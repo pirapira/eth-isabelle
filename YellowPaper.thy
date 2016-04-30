@@ -57,9 +57,7 @@ text "Now I have to choose if I model the account state
 type_synonym "address" = "160 word"
 
 text "Shall I model the nonce as a natural number?"
-text "Well, I'll just use uint256."
-text "If there is a program depending on the monotonicity of"
-text "the nonce, at least I can point that out."
+text "Well, I'll just use uint256. -> (11) and (12) support this."
 
 text "Shall I model the storage just as a hash or not."
 text "Mathematically, there are many states that maps to"
@@ -68,16 +66,39 @@ text "So I need to embed the whole storage here."
 text "For the same reason, I record code not just the code hash."
 
 type_synonym byte = "8 word"
+type_synonym storage = "uint256 \<Rightarrow> uint256"
 
 record "account_state" =
   Nonce :: "uint256"
   Balance :: "uint256"
-  StorageRoot :: "uint256" (* This should be changed. *)
+  Storage :: "storage"
   CodeHash :: "byte list"
 
 type_synonym "state" = "address \<Rightarrow> account_state"
 
-text "We do not model the Merkle Patricia tree for now"
+text "TODO"
+text "I will need to compute a codeHash from the code."
 
+text "TODO"
+text "Also I will need to compute a storageRoot from the"
+text "storage."
+text "Equation (6) is convenient for this."
+
+text "Question about text:"
+text "not a 'physical' member of the account"
+
+text "TODO"
+text "Model the world-state collapse function L_S"
+
+text "(11) will be encoded in the types"
+text "when the hash functions will be defined."
+
+text "4.2. Transaction."
+text "I think I will delay the implementation of this part,"
+text "until the hash functions are implemented."
+text "The transaction part has already been modelled in"
+text "the Coq formalization more or less."
+text "Currently I'm interested if the hash function"
+text "defined here would be nicely executable."
 
 end
