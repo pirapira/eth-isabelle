@@ -78,6 +78,7 @@ type_synonym "state" = "address \<Rightarrow> account_state"
 
 text "TODO"
 text "I will need to compute a codeHash from the code."
+text "I need the KEC function."
 
 text "TODO"
 text "Also I will need to compute a storageRoot from the"
