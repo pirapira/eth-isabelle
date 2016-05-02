@@ -1,6 +1,6 @@
 theory YellowPaper
 
-imports Main "~~/src/HOL/Word/Word"
+imports Main "~~/src/HOL/Word/Word" "./KEC"
 
 begin
 
@@ -66,19 +66,19 @@ text "So I need to embed the whole storage here."
 text "For the same reason, I record code not just the code hash."
 
 type_synonym byte = "8 word"
-type_synonym storage = "uint256 \<Rightarrow> uint256"
+type_synonym storage = "uint256 \<Rightarrow> uint256 option"
 
 record "account_state" =
   Nonce :: "uint256"
   Balance :: "uint256"
   Storage :: "storage"
-  CodeHash :: "byte list"
+  Code :: "byte list"
 
 type_synonym "state" = "address \<Rightarrow> account_state"
 
-text "TODO"
-text "I will need to compute a codeHash from the code."
-text "I need the KEC function."
+definition "codeHash" :: "account_state \<Rightarrow> uint256"
+where
+"codeHash as = sha3 (Code as)"
 
 text "TODO"
 text "Also I will need to compute a storageRoot from the"

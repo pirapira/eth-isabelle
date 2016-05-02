@@ -199,12 +199,16 @@ definition "initial_pos" :: "nat"
 where
 "initial_pos = 0"
 
-definition "sha3" :: "byte list \<Rightarrow> byte list"
+definition "sha3'" :: "byte list \<Rightarrow> byte list"
 where
-"sha3 input =
+"sha3' input =
    (let mid = sha3_update input initial_pos initial_st in
     sha3_final (fst mid) (snd mid))"
 
-value "sha3 []"
+value "sha3' []"
+
+definition "sha3" :: "byte list \<Rightarrow> 256 word"
+where
+"sha3 input = word_rcat (sha3' input)"
 
 end
