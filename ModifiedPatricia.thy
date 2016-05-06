@@ -70,5 +70,6 @@ apply(auto)
 done
 
 text "I still need to encode storage as a MP tree."
+text "Or, include an MP tree in the account state."
 
 end

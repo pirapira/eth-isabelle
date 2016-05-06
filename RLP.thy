@@ -45,7 +45,7 @@ by (simp add: BD_def BE_def)
 fun "r_b" :: "byte list \<Rightarrow> byte list"
 where
 "r_b [] = [128]" |
-"r_b [k] = (if k < 128 then [k] else [128, k])" |
+"r_b [k] = (if k < 128 then [k] else [129, k])" | (* there was a mistake, putting 128 twice *)
 "r_b lst =
    (if length lst < 56 then
       of_nat (128 + length lst) # lst
@@ -55,16 +55,89 @@ where
 
 value "r_b (map of_nat (upt 0 100))"
 
-function "de_r_b" :: "byte list \<Rightarrow> (byte list * (*rest*) byte list) option"
+definition "read_n_bytes" :: "nat \<Rightarrow> byte list \<Rightarrow> (byte list  * (* rest *) byte list) option"
 where
-  "de_r_b [] = None"
-| "de_r_b (128 # r) = Some ([], r)"
-| "k < 128 \<Longrightarrow> de_r_b (k # r) = Some ([k], r)"
-| "128 < k \<Longrightarrow> k < 128 + 56 \<Longrightarrow>
-    de_r_b (k # lst) = (if length lst \<ge> (unat k) then Some (take (unat k) lst, drop (unat k) lst)
-                                         else None)"
+"read_n_bytes n lst =
+  (if length lst \<ge> n then
+     Some (take n lst, drop n lst)
+   else None)
+"
+
+definition "de_r_b" :: "byte list \<Rightarrow> (byte list * (*rest*) byte list) option"
+where
+  "de_r_b ll =
+  (case ll of
+    [] \<Rightarrow> None
+  | k # lst \<Rightarrow>
+    (if k = 128 then
+       Some ([], lst)
+     else if k < 128 then
+       Some ([k], lst)
+     else if k < 184 then
+       (let len = unat k - 128 in
+       (if length lst \<ge> len then Some (take len lst, drop len lst)
+                                         else None))
+     else if k \<le> 192 then
+      (case read_n_bytes (unat k - 183) lst of
+         None \<Rightarrow> None
+       | Some(be_bytes, x_and_rest) \<Rightarrow>
+         read_n_bytes (BD be_bytes) x_and_rest
+      )
+     else 
+       None
+    )
+  )"
+
+  value "r_b (map of_nat (upt 0 10))"
+  value "de_r_b (r_b (map of_nat (upt 0 10)))"
+
+
+lemma encode_r_b_middle[simp] :
+    "length vc < 54 \<Longrightarrow>
+       de_r_b ((130 + of_nat (length vc)) # v # vb # vc @ tail) = Some (v # vb # vc, tail)"
+apply(simp add: de_r_b_def word_less_nat_alt unat_word_ariths unat_of_nat)
+apply(unat_arith)
+apply(simp add: unat_of_nat)
+done
+
+lemma BE0[simp] : "(BE (n) = []) = (n = 0)"
+apply(simp only: BE_def)
+apply(induct n rule: BE_rev.induct)
+apply(simp)+
+done
+
+lemma read_n_n[simp] : "read_n_bytes (length lst) (lst @ rest) = Some (lst, rest)"
+apply(induction lst)
+apply(simp add: read_n_bytes_def)+
+done
+
+lemma encode_r_b_last[simp] :
+"length (BE (length (v # vb # vc))) \<le> 9 \<Longrightarrow>
+       \<not> length vc < 54 \<Longrightarrow>
+       de_r_b
+        ((183 + of_nat (length (BE (Suc (Suc (length vc)))))) #
+         BE (Suc (Suc (length vc))) @ v # vb # vc @ tail) =
+       Some (v # vb # vc, tail)"
+apply(simp add: de_r_b_def word_less_nat_alt unat_word_ariths unat_of_nat)
 apply(auto)
-oops
+
+apply(unat_arith)
+apply(simp add: unat_of_nat)
+
+apply(simp add: read_n_bytes_def)
+
+apply(unat_arith)
+apply(simp add: unat_of_nat)
+done
+
+lemma encode_r_b[simp] : "length(BE(length lst)) \<le> 9 \<Longrightarrow> de_r_b (r_b lst @ tail) = Some (lst, tail)"
+apply(induction lst rule: r_b.induct)
+apply(simp add: de_r_b_def)
+apply(simp add: "r_b.simps")
+apply(auto)
+apply(simp add: de_r_b_def)
+apply(simp add: de_r_b_def)
+done
 
 fun "RLP" :: "tree \<Rightarrow> byte list"
 where
