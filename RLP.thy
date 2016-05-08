@@ -16,9 +16,12 @@ where
 "BE_rev n = (if n < 256 then [of_nat n] else
          (of_nat (n mod 256)) # BE_rev (n div 256))"
 
+value "BE_rev 256"
+
 definition BE :: "nat \<Rightarrow> byte list"
 where
 "BE n = rev (BE_rev n)"
+
 
 value "BE 300"
 
@@ -102,9 +105,7 @@ done
 
 lemma BE0[simp] : "(BE (n) = []) = (n = 0)"
 apply(simp only: BE_def)
-apply(induct n rule: BE_rev.induct)
-apply(simp)+
-done
+by(induct n rule: BE_rev.induct; simp)
 
 lemma read_n_n[simp] : "read_n_bytes (length lst) (lst @ rest) = Some (lst, rest)"
 apply(induction lst)
@@ -130,7 +131,7 @@ apply(unat_arith)
 apply(simp add: unat_of_nat)
 done
 
-lemma encode_r_b[simp] : "length(BE(length lst)) \<le> 9 \<Longrightarrow> de_r_b (r_b lst @ tail) = Some (lst, tail)"
+lemma inv_r_b[simp] : "length(BE(length lst)) \<le> 9 \<Longrightarrow> de_r_b (r_b lst @ tail) = Some (lst, tail)"
 apply(induction lst rule: r_b.induct)
 apply(simp add: de_r_b_def)
 apply(simp add: "r_b.simps")

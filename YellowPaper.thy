@@ -1,6 +1,6 @@
 theory YellowPaper
 
-imports Main "~~/src/HOL/Word/Word" "./KEC"
+imports Main "~~/src/HOL/Word/Word" "./KEC" "./ModifiedPatricia"
 
 begin
 
@@ -71,7 +71,8 @@ type_synonym storage = "uint256 \<Rightarrow> uint256 option"
 record "account_state" =
   Nonce :: "uint256"
   Balance :: "uint256"
-  Storage :: "storage"
+  Storage :: "MPTree option" (* storing MPTree instead of the hash.
+                         It's easier to compute the hash from the tree.*)
   Code :: "byte list"
 
 type_synonym "state" = "address \<Rightarrow> account_state"
@@ -80,13 +81,24 @@ definition "codeHash" :: "account_state \<Rightarrow> uint256"
 where
 "codeHash as = sha3 (Code as)"
 
-text "TODO"
-text "Also I will need to compute a storageRoot from the"
-text "storage."
-text "Equation (6) is convenient for this."
+definition "storageRoot" :: "account_state \<Rightarrow> uint256"
+where
+"storageRoot as = TRIE (Storage as)"
 
 text "Question about text:"
 text "not a 'physical' member of the account"
+text "What does this mean?"
+
+text "Model the world state."
+text "Maybe not as a function but a MP Tree"
+text "Or, list of pairs (address, account state)."
+text "Or, maybe try this https://wwwmath.uni-muenster.de:16030/sev/projects/icf/icf-2010-01-20-outline.pdf"
+
+text "But, when I analyze a contract, I don't need to know"
+text "if there are only finitely many addresses."
+text "So just a mapping is enough."
+
+type_synonym "world_state" = "address \<Rightarrow> account_state"
 
 text "TODO"
 text "Model the world-state collapse function L_S"
@@ -95,11 +107,8 @@ text "(11) will be encoded in the types"
 text "when the hash functions will be defined."
 
 text "4.2. Transaction."
-text "I think I will delay the implementation of this part,"
-text "until the hash functions are implemented."
-text "The transaction part has already been modelled in"
-text "the Coq formalization more or less."
-text "Currently I'm interested if the hash function"
-text "defined here would be nicely executable."
+
+text "Appendix F. Signing Transactions"
+text "I don't think this part is necessary for analyzing EVM programs."
 
 end

@@ -72,4 +72,8 @@ done
 text "I still need to encode storage as a MP tree."
 text "Or, include an MP tree in the account state."
 
+definition "TRIE" :: "MPTree option \<Rightarrow> 256 word"
+where
+"TRIE t = (case t of None \<Rightarrow> sha3([]) | Some tree \<Rightarrow> sha3(MP_c tree))"
+
 end
