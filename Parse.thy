@@ -92,6 +92,8 @@ where
           ) ))
       else if m = 0x8 then
         Complete (Dup (unat n + 1))
+      else if m = 0x9 then
+        Complete (Swap (unat n + 1))
       else Complete unknown))"
 
 definition parse_byte :: "byte \<Rightarrow> parse_single_result"
