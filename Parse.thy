@@ -91,7 +91,7 @@ where
           else Some (Stack (PUSH_N (take bytes rest)), (drop bytes rest))
           ) ))
       else if m = 0x8 then
-        Complete unknown (* TODO parse DUP*)
+        Complete (Dup (unat n + 1))
       else Complete unknown))"
 
 definition parse_byte :: "byte \<Rightarrow> parse_single_result"
