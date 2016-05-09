@@ -94,6 +94,13 @@ where
         Complete (Dup (unat n + 1))
       else if m = 0x9 then
         Complete (Swap (unat n + 1))
+      else if m = 0xa then
+        Complete (if n = 0x0 then Log LOG0
+        else if n = 0x1 then Log LOG1
+        else if n = 0x2 then Log LOG2
+        else if n = 0x3 then Log LOG3
+        else if n = 0x4 then Log LOG4
+        else unknown)
       else Complete unknown))"
 
 definition parse_byte :: "byte \<Rightarrow> parse_single_result"

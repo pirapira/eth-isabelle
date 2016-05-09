@@ -87,12 +87,8 @@ datatype stack_inst =
 
   type_synonym swap_inst = nat
 
-datatype log_inst
-  = LOG0
-  | LOG1
-  | LOG2
-  | LOG3
-  | LOG4
+type_synonym log_inst
+  = "byte list"
 
 datatype misc_inst
   = STOP
