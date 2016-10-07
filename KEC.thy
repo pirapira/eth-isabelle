@@ -181,16 +181,16 @@ text "model sha3_final"
 
 value "split 30"
 
-definition "sha3_final" :: "nat \<Rightarrow> 64 word list \<Rightarrow> byte list"
+definition "keccack_final" :: "nat \<Rightarrow> 64 word list \<Rightarrow> byte list"
 where
-"sha3_final p st =
-   (let st0 = update_byte 0x06 p st in
+"keccack_final p st =
+   (let st0 = update_byte 0x01 p st in
     let st1 = update_byte 0x80 (rsiz - 1) st0 in
     let st2 = take 4 (keccakf st1) in
     concat (map (\<lambda> x. rev (split x)) st2))
 "
 
-text "model the whole sha3 function"
+text "model the whole keccack function"
 
 definition "(initial_st :: 64 word list) = concat (replicate 25 [0])"
 value "initial_st"
@@ -199,16 +199,16 @@ definition "initial_pos" :: "nat"
 where
 "initial_pos = 0"
 
-definition "sha3'" :: "byte list \<Rightarrow> byte list"
+definition "keccack'" :: "byte list \<Rightarrow> byte list"
 where
-"sha3' input =
+"keccack' input =
    (let mid = sha3_update input initial_pos initial_st in
-    sha3_final (fst mid) (snd mid))"
+    keccack_final (fst mid) (snd mid))"
 
-value "sha3' []"
+value "keccack' []"
 
-definition "sha3" :: "byte list \<Rightarrow> 256 word"
+definition "keccack" :: "byte list \<Rightarrow> 256 word"
 where
-"sha3 input = word_rcat (sha3' input)"
+"keccack input = word_rcat (keccack' input)"
 
 end
