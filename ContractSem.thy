@@ -29,5 +29,44 @@ record call_arguments =
   callarg_data :: "byte list"
   callarg_output_begin :: uint
   callarg_output_size :: uint
+  
+record return_result =
+  return_data :: "byte list"
+  return_balance :: "address \<Rightarrow> uint"
+  
+record call_env =
+  callenv_gaslimit :: uint
+  callenv_value :: uint
+  callenv_data :: "byte list"
+  callenv_caller :: address
+  callenv_timestamp :: uint
+  callenv_blocknum :: uint
+  callenv_balane :: "address \<Rightarrow> uint"
+  
+datatype contract_action =
+  ContratCall call_arguments
+| ContractFail
+| ContractSuicide
+| ContractReturn "byte list"
+
+text "response_to_world is not ported"
+text "We will be checking the resulting state"
+
+datatype world_action =
+  WorldCall call_env
+| WorldRet return_result
+| WorldFail
+
+type_synonym world = "world_action list"
+
+datatype action =
+  ActionByWorld world_action
+| ActionByContract contract_action
+
+type_synonym history = "action list"
+
+type_synonym program = "inst list"
+
+
 
 end
