@@ -1,12 +1,9 @@
 theory EVM
 
-imports Main
+imports Main "~~/src/HOL/Word/Word" "./Instructions"
 
 begin
 
-text "9.1."
 
-
-text "9.3. Execution Environment"
 
 end
