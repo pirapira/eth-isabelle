@@ -67,6 +67,55 @@ type_synonym history = "action list"
 
 type_synonym program = "inst list"
 
+fun drop_bytes :: "program \<Rightarrow> nat \<Rightarrow> program"
+where
+  "drop_bytes prg 0 = prg"
+| "drop_bytes (Stack (PUSH_N v) # rest) bytes = drop_bytes rest (bytes - 1 - length v)"
+| "drop_bytes (_ # rest) bytes = drop_bytes rest (bytes - 1)"
+| "drop_bytes [] (Suc v) = []"
 
+type_synonym memory = "uint \<Rightarrow> byte"
+definition empty_memory :: memory
+where
+"empty_memory _ = 0"
+
+type_synonym storage = "uint \<Rightarrow> uint"
+
+record variable_env =
+  venv_stack :: "uint list"
+  venv_memory :: memory
+  venv_storage :: storage
+  venv_prg_sfx :: program
+  venv_balance :: "address \<Rightarrow> uint"
+  venv_caller :: address
+  venv_value_sent :: uint
+  venv_data_sent :: "byte list"
+  venv_storage_at_call :: storage
+  venv_balance_at_call :: "address \<Rightarrow> uint"
+  
+definition update_balance :: "address \<Rightarrow> (uint \<Rightarrow> uint) \<Rightarrow> (address \<Rightarrow> uint) \<Rightarrow> (address \<Rightarrow> uint)"
+where
+"update_balance a newbal orig = orig(a := newbal (orig a))"
+
+record constant_env =
+  cenv_program :: program
+  cenv_this :: address
+
+definition init_variable_env ::
+  "storage \<Rightarrow> (address \<Rightarrow> uint) \<Rightarrow> address \<Rightarrow> constant_env \<Rightarrow> uint \<Rightarrow> byte list \<Rightarrow> variable_env"
+where
+  "init_variable_env s bal caller cenv value data =
+     \<lparr> venv_stack = []
+     , venv_memory = empty_memory
+     , venv_storage = s
+     , venv_prg_sfx = cenv_program cenv
+     , venv_balance = bal
+     , venv_caller = caller
+     , venv_value_sent = value
+     , venv_data_sent = data
+     , venv_storage_at_call = s
+     , venv_balance_at_call = bal
+     \<rparr>
+  "
 
 end
