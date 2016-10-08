@@ -118,4 +118,56 @@ where
      \<rparr>
   "
 
+datatype instruction_result =
+  InstructionUnknown (* should be removed at one point *) 
+| InstructionContinue variable_env
+| InstructionToWorld "contract_action * variable_env option"
+
+definition instruction_failure_result :: instruction_result
+where
+"instruction_failure_result = InstructionToWorld (ContractFail, None)"
+
+definition instruction_return_result :: "byte list \<Rightarrow> instruction_result"
+where
+"instruction_return_result x = InstructionToWorld (ContractReturn x, None)"
+
+(* venv_update_x functions are not useful in Isabelle/HOL,
+ * where field updates are supported already. *)
+ 
+fun venv_pop_stack :: "nat \<Rightarrow> variable_env \<Rightarrow> variable_env"
+where
+  "venv_pop_stack 0 v = v"
+| "venv_pop_stack (Suc n) v =
+   v\<lparr> venv_stack := tl (venv_stack v)\<rparr>"
+   
+definition venv_stack_top :: "variable_env \<Rightarrow> uint option"
+where
+"venv_stack_top v =
+  (case venv_stack v of
+     h # _\<Rightarrow> Some h
+   | [] \<Rightarrow> None)"
+
+definition venv_change_sfx :: "nat \<Rightarrow> variable_env \<Rightarrow> constant_env \<Rightarrow> variable_env"
+where
+"venv_change_sfx pos v c =
+   v\<lparr>
+     venv_prg_sfx := drop_bytes (cenv_program c) pos
+   \<rparr>"
+
+(* function_update is already provided in Main library *)
+
+definition venv_update_storage :: "uint \<Rightarrow> uint \<Rightarrow> variable_env \<Rightarrow> variable_env"
+where
+"venv_update_storage idx val v =
+  v\<lparr>venv_storage := (venv_storage v)(idx := val)\<rparr>"
+
+definition venv_first_instruction :: "variable_env \<Rightarrow> inst option"
+where
+"venv_first_instruction v =
+   (case venv_prg_sfx v of
+      [] \<Rightarrow> None
+    | h # _ \<Rightarrow> Some h)"
+
+
+
 end
