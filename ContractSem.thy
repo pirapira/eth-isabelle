@@ -219,4 +219,26 @@ definition sload :: "variable_env \<Rightarrow> uint \<Rightarrow> uint"
 where
 "sload v idx = venv_storage v idx"
 
+definition sstore :: "variable_env \<Rightarrow> constant_env \<Rightarrow> instruction_result"
+where
+"sstore v c =
+  (case venv_stack v of
+    addr # val # stack_tail \<Rightarrow>
+      InstructionContinue
+      (venv_advance_pc
+        (venv_update_storage addr val v\<lparr>venv_stack := stack_tail\<rparr>))
+    | _ \<Rightarrow> instruction_failure_result)"
+
+definition jump :: "variable_env \<Rightarrow> constant_env \<Rightarrow> instruction_result"
+where
+"jump v c =
+  (case venv_stack_top v of
+     None \<Rightarrow> instruction_failure_result
+   | Some pos \<Rightarrow>
+     (let v_new = venv_change_sfx (Word.unat pos) (venv_pop_stack 1 v) c in
+     (case venv_first_instruction v_new of
+        Some (Pc JUMPDEST) \<Rightarrow>
+          InstructionContinue v_new
+      | None \<Rightarrow> instruction_failure_result )))"
+
 end
