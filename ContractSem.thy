@@ -44,7 +44,7 @@ record call_env =
   callenv_balane :: "address \<Rightarrow> uint"
   
 datatype contract_action =
-  ContratCall call_arguments
+  ContractCall call_arguments
 | ContractFail
 | ContractSuicide
 | ContractReturn "byte list"
@@ -266,4 +266,39 @@ definition cut_data :: "variable_env \<Rightarrow> uint \<Rightarrow> uint"
 where
 "cut_data v idx =
     read_word_from_bytes (Word.unat idx) (venv_data_sent v)"
+
+fun cut_memory :: "uint \<Rightarrow> nat \<Rightarrow> (uint \<Rightarrow> byte) \<Rightarrow> byte list"
+where
+"cut_memory idx 0 memory = []" |
+"cut_memory idx (Suc n) memory = 
+  memory idx # cut_memory (idx + 1) n memory"
+    
+definition call :: "variable_env \<Rightarrow> constant_env \<Rightarrow> instruction_result"
+where
+"call v c =
+  (case venv_stack v of
+    e0 # e1 # e2 # e3 # e4 # e5 # e6 # rest \<Rightarrow>
+    (if venv_balance v (cenv_this c) < e2 then
+       instruction_failure_result
+     else
+       InstructionToWorld
+         (ContractCall
+           (\<lparr> callarg_gaslimit = e0,
+              callarg_code = Word.ucast e1,
+              callarg_recipient = Word.ucast e1,
+              callarg_value = e2,
+              callarg_data = cut_memory e3 (Word.unat e4) (venv_memory v),
+              callarg_output_begin = e5,
+              callarg_output_size = e6 \<rparr>),
+          Some
+            (v\<lparr> venv_stack := rest,
+               venv_prg_sfx := drop_one_element (venv_prg_sfx v),
+               venv_balance :=
+                 update_balance (cenv_this c)
+                   (\<lambda> orig \<Rightarrow> orig - e2) (venv_balance v)\<rparr>
+         ))
+       )
+  | _ \<Rightarrow> instruction_failure_result
+  )"
+
 end
