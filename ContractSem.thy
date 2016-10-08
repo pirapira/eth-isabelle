@@ -240,5 +240,30 @@ where
         Some (Pc JUMPDEST) \<Rightarrow>
           InstructionContinue v_new
       | None \<Rightarrow> instruction_failure_result )))"
+      
+definition jumpi :: "variable_env \<Rightarrow> constant_env \<Rightarrow> instruction_result"
+where
+"jumpi v c =
+  (case venv_stack v of
+      pos # cond # rest \<Rightarrow>
+        (if cond = 0 then
+           InstructionContinue
+             (venv_advance_pc (venv_pop_stack 2 v))
+         else
+           jump (v\<lparr> venv_stack := pos # rest \<rparr>) c)
+    | _ \<Rightarrow> instruction_failure_result)"
 
+definition datasize :: "variable_env \<Rightarrow> uint"
+where
+"datasize v = Word.word_of_int (int (length (venv_data_sent v)))"
+
+definition read_word_from_bytes :: "nat \<Rightarrow> byte list \<Rightarrow> uint"
+where
+"read_word_from_bytes idx lst =
+   Word.word_rcat (take 32 (drop idx lst))"
+
+definition cut_data :: "variable_env \<Rightarrow> uint \<Rightarrow> uint"
+where
+"cut_data v idx =
+    read_word_from_bytes (Word.unat idx) (venv_data_sent v)"
 end
