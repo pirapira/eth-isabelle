@@ -168,6 +168,29 @@ where
       [] \<Rightarrow> None
     | h # _ \<Rightarrow> Some h)"
 
+definition venv_advance_pc :: "variable_env \<Rightarrow> variable_env"
+where
+"venv_advance_pc v = v\<lparr> venv_prg_sfx := drop_one_element (venv_prg_sfx v)\<rparr>"
 
+    
+definition stack_0_0_op :: "variable_env \<Rightarrow> constant_env \<Rightarrow> instruction_result"
+where
+"stack_0_0_op v c = InstructionContinue (venv_advance_pc v)"
+
+definition stack_0_1_op :: "variable_env \<Rightarrow> constant_env \<Rightarrow> uint \<Rightarrow> instruction_result"
+where
+"stack_0_1_op v c w =
+   InstructionContinue
+      (venv_advance_pc v\<lparr>venv_stack := w # venv_stack v\<rparr>)"
+
+definition stack_1_1_op :: "variable_env \<Rightarrow> constant_env \<Rightarrow> (uint \<Rightarrow> uint) \<Rightarrow> instruction_result"
+where
+"stack_1_1_op v c f =
+   (case venv_stack v of
+      [] \<Rightarrow> instruction_failure_result
+      | h # t \<Rightarrow>
+         InstructionContinue
+           (venv_advance_pc v\<lparr>venv_stack := f h # t\<rparr>)
+      )"
 
 end
