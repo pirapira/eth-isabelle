@@ -193,4 +193,30 @@ where
            (venv_advance_pc v\<lparr>venv_stack := f h # t\<rparr>)
       )"
 
+definition stack_1_2_op :: "variable_env \<Rightarrow> constant_env \<Rightarrow> (uint \<Rightarrow> uint * uint) \<Rightarrow> instruction_result"
+where
+"stack_1_2_op v c f =
+  (case venv_stack v of
+     [] \<Rightarrow> instruction_failure_result
+   | h # t \<Rightarrow>
+     (case f h of
+        (new0, new1) \<Rightarrow>
+          InstructionContinue
+            (venv_advance_pc v\<lparr>venv_stack := new0 # new1 # venv_stack v\<rparr>)))"
+
+definition stack_2_1_op :: "variable_env \<Rightarrow> constant_env \<Rightarrow> (uint \<Rightarrow> uint \<Rightarrow> uint) \<Rightarrow> instruction_result"
+where
+"stack_2_1_op v c f =
+  (case venv_stack v of
+     operand0 # operand1 # rest \<Rightarrow>
+       InstructionContinue
+         (venv_advance_pc
+            v\<lparr>venv_stack := f operand0 operand1 # rest\<rparr>)
+  | _ \<Rightarrow> instruction_failure_result
+  )"
+
+definition sload :: "variable_env \<Rightarrow> uint \<Rightarrow> uint"
+where
+"sload v idx = venv_storage v idx"
+
 end
