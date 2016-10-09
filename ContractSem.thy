@@ -351,10 +351,83 @@ where
 | "instruction_sem v c (Arith EQ) = stack_2_1_op v c (\<lambda> a b. if a = b then 1 else 0)"
 
 datatype program_result =
-  ProgramSetpRunOut
-| ProgramToWorld "contract_action * storage * (address => world) * variable_env option"
+  ProgramStepRunOut
+| ProgramToWorld "contract_action * storage * (address => uint) * variable_env option"
 | ProgramInvalid
 
+fun program_sem :: "variable_env \<Rightarrow> constant_env \<Rightarrow> nat \<Rightarrow> program_result"
+where
+  "program_sem v c 0 = ProgramStepRunOut"
+| "program_sem v c (Suc remaining_steps) =
+    (case venv_prg_sfx v of
+      [] \<Rightarrow> ProgramStepRunOut
+    | i # _ \<Rightarrow>
+      (case instruction_sem v c i of
+        InstructionContinue new_v \<Rightarrow>
+          program_sem new_v c remaining_steps
+      | InstructionToWorld (ContractFail, opt_pushed_v) \<Rightarrow>
+        ProgramToWorld (ContractFail, venv_storage_at_call v, venv_balance_at_call v, opt_pushed_v)
+      | InstructionToWorld (ContractCall args, Some new_v) \<Rightarrow>
+        ProgramToWorld (ContractCall args, venv_storage new_v, venv_balance new_v, Some new_v)
+      | InstructionToWorld (a, opt_pushed_v) \<Rightarrow>
+        ProgramToWorld (a, venv_storage v, venv_balance v, opt_pushed_v)
+      | InstructionUnknown \<Rightarrow> ProgramInvalid
+      )
+    )"
+    
+record account_state =
+  account_address :: address
+  account_storage :: storage
+  account_code :: "inst list"
+  account_balance :: uint (* TODO: model the fact that this can be
+                             increased at any moment *)
+                             
+(* account_state_update_storage is not particularly useful in
+ * Isabelle/HOL where fields of records can be updated. *)
 
+(* Currently it's shown as if the variable_env is determinined by
+ * the other arguments but in reality the balance might increase.
+ * This mistake will be kept until we try the managed_account_with_accumulated_income_and_spending
+ * and we compare Coq and Isabelle/HOL on the same target.
+ *)
+ 
+inductive build_venv_called :: "account_state => call_env => variable_env => bool"
+where
+venv_called:
+  "venv_stack venv = [] \<Longrightarrow>
+   venv_memory venv = empty_memory \<Longrightarrow>
+   venv_prg_sfx venv = account_code a \<Longrightarrow>
+   venv_storage venv = account_storage a \<Longrightarrow>
+   venv_balance venv = (* replace this with \<le> *)
+     update_balance (account_address a)
+       (\<lambda> _. account_balance a + callenv_value env)
+       (callenv_balance env) \<Longrightarrow>
+   venv_caller venv = callenv_caller env \<Longrightarrow>
+   venv_value_sent venv = callenv_value env \<Longrightarrow>
+   venv_storage_at_call venv = account_storage a \<Longrightarrow>
+   venv_balance_at_call venv = venv_balance venv \<Longrightarrow>
+   build_venv_called a env venv"
+   
+definition build_cenv :: "account_state \<Rightarrow> constant_env"
+where
+"build_cenv a =
+  \<lparr> cenv_program = account_code a,
+           cenv_this = account_address a \<rparr>"
+
+inductive build_venv_returned :: "account_state \<Rightarrow> return_result \<Rightarrow> variable_env option \<Rightarrow> bool"
+where
+venv_returned_no_ongoing:
+"  account_ongoing_calls a = [] \<Longrightarrow>
+   build_venv_returned a r None"
+| venv_returned:
+"  hd (account_ongoing_calls a) = recovered \<Longrightarrow>
+   build_venv_returned a r
+     (Some (
+              recovered \<lparr>
+                venv_stack := 1 # venv_stack recovered
+              , venv_storage := account_storage a
+              , venv_balance := (update_balance (account_address a)
+                                   (\<lambda> _. account_balance a) (return_balance r))
+            \<rparr>))"
 
 end
