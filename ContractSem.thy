@@ -350,4 +350,11 @@ where
 | "instruction_sem v c (Arith GT) = stack_2_1_op v c (\<lambda> a b. if a > b then 1 else 0)"
 | "instruction_sem v c (Arith EQ) = stack_2_1_op v c (\<lambda> a b. if a = b then 1 else 0)"
 
+datatype program_result =
+  ProgramSetpRunOut
+| ProgramToWorld "contract_action * storage * (address => world) * variable_env option"
+| ProgramInvalid
+
+
+
 end
