@@ -381,6 +381,7 @@ record account_state =
   account_code :: "inst list"
   account_balance :: uint (* TODO: model the fact that this can be
                              increased at any moment *)
+  account_ongoing_calls :: "variable_env list"
                              
 (* account_state_update_storage is not particularly useful in
  * Isabelle/HOL where fields of records can be updated. *)
@@ -429,5 +430,14 @@ venv_returned_no_ongoing:
               , venv_balance := (update_balance (account_address a)
                                    (\<lambda> _. account_balance a (* This has to change to allow random balance increases *)) (return_balance r))
             \<rparr>))"
+
+definition build_venv_fail :: "account_state \<Rightarrow> variable_env option"
+where
+"build_venv_fail a =
+  (case account_ongoing_calls a of
+     [] \<Rightarrow> None
+   | recovered # _ \<Rightarrow>
+      Some (recovered \<lparr>venv_stack := 0 # venv_stack recovered\<rparr>)
+  )"
 
 end
