@@ -92,6 +92,10 @@ record variable_env =
   venv_data_sent :: "byte list"
   venv_storage_at_call :: storage
   venv_balance_at_call :: "address \<Rightarrow> uint"
+
+(* TODO: keep track of the gas consumption in variable_env *)
+definition gas_limit :: "variable_env \<Rightarrow> uint"
+where "gas_limit = undefined"
   
 definition update_balance :: "address \<Rightarrow> (uint \<Rightarrow> uint) \<Rightarrow> (address \<Rightarrow> uint) \<Rightarrow> (address \<Rightarrow> uint)"
 where
@@ -300,5 +304,50 @@ where
        )
   | _ \<Rightarrow> instruction_failure_result
   )"
+  
+definition
+"venv_returned_bytes v =
+  (case venv_stack v of
+    e0 # e1 # _ \<Rightarrow> cut_memory e0 (Word.unat e1) (venv_memory v)
+  | _ \<Rightarrow> []
+)"
+
+definition ret :: "variable_env \<Rightarrow> constant_env \<Rightarrow> instruction_result"
+where
+"ret v c = InstructionToWorld ((ContractReturn (venv_returned_bytes v)), None)"
+
+definition stop :: "variable_env \<Rightarrow> constant_env \<Rightarrow> instruction_result"
+where
+"stop v c = InstructionToWorld (ContractReturn [], None)"
+
+definition pop :: "variable_env \<Rightarrow> constant_env \<Rightarrow> instruction_result"
+where
+"pop v c = InstructionContinue (venv_advance_pc
+             v\<lparr>venv_stack := tl (venv_stack v)\<rparr>)"
+
+fun instruction_sem :: "variable_env \<Rightarrow> constant_env \<Rightarrow> inst \<Rightarrow> instruction_result"
+where
+"instruction_sem v c (Stack (PUSH_N lst)) =
+     stack_0_1_op v c (Word.word_rcat lst)"
+| "instruction_sem v c (Unknown _) = InstructionUnknown"
+| "instruction_sem v c (Storage SLOAD) = stack_1_1_op v c (sload v)"
+| "instruction_sem v c (Storage SSTORE) = sstore v c"
+| "instruction_sem v c (Pc JUMPI) = jumpi v c"
+| "instruction_sem v c (Pc JUMP) = jump v c"
+| "instruction_sem v c (Pc JUMPDEST) = stack_0_0_op v c"
+| "instruction_sem v c (Info CALLDATASIZE) = stack_0_1_op v c (datasize v)"
+| "instruction_sem v c (Stack CALLDATALOAD) = stack_1_1_op v c (cut_data v)"
+| "instruction_sem v c (Info CALLER) = stack_0_1_op v c (Word.ucast (venv_caller v))"
+| "instruction_sem v c (Arith ADD) = stack_2_1_op v c (\<lambda> a b. a + b)"
+| "instruction_sem v c (Arith SUB) = stack_2_1_op v c (\<lambda> a b. a - b)"
+| "instruction_sem v c (Arith ISZERO) = stack_1_1_op v c (\<lambda> a. if a = 0 then 1 else 0)"
+| "instruction_sem v c (Misc CALL) = call v c"
+| "instruction_sem v c (Misc RETURN) = ret v c"
+| "instruction_sem v c (Misc STOP) = stop v c"
+| "instruction_sem v c (Dup (Suc 0)) = stack_1_2_op v c (\<lambda> a. (a, a))"
+| "instruction_sem v c (Stack POP) = pop v c"
+| "instruction_sem v c (Info GASLIMIT) = stack_0_1_op v c (gas_limit v)"
+| "instruction_sem v c (Arith GT) = stack_2_1_op v c (\<lambda> a b. if a > b then 1 else 0)"
+| "instruction_sem v c (Arith EQ) = stack_2_1_op v c (\<lambda> a b. if a = b then 1 else 0)"
 
 end
