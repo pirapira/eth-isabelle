@@ -427,7 +427,7 @@ venv_returned_no_ongoing:
                 venv_stack := 1 # venv_stack recovered
               , venv_storage := account_storage a
               , venv_balance := (update_balance (account_address a)
-                                   (\<lambda> _. account_balance a) (return_balance r))
+                                   (\<lambda> _. account_balance a (* This has to change to allow random balance increases *)) (return_balance r))
             \<rparr>))"
 
 end
