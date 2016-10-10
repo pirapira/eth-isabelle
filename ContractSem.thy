@@ -440,4 +440,16 @@ where
       Some (recovered \<lparr>venv_stack := 0 # venv_stack recovered\<rparr>)
   )"
 
+  
+(* Replace the coinductional future of the 
+ * contract_behavior with just a condition on
+ * the resulting account_state *)
+
+type_synonym contract_behavior = "contract_action * account_state"
+
+record response_to_world =
+  when_called :: "call_env \<Rightarrow> contract_behavior"
+  when_returned :: "return_result \<Rightarrow> contract_behavior"
+  when_failed :: "return_result \<Rightarrow> contract_behavior"
+
 end
