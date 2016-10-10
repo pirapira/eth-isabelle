@@ -470,7 +470,7 @@ type_synonym contract_behavior = "contract_action * account_state"
 record response_to_world =
   when_called :: "call_env \<Rightarrow> contract_behavior"
   when_returned :: "return_result \<Rightarrow> contract_behavior"
-  when_failed :: "return_result \<Rightarrow> contract_behavior"
+  when_failed :: "contract_behavior"
 
 definition respond_to_call_correctly ::
   " (call_env \<Rightarrow> contract_behavior) \<Rightarrow>
@@ -492,7 +492,7 @@ where "respond_to_call_correctly c a I =
              r = ProgramStepRunOut \<or>
              (* the result matches the specification *)
              (\<exists> pushed_venv st bal.
-              r = ProgramToWorld (resultign_action, st, bal, pushed_venv) \<and>
+              r = ProgramToWorld (resulting_action, st, bal, pushed_venv) \<and>
               update_account_state a resulting_action st bal pushed_venv = final_state)
            )))))
 "
@@ -533,12 +533,18 @@ where
              r = ProgramToWorld (resulting_action, st, bal, pushed_venv) \<and>
              update_account_state a resulting_action st bal pushed_venv = final_state))))"
 
-(*
+
 inductive account_state_responds_to_world ::
   "account_state \<Rightarrow> response_to_world \<Rightarrow>
    (variable_env \<Rightarrow> constant_env \<Rightarrow> bool) \<Rightarrow> bool"
+where
 AccountStep:
-  "respond_to_call_correctly c a I
-  *)
+  "respond_to_call_correctly c a I \<Longrightarrow>
+   respond_to_return_correctly r a I \<Longrightarrow>
+   respond_to_fail_correctly f a I \<Longrightarrow>
+   account_state_responds_to_world a
+   \<lparr> when_called = c, when_returned = r, when_failed = f \<rparr>
+   I"
+
 
 end
