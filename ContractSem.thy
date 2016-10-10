@@ -484,17 +484,38 @@ where "respond_to_call_correctly c a I =
        I initial_venv (build_cenv a)
        \<and>
        ( I initial_venv (build_cenv a) \<longrightarrow>
+         (* The specification says the execution should result in these *)
          c call_env = (resulting_action, final_state) \<longrightarrow>
-         ( \<forall> steps.
+         ( \<forall> steps. (* and for any number of steps *)
            ( let r = program_sem initial_venv (build_cenv a) steps in
+             (* either more steps are necessary, or *)
              r = ProgramStepRunOut \<or>
+             (* the result matches the specification *)
              (\<exists> act pushed_venv st bal.
               r = ProgramToWorld (act, st, bal, pushed_venv) \<and>
               update_account_state a act st bal pushed_venv = final_state)
            )))))
 "
 
-  
+definition respond_to_return_correctly ::
+  "(return_result \<Rightarrow> contract_behavior) \<Rightarrow>
+   account_state \<Rightarrow>
+   (variable_env \<Rightarrow> constant_env \<Rightarrow> bool) \<Rightarrow>
+   bool"
+where
+"respond_to_return_correctly r a I =
+   (\<forall> rr initial_venv final_state resulting_action.
+       build_venv_returned a rr (Some initial_venv) \<longrightarrow>
+       r rr = (resulting_action, final_state) \<longrightarrow>
+       ( \<forall> steps.
+          (let r = program_sem initial_venv (build_cenv a) steps in
+           r = ProgramStepRunOut \<or>
+           (\<exists> act pushed_venv st bal.
+            r = ProgramToWorld (act, st, bal, pushed_venv) \<and>
+            update_account_state a act st bal pushed_venv = final_state)
+          )))
+"
+
 (*
 inductive account_state_responds_to_world ::
   "account_state \<Rightarrow> response_to_world \<Rightarrow>
