@@ -243,6 +243,7 @@ where
      (case venv_first_instruction v_new of
         Some (Pc JUMPDEST) \<Rightarrow>
           InstructionContinue v_new
+      | Some _ \<Rightarrow> instruction_failure_result
       | None \<Rightarrow> instruction_failure_result )))"
       
 definition jumpi :: "variable_env \<Rightarrow> constant_env \<Rightarrow> instruction_result"
@@ -421,7 +422,7 @@ venv_returned_no_ongoing:
 "  account_ongoing_calls a = [] \<Longrightarrow>
    build_venv_returned a r None"
 | venv_returned:
-"  hd (account_ongoing_calls a) = recovered \<Longrightarrow>
+"  account_ongoing_calls a = recovered # _ \<Longrightarrow>
    build_venv_returned a r
      (Some (
               recovered \<lparr>
