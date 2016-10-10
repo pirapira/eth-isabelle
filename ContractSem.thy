@@ -385,7 +385,7 @@ record account_state =
                              
 (* account_state_update_storage is not particularly useful in
  * Isabelle/HOL where fields of records can be updated. *)
-
+ 
 (* Currently it's shown as if the variable_env is determinined by
  * the other arguments but in reality the balance might increase.
  * This mistake will be kept until we try the managed_account_with_accumulated_income_and_spending
@@ -471,5 +471,36 @@ record response_to_world =
   when_called :: "call_env \<Rightarrow> contract_behavior"
   when_returned :: "return_result \<Rightarrow> contract_behavior"
   when_failed :: "return_result \<Rightarrow> contract_behavior"
+
+definition respond_to_call_correctly ::
+  " (call_env \<Rightarrow> contract_behavior) \<Rightarrow>
+       account_state \<Rightarrow>
+       (variable_env \<Rightarrow> constant_env \<Rightarrow> bool (* This part should be unnecessary after assertions are introduced *)) =>
+       bool"
+where "respond_to_call_correctly c a I =
+  (\<forall> call_env initial_venv resulting_action final_state.
+     build_venv_called a call_env initial_venv \<longrightarrow>
+     ( (* The invariant holds at the beginning *)
+       I initial_venv (build_cenv a)
+       \<and>
+       ( I initial_venv (build_cenv a) \<longrightarrow>
+         c call_env = (resulting_action, final_state) \<longrightarrow>
+         ( \<forall> steps.
+           ( let r = program_sem initial_venv (build_cenv a) steps in
+             r = ProgramStepRunOut \<or>
+             (\<exists> act pushed_venv st bal.
+              r = ProgramToWorld (act, st, bal, pushed_venv) \<and>
+              update_account_state a act st bal pushed_venv = final_state)
+           )))))
+"
+
+  
+(*
+inductive account_state_responds_to_world ::
+  "account_state \<Rightarrow> response_to_world \<Rightarrow>
+   (variable_env \<Rightarrow> constant_env \<Rightarrow> bool) \<Rightarrow> bool"
+AccountStep:
+  "respond_to_call_correctly c a I
+  *)
 
 end
