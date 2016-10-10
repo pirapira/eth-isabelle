@@ -491,9 +491,9 @@ where "respond_to_call_correctly c a I =
              (* either more steps are necessary, or *)
              r = ProgramStepRunOut \<or>
              (* the result matches the specification *)
-             (\<exists> act pushed_venv st bal.
-              r = ProgramToWorld (act, st, bal, pushed_venv) \<and>
-              update_account_state a act st bal pushed_venv = final_state)
+             (\<exists> pushed_venv st bal.
+              r = ProgramToWorld (resultign_action, st, bal, pushed_venv) \<and>
+              update_account_state a resulting_action st bal pushed_venv = final_state)
            )))))
 "
 
@@ -510,11 +510,28 @@ where
        ( \<forall> steps.
           (let r = program_sem initial_venv (build_cenv a) steps in
            r = ProgramStepRunOut \<or>
-           (\<exists> act pushed_venv st bal.
-            r = ProgramToWorld (act, st, bal, pushed_venv) \<and>
-            update_account_state a act st bal pushed_venv = final_state)
+           (\<exists> pushed_venv st bal.
+            r = ProgramToWorld (resulting_action, st, bal, pushed_venv) \<and>
+            update_account_state a resulting_action st bal pushed_venv = final_state)
           )))
 "
+
+definition respond_to_fail_correctly ::
+  "contract_behavior \<Rightarrow>
+   account_state \<Rightarrow>
+   (variable_env \<Rightarrow> constant_env \<Rightarrow> bool) \<Rightarrow>
+   bool"
+where
+"respond_to_fail_correctly f a I =
+   (\<forall> initial_venv final_state resulting_action.
+      Some initial_venv = build_venv_fail a \<longrightarrow>
+      f = (resulting_action, final_state) \<longrightarrow>
+      ( \<forall> steps.
+        ( let r = program_sem initial_venv (build_cenv a) steps in
+          r = ProgramStepRunOut \<or>
+          (\<exists> pushed_venv st bal.
+             r = ProgramToWorld (resulting_action, st, bal, pushed_venv) \<and>
+             update_account_state a resulting_action st bal pushed_venv = final_state))))"
 
 (*
 inductive account_state_responds_to_world ::
