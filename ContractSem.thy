@@ -440,7 +440,27 @@ where
       Some (recovered \<lparr>venv_stack := 0 # venv_stack recovered\<rparr>)
   )"
 
-  
+definition account_state_pop_ongoing_call :: "account_state \<Rightarrow> account_state"
+where
+"account_state_pop_ongoing_call orig =
+   orig\<lparr> account_ongoing_calls := tl (account_ongoing_calls orig)\<rparr>"
+ 
+definition update_account_state :: "account_state \<Rightarrow> contract_action \<Rightarrow> storage \<Rightarrow> (address \<Rightarrow> uint) \<Rightarrow> variable_env option \<Rightarrow> account_state"
+where
+"update_account_state prev act st bal v_opt =
+  (case v_opt of
+    None \<Rightarrow>
+      prev\<lparr>
+        account_storage := st \<rparr>
+  | Some pushed \<Rightarrow>
+      prev\<lparr>
+        account_storage := st,
+        account_balance := bal (account_address prev),
+        account_ongoing_calls := pushed # (account_ongoing_calls prev)
+      \<rparr>
+  )
+"
+
 (* Replace the coinductional future of the 
  * contract_behavior with just a condition on
  * the resulting account_state *)
