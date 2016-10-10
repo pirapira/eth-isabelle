@@ -19,7 +19,7 @@ definition bool_to_uint :: "bool \<Rightarrow> uint"
 where
 "bool_to_uint b = (if b then 1 else 0)"
 
-definition "drop_one_element = tl"
+abbreviation "drop_one_element == tl"
 
 record call_arguments =
   callarg_gaslimit :: uint
@@ -74,6 +74,8 @@ where
 | "drop_bytes (_ # rest) bytes = drop_bytes rest (bytes - 1)"
 | "drop_bytes [] (Suc v) = []"
 
+declare drop_bytes.simps [simp]
+
 type_synonym memory = "uint \<Rightarrow> byte"
 definition empty_memory :: memory
 where
@@ -127,13 +129,13 @@ datatype instruction_result =
 | InstructionContinue variable_env
 | InstructionToWorld "contract_action * variable_env option"
 
-definition instruction_failure_result :: instruction_result
+abbreviation instruction_failure_result :: instruction_result
 where
-"instruction_failure_result = InstructionToWorld (ContractFail, None)"
+"instruction_failure_result == InstructionToWorld (ContractFail, None)"
 
-definition instruction_return_result :: "byte list \<Rightarrow> instruction_result"
+abbreviation instruction_return_result :: "byte list \<Rightarrow> instruction_result"
 where
-"instruction_return_result x = InstructionToWorld (ContractReturn x, None)"
+"instruction_return_result x == InstructionToWorld (ContractReturn x, None)"
 
 (* venv_update_x functions are not useful in Isabelle/HOL,
  * where field updates are supported already. *)
@@ -143,53 +145,53 @@ where
   "venv_pop_stack 0 v = v"
 | "venv_pop_stack (Suc n) v =
    v\<lparr> venv_stack := tl (venv_stack v)\<rparr>"
-   
-definition venv_stack_top :: "variable_env \<Rightarrow> uint option"
+
+abbreviation venv_stack_top :: "variable_env \<Rightarrow> uint option"
 where
-"venv_stack_top v =
+"venv_stack_top v ==
   (case venv_stack v of
      h # _\<Rightarrow> Some h
    | [] \<Rightarrow> None)"
 
-definition venv_change_sfx :: "nat \<Rightarrow> variable_env \<Rightarrow> constant_env \<Rightarrow> variable_env"
+abbreviation venv_change_sfx :: "nat \<Rightarrow> variable_env \<Rightarrow> constant_env \<Rightarrow> variable_env"
 where
-"venv_change_sfx pos v c =
+"venv_change_sfx pos v c ==
    v\<lparr>
      venv_prg_sfx := drop_bytes (cenv_program c) pos
    \<rparr>"
 
 (* function_update is already provided in Main library *)
 
-definition venv_update_storage :: "uint \<Rightarrow> uint \<Rightarrow> variable_env \<Rightarrow> variable_env"
+abbreviation venv_update_storage :: "uint \<Rightarrow> uint \<Rightarrow> variable_env \<Rightarrow> variable_env"
 where
-"venv_update_storage idx val v =
+"venv_update_storage idx val v ==
   v\<lparr>venv_storage := (venv_storage v)(idx := val)\<rparr>"
 
-definition venv_first_instruction :: "variable_env \<Rightarrow> inst option"
+abbreviation venv_first_instruction :: "variable_env \<Rightarrow> inst option"
 where
-"venv_first_instruction v =
+"venv_first_instruction v ==
    (case venv_prg_sfx v of
       [] \<Rightarrow> None
     | h # _ \<Rightarrow> Some h)"
 
-definition venv_advance_pc :: "variable_env \<Rightarrow> variable_env"
+abbreviation venv_advance_pc :: "variable_env \<Rightarrow> variable_env"
 where
-"venv_advance_pc v = v\<lparr> venv_prg_sfx := drop_one_element (venv_prg_sfx v)\<rparr>"
+"venv_advance_pc v \<equiv> v\<lparr> venv_prg_sfx := drop_one_element (venv_prg_sfx v)\<rparr>"
 
     
-definition stack_0_0_op :: "variable_env \<Rightarrow> constant_env \<Rightarrow> instruction_result"
+abbreviation stack_0_0_op :: "variable_env \<Rightarrow> constant_env \<Rightarrow> instruction_result"
 where
-"stack_0_0_op v c = InstructionContinue (venv_advance_pc v)"
+"stack_0_0_op v c == InstructionContinue (venv_advance_pc v)"
 
-definition stack_0_1_op :: "variable_env \<Rightarrow> constant_env \<Rightarrow> uint \<Rightarrow> instruction_result"
+abbreviation stack_0_1_op :: "variable_env \<Rightarrow> constant_env \<Rightarrow> uint \<Rightarrow> instruction_result"
 where
-"stack_0_1_op v c w =
+"stack_0_1_op v c w ==
    InstructionContinue
       (venv_advance_pc v\<lparr>venv_stack := w # venv_stack v\<rparr>)"
 
-definition stack_1_1_op :: "variable_env \<Rightarrow> constant_env \<Rightarrow> (uint \<Rightarrow> uint) \<Rightarrow> instruction_result"
+abbreviation stack_1_1_op :: "variable_env \<Rightarrow> constant_env \<Rightarrow> (uint \<Rightarrow> uint) \<Rightarrow> instruction_result"
 where
-"stack_1_1_op v c f =
+"stack_1_1_op v c f \<equiv>
    (case venv_stack v of
       [] \<Rightarrow> instruction_failure_result
       | h # t \<Rightarrow>
@@ -197,9 +199,9 @@ where
            (venv_advance_pc v\<lparr>venv_stack := f h # t\<rparr>)
       )"
 
-definition stack_1_2_op :: "variable_env \<Rightarrow> constant_env \<Rightarrow> (uint \<Rightarrow> uint * uint) \<Rightarrow> instruction_result"
+abbreviation stack_1_2_op :: "variable_env \<Rightarrow> constant_env \<Rightarrow> (uint \<Rightarrow> uint * uint) \<Rightarrow> instruction_result"
 where
-"stack_1_2_op v c f =
+"stack_1_2_op v c f ==
   (case venv_stack v of
      [] \<Rightarrow> instruction_failure_result
    | h # t \<Rightarrow>
@@ -208,9 +210,9 @@ where
           InstructionContinue
             (venv_advance_pc v\<lparr>venv_stack := new0 # new1 # venv_stack v\<rparr>)))"
 
-definition stack_2_1_op :: "variable_env \<Rightarrow> constant_env \<Rightarrow> (uint \<Rightarrow> uint \<Rightarrow> uint) \<Rightarrow> instruction_result"
+abbreviation stack_2_1_op :: "variable_env \<Rightarrow> constant_env \<Rightarrow> (uint \<Rightarrow> uint \<Rightarrow> uint) \<Rightarrow> instruction_result"
 where
-"stack_2_1_op v c f =
+"stack_2_1_op v c f \<equiv>
   (case venv_stack v of
      operand0 # operand1 # rest \<Rightarrow>
        InstructionContinue
@@ -219,13 +221,13 @@ where
   | _ \<Rightarrow> instruction_failure_result
   )"
 
-definition sload :: "variable_env \<Rightarrow> uint \<Rightarrow> uint"
+abbreviation sload :: "variable_env \<Rightarrow> uint \<Rightarrow> uint"
 where
-"sload v idx = venv_storage v idx"
+"sload v idx == venv_storage v idx"
 
-definition sstore :: "variable_env \<Rightarrow> constant_env \<Rightarrow> instruction_result"
+abbreviation sstore :: "variable_env \<Rightarrow> constant_env \<Rightarrow> instruction_result"
 where
-"sstore v c =
+"sstore v c ==
   (case venv_stack v of
     addr # val # stack_tail \<Rightarrow>
       InstructionContinue
@@ -233,9 +235,9 @@ where
         (venv_update_storage addr val v\<lparr>venv_stack := stack_tail\<rparr>))
     | _ \<Rightarrow> instruction_failure_result)"
 
-definition jump :: "variable_env \<Rightarrow> constant_env \<Rightarrow> instruction_result"
+abbreviation jump :: "variable_env \<Rightarrow> constant_env \<Rightarrow> instruction_result"
 where
-"jump v c =
+"jump v c \<equiv>
   (case venv_stack_top v of
      None \<Rightarrow> instruction_failure_result
    | Some pos \<Rightarrow>
@@ -246,9 +248,9 @@ where
       | Some _ \<Rightarrow> instruction_failure_result
       | None \<Rightarrow> instruction_failure_result )))"
       
-definition jumpi :: "variable_env \<Rightarrow> constant_env \<Rightarrow> instruction_result"
+abbreviation jumpi :: "variable_env \<Rightarrow> constant_env \<Rightarrow> instruction_result"
 where
-"jumpi v c =
+"jumpi v c ==
   (case venv_stack v of
       pos # cond # rest \<Rightarrow>
         (if cond = 0 then
@@ -258,18 +260,18 @@ where
            jump (v\<lparr> venv_stack := pos # rest \<rparr>) c)
     | _ \<Rightarrow> instruction_failure_result)"
 
-definition datasize :: "variable_env \<Rightarrow> uint"
+abbreviation datasize :: "variable_env \<Rightarrow> uint"
 where
-"datasize v = Word.word_of_int (int (length (venv_data_sent v)))"
+"datasize v == Word.word_of_int (int (length (venv_data_sent v)))"
 
-definition read_word_from_bytes :: "nat \<Rightarrow> byte list \<Rightarrow> uint"
+abbreviation read_word_from_bytes :: "nat \<Rightarrow> byte list \<Rightarrow> uint"
 where
-"read_word_from_bytes idx lst =
+"read_word_from_bytes idx lst ==
    Word.word_rcat (take 32 (drop idx lst))"
 
-definition cut_data :: "variable_env \<Rightarrow> uint \<Rightarrow> uint"
+abbreviation cut_data :: "variable_env \<Rightarrow> uint \<Rightarrow> uint"
 where
-"cut_data v idx =
+"cut_data v idx ==
     read_word_from_bytes (Word.unat idx) (venv_data_sent v)"
 
 fun cut_memory :: "uint \<Rightarrow> nat \<Rightarrow> (uint \<Rightarrow> byte) \<Rightarrow> byte list"
@@ -278,9 +280,9 @@ where
 "cut_memory idx (Suc n) memory = 
   memory idx # cut_memory (idx + 1) n memory"
     
-definition call :: "variable_env \<Rightarrow> constant_env \<Rightarrow> instruction_result"
+abbreviation call :: "variable_env \<Rightarrow> constant_env \<Rightarrow> instruction_result"
 where
-"call v c =
+"call v c ==
   (case venv_stack v of
     e0 # e1 # e2 # e3 # e4 # e5 # e6 # rest \<Rightarrow>
     (if venv_balance v (cenv_this c) < e2 then
@@ -313,17 +315,17 @@ definition
   | _ \<Rightarrow> []
 )"
 
-definition ret :: "variable_env \<Rightarrow> constant_env \<Rightarrow> instruction_result"
+abbreviation ret :: "variable_env \<Rightarrow> constant_env \<Rightarrow> instruction_result"
 where
-"ret v c = InstructionToWorld ((ContractReturn (venv_returned_bytes v)), None)"
+"ret v c \<equiv> InstructionToWorld ((ContractReturn (venv_returned_bytes v)), None)"
 
-definition stop :: "variable_env \<Rightarrow> constant_env \<Rightarrow> instruction_result"
+abbreviation stop :: "variable_env \<Rightarrow> constant_env \<Rightarrow> instruction_result"
 where
-"stop v c = InstructionToWorld (ContractReturn [], None)"
+"stop v c \<equiv> InstructionToWorld (ContractReturn [], None)"
 
-definition pop :: "variable_env \<Rightarrow> constant_env \<Rightarrow> instruction_result"
+abbreviation pop :: "variable_env \<Rightarrow> constant_env \<Rightarrow> instruction_result"
 where
-"pop v c = InstructionContinue (venv_advance_pc
+"pop v c \<equiv> InstructionContinue (venv_advance_pc
              v\<lparr>venv_stack := tl (venv_stack v)\<rparr>)"
 
 fun instruction_sem :: "variable_env \<Rightarrow> constant_env \<Rightarrow> inst \<Rightarrow> instruction_result"
@@ -410,9 +412,11 @@ venv_called:
    venv_balance_at_call venv = venv_balance venv \<Longrightarrow>
    build_venv_called a env venv"
    
-definition build_cenv :: "account_state \<Rightarrow> constant_env"
+declare build_venv_called.simps [simp]
+   
+abbreviation build_cenv :: "account_state \<Rightarrow> constant_env"
 where
-"build_cenv a =
+"build_cenv a \<equiv>
   \<lparr> cenv_program = account_code a,
            cenv_this = account_address a \<rparr>"
 
@@ -431,24 +435,25 @@ venv_returned_no_ongoing:
               , venv_balance := (update_balance (account_address a)
                                    (\<lambda> _. account_balance a (* This has to change to allow random balance increases *)) (return_balance r))
             \<rparr>))"
+declare build_venv_returned.simps [simp]
 
-definition build_venv_fail :: "account_state \<Rightarrow> variable_env option"
+abbreviation build_venv_fail :: "account_state \<Rightarrow> variable_env option"
 where
-"build_venv_fail a =
+"build_venv_fail a \<equiv>
   (case account_ongoing_calls a of
      [] \<Rightarrow> None
    | recovered # _ \<Rightarrow>
       Some (recovered \<lparr>venv_stack := 0 # venv_stack recovered\<rparr>)
   )"
 
-definition account_state_pop_ongoing_call :: "account_state \<Rightarrow> account_state"
+abbreviation account_state_pop_ongoing_call :: "account_state \<Rightarrow> account_state"
 where
-"account_state_pop_ongoing_call orig =
+"account_state_pop_ongoing_call orig ==
    orig\<lparr> account_ongoing_calls := tl (account_ongoing_calls orig)\<rparr>"
  
-definition update_account_state :: "account_state \<Rightarrow> contract_action \<Rightarrow> storage \<Rightarrow> (address \<Rightarrow> uint) \<Rightarrow> variable_env option \<Rightarrow> account_state"
+abbreviation update_account_state :: "account_state \<Rightarrow> contract_action \<Rightarrow> storage \<Rightarrow> (address \<Rightarrow> uint) \<Rightarrow> variable_env option \<Rightarrow> account_state"
 where
-"update_account_state prev act st bal v_opt =
+"update_account_state prev act st bal v_opt \<equiv>
   (case v_opt of
     None \<Rightarrow>
       prev\<lparr>
@@ -473,12 +478,12 @@ record response_to_world =
   when_returned :: "return_result \<Rightarrow> contract_behavior"
   when_failed :: "contract_behavior"
 
-definition respond_to_call_correctly ::
+abbreviation respond_to_call_correctly ::
   " (call_env \<Rightarrow> contract_behavior) \<Rightarrow>
        account_state \<Rightarrow>
        (variable_env \<Rightarrow> constant_env \<Rightarrow> bool (* This part should be unnecessary after assertions are introduced *)) =>
        bool"
-where "respond_to_call_correctly c a I =
+where "respond_to_call_correctly c a I \<equiv>
   (\<forall> call_env initial_venv resulting_action final_state.
      build_venv_called a call_env initial_venv \<longrightarrow>
      ( (* The invariant holds at the beginning *)
@@ -498,13 +503,13 @@ where "respond_to_call_correctly c a I =
            )))))
 "
 
-definition respond_to_return_correctly ::
+abbreviation respond_to_return_correctly ::
   "(return_result \<Rightarrow> contract_behavior) \<Rightarrow>
    account_state \<Rightarrow>
    (variable_env \<Rightarrow> constant_env \<Rightarrow> bool) \<Rightarrow>
    bool"
 where
-"respond_to_return_correctly r a I =
+"respond_to_return_correctly r a I \<equiv>
    (\<forall> rr initial_venv final_state resulting_action.
        build_venv_returned a rr (Some initial_venv) \<longrightarrow>
        r rr = (resulting_action, final_state) \<longrightarrow>
@@ -517,13 +522,13 @@ where
           )))
 "
 
-definition respond_to_fail_correctly ::
+abbreviation respond_to_fail_correctly ::
   "contract_behavior \<Rightarrow>
    account_state \<Rightarrow>
    (variable_env \<Rightarrow> constant_env \<Rightarrow> bool) \<Rightarrow>
    bool"
 where
-"respond_to_fail_correctly f a I =
+"respond_to_fail_correctly f a I \<equiv>
    (\<forall> initial_venv final_state resulting_action.
       Some initial_venv = build_venv_fail a \<longrightarrow>
       f = (resulting_action, final_state) \<longrightarrow>
