@@ -129,9 +129,9 @@ datatype instruction_result =
 | InstructionContinue variable_env
 | InstructionToWorld "contract_action * variable_env option"
 
-definition instruction_failure_result :: instruction_result
+abbreviation instruction_failure_result :: instruction_result
 where
-"instruction_failure_result = InstructionToWorld (ContractFail, None)"
+"instruction_failure_result == InstructionToWorld (ContractFail, None)"
 
 abbreviation instruction_return_result :: "byte list \<Rightarrow> instruction_result"
 where
