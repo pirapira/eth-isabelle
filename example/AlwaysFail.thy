@@ -25,9 +25,12 @@ where
 abbreviation always_fail_spec :: "uint \<Rightarrow> response_to_world"
 where
 " always_fail_spec initial_balance ==
-  \<lparr> when_called = \<lambda> _. (ContractFail, always_fail_account_state initial_balance)
-  , when_returned = \<lambda> _. (ContractFail, always_fail_account_state initial_balance)
-  , when_failed = (ContractFail, always_fail_account_state initial_balance)
+  \<lparr> when_called = \<lambda> _. (ContractFail,
+                        \<lambda> a. a = always_fail_account_state initial_balance)
+  , when_returned = \<lambda> _. (ContractFail, 
+                           \<lambda> a. a = always_fail_account_state initial_balance)
+  , when_failed = (ContractFail,
+                     \<lambda> a. a = always_fail_account_state initial_balance)
   \<rparr>
 "
 
@@ -44,11 +47,11 @@ done
 lemma always_fail_correct:
 "
   account_state_responds_to_world
-  (always_fail_account_state initial_balance)
+  (\<lambda> a. a = always_fail_account_state initial_balance)
   (always_fail_spec initial_balance)
   (\<lambda> _ _. True)
 "
-apply (rule AccountStep; auto)
+apply(rule AccountStep; auto)
 apply(case_tac steps)
  apply(auto)
 apply(case_tac nat)

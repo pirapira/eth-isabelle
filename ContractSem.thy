@@ -471,7 +471,7 @@ where
  * contract_behavior with just a condition on
  * the resulting account_state *)
 
-type_synonym contract_behavior = "contract_action * account_state"
+type_synonym contract_behavior = "contract_action * (account_state \<Rightarrow> bool)"
 
 record response_to_world =
   when_called :: "call_env \<Rightarrow> contract_behavior"
@@ -484,14 +484,14 @@ abbreviation respond_to_call_correctly ::
        (variable_env \<Rightarrow> constant_env \<Rightarrow> bool (* This part should be unnecessary after assertions are introduced *)) =>
        bool"
 where "respond_to_call_correctly c a I \<equiv>
-  (\<forall> call_env initial_venv resulting_action final_state.
+  (\<forall> call_env initial_venv resulting_action final_state_pred.
      build_venv_called a call_env initial_venv \<longrightarrow>
      ( (* The invariant holds at the beginning *)
        I initial_venv (build_cenv a)
        \<and>
        ( I initial_venv (build_cenv a) \<longrightarrow>
          (* The specification says the execution should result in these *)
-         c call_env = (resulting_action, final_state) \<longrightarrow>
+         c call_env = (resulting_action, final_state_pred) \<longrightarrow>
          ( \<forall> steps. (* and for any number of steps *)
            ( let r = program_sem initial_venv (build_cenv a) steps in
              (* either more steps are necessary, or *)
@@ -499,7 +499,8 @@ where "respond_to_call_correctly c a I \<equiv>
              (* the result matches the specification *)
              (\<exists> pushed_venv st bal.
               r = ProgramToWorld (resulting_action, st, bal, pushed_venv) \<and>
-              update_account_state a resulting_action st bal pushed_venv = final_state)
+              final_state_pred
+                (update_account_state a resulting_action st bal pushed_venv))
            )))))
 "
 
@@ -512,13 +513,14 @@ where
 "respond_to_return_correctly r a I \<equiv>
    (\<forall> rr initial_venv final_state resulting_action.
        build_venv_returned a rr (Some initial_venv) \<longrightarrow>
-       r rr = (resulting_action, final_state) \<longrightarrow>
+       r rr = (resulting_action, final_state_pred) \<longrightarrow>
        ( \<forall> steps.
           (let r = program_sem initial_venv (build_cenv a) steps in
            r = ProgramStepRunOut \<or>
            (\<exists> pushed_venv st bal.
             r = ProgramToWorld (resulting_action, st, bal, pushed_venv) \<and>
-            update_account_state a resulting_action st bal pushed_venv = final_state)
+            final_state_pred
+              (update_account_state a resulting_action st bal pushed_venv))
           )))
 "
 
@@ -529,26 +531,26 @@ abbreviation respond_to_fail_correctly ::
    bool"
 where
 "respond_to_fail_correctly f a I \<equiv>
-   (\<forall> initial_venv final_state resulting_action.
+   (\<forall> initial_venv final_state_pred resulting_action.
       Some initial_venv = build_venv_fail a \<longrightarrow>
-      f = (resulting_action, final_state) \<longrightarrow>
+      f = (resulting_action, final_state_pred) \<longrightarrow>
       ( \<forall> steps.
         ( let r = program_sem initial_venv (build_cenv a) steps in
           r = ProgramStepRunOut \<or>
           (\<exists> pushed_venv st bal.
              r = ProgramToWorld (resulting_action, st, bal, pushed_venv) \<and>
-             update_account_state a resulting_action st bal pushed_venv = final_state))))"
+             final_state_pred (update_account_state a resulting_action st bal pushed_venv)))))"
 
 
 inductive account_state_responds_to_world ::
-  "account_state \<Rightarrow> response_to_world \<Rightarrow>
+  "(account_state \<Rightarrow> bool) \<Rightarrow> response_to_world \<Rightarrow>
    (variable_env \<Rightarrow> constant_env \<Rightarrow> bool) \<Rightarrow> bool"
 where
 AccountStep:
-  "respond_to_call_correctly c a I \<Longrightarrow>
-   respond_to_return_correctly r a I \<Longrightarrow>
-   respond_to_fail_correctly f a I \<Longrightarrow>
-   account_state_responds_to_world a
+  "(\<forall> a. precond a \<longrightarrow> respond_to_call_correctly c a I) \<Longrightarrow>
+   (\<forall> a. precond a \<longrightarrow> respond_to_return_correctly r a I) \<Longrightarrow>
+   (\<forall> a. precond a \<longrightarrow> respond_to_fail_correctly f a I) \<Longrightarrow>
+   account_state_responds_to_world precond
    \<lparr> when_called = c, when_returned = r, when_failed = f \<rparr>
    I"
 
