@@ -374,7 +374,7 @@ where
       | InstructionUnknown \<Rightarrow> ProgramInvalid
       )
     )"
-    
+
 record account_state =
   account_address :: address
   account_storage :: storage
@@ -382,7 +382,7 @@ record account_state =
   account_balance :: uint (* TODO: model the fact that this can be
                              increased at any moment *)
   account_ongoing_calls :: "variable_env list"
-                             
+
 (* account_state_update_storage is not particularly useful in
  * Isabelle/HOL where fields of records can be updated. *)
  
