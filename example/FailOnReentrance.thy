@@ -22,7 +22,7 @@ where
   Storage SLOAD #
   Dup 1 #
   Stack (PUSH_N [2]) #
-  Pc JUMP #
+  Pc JUMPI #
   Stack (PUSH_N [1]) #
   Arith ADD #
   Stack (PUSH_N [0]) #
@@ -41,32 +41,26 @@ definition fail_on_reentrance_address :: address
 where
 "fail_on_reentrance_address = undefined"
 
-fun fail_on_reentrance_depth_n_state :: "uint \<Rightarrow> uint \<Rightarrow> account_state"
+inductive fail_on_reentrance_state :: "nat \<Rightarrow> account_state \<Rightarrow> bool"
 where
-  "fail_on_reentrance_depth_n_state 0 bal =
-   \<lparr> account_address = fail_on_reentrance_address
-   , account_storage = \<lambda> _. 0
-   , account_code = fail_on_reentrance_program
-   , account_balance = bal
-   , account_ongoing_calls = []
-   \<rparr>"
-| "fail_on_reentrance_depth_n_state 1 =
-   \<lparr> account_address = fail_on_reentrance_address
-   , account_storage = \<lambda> idx. if idx = 0 then 1 else 0
-   , account_code = fail_on_reentrance_program
-   , account_balance = bal
-   , account_ongoing_calls = [ongoing]
-   \<rparr>
-   
+  depth_zero:
+    "account_address st = fail_on_reentrance_address \<Longrightarrow>
+     account_storage st 0 = 0 \<Longrightarrow>
+     account_code st = fail_on_reentrance_program \<Longrightarrow>
+     account_ongoing_calls st = [] \<Longrightarrow>
+     fail_on_reentrance_state 0 st"
+| depth_one:
     "account_code st = fail_on_reentrance_program \<Longrightarrow>
      account_storage st 0 = 1 \<Longrightarrow>
      account_address st = fail_on_reentrance_address \<Longrightarrow>
      account_ongoing_calls st = [ve] \<Longrightarrow>
      venv_prg_sfx ve = after_call \<Longrightarrow>
-     venv_storage ve 0 = 0 \<Longrightarrow>
+     venv_storage ve 0 = 1 \<Longrightarrow>
      venv_storage_at_call ve 0 = 0 \<Longrightarrow>
-     fail_on_reentrance_depth_n_state 1 st"
-     
+     fail_on_reentrance_state 1 st"
+
+declare fail_on_reentrance_state.simps [simp]
+
 abbreviation something_to_call :: call_arguments
 where
 "something_to_call ==
@@ -79,14 +73,79 @@ where
  , callarg_output_size = 0
  \<rparr>"
 
-fun call_but_fail_on_reentrance :: "uint \<Rightarrow> response_to_world"
+fun fail_on_reentrance_spec :: "nat \<Rightarrow> response_to_world"
 where
-"call_but_fail_on_reentrance 0 =
-   \<lparr> when_called = \<lambda> _. ContractAction (ContractCall something_to_call,
-                                        call_but_fail_on_r_state 1)
-   , when_returned = \<lambda> _. ContractAction (ContractFail, call_but_fail_on_r_state 0)
-   , when_failed = ContractAction (ContractFail, call_but_fail_on_r_state 0)
-   \<rparr>
-"
+  "fail_on_reentrance_spec 0 =
+   \<lparr> when_called = \<lambda> _. (ContractCall something_to_call,
+                                        fail_on_reentrance_state 1)
+   , when_returned = \<lambda> _. (ContractFail, fail_on_reentrance_state 0)
+   , when_failed = (ContractFail, fail_on_reentrance_state 0)
+   \<rparr>"
+| "fail_on_reentrance_spec (Suc 0) =
+   \<lparr> when_called = \<lambda> _. (ContractFail, fail_on_reentrance_state 1)
+   , when_returned = \<lambda> _. (ContractReturn [], fail_on_reentrance_state 0)
+   , when_failed = (ContractFail, fail_on_reentrance_state 0)
+   \<rparr>"
+| "fail_on_reentrance_spec (Suc (Suc n)) =
+   \<lparr> when_called = \<lambda> _. (ContractFail, fail_on_reentrance_state (Suc (Suc n)))
+   , when_returned = \<lambda> _. (ContractFail, fail_on_reentrance_state (Suc (Suc n)))
+   , when_failed = (ContractFail, fail_on_reentrance_state (Suc (Suc n))) \<rparr>"
+
+declare fail_on_reentrance_spec.simps [simp]
+
+declare drop_bytes.simps [simp]
+
+lemma two [simp] : "2 = Suc (Suc 0)"
+apply(auto)
+done
+
+lemma fail_on_reentrance_correct :
+  "account_state_responds_to_world
+    (fail_on_reentrance_state n)
+    (fail_on_reentrance_spec n)
+    (\<lambda> _ _. True)
+    "
+apply(case_tac n)
+ apply(simp)
+ apply(rule AccountStep; auto)
+  apply(case_tac steps; auto)
+ apply(case_tac nat; auto)
+ apply(case_tac nata; auto)
+ apply(case_tac nat; auto)
+ apply(case_tac nata; auto)
+ apply(case_tac nat; auto)
+ apply(case_tac nata; auto)
+ apply(case_tac nat; auto)
+ apply(case_tac nata; auto)
+ apply(case_tac nat; auto)
+ apply(case_tac nata; auto)
+ apply(case_tac nat; auto)
+ apply(case_tac nata; auto)
+ apply(case_tac nat; auto)
+ apply(case_tac nata; auto)
+ apply(case_tac nat; auto)
+apply(simp add: build_venv_fail_def)
+apply(case_tac nat)
+ apply(simp add: build_venv_fail_def)
+ apply(rule AccountStep; auto)
+  apply(case_tac steps; auto)
+  apply(case_tac nat; auto)
+   apply(case_tac nata; auto)
+   apply(case_tac nat; auto)
+   apply(case_tac nata; auto)
+   apply(case_tac nat; auto)
+    apply(simp add: instruction_failure_result_def)
+   apply(simp add: instruction_failure_result_def)
+  apply(case_tac steps; auto)
+  apply(case_tac nat; auto)
+  apply(simp add: build_venv_fail_def)
+  apply(case_tac nata; auto)
+  apply(case_tac nat; auto)
+  apply(simp only: instruction_failure_result_def)
+  apply(simp)
+ apply(simp add: instruction_failure_result_def)
+apply(auto)
+apply(rule AccountStep; auto)
+done
 
 end

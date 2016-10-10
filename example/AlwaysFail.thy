@@ -56,7 +56,6 @@ apply(case_tac steps)
  apply(auto)
 apply(case_tac nat)
  apply(auto)
-apply(simp add: word_rcat_def add: unat_def add: bin_rcat_def)
 done
 
 end

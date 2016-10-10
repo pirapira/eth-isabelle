@@ -98,7 +98,7 @@ record variable_env =
 (* TODO: keep track of the gas consumption in variable_env *)
 definition gas_limit :: "variable_env \<Rightarrow> uint"
 where "gas_limit = undefined"
-  
+
 definition update_balance :: "address \<Rightarrow> (uint \<Rightarrow> uint) \<Rightarrow> (address \<Rightarrow> uint) \<Rightarrow> (address \<Rightarrow> uint)"
 where
 "update_balance a newbal orig = orig(a := newbal (orig a))"
@@ -129,9 +129,9 @@ datatype instruction_result =
 | InstructionContinue variable_env
 | InstructionToWorld "contract_action * variable_env option"
 
-abbreviation instruction_failure_result :: instruction_result
+definition instruction_failure_result :: instruction_result
 where
-"instruction_failure_result == InstructionToWorld (ContractFail, None)"
+"instruction_failure_result = InstructionToWorld (ContractFail, None)"
 
 abbreviation instruction_return_result :: "byte list \<Rightarrow> instruction_result"
 where
@@ -277,12 +277,12 @@ where
 fun cut_memory :: "uint \<Rightarrow> nat \<Rightarrow> (uint \<Rightarrow> byte) \<Rightarrow> byte list"
 where
 "cut_memory idx 0 memory = []" |
-"cut_memory idx (Suc n) memory = 
+"cut_memory idx (Suc n) memory =
   memory idx # cut_memory (idx + 1) n memory"
-    
-abbreviation call :: "variable_env \<Rightarrow> constant_env \<Rightarrow> instruction_result"
+
+definition call :: "variable_env \<Rightarrow> constant_env \<Rightarrow> instruction_result"
 where
-"call v c ==
+"call v c =
   (case venv_stack v of
     e0 # e1 # e2 # e3 # e4 # e5 # e6 # rest \<Rightarrow>
     (if venv_balance v (cenv_this c) < e2 then
@@ -307,7 +307,9 @@ where
        )
   | _ \<Rightarrow> instruction_failure_result
   )"
-  
+
+declare call_def [simp]
+
 definition
 "venv_returned_bytes v =
   (case venv_stack v of
@@ -435,16 +437,19 @@ venv_returned_no_ongoing:
               , venv_balance := (update_balance (account_address a)
                                    (\<lambda> _. account_balance a (* This has to change to allow random balance increases *)) (return_balance r))
             \<rparr>))"
-declare build_venv_returned.simps [simp]
+(* declare build_venv_returned.simps [simp] *)
 
-abbreviation build_venv_fail :: "account_state \<Rightarrow> variable_env option"
+definition build_venv_fail :: "account_state \<Rightarrow> variable_env option"
 where
-"build_venv_fail a \<equiv>
+"build_venv_fail a =
   (case account_ongoing_calls a of
      [] \<Rightarrow> None
    | recovered # _ \<Rightarrow>
       Some (recovered \<lparr>venv_stack := 0 # venv_stack recovered\<rparr>)
   )"
+
+declare build_venv_fail_def [simp]
+
 
 abbreviation account_state_pop_ongoing_call :: "account_state \<Rightarrow> account_state"
 where
@@ -520,7 +525,7 @@ where
            (\<exists> pushed_venv st bal.
             r = ProgramToWorld (resulting_action, st, bal, pushed_venv) \<and>
             final_state_pred
-              (update_account_state a resulting_action st bal pushed_venv))
+              (update_account_state (account_state_pop_ongoing_call a) resulting_action st bal pushed_venv))
           )))
 "
 
@@ -539,7 +544,7 @@ where
           r = ProgramStepRunOut \<or>
           (\<exists> pushed_venv st bal.
              r = ProgramToWorld (resulting_action, st, bal, pushed_venv) \<and>
-             final_state_pred (update_account_state a resulting_action st bal pushed_venv)))))"
+             final_state_pred (update_account_state (account_state_pop_ongoing_call a) resulting_action st bal pushed_venv)))))"
 
 
 inductive account_state_responds_to_world ::
@@ -554,5 +559,8 @@ AccountStep:
    \<lparr> when_called = c, when_returned = r, when_failed = f \<rparr>
    I"
 
+declare word_rcat_def [simp]
+        unat_def [simp]
+        bin_rcat_def [simp]
 
 end
