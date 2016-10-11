@@ -13,6 +13,7 @@ where
   Stack (PUSH_N [0]) #
   Stack (PUSH_N [0]) #
   Storage SSTORE #
+  Annotation (\<lambda> aenv. aenv_storage aenv 0 = 0) #
   Misc STOP # []"
 
 abbreviation fail_on_reentrance_program :: "inst list"
@@ -139,6 +140,7 @@ apply(case_tac nat)
   apply(case_tac nata; auto)
   apply(case_tac nat; auto)
   apply(case_tac nata; auto)
+  apply(case_tac nat; auto)
  apply(case_tac steps; auto)
  apply(case_tac nat; auto)
  apply(case_tac nata; auto)
