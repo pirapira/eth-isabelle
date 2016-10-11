@@ -4,3 +4,6 @@ The status is very immature.  Currently [a Coq project](https://github.com/pirap
 
 * a Keccak-256 implementation in Isabelle/HOL `KEC.thy`
 * a RLP implementation (in progress) `RLP.thy`
+
+
+When you see `\<Rightarrow>` in the source, try using the Isabelle2016 interface.  There you see `⇒` instead.
