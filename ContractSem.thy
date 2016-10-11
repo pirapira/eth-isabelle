@@ -438,7 +438,7 @@ venv_returned_no_ongoing:
               , venv_balance := (update_balance (account_address a)
                                    (\<lambda> _. new_bal) (return_balance r))
             \<rparr>))"
-(* declare build_venv_returned.simps [simp] *)
+declare build_venv_returned.simps [simp]
 
 definition build_venv_fail :: "account_state \<Rightarrow> variable_env option"
 where

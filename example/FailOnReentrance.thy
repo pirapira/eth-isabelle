@@ -136,7 +136,14 @@ apply(case_tac nat)
   apply(case_tac nat; auto)
   apply(case_tac nata; auto)
   apply(case_tac nat; auto)
-apply(rule AccountStep; auto)
+  apply(case_tac nata; auto)
+  apply(case_tac nat; auto)
+  apply(case_tac nata; auto)
+ apply(case_tac steps; auto)
+ apply(case_tac nat; auto)
+ apply(case_tac nata; auto)
+apply(simp)
+apply(rule AccountStep; auto)  
 done
 
 end
