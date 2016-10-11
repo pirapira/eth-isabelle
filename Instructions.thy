@@ -178,18 +178,25 @@ datatype stack_inst =
   | PUSH_N "8 word list"
   | CALLDATALOAD
 
-fun stack_inst_code :: "stack_inst \<Rightarrow> byte"
+fun stack_inst_code :: "stack_inst \<Rightarrow> byte list"
 where
-  "stack_inst_code POP = 0x50"
+  "stack_inst_code POP = [0x50]"
 | "stack_inst_code (PUSH_N lst) =
      (if (size lst) < 1 then undefined
       else (if (size lst) > 32 then undefined
-      else word_of_int (int (size lst)) + 0x59))"
-| "stack_inst_code CALLDATALOAD = 0x35"
+      else word_of_int (int (size lst)) + 0x59)) # lst"
+| "stack_inst_code CALLDATALOAD = [0x35]"
 
 declare stack_inst_code.simps [simp]
 
 type_synonym swap_inst = nat
+
+abbreviation swap_inst_code :: "swap_inst \<Rightarrow> byte"
+where
+"swap_inst_code n ==
+  (if n < 1 then undefined else
+  (if n > 16 then undefined else
+   word_of_int (int n) + 0x89))"
 
 datatype log_inst
   = LOG0
@@ -197,6 +204,16 @@ datatype log_inst
   | LOG2
   | LOG3
   | LOG4
+
+fun log_inst_code :: "log_inst \<Rightarrow> byte"
+where
+  "log_inst_code LOG0 = 0xa0"
+| "log_inst_code LOG1 = 0xa1"
+| "log_inst_code LOG2 = 0xa2"
+| "log_inst_code LOG3 = 0xa3"
+| "log_inst_code LOG4 = 0xa4"
+
+declare log_inst_code.simps [simp]
 
 datatype misc_inst
   = STOP
@@ -206,6 +223,18 @@ datatype misc_inst
   | DELEGATECALL
   | RETURN
   | SUICIDE
+
+fun misc_inst_code :: "misc_inst \<Rightarrow> byte"
+where
+  "misc_inst_code STOP = 0x0"
+| "misc_inst_code CREATE = 0xf0"
+| "misc_inst_code CALL = 0xf1"
+| "misc_inst_code CALLCODE = 0xf2"
+| "misc_inst_code RETURN = 0xf3"
+| "misc_inst_code DELEGATECALL = 0xf4"
+| "misc_inst_code SUICIDE = 0xff"
+
+declare misc_inst_code.simps [simp]
 
 type_synonym annotation = "aenv \<Rightarrow> bool"
 
@@ -225,8 +254,25 @@ datatype inst =
   | Misc misc_inst
   | Annotation annotation
 
+fun inst_code :: "inst \<Rightarrow> byte list"
+where
+  "inst_code (Unknown byte) = [byte]"
+| "inst_code (Bits b) = [bits_inst_code b]"
+| "inst_code (Sarith s) = [sarith_inst_code s]"
+| "inst_code (Arith a) = [arith_inst_code a]"
+| "inst_code (Info i) = [info_inst_code i]"
+| "inst_code (Dup d) = [dup_inst_code d]"
+| "inst_code (Memory m) = [memory_inst_code m]"
+| "inst_code (Storage s) = [storage_inst_code s]"
+| "inst_code (Pc p) = [pc_inst_code p]"
+| "inst_code (Stack s) = stack_inst_code s"
+| "inst_code (Swap s) = [swap_inst_code s]"
+| "inst_code (Log l) = [log_inst_code l]"
+| "inst_code (Misc m) = [misc_inst_code m]"
+| "inst_code (Annotation _) = []"
+
+declare inst_code.simps [simp]
+
 value "Misc STOP"
-
-
 
 end
