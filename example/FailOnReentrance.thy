@@ -35,6 +35,8 @@ where
   Stack (PUSH_N [0]) #
   Stack (PUSH_N [0]) #
   Stack (PUSH_N [0]) #
+  Stack (PUSH_N [0]) #
+(*  Annotation (\<lambda> aenv. length (aenv_stack aenv) = 7) # *)
   Misc CALL #
   after_call"
   
@@ -109,14 +111,46 @@ lemma fail_on_reentrance_correct :
     (fail_on_reentrance_spec n)
     (\<lambda> _ _. True)
     "
-
 apply(case_tac n)
  apply(simp)
  apply(rule AccountStep; auto)
+ apply(case_tac steps; auto)
+ apply(case_tac nat; auto)
+ apply(case_tac nata; auto)
+ apply(case_tac nat; auto)
+ apply(case_tac nata; auto)
+ apply(case_tac nat; auto)
+ apply(case_tac nata; auto)
+ apply(case_tac nat; auto)
+ apply(case_tac nata; auto)
+ apply(case_tac nat; auto)
+ apply(case_tac nata; auto)
+ apply(case_tac nat; auto)
+ apply(case_tac nata; auto)
+ apply(case_tac nat; auto)
+ apply(case_tac nata; auto)
+ apply(case_tac nat; auto)
+ apply(case_tac nata; auto)
 apply(case_tac nat)
  apply(simp)
  apply(rule AccountStep; auto)
-apply(simp)
+   apply(case_tac steps; auto)
+   apply(case_tac nat; auto)
+   apply(case_tac nata; auto)
+   apply(case_tac nat; auto)
+   apply(case_tac nata; auto)
+  apply(case_tac steps; auto)
+  apply(case_tac nat; auto)
+  apply(case_tac nata; auto)
+  apply(case_tac nat; auto)
+  apply(case_tac nata; auto)
+  apply(case_tac nat; auto)
+  apply(case_tac nata; auto)
+  apply(case_tac nat; auto)
+ apply(case_tac steps; auto)
+ apply(case_tac nat; auto)
+ apply(case_tac nata; auto)
+ apply(case_tac nat; auto)
 apply(rule AccountStep; auto)
 done
 
