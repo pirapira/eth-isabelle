@@ -404,7 +404,7 @@ venv_called:
    venv_memory venv = empty_memory \<Longrightarrow>
    venv_prg_sfx venv = account_code a \<Longrightarrow>
    venv_storage venv = account_storage a \<Longrightarrow>
-   venv_balance venv = (* replace this with \<le> *)
+   venv_balance venv \<ge>
      update_balance (account_address a)
        (\<lambda> _. account_balance a + callenv_value env)
        (callenv_balance env) \<Longrightarrow>
@@ -429,13 +429,14 @@ venv_returned_no_ongoing:
    build_venv_returned a r None"
 | venv_returned:
 "  account_ongoing_calls a = recovered # _ \<Longrightarrow>
+   new_bal \<ge> account_balance a \<Longrightarrow>
    build_venv_returned a r
      (Some (
               recovered \<lparr>
                 venv_stack := 1 # venv_stack recovered
               , venv_storage := account_storage a
               , venv_balance := (update_balance (account_address a)
-                                   (\<lambda> _. account_balance a (* This has to change to allow random balance increases *)) (return_balance r))
+                                   (\<lambda> _. new_bal) (return_balance r))
             \<rparr>))"
 (* declare build_venv_returned.simps [simp] *)
 
