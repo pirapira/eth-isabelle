@@ -367,6 +367,43 @@ where
     InstructionContinue (venv_advance_pc v\<lparr> venv_stack := duplicated # venv_stack v \<rparr>))
 "
 
+fun store_byte_list_memory :: "uint \<Rightarrow> byte list \<Rightarrow> memory \<Rightarrow> memory"
+where
+  "store_byte_list_memory _ [] orig = orig"
+| "store_byte_list_memory pos (h # t) orig =
+     store_byte_list_memory (pos + 1) t (orig(pos := h))"
+
+declare store_byte_list_memory.simps [simp]
+
+abbreviation store_word_memory :: "uint \<Rightarrow> uint \<Rightarrow> memory \<Rightarrow> memory"
+where
+"store_word_memory pos val mem ==
+   store_byte_list_memory pos (word_rsplit val) mem"
+
+abbreviation mstore :: "variable_env \<Rightarrow> constant_env \<Rightarrow> instruction_result"
+where
+"mstore v c ==
+   (* TODO: update the memory consumption counter *)
+   (case venv_stack v of
+     [] \<Rightarrow> instruction_failure_result
+   | [_] \<Rightarrow> instruction_failure_result
+   | pos # val # rest \<Rightarrow>
+       let new_memory = store_word_memory pos val (venv_memory v) in
+       InstructionContinue (venv_advance_pc
+         v\<lparr> venv_stack := rest
+          , venv_memory := new_memory \<rparr>)
+   )
+"
+
+abbreviation mstore8 :: "variable_env \<Rightarrow> constant_env \<Rightarrow> instruction_result"
+where
+"mstore8 v c ==
+  (case venv_stack v of
+     pos # val # rest \<Rightarrow>
+        let new_memory = (venv_memory v)(pos := ucast val) in
+        InstructionContinue (venv_advance_pc
+          v\<lparr> venv_stack := rest, venv_memory := new_memory \<rparr>))"
+
 fun instruction_sem :: "variable_env \<Rightarrow> constant_env \<Rightarrow> inst \<Rightarrow> instruction_result"
 where
 "instruction_sem v c (Stack (PUSH_N lst)) =
@@ -449,7 +486,10 @@ where
 | "instruction_sem v c (Info TIMESTAMP) = stack_0_1_op v c (block_timestamp (venv_block v))"
 | "instruction_sem v c (Info NUMBER) = stack_0_1_op v c (block_number (venv_block v))"
 | "instruction_sem v c (Info difficulty) = stack_0_1_op v c (block_difficulty (venv_block v))"
-
+| "instruction_sem v c (Memory MLOAD) = stack_1_1_op v c
+     (\<lambda> pos. word_rcat (cut_memory pos 32 (venv_memory v)))"
+| "instruction_sem v c (Memory MSTORE) = mstore v c"
+| "instruction_sem v c (Memory MSTORE8) = mstore8 v c"
 
 datatype program_result =
   ProgramStepRunOut
