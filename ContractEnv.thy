@@ -11,20 +11,17 @@ type_synonym byte = "8 word"
 type_synonym memory = "uint \<Rightarrow> byte"
 type_synonym storage = "uint \<Rightarrow> uint"
 
-record 'a variable_env' =
-  venv_stack :: "uint list"
-  venv_memory :: memory
-  venv_storage :: storage
-  venv_prg_sfx :: 'a
-  venv_balance :: "address \<Rightarrow> uint"
-  venv_caller :: address
-  venv_value_sent :: uint
-  venv_data_sent :: "byte list"
-  venv_storage_at_call :: storage
-  venv_balance_at_call :: "address \<Rightarrow> uint"
-
-record 'a constant_env' =
-  cenv_program :: 'a
-  cenv_this :: address
+(* The environment visible for annotations *)
+record aenv =
+  aenv_stack :: "uint list"
+  aenv_memory :: memory
+  aenv_storage :: storage
+  aenv_balance :: "address \<Rightarrow> uint"
+  aenv_caller :: address
+  aenv_value_sent :: uint
+  aenv_data_sent :: "byte list"
+  aenv_storage_at_call :: storage
+  aenv_balance_at_call :: "address \<Rightarrow> uint"
+  aenv_this :: address
 
 end

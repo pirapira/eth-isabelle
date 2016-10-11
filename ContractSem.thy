@@ -76,8 +76,21 @@ definition empty_memory :: memory
 where
 "empty_memory _ = 0"
 
-type_synonym variable_env = "program variable_env'"
-type_synonym constant_env = "program constant_env'"
+record variable_env =
+  venv_stack :: "uint list"
+  venv_memory :: memory
+  venv_storage :: storage
+  venv_prg_sfx :: program
+  venv_balance :: "address \<Rightarrow> uint"
+  venv_caller :: address
+  venv_value_sent :: uint
+  venv_data_sent :: "byte list"
+  venv_storage_at_call :: storage
+  venv_balance_at_call :: "address \<Rightarrow> uint"
+
+record constant_env =
+  cenv_program :: program
+  cenv_this :: address
 
 (* TODO: keep track of the gas consumption in variable_env *)
 definition gas_limit :: "variable_env \<Rightarrow> uint"
