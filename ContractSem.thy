@@ -67,6 +67,7 @@ fun drop_bytes :: "program \<Rightarrow> nat \<Rightarrow> program"
 where
   "drop_bytes prg 0 = prg"
 | "drop_bytes (Stack (PUSH_N v) # rest) bytes = drop_bytes rest (bytes - 1 - length v)"
+| "drop_bytes (Annotation _ # rest) bytes = drop_bytes rest bytes"
 | "drop_bytes (_ # rest) bytes = drop_bytes rest (bytes - 1)"
 | "drop_bytes [] (Suc v) = []"
 
