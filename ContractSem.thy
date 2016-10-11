@@ -141,7 +141,7 @@ fun venv_pop_stack :: "nat \<Rightarrow> variable_env \<Rightarrow> variable_env
 where
   "venv_pop_stack 0 v = v"
 | "venv_pop_stack (Suc n) v =
-   v\<lparr> venv_stack := tl (venv_stack v)\<rparr>"
+   venv_pop_stack n v\<lparr> venv_stack := tl (venv_stack v) \<rparr>"
 
 abbreviation venv_stack_top :: "variable_env \<Rightarrow> uint option"
 where
