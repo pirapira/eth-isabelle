@@ -34,16 +34,6 @@ where
   \<rparr>
 "
 
-inductive ev :: "nat \<Rightarrow> bool" where
-ev0: "ev 0" |
-evSS: "ev n \<Longrightarrow> ev (Suc (Suc n))"
-
-lemma "ev (Suc(Suc 0))"
-
-apply(rule evSS)
-apply (rule ev0)
-done
-
 lemma always_fail_correct:
 "
   account_state_responds_to_world

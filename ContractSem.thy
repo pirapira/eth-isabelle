@@ -11,10 +11,6 @@ imports Main "~~/src/HOL/Word/Word" "./ContractEnv" "./Instructions"
 
 begin
 
-type_synonym uint = "256 word"
-type_synonym address = "160 word"
-type_synonym byte = "8 word"
-
 definition bool_to_uint :: "bool \<Rightarrow> uint"
 where
 "bool_to_uint b = (if b then 1 else 0)"
@@ -76,24 +72,12 @@ where
 
 declare drop_bytes.simps [simp]
 
-type_synonym memory = "uint \<Rightarrow> byte"
 definition empty_memory :: memory
 where
 "empty_memory _ = 0"
 
-type_synonym storage = "uint \<Rightarrow> uint"
-
-record variable_env =
-  venv_stack :: "uint list"
-  venv_memory :: memory
-  venv_storage :: storage
-  venv_prg_sfx :: program
-  venv_balance :: "address \<Rightarrow> uint"
-  venv_caller :: address
-  venv_value_sent :: uint
-  venv_data_sent :: "byte list"
-  venv_storage_at_call :: storage
-  venv_balance_at_call :: "address \<Rightarrow> uint"
+type_synonym variable_env = "program variable_env'"
+type_synonym constant_env = "program constant_env'"
 
 (* TODO: keep track of the gas consumption in variable_env *)
 definition gas_limit :: "variable_env \<Rightarrow> uint"
@@ -102,10 +86,6 @@ where "gas_limit = undefined"
 definition update_balance :: "address \<Rightarrow> (uint \<Rightarrow> uint) \<Rightarrow> (address \<Rightarrow> uint) \<Rightarrow> (address \<Rightarrow> uint)"
 where
 "update_balance a newbal orig = orig(a := newbal (orig a))"
-
-record constant_env =
-  cenv_program :: program
-  cenv_this :: address
 
 definition init_variable_env ::
   "storage \<Rightarrow> (address \<Rightarrow> uint) \<Rightarrow> address \<Rightarrow> constant_env \<Rightarrow> uint \<Rightarrow> byte list \<Rightarrow> variable_env"

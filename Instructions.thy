@@ -9,7 +9,7 @@ value "3 :: nat"
 text "The set of instructions can be defined inductively, or"
 text "just as a nibble.  I choose the inductive definition."
 
-type_synonym byte = "256 word"
+type_synonym byte = "8 word"
 
 datatype bits_inst
 = inst_AND
