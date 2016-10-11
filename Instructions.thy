@@ -99,6 +99,7 @@ datatype misc_inst
   | CREATE
   | CALL
   | CALLCODE
+  | DELEGATECALL
   | RETURN
   | SUICIDE
 
