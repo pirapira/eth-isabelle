@@ -404,6 +404,22 @@ where
         InstructionContinue (venv_advance_pc
           v\<lparr> venv_stack := rest, venv_memory := new_memory \<rparr>))"
 
+abbreviation input_as_memory :: "byte list \<Rightarrow> memory"
+where
+"input_as_memory lst idx ==
+   (if length lst \<le> unat idx then 0 else
+    lst ! unat idx)"
+
+abbreviation calldatacopy :: "variable_env \<Rightarrow> constant_env \<Rightarrow> instruction_result"
+where
+"calldatacopy v c ==
+  (case venv_stack v of
+     (dst_start :: uint) # src_start # len # rest \<Rightarrow>
+       let data = cut_memory src_start (unat len) (input_as_memory (venv_data_sent v)) in
+       let new_memory = store_byte_list_memory dst_start data (venv_memory v) in
+       InstructionContinue (venv_advance_pc
+         v\<lparr> venv_stack := rest, venv_memory := new_memory \<rparr>))"
+
 fun instruction_sem :: "variable_env \<Rightarrow> constant_env \<Rightarrow> inst \<Rightarrow> instruction_result"
 where
 "instruction_sem v c (Stack (PUSH_N lst)) =
@@ -490,6 +506,7 @@ where
      (\<lambda> pos. word_rcat (cut_memory pos 32 (venv_memory v)))"
 | "instruction_sem v c (Memory MSTORE) = mstore v c"
 | "instruction_sem v c (Memory MSTORE8) = mstore8 v c"
+| "instruction_sem v c (Memory CALLDATACOPY) = calldatacopy v c"
 
 datatype program_result =
   ProgramStepRunOut
