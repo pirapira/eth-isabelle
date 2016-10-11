@@ -43,7 +43,6 @@ lemma always_fail_correct:
 "
 apply(rule AccountStep; auto)
 apply(case_tac steps; auto)
-apply(case_tac nat; auto)
 done
 
 end

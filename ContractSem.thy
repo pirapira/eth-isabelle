@@ -122,7 +122,7 @@ where
 
 datatype instruction_result =
   InstructionUnknown
-| InstructionContinue variable_env
+| InstructionContinue "variable_env * nat"
 | InstructionAnnotationFailure
 | InstructionToWorld "contract_action * variable_env option"
 
@@ -178,13 +178,13 @@ where
     
 abbreviation stack_0_0_op :: "variable_env \<Rightarrow> constant_env \<Rightarrow> instruction_result"
 where
-"stack_0_0_op v c == InstructionContinue (venv_advance_pc v)"
+"stack_0_0_op v c == InstructionContinue (venv_advance_pc v, 0)"
 
 abbreviation stack_0_1_op :: "variable_env \<Rightarrow> constant_env \<Rightarrow> uint \<Rightarrow> instruction_result"
 where
 "stack_0_1_op v c w ==
    InstructionContinue
-      (venv_advance_pc v\<lparr>venv_stack := w # venv_stack v\<rparr>)"
+      (venv_advance_pc v\<lparr>venv_stack := w # venv_stack v\<rparr>, 0)"
 
 abbreviation stack_1_1_op :: "variable_env \<Rightarrow> constant_env \<Rightarrow> (uint \<Rightarrow> uint) \<Rightarrow> instruction_result"
 where
@@ -193,7 +193,7 @@ where
       [] \<Rightarrow> instruction_failure_result
       | h # t \<Rightarrow>
          InstructionContinue
-           (venv_advance_pc v\<lparr>venv_stack := f h # t\<rparr>)
+           (venv_advance_pc v\<lparr>venv_stack := f h # t\<rparr>, 0)
       )"
 
 abbreviation stack_1_2_op :: "variable_env \<Rightarrow> constant_env \<Rightarrow> (uint \<Rightarrow> uint * uint) \<Rightarrow> instruction_result"
@@ -205,7 +205,7 @@ where
      (case f h of
         (new0, new1) \<Rightarrow>
           InstructionContinue
-            (venv_advance_pc v\<lparr>venv_stack := new0 # new1 # venv_stack v\<rparr>)))"
+            (venv_advance_pc v\<lparr>venv_stack := new0 # new1 # venv_stack v\<rparr>, 0)))"
 
 abbreviation stack_2_1_op :: "variable_env \<Rightarrow> constant_env \<Rightarrow> (uint \<Rightarrow> uint \<Rightarrow> uint) \<Rightarrow> instruction_result"
 where
@@ -214,7 +214,7 @@ where
      operand0 # operand1 # rest \<Rightarrow>
        InstructionContinue
          (venv_advance_pc
-            v\<lparr>venv_stack := f operand0 operand1 # rest\<rparr>)
+            v\<lparr>venv_stack := f operand0 operand1 # rest\<rparr>, 0)
   | _ \<Rightarrow> instruction_failure_result
   )"
   
@@ -226,7 +226,7 @@ where
      operand0 # operand1 # operand2 # rest \<Rightarrow>
        InstructionContinue
          (venv_advance_pc
-            v\<lparr>venv_stack := f operand0 operand1 operand2 # rest\<rparr>)
+            v\<lparr>venv_stack := f operand0 operand1 operand2 # rest\<rparr>, 0)
    | _ \<Rightarrow> instruction_failure_result
    )"
 
@@ -241,7 +241,7 @@ where
     addr # val # stack_tail \<Rightarrow>
       InstructionContinue
       (venv_advance_pc
-        (venv_update_storage addr val v\<lparr>venv_stack := stack_tail\<rparr>))
+        (venv_update_storage addr val v\<lparr>venv_stack := stack_tail\<rparr>), 0)
     | _ \<Rightarrow> instruction_failure_result)"
 
 abbreviation build_aenv :: "variable_env \<Rightarrow> constant_env \<Rightarrow> aenv"
@@ -262,7 +262,7 @@ where
 abbreviation eval_annotation :: "annotation \<Rightarrow> variable_env \<Rightarrow> constant_env \<Rightarrow> instruction_result"
 where
 "eval_annotation anno v c ==
-   (if anno (build_aenv v c) then InstructionContinue (venv_advance_pc v)
+   (if anno (build_aenv v c) then InstructionContinue (venv_advance_pc v, 0)
     else InstructionAnnotationFailure)"
 
 abbreviation jump :: "variable_env \<Rightarrow> constant_env \<Rightarrow> instruction_result"
@@ -274,7 +274,7 @@ where
      (let v_new = venv_change_sfx (Word.unat pos) (venv_pop_stack 1 v) c in
      (case venv_first_instruction v_new of
         Some (Pc JUMPDEST) \<Rightarrow>
-          InstructionContinue v_new
+          InstructionContinue (v_new, 1)
       | Some _ \<Rightarrow> instruction_failure_result
       | None \<Rightarrow> instruction_failure_result )))"
       
@@ -285,7 +285,7 @@ where
       pos # cond # rest \<Rightarrow>
         (if cond = 0 then
            InstructionContinue
-             (venv_advance_pc (venv_pop_stack 2 v))
+             (venv_advance_pc (venv_pop_stack 2 v), 0)
          else
            jump (v\<lparr> venv_stack := pos # rest \<rparr>) c)
     | _ \<Rightarrow> instruction_failure_result)"
@@ -358,13 +358,13 @@ where
 abbreviation pop :: "variable_env \<Rightarrow> constant_env \<Rightarrow> instruction_result"
 where
 "pop v c \<equiv> InstructionContinue (venv_advance_pc
-             v\<lparr>venv_stack := tl (venv_stack v)\<rparr>)"
+             v\<lparr>venv_stack := tl (venv_stack v)\<rparr>, 0)"
              
 abbreviation general_dup :: "nat \<Rightarrow> variable_env \<Rightarrow> constant_env \<Rightarrow> instruction_result"
 where
 "general_dup n v c ==
    (let duplicated = venv_stack v ! (n - 1) in
-    InstructionContinue (venv_advance_pc v\<lparr> venv_stack := duplicated # venv_stack v \<rparr>))
+    InstructionContinue (venv_advance_pc v\<lparr> venv_stack := duplicated # venv_stack v \<rparr>, 0))
 "
 
 fun store_byte_list_memory :: "uint \<Rightarrow> byte list \<Rightarrow> memory \<Rightarrow> memory"
@@ -391,7 +391,7 @@ where
        let new_memory = store_word_memory pos val (venv_memory v) in
        InstructionContinue (venv_advance_pc
          v\<lparr> venv_stack := rest
-          , venv_memory := new_memory \<rparr>)
+          , venv_memory := new_memory \<rparr>, 0)
    )
 "
 
@@ -402,7 +402,7 @@ where
      pos # val # rest \<Rightarrow>
         let new_memory = (venv_memory v)(pos := ucast val) in
         InstructionContinue (venv_advance_pc
-          v\<lparr> venv_stack := rest, venv_memory := new_memory \<rparr>))"
+          v\<lparr> venv_stack := rest, venv_memory := new_memory \<rparr>, 0))"
 
 abbreviation input_as_memory :: "byte list \<Rightarrow> memory"
 where
@@ -418,7 +418,7 @@ where
        let data = cut_memory src_start (unat len) (input_as_memory (venv_data_sent v)) in
        let new_memory = store_byte_list_memory dst_start data (venv_memory v) in
        InstructionContinue (venv_advance_pc
-         v\<lparr> venv_stack := rest, venv_memory := new_memory \<rparr>))"
+         v\<lparr> venv_stack := rest, venv_memory := new_memory \<rparr>, 0))"
 
 fun instruction_sem :: "variable_env \<Rightarrow> constant_env \<Rightarrow> inst \<Rightarrow> instruction_result"
 where
@@ -514,16 +514,27 @@ datatype program_result =
 | ProgramInvalid
 | ProgramAnnotationFailure
 
-fun program_sem :: "variable_env \<Rightarrow> constant_env \<Rightarrow> nat \<Rightarrow> program_result"
+definition decrease :: "((variable_env * constant_env * nat) * (variable_env * constant_env * nat)) set"
 where
-  "program_sem v c 0 = ProgramStepRunOut"
-| "program_sem v c (Suc remaining_steps) =
-    (case venv_prg_sfx v of
+"decrease =
+  Collect (\<lambda> x.
+     (let ((av, _, an), (bv, _, bn)) = x in
+      an < bn \<or> (an = bn \<and> length (venv_prg_sfx av) < length (venv_prg_sfx bv))))
+"
+
+fun program_sem :: "variable_env \<Rightarrow> constant_env \<Rightarrow> program \<Rightarrow> nat \<Rightarrow> program_result"
+where
+  "program_sem _ _ _ 0 = ProgramStepRunOut"
+| "program_sem v c prg (Suc remaining_steps) =
+    (case prg of
       [] \<Rightarrow> ProgramStepRunOut
-    | i # _ \<Rightarrow>
+    | i # rest \<Rightarrow>
       (case instruction_sem v c i of
-        InstructionContinue new_v \<Rightarrow>
-          program_sem new_v c remaining_steps
+        InstructionContinue (new_v, consumed_steps) \<Rightarrow>
+          (if venv_prg_sfx new_v = rest then
+             program_sem new_v c rest (Suc remaining_steps)
+           else
+             program_sem new_v c (venv_prg_sfx new_v) remaining_steps)
       | InstructionToWorld (ContractFail, opt_pushed_v) \<Rightarrow>
         ProgramToWorld (ContractFail, venv_storage_at_call v, venv_balance_at_call v, opt_pushed_v)
       | InstructionToWorld (ContractCall args, Some new_v) \<Rightarrow>
@@ -534,6 +545,8 @@ where
       | InstructionAnnotationFailure \<Rightarrow> ProgramAnnotationFailure
       )
     )"
+    
+declare program_sem.simps [simp]
 
 record account_state =
   account_address :: address
@@ -654,7 +667,7 @@ where "respond_to_call_correctly c a I \<equiv>
          (* The specification says the execution should result in these *)
          c call_env = (resulting_action, final_state_pred) \<longrightarrow>
          ( \<forall> steps. (* and for any number of steps *)
-           ( let r = program_sem initial_venv (build_cenv a) steps in
+           ( let r = program_sem initial_venv (build_cenv a) (venv_prg_sfx initial_venv) steps in
              (* either more steps are necessary, or *)
              r = ProgramStepRunOut \<or>
              (* the result matches the specification *)
@@ -676,7 +689,7 @@ where
        build_venv_returned a rr (Some initial_venv) \<longrightarrow>
        r rr = (resulting_action, final_state_pred) \<longrightarrow>
        ( \<forall> steps.
-          (let r = program_sem initial_venv (build_cenv a) steps in
+          (let r = program_sem initial_venv (build_cenv a) (venv_prg_sfx initial_venv) steps in
            r = ProgramStepRunOut \<or>
            (\<exists> pushed_venv st bal.
             r = ProgramToWorld (resulting_action, st, bal, pushed_venv) \<and>
@@ -696,7 +709,7 @@ where
       Some initial_venv = build_venv_fail a \<longrightarrow>
       f = (resulting_action, final_state_pred) \<longrightarrow>
       ( \<forall> steps.
-        ( let r = program_sem initial_venv (build_cenv a) steps in
+        ( let r = program_sem initial_venv (build_cenv a) (venv_prg_sfx initial_venv) steps in
           r = ProgramStepRunOut \<or>
           (\<exists> pushed_venv st bal.
              r = ProgramToWorld (resulting_action, st, bal, pushed_venv) \<and>
