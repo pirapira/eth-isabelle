@@ -42,10 +42,6 @@ lemma always_fail_correct:
   (\<lambda> _ _. True)
 "
 apply(rule AccountStep; auto)
-apply(case_tac steps)
- apply(auto)
-apply(case_tac nat)
- apply(auto)
 done
 
 end
