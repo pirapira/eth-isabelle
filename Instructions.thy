@@ -1,6 +1,6 @@
 theory Instructions
 
-imports Main "~~/src/HOL/Word/Word"
+imports Main "~~/src/HOL/Word/Word" "./ContractEnv"
 
 begin
 
@@ -85,7 +85,7 @@ datatype stack_inst =
   | CALLDATALOAD
 
 
-  type_synonym swap_inst = nat
+type_synonym swap_inst = nat
 
 datatype log_inst
   = LOG0
@@ -102,6 +102,7 @@ datatype misc_inst
   | RETURN
   | SUICIDE
 
+type_synonym annotation = "aenv \<Rightarrow> bool"
 
 datatype inst =
     Unknown byte
@@ -117,7 +118,8 @@ datatype inst =
   | Swap swap_inst
   | Log log_inst
   | Misc misc_inst
-  
+  | Annotation annotation
+
 value "Misc STOP"
 
 end
