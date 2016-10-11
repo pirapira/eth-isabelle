@@ -18,12 +18,32 @@ datatype bits_inst
 | inst_NOT
 | BYTE
 
+fun bits_inst_code :: "bits_inst \<Rightarrow> byte"
+where
+  "bits_inst_code inst_AND = 0x16"
+| "bits_inst_code inst_OR = 0x17"
+| "bits_inst_code inst_XOR = 0x18"
+| "bits_inst_code inst_NOT = 0x18"
+| "bits_inst_code BYTE = 0x1a"
+
+declare bits_inst_code.simps [simp]
+
 datatype sarith_inst
 = SDIV
 | SMOD
 | SGT
 | SLT
 | SIGNEXTEND
+
+fun sarith_inst_code :: "sarith_inst => byte"
+where
+  "sarith_inst_code SDIV = 0x05"
+| "sarith_inst_code SMOD = 0x07"
+| "sarith_inst_code SGT = 0x13"
+| "sarith_inst_code SLT = 0x12"
+| "sarith_inst_code SIGNEXTEND = 0x0b"
+
+declare sarith_inst_code.simps [simp]
 
 datatype arith_inst
 = ADD
@@ -39,6 +59,24 @@ datatype arith_inst
 | LT
 | ISZERO
 | SHA3
+
+fun arith_inst_code :: "arith_inst \<Rightarrow> byte"
+where
+  "arith_inst_code ADD = 0x01"
+| "arith_inst_code MUL = 0x02"
+| "arith_inst_code SUB = 0x03"
+| "arith_inst_code DIV = 0x04"
+| "arith_inst_code MOD = 0x06"
+| "arith_inst_code ADDMOD = 0x08"
+| "arith_inst_code MULMOD = 0x09"
+| "arith_inst_code EXP = 0x0a"
+| "arith_inst_code GT = 0x11"
+| "arith_inst_code LT = 0x10"
+| "arith_inst_code EQ = 0x14"
+| "arith_inst_code ISZERO = 0x15"
+| "arith_inst_code SHA3 = 0x20"
+
+declare arith_inst_code.simps [simp]
 
 datatype info_inst =
     ADDRESS
@@ -57,8 +95,36 @@ datatype info_inst =
   | DIFFICULTY
   | GASLIMIT
   | GAS
+  
+fun info_inst_code :: "info_inst \<Rightarrow> byte"
+where
+  "info_inst_code ADDRESS = 0x30"
+| "info_inst_code BALANCE = 0x31"
+| "info_inst_code ORIGIN = 0x32"
+| "info_inst_code CALLVALUE = 0x34"
+| "info_inst_code CALLDATASIZE = 0x36"
+| "info_inst_code CALLER = 0x33"
+| "info_inst_code CODESIZE = 0x38"
+| "info_inst_code GASPRICE = 0x3a"
+| "info_inst_code EXTCODESIZE = 0x3b"
+| "info_inst_code BLOCKHASH = 0x40"
+| "info_inst_code COINBASE = 0x41"
+| "info_inst_code TIMESTAMP = 0x42"
+| "info_inst_code NUMBER = 0x43"
+| "info_inst_code DIFFICULTY = 0x44"
+| "info_inst_code GASLIMIT = 0x45"
+| "info_inst_code GAS = 0x5a"
 
-  type_synonym dup_inst = nat
+declare info_inst_code.simps [simp]
+
+type_synonym dup_inst = nat
+
+abbreviation dup_inst_code :: "dup_inst \<Rightarrow> byte"
+where
+"dup_inst_code n ==
+   (if n < 1 then undefined
+    else (if n > 16 then undefined
+    else (word_of_int (int n)) + 0x79))"
 
 datatype memory_inst =
     MLOAD
@@ -69,21 +135,59 @@ datatype memory_inst =
   | EXTCODECOPY
   | MSIZE
 
+fun memory_inst_code :: "memory_inst \<Rightarrow> byte"
+where
+  "memory_inst_code MLOAD = 0x51"
+| "memory_inst_code MSTORE = 0x52"
+| "memory_inst_code MSTORE8 = 0x53"
+| "memory_inst_code CALLDATACOPY = 0x37"
+| "memory_inst_code CODECOPY = 0x39"
+| "memory_inst_code EXTCODECOPY = 0x3c"
+| "memory_inst_code MSIZE = 0x59"
+
+declare memory_inst_code.simps [simp]
+
 datatype storage_inst =
     SLOAD
   | SSTORE
+
+fun storage_inst_code :: "storage_inst \<Rightarrow> byte"
+where
+  "storage_inst_code SLOAD = 0x54"
+| "storage_inst_code SSTORE = 0x55"
+
+declare storage_inst_code.simps [simp]
 
 datatype pc_inst =
     JUMP
   | JUMPI
   | PC
   | JUMPDEST
+
+fun pc_inst_code :: "pc_inst \<Rightarrow> byte"
+where
+  "pc_inst_code JUMP = 0x56"
+| "pc_inst_code JUMPI = 0x57"
+| "pc_inst_code PC = 0x58"
+| "pc_inst_code JUMPDEST = 0x5b"
+
+declare pc_inst_code.simps [simp]
   
 datatype stack_inst =
-  POP
+    POP
   | PUSH_N "8 word list"
   | CALLDATALOAD
 
+fun stack_inst_code :: "stack_inst \<Rightarrow> byte"
+where
+  "stack_inst_code POP = 0x50"
+| "stack_inst_code (PUSH_N lst) =
+     (if (size lst) < 1 then undefined
+      else (if (size lst) > 32 then undefined
+      else word_of_int (int (size lst)) + 0x59))"
+| "stack_inst_code CALLDATALOAD = 0x35"
+
+declare stack_inst_code.simps [simp]
 
 type_synonym swap_inst = nat
 
@@ -122,5 +226,7 @@ datatype inst =
   | Annotation annotation
 
 value "Misc STOP"
+
+
 
 end
