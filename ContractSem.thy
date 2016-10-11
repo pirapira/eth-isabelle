@@ -7,7 +7,7 @@ text "Maybe that's fine."
 
 theory ContractSem
 
-imports Main "~~/src/HOL/Word/Word" "./Instructions"
+imports Main "~~/src/HOL/Word/Word" "./ContractEnv" "./Instructions"
 
 begin
 
