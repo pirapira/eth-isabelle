@@ -517,7 +517,7 @@ abbreviation respond_to_return_correctly ::
    bool"
 where
 "respond_to_return_correctly r a I \<equiv>
-   (\<forall> rr initial_venv final_state resulting_action.
+   (\<forall> rr initial_venv final_state_pred resulting_action.
        build_venv_returned a rr (Some initial_venv) \<longrightarrow>
        r rr = (resulting_action, final_state_pred) \<longrightarrow>
        ( \<forall> steps.
