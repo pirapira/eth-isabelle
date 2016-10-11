@@ -100,12 +100,17 @@ lemma two [simp] : "2 = Suc (Suc 0)"
 apply(auto)
 done
 
+
+
+
 lemma fail_on_reentrance_correct :
   "account_state_responds_to_world
     (fail_on_reentrance_state n)
     (fail_on_reentrance_spec n)
     (\<lambda> _ _. True)
     "
+
+
 apply(case_tac n)
  apply(simp)
  apply(rule AccountStep; auto)
@@ -143,7 +148,7 @@ apply(case_tac nat)
   apply(case_tac nat; auto)
  apply(case_tac steps; auto)
  apply(case_tac nat; auto)
- apply(case_tac nata; auto)
+ apply(case_tac nata; auto) 
 apply(simp)
 apply(rule AccountStep; auto)  
 done

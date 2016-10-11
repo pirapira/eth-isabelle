@@ -23,5 +23,6 @@ record aenv =
   aenv_storage_at_call :: storage
   aenv_balance_at_call :: "address \<Rightarrow> uint"
   aenv_this :: address
+  aenv_origin :: address
 
 end

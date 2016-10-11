@@ -7,7 +7,7 @@ text "Maybe that's fine."
 
 theory ContractSem
 
-imports Main "~~/src/HOL/Word/Word" "./ContractEnv" "./Instructions"
+imports Main "~~/src/HOL/Word/Word" "./ContractEnv" "./Instructions" "./KEC"
 
 begin
 
@@ -73,9 +73,24 @@ where
 
 declare drop_bytes.simps [simp]
 
+fun program_size :: "program \<Rightarrow> nat"
+where
+  "program_size (Stack (PUSH_N v) # rest) = length v + 1 + program_size rest"
+| "program_size (Annotation _ # rest) = program_size rest"
+| "program_size (_ # rest) = 1 + program_size rest"
+| "program_size [] = 0"
+
 definition empty_memory :: memory
 where
 "empty_memory _ = 0"
+
+record block_info =
+  block_blockhash :: "uint \<Rightarrow> uint" (* This captures the whole BLOCKHASH operation *)
+  block_coinbase :: address
+  block_timestamp :: uint
+  block_number :: uint
+  block_difficulty :: uint
+
 
 record variable_env =
   venv_stack :: "uint list"
@@ -88,6 +103,10 @@ record variable_env =
   venv_data_sent :: "byte list"
   venv_storage_at_call :: storage
   venv_balance_at_call :: "address \<Rightarrow> uint"
+  venv_origin :: address
+  venv_gasprice :: uint
+  venv_ext_program :: "address \<Rightarrow> program"
+  venv_block :: block_info
 
 record constant_env =
   cenv_program :: program
@@ -100,23 +119,6 @@ where "gas_limit = undefined"
 definition update_balance :: "address \<Rightarrow> (uint \<Rightarrow> uint) \<Rightarrow> (address \<Rightarrow> uint) \<Rightarrow> (address \<Rightarrow> uint)"
 where
 "update_balance a newbal orig = orig(a := newbal (orig a))"
-
-definition init_variable_env ::
-  "storage \<Rightarrow> (address \<Rightarrow> uint) \<Rightarrow> address \<Rightarrow> constant_env \<Rightarrow> uint \<Rightarrow> byte list \<Rightarrow> variable_env"
-where
-  "init_variable_env s bal caller cenv value data =
-     \<lparr> venv_stack = []
-     , venv_memory = empty_memory
-     , venv_storage = s
-     , venv_prg_sfx = cenv_program cenv
-     , venv_balance = bal
-     , venv_caller = caller
-     , venv_value_sent = value
-     , venv_data_sent = data
-     , venv_storage_at_call = s
-     , venv_balance_at_call = bal
-     \<rparr>
-  "
 
 datatype instruction_result =
   InstructionUnknown
@@ -215,6 +217,18 @@ where
             v\<lparr>venv_stack := f operand0 operand1 # rest\<rparr>)
   | _ \<Rightarrow> instruction_failure_result
   )"
+  
+abbreviation stack_3_1_op :: "variable_env \<Rightarrow> constant_env \<Rightarrow> (uint \<Rightarrow> uint \<Rightarrow> uint \<Rightarrow> uint) \<Rightarrow>
+  instruction_result"
+where
+"stack_3_1_op v c f ==
+  (case venv_stack v of
+     operand0 # operand1 # operand2 # rest \<Rightarrow>
+       InstructionContinue
+         (venv_advance_pc
+            v\<lparr>venv_stack := f operand0 operand1 operand2 # rest\<rparr>)
+   | _ \<Rightarrow> instruction_failure_result
+   )"
 
 abbreviation sload :: "variable_env \<Rightarrow> uint \<Rightarrow> uint"
 where
@@ -242,7 +256,8 @@ where
   , aenv_data_sent = venv_data_sent v
   , aenv_storage_at_call = venv_storage_at_call v
   , aenv_balance_at_call = venv_balance_at_call v
-  , aenv_this = cenv_this c \<rparr>"
+  , aenv_this = cenv_this c
+  , aenv_origin = venv_origin v \<rparr>"
 
 abbreviation eval_annotation :: "annotation \<Rightarrow> variable_env \<Rightarrow> constant_env \<Rightarrow> instruction_result"
 where
@@ -344,6 +359,13 @@ abbreviation pop :: "variable_env \<Rightarrow> constant_env \<Rightarrow> instr
 where
 "pop v c \<equiv> InstructionContinue (venv_advance_pc
              v\<lparr>venv_stack := tl (venv_stack v)\<rparr>)"
+             
+abbreviation general_dup :: "nat \<Rightarrow> variable_env \<Rightarrow> constant_env \<Rightarrow> instruction_result"
+where
+"general_dup n v c ==
+   (let duplicated = venv_stack v ! (n - 1) in
+    InstructionContinue (venv_advance_pc v\<lparr> venv_stack := duplicated # venv_stack v \<rparr>))
+"
 
 fun instruction_sem :: "variable_env \<Rightarrow> constant_env \<Rightarrow> inst \<Rightarrow> instruction_result"
 where
@@ -364,12 +386,70 @@ where
 | "instruction_sem v c (Misc CALL) = call v c"
 | "instruction_sem v c (Misc RETURN) = ret v c"
 | "instruction_sem v c (Misc STOP) = stop v c"
-| "instruction_sem v c (Dup (Suc 0)) = stack_1_2_op v c (\<lambda> a. (a, a))"
+| "instruction_sem v c (Dup n) = general_dup n v c"
 | "instruction_sem v c (Stack POP) = pop v c"
 | "instruction_sem v c (Info GASLIMIT) = stack_0_1_op v c (gas_limit v)"
 | "instruction_sem v c (Arith GT) = stack_2_1_op v c (\<lambda> a b. if a > b then 1 else 0)"
 | "instruction_sem v c (Arith EQ) = stack_2_1_op v c (\<lambda> a b. if a = b then 1 else 0)"
 | "instruction_sem v c (Annotation a) = eval_annotation a v c"
+| "instruction_sem v c (Bits AND_inst) = stack_2_1_op v c (\<lambda> a b. a AND b)"
+| "instruction_sem v c (Sarith SDIV) = stack_2_1_op v c
+     (\<lambda> n divisor. if divisor = 0 then 0 else
+                        word_of_int ((sint n) div (sint divisor)))"
+| "instruction_sem v c (Sarith SMOD) = stack_2_1_op v c
+     (\<lambda> n divisor. if divisor = 0 then 0 else
+                        word_of_int ((sint n) mod (sint divisor)))"
+| "instruction_sem v c (Sarith SGT) = stack_2_1_op v c
+     (\<lambda> elm0 elm1. if sint elm0 > sint elm1 then 1 else 0)"
+| "instruction_sem v c (Sarith SLT) = stack_2_1_op v c
+     (\<lambda> elm0 elm1. if sint elm0 < sint elm1 then 1 else 0)"
+| "instruction_sem v c (Sarith SIGNEXTEND) = stack_2_1_op v c
+     (\<lambda> len orig.
+        of_bl (List.map (\<lambda> i.
+          if i \<le> 256 - 8 * ((uint len) + 1)
+          then test_bit orig (nat (256 - 8 * ((uint len) + 1)))
+          else test_bit orig (nat i)
+        ) (List.upto 0 256))
+     )"
+| "instruction_sem v c (Arith MUL) = stack_2_1_op v c
+     (\<lambda> a b. a * b)"
+| "instruction_sem v c (Arith DIV) = stack_2_1_op v c
+     (\<lambda> a divisor. (if divisor = 0 then 0 else a div divisor))"
+| "instruction_sem v c (Arith MOD) = stack_2_1_op v c
+     (\<lambda> a divisor. (if divisor = 0 then 0 else a mod divisor))"
+| "instruction_sem v c (Arith ADDMOD) = stack_3_1_op v c
+     (\<lambda> a b divisor.
+         (if divisor = 0 then 0 else (a + b) mod divisor))"
+| "instruction_sem v c (Arith MULMOD) = stack_3_1_op v c
+     (\<lambda> a b divisor.
+         (if divisor = 0 then 0 else (a * b) mod divisor))"
+| "instruction_sem v c (Arith EXP) = stack_2_1_op v c
+     (\<lambda> a exponent. word_of_int ((uint a) ^ (unat exponent)))"
+| "instruction_sem v c (Arith LT) = stack_2_1_op v c
+     (\<lambda> arg0 arg1. if arg0 < arg1 then 1 else 0)"
+| "instruction_sem v c (Arith SHA3) = stack_2_1_op v c
+     (\<lambda> start size.
+        keccack (cut_memory start (unat size) (venv_memory v)))"
+| "instruction_sem v c (Info ADDRESS) = stack_0_1_op v c
+     (ucast (cenv_this c))"
+| "instruction_sem v c (Info BALANCE) = stack_1_1_op v c
+      (\<lambda> addr. venv_balance v (ucast addr))"
+| "instruction_sem v c (Info ORIGIN) = stack_0_1_op v c
+     (ucast (venv_origin v))"
+| "instruction_sem v c (Info CALLVALUE) = stack_0_1_op v c
+     (venv_value_sent v)"
+| "instruction_sem v c (Info CODESIZE) = stack_0_1_op v c
+     (word_of_int (int (program_size (cenv_program c))))"
+| "instruction_sem v c (Info GASPRICE) = stack_0_1_op v c
+     (venv_gasprice v)"
+| "instruction_sem v c (Info EXTCODESIZE) = stack_1_1_op v c
+     (\<lambda> arg. (word_of_int (int (program_size (venv_ext_program v (ucast arg))))))"
+| "instruction_sem v c (Info BLOCKHASH) = stack_1_1_op v c (block_blockhash (venv_block v))"
+| "instruction_sem v c (Info COINBASE) = stack_0_1_op v c (ucast (block_coinbase (venv_block v)))"
+| "instruction_sem v c (Info TIMESTAMP) = stack_0_1_op v c (block_timestamp (venv_block v))"
+| "instruction_sem v c (Info NUMBER) = stack_0_1_op v c (block_number (venv_block v))"
+| "instruction_sem v c (Info difficulty) = stack_0_1_op v c (block_difficulty (venv_block v))"
+
 
 datatype program_result =
   ProgramStepRunOut
