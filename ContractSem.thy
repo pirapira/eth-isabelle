@@ -119,8 +119,9 @@ where
   "
 
 datatype instruction_result =
-  InstructionUnknown (* should be removed at one point *) 
+  InstructionUnknown
 | InstructionContinue variable_env
+| InstructionAnnotationFailure
 | InstructionToWorld "contract_action * variable_env option"
 
 abbreviation instruction_failure_result :: instruction_result
@@ -228,6 +229,26 @@ where
       (venv_advance_pc
         (venv_update_storage addr val v\<lparr>venv_stack := stack_tail\<rparr>))
     | _ \<Rightarrow> instruction_failure_result)"
+
+abbreviation build_aenv :: "variable_env \<Rightarrow> constant_env \<Rightarrow> aenv"
+where
+"build_aenv v c ==
+  \<lparr> aenv_stack = venv_stack v
+  , aenv_memory = venv_memory v
+  , aenv_storage = venv_storage v
+  , aenv_balance = venv_balance v
+  , aenv_caller = venv_caller v
+  , aenv_value_sent = venv_value_sent v
+  , aenv_data_sent = venv_data_sent v
+  , aenv_storage_at_call = venv_storage_at_call v
+  , aenv_balance_at_call = venv_balance_at_call v
+  , aenv_this = cenv_this c \<rparr>"
+
+abbreviation eval_annotation :: "annotation \<Rightarrow> variable_env \<Rightarrow> constant_env \<Rightarrow> instruction_result"
+where
+"eval_annotation anno v c ==
+   (if anno (build_aenv v c) then InstructionContinue (venv_advance_pc v)
+    else InstructionAnnotationFailure)"
 
 abbreviation jump :: "variable_env \<Rightarrow> constant_env \<Rightarrow> instruction_result"
 where
@@ -348,11 +369,13 @@ where
 | "instruction_sem v c (Info GASLIMIT) = stack_0_1_op v c (gas_limit v)"
 | "instruction_sem v c (Arith GT) = stack_2_1_op v c (\<lambda> a b. if a > b then 1 else 0)"
 | "instruction_sem v c (Arith EQ) = stack_2_1_op v c (\<lambda> a b. if a = b then 1 else 0)"
+| "instruction_sem v c (Annotation a) = eval_annotation a v c"
 
 datatype program_result =
   ProgramStepRunOut
 | ProgramToWorld "contract_action * storage * (address => uint) * variable_env option"
 | ProgramInvalid
+| ProgramAnnotationFailure
 
 fun program_sem :: "variable_env \<Rightarrow> constant_env \<Rightarrow> nat \<Rightarrow> program_result"
 where
@@ -371,6 +394,7 @@ where
       | InstructionToWorld (a, opt_pushed_v) \<Rightarrow>
         ProgramToWorld (a, venv_storage v, venv_balance v, opt_pushed_v)
       | InstructionUnknown \<Rightarrow> ProgramInvalid
+      | InstructionAnnotationFailure \<Rightarrow> ProgramAnnotationFailure
       )
     )"
 
