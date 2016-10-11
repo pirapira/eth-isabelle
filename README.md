@@ -6,4 +6,4 @@ The status is very immature.  Currently [a Coq project](https://github.com/pirap
 * a RLP implementation (in progress) `RLP.thy`
 
 
-When you see `\<Rightarrow>` in the source, try using the Isabelle2016 interface.  There you see `⇒` instead.
+When you see `\<Rightarrow>` in the source, try using the [Isabelle2016](https://isabelle.in.tum.de/index.html) interface.  There you see `⇒` instead.
