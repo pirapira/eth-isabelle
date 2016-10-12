@@ -500,6 +500,18 @@ where
    )
 "
 
+abbreviation mload :: "variable_env \<Rightarrow> constant_env \<Rightarrow> instruction_result"
+where
+"mload v c ==
+  (case venv_stack v of
+    pos # rest \<Rightarrow>
+      let value = word_rcat (cut_memory pos 32 (venv_memory v)) in
+      InstructionContinue (venv_advance_pc
+        v \<lparr> venv_stack := value # rest
+          , venv_memory_usage := M (venv_memory_usage v) pos 32
+          \<rparr>, 0)
+  | _ \<Rightarrow> instruction_failure_result)"
+
 abbreviation mstore8 :: "variable_env \<Rightarrow> constant_env \<Rightarrow> instruction_result"
 where
 "mstore8 v c ==
@@ -507,7 +519,9 @@ where
      pos # val # rest \<Rightarrow>
         let new_memory = (venv_memory v)(pos := ucast val) in
         InstructionContinue (venv_advance_pc
-          v\<lparr> venv_stack := rest, venv_memory := new_memory \<rparr>, 0))"
+          v\<lparr> venv_stack := rest
+           , venv_memory_usage := M (venv_memory_usage v) pos 8
+           , venv_memory := new_memory \<rparr>, 0))"
 
 abbreviation input_as_memory :: "byte list \<Rightarrow> memory"
 where
@@ -667,8 +681,7 @@ where
 | "instruction_sem v c (Info TIMESTAMP) = stack_0_1_op v c (block_timestamp (venv_block v))"
 | "instruction_sem v c (Info NUMBER) = stack_0_1_op v c (block_number (venv_block v))"
 | "instruction_sem v c (Info difficulty) = stack_0_1_op v c (block_difficulty (venv_block v))"
-| "instruction_sem v c (Memory MLOAD) = stack_1_1_op v c
-     (\<lambda> pos. word_rcat (cut_memory pos 32 (venv_memory v)))"
+| "instruction_sem v c (Memory MLOAD) = mload v c"
 | "instruction_sem v c (Memory MSTORE) = mstore v c"
 | "instruction_sem v c (Memory MSTORE8) = mstore8 v c"
 | "instruction_sem v c (Memory CALLDATACOPY) = calldatacopy v c"
