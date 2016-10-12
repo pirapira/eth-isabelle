@@ -537,7 +537,9 @@ where
        let data = cut_memory src_start (unat len) (input_as_memory (venv_data_sent v)) in
        let new_memory = store_byte_list_memory dst_start data (venv_memory v) in
        InstructionContinue (venv_advance_pc
-         v\<lparr> venv_stack := rest, venv_memory := new_memory \<rparr>, 0))"
+         v\<lparr> venv_stack := rest, venv_memory := new_memory,
+            venv_memory_usage := M (venv_memory_usage v) dst_start len
+         \<rparr>, 0))"
 
 abbreviation codecopy :: "variable_env \<Rightarrow> constant_env \<Rightarrow> instruction_result"
 where
