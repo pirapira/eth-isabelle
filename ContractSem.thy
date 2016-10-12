@@ -453,6 +453,12 @@ where
    InstructionContinue (venv_advance_pc
      v\<lparr> venv_stack := word_of_int (int pc) # venv_stack v \<rparr>, 0))"
 
+abbreviation log :: "nat \<Rightarrow> variable_env \<Rightarrow> constant_env \<Rightarrow> instruction_result"
+where
+"log n v c ==
+   InstructionContinue (venv_advance_pc
+     (venv_pop_stack (n + 2) v), 0)"
+
 fun instruction_sem :: "variable_env \<Rightarrow> constant_env \<Rightarrow> inst \<Rightarrow> instruction_result"
 where
 "instruction_sem v c (Stack (PUSH_N lst)) =
@@ -543,6 +549,11 @@ where
 | "instruction_sem v c (Memory CODECOPY) = codecopy v c"
 | "instruction_sem v c (Memory EXTCODECOPY) = extcodecopy v c"
 | "instruction_sem v c (Pc PC) = pc v c"
+| "instruction_sem v c (Log LOG0) = log 0 v c"
+| "instruction_sem v c (Log LOG1) = log 1 v c"
+| "instruction_sem v c (Log LOG2) = log 2 v c"
+| "instruction_sem v c (Log LOG3) = log 3 v c"
+| "instruction_sem v c (Log LOG4) = log 4 v c"
 
 datatype program_result =
   ProgramStepRunOut
