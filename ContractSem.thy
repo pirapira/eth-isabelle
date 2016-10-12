@@ -347,11 +347,12 @@ where
               callarg_output_size = e6 \<rparr>),
           Some
             (v\<lparr> venv_stack := rest,
-               venv_prg_sfx := drop_one_element (venv_prg_sfx v),
-               venv_balance :=
-                 update_balance (cenv_this c)
-                   (\<lambda> orig \<Rightarrow> orig - e2) (venv_balance v)\<rparr>
-         ))
+                venv_prg_sfx := drop_one_element (venv_prg_sfx v),
+                venv_balance :=
+                  update_balance (cenv_this c)
+                    (\<lambda> orig \<Rightarrow> orig - e2) (venv_balance v)
+              , venv_memory_usage := M (M (venv_memory_usage v) e3 e4) e5 e6 \<rparr>
+              ))
        )
   | _ \<Rightarrow> instruction_failure_result
   )"
@@ -430,10 +431,11 @@ where
              (\<lparr> createarg_value = val
               , createarg_code = code \<rparr>),
             Some
-              (v\<lparr> venv_stack := rest,
-                  venv_prg_sfx := drop_one_element (venv_prg_sfx v),
-                  venv_balance := update_balance (cenv_this c) (\<lambda> orig. orig - val) (venv_balance v) \<rparr>
-                  )))
+              (v\<lparr> venv_stack := rest
+                , venv_prg_sfx := drop_one_element (venv_prg_sfx v)
+                , venv_balance := update_balance (cenv_this c) (\<lambda> orig. orig - val) (venv_balance v)
+                , venv_memory_usage := M (venv_memory_usage v) code_start code_len \<rparr>
+              )))
   | _ \<Rightarrow> instruction_failure_result)"
 
 definition
