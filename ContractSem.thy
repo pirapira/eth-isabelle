@@ -430,7 +430,21 @@ where
                     (program_code (cenv_program c))) in
      let new_memory = store_byte_list_memory dst_start data (venv_memory v) in
      InstructionContinue (venv_advance_pc
-       v\<lparr> venv_stack := rest, venv_memory := new_memory \<rparr>, 0))"
+       v\<lparr> venv_stack := rest, venv_memory := new_memory \<rparr>, 0)
+   | _ \<Rightarrow> instruction_failure_result)"
+
+abbreviation extcodecopy :: "variable_env \<Rightarrow> constant_env \<Rightarrow> instruction_result"
+where
+"extcodecopy v c ==
+  (case venv_stack v of
+     addr # dst_start # src_start # len # rest \<Rightarrow>
+     let data = cut_memory src_start (unat len)
+                  (input_as_memory
+                    (program_code (venv_ext_program v (ucast addr)))) in
+     let new_memory = store_byte_list_memory dst_start data (venv_memory v) in
+     InstructionContinue (venv_advance_pc
+       v\<lparr> venv_stack := rest, venv_memory := new_memory \<rparr>, 0)
+   | _ \<Rightarrow> instruction_failure_result)"
 
 fun instruction_sem :: "variable_env \<Rightarrow> constant_env \<Rightarrow> inst \<Rightarrow> instruction_result"
 where
@@ -520,6 +534,8 @@ where
 | "instruction_sem v c (Memory MSTORE8) = mstore8 v c"
 | "instruction_sem v c (Memory CALLDATACOPY) = calldatacopy v c"
 | "instruction_sem v c (Memory CODECOPY) = codecopy v c"
+| "instruction_sem v c (Memory EXTCODECOPY) = extcodecopy v c"
+
 
 datatype program_result =
   ProgramStepRunOut
