@@ -603,6 +603,20 @@ where
     | Some new_stack \<Rightarrow>
       InstructionContinue (venv_advance_pc v\<lparr> venv_stack := new_stack \<rparr>, 0))"
 
+abbreviation sha3 :: "variable_env \<Rightarrow> constant_env \<Rightarrow> instruction_result"
+where
+"sha3 v c ==
+  (case venv_stack v of
+    start # len # rest \<Rightarrow>
+      InstructionContinue (
+        venv_advance_pc v\<lparr> venv_stack := keccack
+                                         (cut_memory start (unat len) (venv_memory v))
+                                        # rest
+                        , venv_memory_usage := M (venv_memory_usage v) start len
+                        \<rparr>, 0)
+  | _ \<Rightarrow> instruction_failure_result
+  )"
+
 fun instruction_sem :: "variable_env \<Rightarrow> constant_env \<Rightarrow> inst \<Rightarrow> instruction_result"
 where
 "instruction_sem v c (Stack (PUSH_N lst)) =
@@ -663,9 +677,7 @@ where
      (\<lambda> a exponent. word_of_int ((uint a) ^ (unat exponent)))"
 | "instruction_sem v c (Arith LT) = stack_2_1_op v c
      (\<lambda> arg0 arg1. if arg0 < arg1 then 1 else 0)"
-| "instruction_sem v c (Arith SHA3) = stack_2_1_op v c
-     (\<lambda> start size.
-        keccack (cut_memory start (unat size) (venv_memory v)))"
+| "instruction_sem v c (Arith SHA3) = sha3 v c"
 | "instruction_sem v c (Info ADDRESS) = stack_0_1_op v c
      (ucast (cenv_this c))"
 | "instruction_sem v c (Info BALANCE) = stack_1_1_op v c
