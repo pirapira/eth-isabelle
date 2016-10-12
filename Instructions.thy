@@ -4,8 +4,6 @@ imports Main "~~/src/HOL/Word/Word" "./ContractEnv"
 
 begin
 
-value "3 :: nat"
-
 text "The set of instructions can be defined inductively, or"
 text "just as a nibble.  I choose the inductive definition."
 
