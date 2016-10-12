@@ -444,7 +444,13 @@ definition
 
 abbreviation ret :: "variable_env \<Rightarrow> constant_env \<Rightarrow> instruction_result"
 where
-"ret v c \<equiv> InstructionToWorld ((ContractReturn (venv_returned_bytes v)), None)"
+"ret v c \<equiv>
+   (case venv_stack v of
+      e0 # e1 # rest \<Rightarrow>
+        let new_v = v\<lparr> venv_memory_usage := M (venv_memory_usage v) e0 e1 \<rparr> in
+        InstructionToWorld ((ContractReturn (venv_returned_bytes new_v)),
+                           None)
+   | _ \<Rightarrow> instruction_failure_result)"
 
 abbreviation stop :: "variable_env \<Rightarrow> constant_env \<Rightarrow> instruction_result"
 where
