@@ -119,7 +119,7 @@ record constant_env =
   cenv_program :: program
   cenv_this :: address
 
-(* TODO: keep track of the gas consumption in variable_env *)
+(* TODO: keep track of the gas consumption in variable_env.  This is issue #7 *)
 definition gas_limit :: "variable_env \<Rightarrow> uint"
 where "gas_limit = undefined"
 
@@ -424,7 +424,7 @@ where
     val # code_start # code_len # rest \<Rightarrow>
       (if venv_balance v (cenv_this c) < val then
          instruction_failure_result
-       else (* TODO: increase the memory usage *)
+       else
          let code = cut_memory code_start (unat code_len) (venv_memory v) in
          InstructionToWorld
            (ContractCreate
@@ -487,7 +487,6 @@ where
 abbreviation mstore :: "variable_env \<Rightarrow> constant_env \<Rightarrow> instruction_result"
 where
 "mstore v c ==
-   (* TODO: update the memory consumption counter *)
    (case venv_stack v of
      [] \<Rightarrow> instruction_failure_result
    | [_] \<Rightarrow> instruction_failure_result
@@ -495,7 +494,9 @@ where
        let new_memory = store_word_memory pos val (venv_memory v) in
        InstructionContinue (venv_advance_pc
          v\<lparr> venv_stack := rest
-          , venv_memory := new_memory \<rparr>, 0)
+          , venv_memory := new_memory
+          , venv_memory_usage := M (venv_memory_usage v) pos 32
+          \<rparr>, 0)
    )
 "
 
