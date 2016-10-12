@@ -632,6 +632,8 @@ where
 | "instruction_sem v c (Swap n) = swap n v c"
 | "instruction_sem v c (Misc CREATE) = create v c"
 | "instruction_sem v c (Misc CALLCODE) = callcode v c"
+| "instruction_sem v c (Misc SUICIDE) = InstructionToWorld (ContractSuicide, None)"
+
 
 datatype program_result =
   ProgramStepRunOut
