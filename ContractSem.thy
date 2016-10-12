@@ -863,16 +863,10 @@ record response_to_world =
 
 abbreviation respond_to_call_correctly ::
   " (call_env \<Rightarrow> contract_behavior) \<Rightarrow>
-       account_state \<Rightarrow>
-       (variable_env \<Rightarrow> constant_env \<Rightarrow> bool (* This part should be unnecessary after assertions are introduced *)) =>
-       bool"
-where "respond_to_call_correctly c a I \<equiv>
+       account_state \<Rightarrow> bool"
+where "respond_to_call_correctly c a \<equiv>
   (\<forall> call_env initial_venv resulting_action final_state_pred.
      build_venv_called a call_env initial_venv \<longrightarrow>
-     ( (* The invariant holds at the beginning *)
-       I initial_venv (build_cenv a)
-       \<and>
-       ( I initial_venv (build_cenv a) \<longrightarrow>
          (* The specification says the execution should result in these *)
          c call_env = (resulting_action, final_state_pred) \<longrightarrow>
          ( \<forall> steps. (* and for any number of steps *)
@@ -884,16 +878,15 @@ where "respond_to_call_correctly c a I \<equiv>
               r = ProgramToWorld (resulting_action, st, bal, pushed_venv) \<and>
               final_state_pred
                 (update_account_state a resulting_action st bal pushed_venv))
-           )))))
+           )))
 "
 
 abbreviation respond_to_return_correctly ::
   "(return_result \<Rightarrow> contract_behavior) \<Rightarrow>
    account_state \<Rightarrow>
-   (variable_env \<Rightarrow> constant_env \<Rightarrow> bool) \<Rightarrow>
    bool"
 where
-"respond_to_return_correctly r a I \<equiv>
+"respond_to_return_correctly r a \<equiv>
    (\<forall> rr initial_venv final_state_pred resulting_action.
        build_venv_returned a rr initial_venv \<longrightarrow>
        r rr = (resulting_action, final_state_pred) \<longrightarrow>
@@ -910,10 +903,9 @@ where
 abbreviation respond_to_fail_correctly ::
   "contract_behavior \<Rightarrow>
    account_state \<Rightarrow>
-   (variable_env \<Rightarrow> constant_env \<Rightarrow> bool) \<Rightarrow>
    bool"
 where
-"respond_to_fail_correctly f a I \<equiv>
+"respond_to_fail_correctly f a \<equiv>
    (\<forall> initial_venv final_state_pred resulting_action.
       Some initial_venv = build_venv_fail a \<longrightarrow>
       f = (resulting_action, final_state_pred) \<longrightarrow>
@@ -926,16 +918,14 @@ where
 
 
 inductive account_state_responds_to_world ::
-  "(account_state \<Rightarrow> bool) \<Rightarrow> response_to_world \<Rightarrow>
-   (variable_env \<Rightarrow> constant_env \<Rightarrow> bool) \<Rightarrow> bool"
+  "(account_state \<Rightarrow> bool) \<Rightarrow> response_to_world \<Rightarrow> bool"
 where
 AccountStep:
-  "(\<forall> a. precond a \<longrightarrow> respond_to_call_correctly c a I) \<Longrightarrow>
-   (\<forall> a. precond a \<longrightarrow> respond_to_return_correctly r a I) \<Longrightarrow>
-   (\<forall> a. precond a \<longrightarrow> respond_to_fail_correctly f a I) \<Longrightarrow>
+  "(\<forall> a. precond a \<longrightarrow> respond_to_call_correctly c a) \<Longrightarrow>
+   (\<forall> a. precond a \<longrightarrow> respond_to_return_correctly r a) \<Longrightarrow>
+   (\<forall> a. precond a \<longrightarrow> respond_to_fail_correctly f a) \<Longrightarrow>
    account_state_responds_to_world precond
-   \<lparr> when_called = c, when_returned = r, when_failed = f \<rparr>
-   I"
+   \<lparr> when_called = c, when_returned = r, when_failed = f \<rparr>"
 
 declare word_rcat_def [simp]
         unat_def [simp]

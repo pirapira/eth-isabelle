@@ -39,7 +39,6 @@ lemma always_fail_correct:
   account_state_responds_to_world
   (\<lambda> a. a = always_fail_account_state initial_balance)
   (always_fail_spec initial_balance)
-  (\<lambda> _ _. True)
 "
 apply(rule AccountStep; auto)
 apply(case_tac steps; auto)
