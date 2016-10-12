@@ -345,6 +345,35 @@ where
 
 declare call_def [simp]
 
+abbreviation callcode :: "variable_env \<Rightarrow> constant_env \<Rightarrow> instruction_result"
+where
+"callcode v c ==
+  (case venv_stack v of
+    e0 # e1 # e2 # e3 # e4 # e5 # e6 # rest \<Rightarrow>
+    (if venv_balance v (cenv_this c) < e2 then
+       instruction_failure_result
+     else
+       InstructionToWorld
+         (ContractCall
+           (\<lparr> callarg_gaslimit = e0,
+              callarg_code = ucast e1,
+              callarg_recipient = cenv_this c,
+              callarg_value = e2,
+              callarg_data = cut_memory e3 (unat e4) (venv_memory v),
+              callarg_output_begin = e5,
+              callarg_output_size = e6 \<rparr>),
+          Some
+            (v\<lparr> venv_stack := rest,
+               venv_prg_sfx := drop_one_element (venv_prg_sfx v),
+               venv_balance :=
+                 update_balance (cenv_this c)
+                   (\<lambda> orig \<Rightarrow> orig - e2) (venv_balance v)\<rparr>
+         ))
+       )
+  | _ \<Rightarrow> instruction_failure_result
+  )"
+
+
 abbreviation create :: "variable_env \<Rightarrow> constant_env \<Rightarrow> instruction_result"
 where
 "create v c \<equiv>
@@ -602,6 +631,7 @@ where
 | "instruction_sem v c (Log LOG4) = log 4 v c"
 | "instruction_sem v c (Swap n) = swap n v c"
 | "instruction_sem v c (Misc CREATE) = create v c"
+| "instruction_sem v c (Misc CALLCODE) = callcode v c"
 
 datatype program_result =
   ProgramStepRunOut
