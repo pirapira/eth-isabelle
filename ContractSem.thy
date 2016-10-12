@@ -25,11 +25,11 @@ record call_arguments =
   callarg_data :: "byte list"
   callarg_output_begin :: uint
   callarg_output_size :: uint
-  
+
 record return_result =
   return_data :: "byte list"
   return_balance :: "address \<Rightarrow> uint"
-  
+
 record call_env =
   callenv_gaslimit :: uint
   callenv_value :: uint
@@ -38,7 +38,7 @@ record call_env =
   callenv_timestamp :: uint
   callenv_blocknum :: uint
   callenv_balane :: "address \<Rightarrow> uint"
-  
+
 datatype contract_action =
   ContractCall call_arguments
 | ContractFail
@@ -136,7 +136,7 @@ where
 
 (* venv_update_x functions are not useful in Isabelle/HOL,
  * where field updates are supported already. *)
- 
+
 fun venv_pop_stack :: "nat \<Rightarrow> variable_env \<Rightarrow> variable_env"
 where
   "venv_pop_stack 0 v = v"
@@ -420,6 +420,18 @@ where
        InstructionContinue (venv_advance_pc
          v\<lparr> venv_stack := rest, venv_memory := new_memory \<rparr>, 0))"
 
+abbreviation codecopy :: "variable_env \<Rightarrow> constant_env \<Rightarrow> instruction_result"
+where
+"codecopy v c ==
+  (case venv_stack v of
+     dst_start # src_start # len # rest \<Rightarrow>
+     let data = cut_memory src_start (unat len)
+                  (input_as_memory
+                    (program_code (cenv_program c))) in
+     let new_memory = store_byte_list_memory dst_start data (venv_memory v) in
+     InstructionContinue (venv_advance_pc
+       v\<lparr> venv_stack := rest, venv_memory := new_memory \<rparr>, 0))"
+
 fun instruction_sem :: "variable_env \<Rightarrow> constant_env \<Rightarrow> inst \<Rightarrow> instruction_result"
 where
 "instruction_sem v c (Stack (PUSH_N lst)) =
@@ -507,6 +519,7 @@ where
 | "instruction_sem v c (Memory MSTORE) = mstore v c"
 | "instruction_sem v c (Memory MSTORE8) = mstore8 v c"
 | "instruction_sem v c (Memory CALLDATACOPY) = calldatacopy v c"
+| "instruction_sem v c (Memory CODECOPY) = codecopy v c"
 
 datatype program_result =
   ProgramStepRunOut

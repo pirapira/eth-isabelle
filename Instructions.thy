@@ -275,4 +275,34 @@ declare inst_code.simps [simp]
 
 value "Misc STOP"
 
+type_synonym program = "inst list"
+
+fun drop_bytes :: "program \<Rightarrow> nat \<Rightarrow> program"
+where
+  "drop_bytes prg 0 = prg"
+| "drop_bytes (Stack (PUSH_N v) # rest) bytes = drop_bytes rest (bytes - 1 - length v)"
+| "drop_bytes (Annotation _ # rest) bytes = drop_bytes rest bytes"
+| "drop_bytes (_ # rest) bytes = drop_bytes rest (bytes - 1)"
+| "drop_bytes [] (Suc v) = []"
+
+declare drop_bytes.simps [simp]
+
+fun program_size :: "program \<Rightarrow> nat"
+where
+  "program_size (Stack (PUSH_N v) # rest) = length v + 1 + program_size rest"
+| "program_size (Annotation _ # rest) = program_size rest"
+| "program_size (_ # rest) = 1 + program_size rest"
+| "program_size [] = 0"
+
+declare program_size.simps [simp]
+
+
+fun program_code :: "program \<Rightarrow> byte list"
+where
+  "program_code [] = []"
+| "program_code (inst # rest) =
+   inst_code inst @ program_code rest"
+
+declare program_code.simps [simp]
+
 end
