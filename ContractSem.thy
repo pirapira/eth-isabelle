@@ -345,6 +345,33 @@ where
 
 declare call_def [simp]
 
+definition delegatecall :: "variable_env \<Rightarrow> constant_env \<Rightarrow> instruction_result"
+where
+"delegatecall v c =
+  (case venv_stack v of
+    e0 # e1 # e3 # e4 # e5 # e6 # rest \<Rightarrow>
+    (if venv_balance v (cenv_this c) < venv_value_sent v then
+       instruction_failure_result
+     else
+       InstructionToWorld
+         (ContractCall
+           (\<lparr> callarg_gaslimit = e0,
+              callarg_code = Word.ucast e1,
+              callarg_recipient = Word.ucast e1,
+              callarg_value = venv_value_sent v,
+              callarg_data = cut_memory e3 (Word.unat e4) (venv_memory v),
+              callarg_output_begin = e5,
+              callarg_output_size = e6 \<rparr>),
+          Some
+            (v\<lparr> venv_stack := rest,
+               venv_prg_sfx := drop_one_element (venv_prg_sfx v)\<rparr>
+         ))
+       )
+  | _ \<Rightarrow> instruction_failure_result
+  )"
+
+declare delegatecall_def [simp]
+
 abbreviation callcode :: "variable_env \<Rightarrow> constant_env \<Rightarrow> instruction_result"
 where
 "callcode v c ==
@@ -633,7 +660,7 @@ where
 | "instruction_sem v c (Misc CREATE) = create v c"
 | "instruction_sem v c (Misc CALLCODE) = callcode v c"
 | "instruction_sem v c (Misc SUICIDE) = InstructionToWorld (ContractSuicide, None)"
-
+| "instruction_sem v c (Misc DELEGATECALL) = delegatecall v c"
 
 datatype program_result =
   ProgramStepRunOut
