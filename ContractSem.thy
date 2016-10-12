@@ -801,22 +801,20 @@ where
   \<lparr> cenv_program = account_code a,
            cenv_this = account_address a \<rparr>"
 
-inductive build_venv_returned :: "account_state \<Rightarrow> return_result \<Rightarrow> variable_env option \<Rightarrow> bool"
+inductive build_venv_returned :: "account_state \<Rightarrow> return_result \<Rightarrow> variable_env \<Rightarrow> bool"
 where
-venv_returned_no_ongoing:
-"  account_ongoing_calls a = [] \<Longrightarrow>
-   build_venv_returned a r None"
-| venv_returned:
+venv_returned:
 "  account_ongoing_calls a = recovered # _ \<Longrightarrow>
    new_bal \<ge> account_balance a \<Longrightarrow>
    build_venv_returned a r
-     (Some (
+     (
               recovered \<lparr>
                 venv_stack := 1 # venv_stack recovered
               , venv_storage := account_storage a
               , venv_balance := (update_balance (account_address a)
                                    (\<lambda> _. new_bal) (return_balance r))
-            \<rparr>))"
+            \<rparr>)"
+
 declare build_venv_returned.simps [simp]
 
 definition build_venv_fail :: "account_state \<Rightarrow> variable_env option"
@@ -897,7 +895,7 @@ abbreviation respond_to_return_correctly ::
 where
 "respond_to_return_correctly r a I \<equiv>
    (\<forall> rr initial_venv final_state_pred resulting_action.
-       build_venv_returned a rr (Some initial_venv) \<longrightarrow>
+       build_venv_returned a rr initial_venv \<longrightarrow>
        r rr = (resulting_action, final_state_pred) \<longrightarrow>
        ( \<forall> steps.
           (let r = program_sem initial_venv (build_cenv a) (venv_prg_sfx initial_venv) steps in
