@@ -100,6 +100,7 @@ record block_info =
 record variable_env =
   venv_stack :: "uint list"
   venv_memory :: memory
+  venv_memory_usage :: int
   venv_storage :: storage
   venv_prg_sfx :: program
   venv_balance :: "address \<Rightarrow> uint"
@@ -113,6 +114,7 @@ record variable_env =
   venv_ext_program :: "address \<Rightarrow> program"
   venv_block :: block_info
 
+
 record constant_env =
   cenv_program :: program
   cenv_this :: address
@@ -120,6 +122,17 @@ record constant_env =
 (* TODO: keep track of the gas consumption in variable_env *)
 definition gas_limit :: "variable_env \<Rightarrow> uint"
 where "gas_limit = undefined"
+
+(* This M function is defined at the end of H.1. in the yellow paper.
+ * The purpose of this is to update the memory usage.
+ *)
+abbreviation M :: "int \<Rightarrow> uint \<Rightarrow> uint \<Rightarrow> int"
+where
+"M s f l ==
+
+  (if l = 0 then s else
+     max s ((uint f + uint l + 31) div 32))
+"
 
 definition update_balance :: "address \<Rightarrow> (uint \<Rightarrow> uint) \<Rightarrow> (address \<Rightarrow> uint) \<Rightarrow> (address \<Rightarrow> uint)"
 where
@@ -363,8 +376,9 @@ where
               callarg_output_begin = e5,
               callarg_output_size = e6 \<rparr>),
           Some
-            (v\<lparr> venv_stack := rest,
-               venv_prg_sfx := drop_one_element (venv_prg_sfx v)\<rparr>
+            (v\<lparr> venv_stack := rest
+              , venv_prg_sfx := drop_one_element (venv_prg_sfx v)
+              , venv_memory_usage := M (M (venv_memory_usage v) e3 e4) e5 e6 \<rparr>
          ))
        )
   | _ \<Rightarrow> instruction_failure_result
