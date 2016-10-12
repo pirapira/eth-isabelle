@@ -459,6 +459,27 @@ where
    InstructionContinue (venv_advance_pc
      (venv_pop_stack (n + 2) v), 0)"
 
+value "[0, 1]"
+
+abbreviation list_swap :: "nat \<Rightarrow> 'a list \<Rightarrow> 'a list option"
+where
+"list_swap n lst \<equiv>
+  if length lst < n + 1 then None else
+  Some (concat [[lst ! n], take (n - 1) (drop 1 lst) , [lst ! 0], drop (2 + n) lst])"
+
+value "list_swap 1 [0, 1]"
+value "list_swap 2 [0, 1]"
+value "list_swap 2 [0, 1, 2]"
+value "list_swap 3 [0, 1, 2, 3]"
+
+abbreviation swap :: "nat \<Rightarrow> variable_env \<Rightarrow> constant_env \<Rightarrow> instruction_result"
+where
+"swap n v c ==
+   (case list_swap n (venv_stack v) of
+      None \<Rightarrow> instruction_failure_result
+    | Some new_stack \<Rightarrow>
+      InstructionContinue (venv_advance_pc v\<lparr> venv_stack := new_stack \<rparr>, 0))"
+
 fun instruction_sem :: "variable_env \<Rightarrow> constant_env \<Rightarrow> inst \<Rightarrow> instruction_result"
 where
 "instruction_sem v c (Stack (PUSH_N lst)) =
@@ -554,6 +575,7 @@ where
 | "instruction_sem v c (Log LOG2) = log 2 v c"
 | "instruction_sem v c (Log LOG3) = log 3 v c"
 | "instruction_sem v c (Log LOG4) = log 4 v c"
+| "instruction_sem v c (Swap n) = swap n v c"
 
 datatype program_result =
   ProgramStepRunOut
