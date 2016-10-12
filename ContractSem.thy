@@ -47,7 +47,7 @@ datatype contract_action =
   ContractCall call_arguments
 | ContractCreate create_arguments
 | ContractFail
-| ContractSuicide
+| ContractSuicide "address \<Rightarrow> uint"
 | ContractReturn "byte list"
 
 text "response_to_world is not ported"
@@ -619,6 +619,16 @@ where
   | _ \<Rightarrow> instruction_failure_result
   )"
 
+abbreviation suicide :: "variable_env \<Rightarrow> constant_env \<Rightarrow> instruction_result"
+where
+"suicide v c ==
+  (case venv_stack v of 
+     dst # _ \<Rightarrow>
+       let new_balance = (venv_balance v)(cenv_this c := 0, ucast dst := venv_balance v (cenv_this c)) in
+       InstructionToWorld (ContractSuicide new_balance, None)
+    | _ \<Rightarrow> instruction_failure_result)"
+
+
 fun instruction_sem :: "variable_env \<Rightarrow> constant_env \<Rightarrow> inst \<Rightarrow> instruction_result"
 where
 "instruction_sem v c (Stack (PUSH_N lst)) =
@@ -714,7 +724,7 @@ where
 | "instruction_sem v c (Swap n) = swap n v c"
 | "instruction_sem v c (Misc CREATE) = create v c"
 | "instruction_sem v c (Misc CALLCODE) = callcode v c"
-| "instruction_sem v c (Misc SUICIDE) = InstructionToWorld (ContractSuicide, None)"
+| "instruction_sem v c (Misc SUICIDE) = suicide v c"
 | "instruction_sem v c (Misc DELEGATECALL) = delegatecall v c"
 
 datatype program_result =
