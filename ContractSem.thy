@@ -446,6 +446,13 @@ where
        v\<lparr> venv_stack := rest, venv_memory := new_memory \<rparr>, 0)
    | _ \<Rightarrow> instruction_failure_result)"
 
+abbreviation pc :: "variable_env \<Rightarrow> constant_env \<Rightarrow> instruction_result"
+where
+"pc v c ==
+  (let pc = program_size (cenv_program c) - program_size (venv_prg_sfx v) in
+   InstructionContinue (venv_advance_pc
+     v\<lparr> venv_stack := word_of_int (int pc) # venv_stack v \<rparr>, 0))"
+
 fun instruction_sem :: "variable_env \<Rightarrow> constant_env \<Rightarrow> inst \<Rightarrow> instruction_result"
 where
 "instruction_sem v c (Stack (PUSH_N lst)) =
@@ -535,7 +542,7 @@ where
 | "instruction_sem v c (Memory CALLDATACOPY) = calldatacopy v c"
 | "instruction_sem v c (Memory CODECOPY) = codecopy v c"
 | "instruction_sem v c (Memory EXTCODECOPY) = extcodecopy v c"
-
+| "instruction_sem v c (Pc PC) = pc v c"
 
 datatype program_result =
   ProgramStepRunOut
