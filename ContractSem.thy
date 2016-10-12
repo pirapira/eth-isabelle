@@ -404,9 +404,10 @@ where
               callarg_output_begin = e5,
               callarg_output_size = e6 \<rparr>),
           Some
-            (v\<lparr> venv_stack := rest,
-               venv_prg_sfx := drop_one_element (venv_prg_sfx v),
-               venv_balance :=
+            (v\<lparr> venv_stack := rest
+              , venv_prg_sfx := drop_one_element (venv_prg_sfx v)
+              , venv_memory_usage := M (M (venv_memory_usage v) e3 e4) e5 e6
+              , venv_balance :=
                  update_balance (cenv_this c)
                    (\<lambda> orig \<Rightarrow> orig - e2) (venv_balance v)\<rparr>
          ))
