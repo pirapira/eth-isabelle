@@ -23,7 +23,7 @@ where
   "bits_inst_code inst_AND = 0x16"
 | "bits_inst_code inst_OR = 0x17"
 | "bits_inst_code inst_XOR = 0x18"
-| "bits_inst_code inst_NOT = 0x18"
+| "bits_inst_code inst_NOT = 0x19"
 | "bits_inst_code BYTE = 0x1a"
 
 declare bits_inst_code.simps [simp]
@@ -124,7 +124,7 @@ where
 "dup_inst_code n ==
    (if n < 1 then undefined
     else (if n > 16 then undefined
-    else (word_of_int (int n)) + 0x79))"
+    else (word_of_int (int n)) + 0x7f))"
 
 datatype memory_inst =
     MLOAD
@@ -172,7 +172,7 @@ where
 | "pc_inst_code JUMPDEST = 0x5b"
 
 declare pc_inst_code.simps [simp]
-  
+
 datatype stack_inst =
     POP
   | PUSH_N "8 word list"
@@ -184,7 +184,7 @@ where
 | "stack_inst_code (PUSH_N lst) =
      (if (size lst) < 1 then undefined
       else (if (size lst) > 32 then undefined
-      else word_of_int (int (size lst)) + 0x59)) # lst"
+      else word_of_int (int (size lst)) + 0x5f)) # lst"
 | "stack_inst_code CALLDATALOAD = [0x35]"
 
 declare stack_inst_code.simps [simp]
@@ -196,7 +196,7 @@ where
 "swap_inst_code n ==
   (if n < 1 then undefined else
   (if n > 16 then undefined else
-   word_of_int (int n) + 0x89))"
+   word_of_int (int n) + 0x8f))"
 
 datatype log_inst
   = LOG0
@@ -226,7 +226,7 @@ datatype misc_inst
 
 fun misc_inst_code :: "misc_inst \<Rightarrow> byte"
 where
-  "misc_inst_code STOP = 0x0"
+  "misc_inst_code STOP = 0x00"
 | "misc_inst_code CREATE = 0xf0"
 | "misc_inst_code CALL = 0xf1"
 | "misc_inst_code CALLCODE = 0xf2"
