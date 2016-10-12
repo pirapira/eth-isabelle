@@ -114,14 +114,11 @@ apply(case_tac n)
  apply(simp)
  apply(rule AccountStep; auto)
  apply(case_tac steps; auto)
-apply(case_tac nat)
- apply(simp)
+apply(case_tac nat; auto)
  apply(rule AccountStep; auto)
    apply(case_tac steps; auto)
   apply(case_tac steps; auto)
  apply(case_tac steps; auto)
-apply(simp)
 apply(rule AccountStep; auto)
 done
-
 end

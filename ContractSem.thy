@@ -47,7 +47,7 @@ datatype contract_action =
   ContractCall call_arguments
 | ContractCreate create_arguments
 | ContractFail
-| ContractSuicide "address \<Rightarrow> uint"
+| ContractSuicide
 | ContractReturn "byte list"
 
 text "response_to_world is not ported"
@@ -142,15 +142,15 @@ datatype instruction_result =
   InstructionUnknown
 | InstructionContinue "variable_env * nat"
 | InstructionAnnotationFailure
-| InstructionToWorld "contract_action * variable_env option"
+| InstructionToWorld "contract_action * variable_env option * storage * (address \<Rightarrow> uint)"
 
-abbreviation instruction_failure_result :: instruction_result
+abbreviation instruction_failure_result :: "variable_env \<Rightarrow> instruction_result"
 where
-"instruction_failure_result == InstructionToWorld (ContractFail, None)"
+"instruction_failure_result v == InstructionToWorld (ContractFail, None, venv_storage_at_call v, venv_balance_at_call v)"
 
-abbreviation instruction_return_result :: "byte list \<Rightarrow> instruction_result"
+abbreviation instruction_return_result :: "byte list \<Rightarrow> variable_env \<Rightarrow> instruction_result"
 where
-"instruction_return_result x == InstructionToWorld (ContractReturn x, None)"
+"instruction_return_result x v == InstructionToWorld (ContractReturn x, None, venv_storage v, venv_balance v)"
 
 (* venv_update_x functions are not useful in Isabelle/HOL,
  * where field updates are supported already. *)
@@ -208,7 +208,7 @@ abbreviation stack_1_1_op :: "variable_env \<Rightarrow> constant_env \<Rightarr
 where
 "stack_1_1_op v c f \<equiv>
    (case venv_stack v of
-      [] \<Rightarrow> instruction_failure_result
+      [] \<Rightarrow> instruction_failure_result v
       | h # t \<Rightarrow>
          InstructionContinue
            (venv_advance_pc v\<lparr>venv_stack := f h # t\<rparr>, 0)
@@ -218,7 +218,7 @@ abbreviation stack_1_2_op :: "variable_env \<Rightarrow> constant_env \<Rightarr
 where
 "stack_1_2_op v c f ==
   (case venv_stack v of
-     [] \<Rightarrow> instruction_failure_result
+     [] \<Rightarrow> instruction_failure_result v
    | h # t \<Rightarrow>
      (case f h of
         (new0, new1) \<Rightarrow>
@@ -233,7 +233,7 @@ where
        InstructionContinue
          (venv_advance_pc
             v\<lparr>venv_stack := f operand0 operand1 # rest\<rparr>, 0)
-  | _ \<Rightarrow> instruction_failure_result
+  | _ \<Rightarrow> instruction_failure_result v
   )"
   
 abbreviation stack_3_1_op :: "variable_env \<Rightarrow> constant_env \<Rightarrow> (uint \<Rightarrow> uint \<Rightarrow> uint \<Rightarrow> uint) \<Rightarrow>
@@ -245,7 +245,7 @@ where
        InstructionContinue
          (venv_advance_pc
             v\<lparr>venv_stack := f operand0 operand1 operand2 # rest\<rparr>, 0)
-   | _ \<Rightarrow> instruction_failure_result
+   | _ \<Rightarrow> instruction_failure_result v
    )"
 
 abbreviation sload :: "variable_env \<Rightarrow> uint \<Rightarrow> uint"
@@ -260,7 +260,7 @@ where
       InstructionContinue
       (venv_advance_pc
         (venv_update_storage addr val v\<lparr>venv_stack := stack_tail\<rparr>), 0)
-    | _ \<Rightarrow> instruction_failure_result)"
+    | _ \<Rightarrow> instruction_failure_result v)"
 
 abbreviation build_aenv :: "variable_env \<Rightarrow> constant_env \<Rightarrow> aenv"
 where
@@ -287,14 +287,14 @@ abbreviation jump :: "variable_env \<Rightarrow> constant_env \<Rightarrow> inst
 where
 "jump v c \<equiv>
   (case venv_stack_top v of
-     None \<Rightarrow> instruction_failure_result
+     None \<Rightarrow> instruction_failure_result v
    | Some pos \<Rightarrow>
      (let v_new = venv_change_sfx (Word.unat pos) (venv_pop_stack 1 v) c in
      (case venv_first_instruction v_new of
         Some (Pc JUMPDEST) \<Rightarrow>
           InstructionContinue (v_new, 1)
-      | Some _ \<Rightarrow> instruction_failure_result
-      | None \<Rightarrow> instruction_failure_result )))"
+      | Some _ \<Rightarrow> instruction_failure_result v
+      | None \<Rightarrow> instruction_failure_result v )))"
       
 abbreviation jumpi :: "variable_env \<Rightarrow> constant_env \<Rightarrow> instruction_result"
 where
@@ -306,7 +306,7 @@ where
              (venv_advance_pc (venv_pop_stack 2 v), 0)
          else
            jump (v\<lparr> venv_stack := pos # rest \<rparr>) c)
-    | _ \<Rightarrow> instruction_failure_result)"
+    | _ \<Rightarrow> instruction_failure_result v)"
 
 abbreviation datasize :: "variable_env \<Rightarrow> uint"
 where
@@ -334,8 +334,9 @@ where
   (case venv_stack v of
     e0 # e1 # e2 # e3 # e4 # e5 # e6 # rest \<Rightarrow>
     (if venv_balance v (cenv_this c) < e2 then
-       instruction_failure_result
+       instruction_failure_result v
      else
+       (
        InstructionToWorld
          (ContractCall
            (\<lparr> callarg_gaslimit = e0,
@@ -348,13 +349,13 @@ where
           Some
             (v\<lparr> venv_stack := rest,
                 venv_prg_sfx := drop_one_element (venv_prg_sfx v),
-                venv_balance :=
-                  update_balance (cenv_this c)
-                    (\<lambda> orig \<Rightarrow> orig - e2) (venv_balance v)
+                venv_balance := update_balance (cenv_this c) (\<lambda> orig \<Rightarrow> orig - e2) (venv_balance v)
               , venv_memory_usage := M (M (venv_memory_usage v) e3 e4) e5 e6 \<rparr>
-              ))
-       )
-  | _ \<Rightarrow> instruction_failure_result
+              ),
+              venv_storage v, update_balance (cenv_this c) (\<lambda> orig \<Rightarrow> orig - e2) (venv_balance v)
+              )
+       ))
+  | _ \<Rightarrow> instruction_failure_result v
   )"
 
 declare call_def [simp]
@@ -365,7 +366,7 @@ where
   (case venv_stack v of
     e0 # e1 # e3 # e4 # e5 # e6 # rest \<Rightarrow>
     (if venv_balance v (cenv_this c) < venv_value_sent v then
-       instruction_failure_result
+       instruction_failure_result v
      else
        InstructionToWorld
          (ContractCall
@@ -380,9 +381,10 @@ where
             (v\<lparr> venv_stack := rest
               , venv_prg_sfx := drop_one_element (venv_prg_sfx v)
               , venv_memory_usage := M (M (venv_memory_usage v) e3 e4) e5 e6 \<rparr>
-         ))
+              ),
+          venv_storage v, venv_balance v)
        )
-  | _ \<Rightarrow> instruction_failure_result
+  | _ \<Rightarrow> instruction_failure_result v
   )"
 
 declare delegatecall_def [simp]
@@ -393,8 +395,11 @@ where
   (case venv_stack v of
     e0 # e1 # e2 # e3 # e4 # e5 # e6 # rest \<Rightarrow>
     (if venv_balance v (cenv_this c) < e2 then
-       instruction_failure_result
+       instruction_failure_result v
      else
+       (let new_balance = update_balance (cenv_this c)
+                   (\<lambda> orig \<Rightarrow> orig - e2) (venv_balance v)
+       in
        InstructionToWorld
          (ContractCall
            (\<lparr> callarg_gaslimit = e0,
@@ -408,12 +413,12 @@ where
             (v\<lparr> venv_stack := rest
               , venv_prg_sfx := drop_one_element (venv_prg_sfx v)
               , venv_memory_usage := M (M (venv_memory_usage v) e3 e4) e5 e6
-              , venv_balance :=
-                 update_balance (cenv_this c)
-                   (\<lambda> orig \<Rightarrow> orig - e2) (venv_balance v)\<rparr>
+              , venv_balance := new_balance \<rparr>
+             ),
+         venv_storage v, new_balance
          ))
        )
-  | _ \<Rightarrow> instruction_failure_result
+  | _ \<Rightarrow> instruction_failure_result v
   )"
 
 
@@ -423,9 +428,10 @@ where
   (case venv_stack v of
     val # code_start # code_len # rest \<Rightarrow>
       (if venv_balance v (cenv_this c) < val then
-         instruction_failure_result
+         instruction_failure_result v
        else
          let code = cut_memory code_start (unat code_len) (venv_memory v) in
+         let new_balance = update_balance (cenv_this c) (\<lambda> orig. orig - val) (venv_balance v) in
          InstructionToWorld
            (ContractCreate
              (\<lparr> createarg_value = val
@@ -433,10 +439,13 @@ where
             Some
               (v\<lparr> venv_stack := rest
                 , venv_prg_sfx := drop_one_element (venv_prg_sfx v)
-                , venv_balance := update_balance (cenv_this c) (\<lambda> orig. orig - val) (venv_balance v)
+                , venv_balance := new_balance
                 , venv_memory_usage := M (venv_memory_usage v) code_start code_len \<rparr>
-              )))
-  | _ \<Rightarrow> instruction_failure_result)"
+              ),
+              venv_storage v,
+              new_balance
+              ))
+  | _ \<Rightarrow> instruction_failure_result v)"
 
 definition
 "venv_returned_bytes v =
@@ -452,12 +461,12 @@ where
       e0 # e1 # rest \<Rightarrow>
         let new_v = v\<lparr> venv_memory_usage := M (venv_memory_usage v) e0 e1 \<rparr> in
         InstructionToWorld ((ContractReturn (venv_returned_bytes new_v)),
-                           None)
-   | _ \<Rightarrow> instruction_failure_result)"
+                           None, venv_storage v, venv_balance v)
+   | _ \<Rightarrow> instruction_failure_result v)"
 
 abbreviation stop :: "variable_env \<Rightarrow> constant_env \<Rightarrow> instruction_result"
 where
-"stop v c \<equiv> InstructionToWorld (ContractReturn [], None)"
+"stop v c \<equiv> InstructionToWorld (ContractReturn [], None, venv_storage v, venv_balance v)"
 
 abbreviation pop :: "variable_env \<Rightarrow> constant_env \<Rightarrow> instruction_result"
 where
@@ -488,8 +497,8 @@ abbreviation mstore :: "variable_env \<Rightarrow> constant_env \<Rightarrow> in
 where
 "mstore v c ==
    (case venv_stack v of
-     [] \<Rightarrow> instruction_failure_result
-   | [_] \<Rightarrow> instruction_failure_result
+     [] \<Rightarrow> instruction_failure_result v
+   | [_] \<Rightarrow> instruction_failure_result v
    | pos # val # rest \<Rightarrow>
        let new_memory = store_word_memory pos val (venv_memory v) in
        InstructionContinue (venv_advance_pc
@@ -510,7 +519,7 @@ where
         v \<lparr> venv_stack := value # rest
           , venv_memory_usage := M (venv_memory_usage v) pos 32
           \<rparr>, 0)
-  | _ \<Rightarrow> instruction_failure_result)"
+  | _ \<Rightarrow> instruction_failure_result v)"
 
 abbreviation mstore8 :: "variable_env \<Rightarrow> constant_env \<Rightarrow> instruction_result"
 where
@@ -521,7 +530,9 @@ where
         InstructionContinue (venv_advance_pc
           v\<lparr> venv_stack := rest
            , venv_memory_usage := M (venv_memory_usage v) pos 8
-           , venv_memory := new_memory \<rparr>, 0))"
+           , venv_memory := new_memory \<rparr>, 0)
+   | _ \<Rightarrow> instruction_failure_result v)
+           "
 
 abbreviation input_as_memory :: "byte list \<Rightarrow> memory"
 where
@@ -554,7 +565,7 @@ where
        v\<lparr> venv_stack := rest, venv_memory := new_memory
        , venv_memory_usage := M (venv_memory_usage v) dst_start len
        \<rparr>, 0)
-   | _ \<Rightarrow> instruction_failure_result)"
+   | _ \<Rightarrow> instruction_failure_result v)"
 
 abbreviation extcodecopy :: "variable_env \<Rightarrow> constant_env \<Rightarrow> instruction_result"
 where
@@ -569,7 +580,7 @@ where
        v\<lparr> venv_stack := rest, venv_memory := new_memory,
        venv_memory_usage := M (venv_memory_usage v) dst_start len
        \<rparr>, 0)
-   | _ \<Rightarrow> instruction_failure_result)"
+   | _ \<Rightarrow> instruction_failure_result v)"
 
 abbreviation pc :: "variable_env \<Rightarrow> constant_env \<Rightarrow> instruction_result"
 where
@@ -601,7 +612,7 @@ abbreviation swap :: "nat \<Rightarrow> variable_env \<Rightarrow> constant_env 
 where
 "swap n v c ==
    (case list_swap n (venv_stack v) of
-      None \<Rightarrow> instruction_failure_result
+      None \<Rightarrow> instruction_failure_result v
     | Some new_stack \<Rightarrow>
       InstructionContinue (venv_advance_pc v\<lparr> venv_stack := new_stack \<rparr>, 0))"
 
@@ -616,7 +627,7 @@ where
                                         # rest
                         , venv_memory_usage := M (venv_memory_usage v) start len
                         \<rparr>, 0)
-  | _ \<Rightarrow> instruction_failure_result
+  | _ \<Rightarrow> instruction_failure_result v
   )"
 
 abbreviation suicide :: "variable_env \<Rightarrow> constant_env \<Rightarrow> instruction_result"
@@ -625,8 +636,8 @@ where
   (case venv_stack v of 
      dst # _ \<Rightarrow>
        let new_balance = (venv_balance v)(cenv_this c := 0, ucast dst := venv_balance v (cenv_this c)) in
-       InstructionToWorld (ContractSuicide new_balance, None)
-    | _ \<Rightarrow> instruction_failure_result)"
+       InstructionToWorld (ContractSuicide, None, venv_storage v, new_balance)
+    | _ \<Rightarrow> instruction_failure_result v)"
 
 
 fun instruction_sem :: "variable_env \<Rightarrow> constant_env \<Rightarrow> inst \<Rightarrow> instruction_result"
@@ -754,14 +765,8 @@ where
              program_sem new_v c rest (Suc remaining_steps)
            else
              program_sem new_v c (venv_prg_sfx new_v) remaining_steps)
-      | InstructionToWorld (ContractFail, opt_pushed_v) \<Rightarrow>
-        ProgramToWorld (ContractFail, venv_storage_at_call v, venv_balance_at_call v, opt_pushed_v)
-      | InstructionToWorld (ContractCall args, Some new_v) \<Rightarrow>
-        ProgramToWorld (ContractCall args, venv_storage new_v, venv_balance new_v, Some new_v)
-      | InstructionToWorld (ContractCreate args, Some new_v) \<Rightarrow>
-        ProgramToWorld (ContractCreate args, venv_storage new_v, venv_balance new_v, Some new_v)
-      | InstructionToWorld (a, opt_pushed_v) \<Rightarrow>
-        ProgramToWorld (a, venv_storage v, venv_balance v, opt_pushed_v)
+      | InstructionToWorld (a, opt_pushed_v, st, bal) \<Rightarrow>
+        ProgramToWorld (a, st, bal, opt_pushed_v)
       | InstructionUnknown \<Rightarrow> ProgramInvalid
       | InstructionAnnotationFailure \<Rightarrow> ProgramAnnotationFailure
       )
