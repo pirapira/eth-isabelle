@@ -26,6 +26,10 @@ record call_arguments =
   callarg_output_begin :: uint
   callarg_output_size :: uint
 
+record create_arguments =
+  createarg_value :: uint
+  createarg_code :: "byte list"
+
 record return_result =
   return_data :: "byte list"
   return_balance :: "address \<Rightarrow> uint"
@@ -41,6 +45,7 @@ record call_env =
 
 datatype contract_action =
   ContractCall call_arguments
+| ContractCreate create_arguments
 | ContractFail
 | ContractSuicide
 | ContractReturn "byte list"
@@ -340,6 +345,26 @@ where
 
 declare call_def [simp]
 
+abbreviation create :: "variable_env \<Rightarrow> constant_env \<Rightarrow> instruction_result"
+where
+"create v c \<equiv>
+  (case venv_stack v of
+    val # code_start # code_len # rest \<Rightarrow>
+      (if venv_balance v (cenv_this c) < val then
+         instruction_failure_result
+       else (* TODO: increase the memory usage *)
+         let code = cut_memory code_start (unat code_len) (venv_memory v) in
+         InstructionToWorld
+           (ContractCreate
+             (\<lparr> createarg_value = val
+              , createarg_code = code \<rparr>),
+            Some
+              (v\<lparr> venv_stack := rest,
+                  venv_prg_sfx := drop_one_element (venv_prg_sfx v),
+                  venv_balance := update_balance (cenv_this c) (\<lambda> orig. orig - val) (venv_balance v) \<rparr>
+                  )))
+  | _ \<Rightarrow> instruction_failure_result)"
+
 definition
 "venv_returned_bytes v =
   (case venv_stack v of
@@ -576,6 +601,7 @@ where
 | "instruction_sem v c (Log LOG3) = log 3 v c"
 | "instruction_sem v c (Log LOG4) = log 4 v c"
 | "instruction_sem v c (Swap n) = swap n v c"
+| "instruction_sem v c (Misc CREATE) = create v c"
 
 datatype program_result =
   ProgramStepRunOut
@@ -608,13 +634,15 @@ where
         ProgramToWorld (ContractFail, venv_storage_at_call v, venv_balance_at_call v, opt_pushed_v)
       | InstructionToWorld (ContractCall args, Some new_v) \<Rightarrow>
         ProgramToWorld (ContractCall args, venv_storage new_v, venv_balance new_v, Some new_v)
+      | InstructionToWorld (ContractCreate args, Some new_v) \<Rightarrow>
+        ProgramToWorld (ContractCreate args, venv_storage new_v, venv_balance new_v, Some new_v)
       | InstructionToWorld (a, opt_pushed_v) \<Rightarrow>
         ProgramToWorld (a, venv_storage v, venv_balance v, opt_pushed_v)
       | InstructionUnknown \<Rightarrow> ProgramInvalid
       | InstructionAnnotationFailure \<Rightarrow> ProgramAnnotationFailure
       )
     )"
-    
+
 declare program_sem.simps [simp]
 
 record account_state =
