@@ -4,7 +4,15 @@ imports Main "./ContractSem"
 
 begin
 
-(* TODO: define account_state_natural_change *)
+inductive account_state_natural_change :: "account_state \<Rightarrow> account_state \<Rightarrow> bool"
+where
+natural:
+"account_address old = account_address new \<Longrightarrow>
+ account_storage old = account_storage new \<Longrightarrow>
+ account_code old = account_code new \<Longrightarrow>
+ account_balance old \<le> account_balance new \<Longrightarrow>
+ account_ongoing_calls old = account_ongoing_calls new \<Longrightarrow>
+ account_state_natural_change old new"
 
 inductive world_turn :: "(account_state * instruction_result) \<Rightarrow> (account_state * variable_env) \<Rightarrow> bool"
 where
