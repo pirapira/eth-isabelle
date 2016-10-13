@@ -144,6 +144,13 @@ datatype instruction_result =
 | InstructionAnnotationFailure
 | InstructionToWorld "contract_action * storage * (address \<Rightarrow> uint) * variable_env option"
 
+abbreviation instruction_result_continuing :: "instruction_result => bool"
+where
+"instruction_result_continuing r ==
+  (case r of
+     InstructionContinue _ => True
+   | _ => False)"
+
 abbreviation instruction_failure_result :: "variable_env \<Rightarrow> instruction_result"
 where
 "instruction_failure_result v == InstructionToWorld (ContractFail, venv_storage_at_call v, venv_balance_at_call v, None)"
@@ -789,7 +796,7 @@ record account_state =
  * This mistake will be kept until we try the managed_account_with_accumulated_income_and_spending
  * and we compare Coq and Isabelle/HOL on the same target.
  *)
- 
+
 inductive build_venv_called :: "account_state => call_env => variable_env => bool"
 where
 venv_called:
