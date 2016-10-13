@@ -51,6 +51,12 @@ where
    instruction_sem old_venv cenv i = InstructionToWorld (act, opt_v, st, bal) \<Longrightarrow>
    account_state_going_out = update_account_state a act opt_v st bal \<Longrightarrow>
    contract_turn (old_account, old_venv) (account_state_going_out, InstructionToWorld (act, opt_v, st, bal))"
+| contract_annotation_failure:
+  "build_cenv old_account = cenv \<Longrightarrow>
+   next_instruction old_venv i \<Longrightarrow>
+   instruction_sem old_venv cenv i = InstructionAnnotationFailure \<Longrightarrow>
+   contract_turn (old_account, old_venv) (old_account, InstrucitonAnnotationFailure)"
+
 
 inductive one_step :: "(account_state * instruction_result) \<Rightarrow> (account_state * instruction_result) \<Rightarrow> bool"
 where
@@ -73,11 +79,25 @@ where
 "initial_instruction_result original init \<Longrightarrow>
  star one_step (original, init) fin \<Longrightarrow>
  reachable original fin"
+ 
+inductive one_run :: "account_state \<Rightarrow> (account_state * instruction_result) \<Rightarrow> bool"
+where
+"initial_instruction_result original init \<Longrightarrow>
+ one_step (original, init) fin \<Longrightarrow>
+ one_run original fin"
 
 definition no_assertion_failure :: "account_state \<Rightarrow> bool"
 where
 "no_assertion_failure a ==
   \<forall> fin r. reachable a (fin, r) \<longrightarrow>
   r \<noteq> InstructionAnnotationFailure"
+  
+definition no_assertion_failure_one_run :: "program \<Rightarrow> bool"
+where
+"no_assertion_failure_one_run code ==
+ \<forall> a fin r.
+ account_code a = code \<longrightarrow>
+ one_run a (fin, r) \<longrightarrow>
+ r \<noteq> InstructionAnnotationFailure"
 
 end

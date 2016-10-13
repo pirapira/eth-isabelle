@@ -49,15 +49,14 @@ apply(simp add: eval_annotation_def)
 done
 
 lemma no_assertion_failure:
-"no_assertion_failure (always_fail_account_state initial_balnce)"
-apply(simp add: no_assertion_failure_def)
-apply(simp add: reachable.simps)
-apply(simp add: initial_instruction_result.simps)
-apply(auto)
-apply(erule star.cases)
- apply(auto)
-apply(simp add: one_step.simps)
-apply(simp add: contract_turn.simps)
+"no_assertion_failure_one_run always_fail_code"
+apply (simp add: no_assertion_failure_one_run_def)
+apply (simp add: one_run.simps)
+apply (simp add: one_step.simps)
+apply (simp add: contract_turn.simps)
+apply (auto)
+apply (simp add: initial_instruction_result.simps; auto)
+apply (simp add: world_turn.simps)
 done
 
 end
