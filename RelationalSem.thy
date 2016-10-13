@@ -38,20 +38,18 @@ where
       i' # _ \<Rightarrow> i = i'
     | _ \<Rightarrow> False)"
 
-inductive contract_turn :: "(account_state * instruction_result) \<Rightarrow> (account_state * instruction_result) \<Rightarrow> bool"
+inductive contract_turn :: "(account_state * variable_env) \<Rightarrow> (account_state * instruction_result) \<Rightarrow> bool"
 where
   contract_to_continue:
-  "world_turn (orig_account, orig_result) (mid_account, venv) \<Longrightarrow>
-   build_cenv mid_account = cenv \<Longrightarrow>
-   next_instruction venv i \<Longrightarrow>
-   instruction_sem venv cenv i = InstructionContinue (continuing_v, n) \<Longrightarrow>
-   contract_turn (orig_account, orig_result) (orig_account, InstructionContinue (continuing_v, n))"
+  "build_cenv old_account = cenv \<Longrightarrow>
+   next_instruction old_venv i \<Longrightarrow>
+   instruction_sem old_venv cenv i = InstructionContinue (continuing_v, n) \<Longrightarrow>
+   contract_turn (old_account, old_venv) (old_account, InstructionContinue (continuing_v, n))"
 | contract_to_world:
-  "world_turn (orig_account, orig_result) (mid_account, venv) \<Longrightarrow>
-   build_cenv mid_account = cenv \<Longrightarrow>
-   next_instruction venv i \<Longrightarrow>
-   instruction_sem venv cenv i = InstructionToWorld (act, opt_v, st, bal) \<Longrightarrow>
+  "build_cenv old_account = cenv \<Longrightarrow>
+   next_instruction old_venv i \<Longrightarrow>
+   instruction_sem old_venv cenv i = InstructionToWorld (act, opt_v, st, bal) \<Longrightarrow>
    account_state_going_out = update_account_state a act opt_v st bal \<Longrightarrow>
-   contract_turn (orig_account, orig_result) (account_state_going_out, InstructionToWorld (act, opt_v, st, bal))"
-
+   contract_turn (old_account, old_venv) (account_state_going_out, InstructionToWorld (act, opt_v, st, bal))"
+  
 end
