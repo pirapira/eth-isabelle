@@ -1,6 +1,6 @@
 theory AlwaysFail
 
-imports Main "../ContractSem"
+imports Main "../ContractSem" "../RelationalSem"
 
 begin
 
@@ -42,6 +42,18 @@ lemma always_fail_correct:
 "
 apply(rule AccountStep; auto)
 apply(case_tac steps; auto)
+done
+
+lemma no_assertion_failure:
+"no_assertion_failure (always_fail_account_state initial_balnce)"
+apply(simp add: no_assertion_failure_def)
+apply(simp add: reachable.simps)
+apply(simp add: initial_instruction_result.simps)
+apply(auto)
+apply(erule star.cases)
+ apply(auto)
+apply(simp add: one_step.simps)
+apply(simp add: contract_turn.simps)
 done
 
 end

@@ -51,5 +51,33 @@ where
    instruction_sem old_venv cenv i = InstructionToWorld (act, opt_v, st, bal) \<Longrightarrow>
    account_state_going_out = update_account_state a act opt_v st bal \<Longrightarrow>
    contract_turn (old_account, old_venv) (account_state_going_out, InstructionToWorld (act, opt_v, st, bal))"
-  
+
+inductive one_step :: "(account_state * instruction_result) \<Rightarrow> (account_state * instruction_result) \<Rightarrow> bool"
+where
+step:
+"world_turn a b \<Longrightarrow> contract_turn b c \<Longrightarrow> one_step a c"
+
+inductive initial_instruction_result :: "account_state \<Rightarrow> instruction_result \<Rightarrow> bool"
+where
+"bal (account_address a) = account_balance a \<Longrightarrow>
+ initial_instruction_result a (InstructionToWorld (ContractFail, account_storage a, bal, None))"
+
+(* taken from the book Concrete Semantics *)
+inductive star :: "('a \<Rightarrow> 'a \<Rightarrow> bool) \<Rightarrow> 'a \<Rightarrow> 'a \<Rightarrow> bool"
+where
+refl: "star r x x" |
+step: "star r x y \<Longrightarrow> r y z \<Longrightarrow> star r x z"
+
+inductive reachable :: "account_state \<Rightarrow> (account_state * instruction_result) \<Rightarrow> bool"
+where
+"initial_instruction_result original init \<Longrightarrow>
+ star one_step (original, init) fin \<Longrightarrow>
+ reachable original fin"
+
+definition no_assertion_failure :: "account_state \<Rightarrow> bool"
+where
+"no_assertion_failure a ==
+  \<forall> fin r. reachable a (fin, r) \<longrightarrow>
+  r \<noteq> InstructionAnnotationFailure"
+
 end
