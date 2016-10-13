@@ -502,7 +502,7 @@ where
          v\<lparr> venv_stack := rest
           , venv_memory := new_memory
           , venv_memory_usage := M (venv_memory_usage v) pos 32
-          \<rparr>, 0)
+          \<rparr>)
    )
 "
 
@@ -612,7 +612,7 @@ where
    (case list_swap n (venv_stack v) of
       None \<Rightarrow> instruction_failure_result v
     | Some new_stack \<Rightarrow>
-      InstructionContinue (venv_advance_pc v\<lparr> venv_stack := new_stack \<rparr>, 0))"
+      InstructionContinue (venv_advance_pc v\<lparr> venv_stack := new_stack \<rparr>))"
 
 abbreviation sha3 :: "variable_env \<Rightarrow> constant_env \<Rightarrow> instruction_result"
 where
