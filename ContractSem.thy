@@ -465,8 +465,9 @@ where
 abbreviation general_dup :: "nat \<Rightarrow> variable_env \<Rightarrow> constant_env \<Rightarrow> instruction_result"
 where
 "general_dup n v c ==
+   (if n > length (venv_stack v) then instruction_failure_result v else
    (let duplicated = venv_stack v ! (n - 1) in
-    InstructionContinue (venv_advance_pc v\<lparr> venv_stack := duplicated # venv_stack v \<rparr>, 0))
+    InstructionContinue (venv_advance_pc v\<lparr> venv_stack := duplicated # venv_stack v \<rparr>, 0)))
 "
 
 fun store_byte_list_memory :: "uint \<Rightarrow> byte list \<Rightarrow> memory \<Rightarrow> memory"
