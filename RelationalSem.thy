@@ -100,7 +100,8 @@ lemma reachable_ind :
      (\<forall> next future. one_step (a, init) next \<longrightarrow>
                      star one_step next future \<longrightarrow> P future )
    )) \<Longrightarrow>
- reachable a f \<Longrightarrow> P f"
+ reachable a f \<longrightarrow> P f"
+apply(rule impI)
 apply(erule reachable.cases)
 apply(auto)
 apply(erule star_ind; auto)
@@ -115,8 +116,8 @@ where
 definition no_assertion_failure :: "account_state \<Rightarrow> bool"
 where
 "no_assertion_failure a ==
-  \<forall> fin r. reachable a (fin, r) \<longrightarrow>
-  r \<noteq> InstructionAnnotationFailure"
+  \<forall> fin. reachable a fin \<longrightarrow>
+  snd fin \<noteq> InstructionAnnotationFailure"
 
 (* TODO: define calls_of_code *)
 

@@ -48,15 +48,20 @@ apply(case_tac steps; auto)
 apply(simp add: eval_annotation_def)
 done
 
+
 lemma no_assertion_failure:
-"no_assertion_failure_one_run always_fail_code"
-apply (simp add: no_assertion_failure_one_run_def)
-apply (simp add: one_run.simps)
-apply (simp add: one_step.simps)
-apply (simp add: contract_turn.simps)
-apply (auto)
-apply (simp add: initial_instruction_result.simps; auto)
-apply (simp add: world_turn.simps)
-done
+"no_assertion_failure (always_fail_account_state initial_balance)"
+apply(simp only: no_assertion_failure_def)
+apply(rule allI)
+apply(rule reachable_ind)
+apply(auto)
+ apply(simp add: initial_instruction_result.simps)
+apply(simp add: initial_instruction_result.simps)
+apply(auto)
+apply(simp add: one_step.simps)
+apply(simp add: world_turn.simps)
+apply(auto)
+
+oops
 
 end
