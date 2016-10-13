@@ -726,6 +726,7 @@ where
 | "instruction_sem v c (Misc CALLCODE) = callcode v c"
 | "instruction_sem v c (Misc SUICIDE) = suicide v c"
 | "instruction_sem v c (Misc DELEGATECALL) = delegatecall v c"
+| "instruction_sem v c (Info GAS) = stack_0_1_op v c (gas_limit v)"
 
 datatype program_result =
   ProgramStepRunOut
