@@ -142,15 +142,15 @@ datatype instruction_result =
   InstructionUnknown
 | InstructionContinue "variable_env * nat"
 | InstructionAnnotationFailure
-| InstructionToWorld "contract_action * variable_env option * storage * (address \<Rightarrow> uint)"
+| InstructionToWorld "contract_action * storage * (address \<Rightarrow> uint) * variable_env option"
 
 abbreviation instruction_failure_result :: "variable_env \<Rightarrow> instruction_result"
 where
-"instruction_failure_result v == InstructionToWorld (ContractFail, None, venv_storage_at_call v, venv_balance_at_call v)"
+"instruction_failure_result v == InstructionToWorld (ContractFail, venv_storage_at_call v, venv_balance_at_call v, None)"
 
 abbreviation instruction_return_result :: "byte list \<Rightarrow> variable_env \<Rightarrow> instruction_result"
 where
-"instruction_return_result x v == InstructionToWorld (ContractReturn x, None, venv_storage v, venv_balance v)"
+"instruction_return_result x v == InstructionToWorld (ContractReturn x, venv_storage v, venv_balance v, None)"
 
 (* venv_update_x functions are not useful in Isabelle/HOL,
  * where field updates are supported already. *)
@@ -336,7 +336,6 @@ where
     (if venv_balance v (cenv_this c) < e2 then
        instruction_failure_result v
      else
-       (
        InstructionToWorld
          (ContractCall
            (\<lparr> callarg_gaslimit = e0,
@@ -346,15 +345,13 @@ where
               callarg_data = cut_memory e3 (Word.unat e4) (venv_memory v),
               callarg_output_begin = e5,
               callarg_output_size = e6 \<rparr>),
+          venv_storage v, update_balance (cenv_this c) (\<lambda> orig \<Rightarrow> orig - e2) (venv_balance v),
           Some
             (v\<lparr> venv_stack := rest,
                 venv_prg_sfx := drop_one_element (venv_prg_sfx v),
                 venv_balance := update_balance (cenv_this c) (\<lambda> orig \<Rightarrow> orig - e2) (venv_balance v)
               , venv_memory_usage := M (M (venv_memory_usage v) e3 e4) e5 e6 \<rparr>
-              ),
-              venv_storage v, update_balance (cenv_this c) (\<lambda> orig \<Rightarrow> orig - e2) (venv_balance v)
-              )
-       ))
+              )))
   | _ \<Rightarrow> instruction_failure_result v
   )"
 
@@ -377,13 +374,12 @@ where
               callarg_data = cut_memory e3 (Word.unat e4) (venv_memory v),
               callarg_output_begin = e5,
               callarg_output_size = e6 \<rparr>),
+          venv_storage v, venv_balance v,
           Some
             (v\<lparr> venv_stack := rest
               , venv_prg_sfx := drop_one_element (venv_prg_sfx v)
               , venv_memory_usage := M (M (venv_memory_usage v) e3 e4) e5 e6 \<rparr>
-              ),
-          venv_storage v, venv_balance v)
-       )
+              )))
   | _ \<Rightarrow> instruction_failure_result v
   )"
 
@@ -397,9 +393,6 @@ where
     (if venv_balance v (cenv_this c) < e2 then
        instruction_failure_result v
      else
-       (let new_balance = update_balance (cenv_this c)
-                   (\<lambda> orig \<Rightarrow> orig - e2) (venv_balance v)
-       in
        InstructionToWorld
          (ContractCall
            (\<lparr> callarg_gaslimit = e0,
@@ -409,15 +402,13 @@ where
               callarg_data = cut_memory e3 (unat e4) (venv_memory v),
               callarg_output_begin = e5,
               callarg_output_size = e6 \<rparr>),
+          venv_storage v, update_balance (cenv_this c) (\<lambda> orig \<Rightarrow> orig - e2) (venv_balance v),
           Some
             (v\<lparr> venv_stack := rest
               , venv_prg_sfx := drop_one_element (venv_prg_sfx v)
               , venv_memory_usage := M (M (venv_memory_usage v) e3 e4) e5 e6
-              , venv_balance := new_balance \<rparr>
-             ),
-         venv_storage v, new_balance
-         ))
-       )
+              , venv_balance := update_balance (cenv_this c) (\<lambda> orig \<Rightarrow> orig - e2) (venv_balance v) \<rparr>
+             )))
   | _ \<Rightarrow> instruction_failure_result v
   )"
 
@@ -436,15 +427,13 @@ where
            (ContractCreate
              (\<lparr> createarg_value = val
               , createarg_code = code \<rparr>),
+            venv_storage v, update_balance (cenv_this c) (\<lambda> orig. orig - val) (venv_balance v),
             Some
               (v\<lparr> venv_stack := rest
                 , venv_prg_sfx := drop_one_element (venv_prg_sfx v)
-                , venv_balance := new_balance
+                , venv_balance := update_balance (cenv_this c) (\<lambda> orig. orig - val) (venv_balance v)
                 , venv_memory_usage := M (venv_memory_usage v) code_start code_len \<rparr>
-              ),
-              venv_storage v,
-              new_balance
-              ))
+              )))
   | _ \<Rightarrow> instruction_failure_result v)"
 
 definition
@@ -461,12 +450,12 @@ where
       e0 # e1 # rest \<Rightarrow>
         let new_v = v\<lparr> venv_memory_usage := M (venv_memory_usage v) e0 e1 \<rparr> in
         InstructionToWorld ((ContractReturn (venv_returned_bytes new_v)),
-                           None, venv_storage v, venv_balance v)
+                           venv_storage v, venv_balance v, None)
    | _ \<Rightarrow> instruction_failure_result v)"
 
 abbreviation stop :: "variable_env \<Rightarrow> constant_env \<Rightarrow> instruction_result"
 where
-"stop v c \<equiv> InstructionToWorld (ContractReturn [], None, venv_storage v, venv_balance v)"
+"stop v c \<equiv> InstructionToWorld (ContractReturn [], venv_storage v, venv_balance v, None)"
 
 abbreviation pop :: "variable_env \<Rightarrow> constant_env \<Rightarrow> instruction_result"
 where
@@ -636,7 +625,7 @@ where
   (case venv_stack v of 
      dst # _ \<Rightarrow>
        let new_balance = (venv_balance v)(cenv_this c := 0, ucast dst := venv_balance v (cenv_this c)) in
-       InstructionToWorld (ContractSuicide, None, venv_storage v, new_balance)
+       InstructionToWorld (ContractSuicide,venv_storage v, new_balance, None)
     | _ \<Rightarrow> instruction_failure_result v)"
 
 
@@ -719,7 +708,7 @@ where
 | "instruction_sem v c (Info COINBASE) = stack_0_1_op v c (ucast (block_coinbase (venv_block v)))"
 | "instruction_sem v c (Info TIMESTAMP) = stack_0_1_op v c (block_timestamp (venv_block v))"
 | "instruction_sem v c (Info NUMBER) = stack_0_1_op v c (block_number (venv_block v))"
-| "instruction_sem v c (Info difficulty) = stack_0_1_op v c (block_difficulty (venv_block v))"
+| "instruction_sem v c (Info DIFFICULTY) = stack_0_1_op v c (block_difficulty (venv_block v))"
 | "instruction_sem v c (Memory MLOAD) = mload v c"
 | "instruction_sem v c (Memory MSTORE) = mstore v c"
 | "instruction_sem v c (Memory MSTORE8) = mstore8 v c"
@@ -765,7 +754,7 @@ where
              program_sem new_v c rest (Suc remaining_steps)
            else
              program_sem new_v c (venv_prg_sfx new_v) remaining_steps)
-      | InstructionToWorld (a, opt_pushed_v, st, bal) \<Rightarrow>
+      | InstructionToWorld (a, st, bal, opt_pushed_v) \<Rightarrow>
         ProgramToWorld (a, st, bal, opt_pushed_v)
       | InstructionUnknown \<Rightarrow> ProgramInvalid
       | InstructionAnnotationFailure \<Rightarrow> ProgramAnnotationFailure
