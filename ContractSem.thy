@@ -277,9 +277,9 @@ where
   , aenv_this = cenv_this c
   , aenv_origin = venv_origin v \<rparr>"
 
-abbreviation eval_annotation :: "annotation \<Rightarrow> variable_env \<Rightarrow> constant_env \<Rightarrow> instruction_result"
+definition eval_annotation :: "annotation \<Rightarrow> variable_env \<Rightarrow> constant_env \<Rightarrow> instruction_result"
 where
-"eval_annotation anno v c ==
+"eval_annotation anno v c =
    (if anno (build_aenv v c) then InstructionContinue (venv_advance_pc v, 0)
     else InstructionAnnotationFailure)"
 
@@ -590,12 +590,13 @@ abbreviation list_swap :: "nat \<Rightarrow> 'a list \<Rightarrow> 'a list optio
 where
 "list_swap n lst \<equiv>
   if length lst < n + 1 then None else
-  Some (concat [[lst ! n], take (n - 1) (drop 1 lst) , [lst ! 0], drop (2 + n) lst])"
+  Some (concat [[lst ! n], take (n - 1) (drop 1 lst) , [lst ! 0], drop (1 + n) lst])"
 
 value "list_swap 1 [0, 1]"
 value "list_swap 2 [0, 1]"
 value "list_swap 2 [0, 1, 2]"
 value "list_swap 3 [0, 1, 2, 3]"
+value "list_swap 1 [0, 1, 2, 3]"
 
 abbreviation swap :: "nat \<Rightarrow> variable_env \<Rightarrow> constant_env \<Rightarrow> instruction_result"
 where
@@ -654,7 +655,13 @@ where
 | "instruction_sem v c (Arith GT) = stack_2_1_op v c (\<lambda> a b. if a > b then 1 else 0)"
 | "instruction_sem v c (Arith EQ) = stack_2_1_op v c (\<lambda> a b. if a = b then 1 else 0)"
 | "instruction_sem v c (Annotation a) = eval_annotation a v c"
-| "instruction_sem v c (Bits AND_inst) = stack_2_1_op v c (\<lambda> a b. a AND b)"
+| "instruction_sem v c (Bits inst_AND) = stack_2_1_op v c (\<lambda> a b. a AND b)"
+| "instruction_sem v c (Bits inst_OR) = stack_2_1_op v c (\<lambda> a b. a OR b)"
+| "instruction_sem v c (Bits inst_XOR) = stack_2_1_op v c (\<lambda> a b. a XOR b)"
+| "instruction_sem v c (Bits inst_NOT) = stack_1_1_op v c (\<lambda> a. NOT a)"
+| "instruction_sem v c (Bits BYTE) =
+    stack_2_1_op v c (\<lambda> position w.
+      if position < 32 then ucast ((word_rsplit w :: byte list) ! (unat position)) else 0)"
 | "instruction_sem v c (Sarith SDIV) = stack_2_1_op v c
      (\<lambda> n divisor. if divisor = 0 then 0 else
                         word_of_int ((sint n) div (sint divisor)))"
