@@ -19,7 +19,7 @@ natural:
 
 inductive world_turn :: "(account_state * instruction_result) \<Rightarrow> (account_state * variable_env) \<Rightarrow> bool"
 where
-  world_continue: "world_turn (orig, (InstructionContinue (v, _))) (orig, v)"
+  world_continue: "world_turn (orig, (InstructionContinue v)) (orig, v)"
 (* | world_call: commented out because we are not going into the deeper callee
   "account_state_natural_change old_state new_state \<Longrightarrow>
    build_venv_called old_state callargs next_venv \<Longrightarrow>
@@ -46,8 +46,8 @@ where
   contract_to_continue:
   "build_cenv old_account = cenv \<Longrightarrow>
    next_instruction old_venv i \<Longrightarrow>
-   instruction_sem old_venv cenv i = InstructionContinue (continuing_v, n) \<Longrightarrow>
-   contract_turn (old_account, old_venv) (old_account, InstructionContinue (continuing_v, n))"
+   instruction_sem old_venv cenv i = InstructionContinue continuing_v \<Longrightarrow>
+   contract_turn (old_account, old_venv) (old_account, InstructionContinue continuing_v)"
 | contract_to_world:
   "build_cenv old_account = cenv \<Longrightarrow>
    next_instruction old_venv i \<Longrightarrow>

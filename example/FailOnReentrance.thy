@@ -113,12 +113,8 @@ lemma fail_on_reentrance_correct :
 apply(case_tac n)
  apply(simp)
  apply(rule AccountStep; auto)
- apply(case_tac steps; auto)
 apply(case_tac nat; auto)
  apply(rule AccountStep; auto)
-   apply(case_tac steps; auto)
-  apply(case_tac steps; auto)
- apply(case_tac steps; auto)
 apply(rule AccountStep; auto)
 done
 

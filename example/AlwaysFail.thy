@@ -44,8 +44,6 @@ lemma always_fail_correct:
   (always_fail_spec initial_balance)
 "
 apply(rule AccountStep; auto)
-apply(case_tac steps; auto)
-apply(simp add: eval_annotation_def)
 done
 
 
