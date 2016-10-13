@@ -727,6 +727,7 @@ where
 | "instruction_sem v c (Misc SUICIDE) = suicide v c"
 | "instruction_sem v c (Misc DELEGATECALL) = delegatecall v c"
 | "instruction_sem v c (Info GAS) = stack_0_1_op v c (gas_limit v)"
+| "instruction_sem v c (Memory MSIZE) = stack_0_1_op v c (word_of_int (venv_memory_usage v))"
 
 datatype program_result =
   ProgramStepRunOut
