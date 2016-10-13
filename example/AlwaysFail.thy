@@ -10,7 +10,10 @@ where "this_address = undefined"
 abbreviation always_fail_code :: "inst list"
 where
 "always_fail_code ==
-   Stack (PUSH_N [0]) # Pc JUMP # []"
+   Stack (PUSH_N [0])
+ # Annotation (\<lambda> aenv. aenv_stack aenv ! 0 = 0)
+ # Pc JUMP #
+ []"
 
 abbreviation always_fail_account_state :: "uint \<Rightarrow> account_state"
 where
@@ -42,6 +45,7 @@ lemma always_fail_correct:
 "
 apply(rule AccountStep; auto)
 apply(case_tac steps; auto)
+apply(simp add: eval_annotation_def)
 done
 
 lemma no_assertion_failure:
