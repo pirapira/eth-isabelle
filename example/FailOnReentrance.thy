@@ -1,6 +1,6 @@
 theory FailOnReentrance
 
-imports Main "../ContractSem"
+imports Main "../ContractSem" "../RelationalSem"
 
 begin
 
@@ -103,7 +103,7 @@ apply(auto)
 done
 
 
-
+declare eval_annotation_def [simp]
 
 lemma fail_on_reentrance_correct :
   "account_state_responds_to_world
@@ -121,4 +121,19 @@ apply(case_tac nat; auto)
  apply(case_tac steps; auto)
 apply(rule AccountStep; auto)
 done
+
+lemma no_assertion_failure:
+"fail_on_reentrance_state n a \<Longrightarrow>
+ no_assertion_failure a"
+apply(case_tac n)
+ apply(simp add: no_assertion_failure_def)
+ apply(simp add: reachable.simps)
+ apply(auto)
+ apply(erule star.cases)
+  apply(auto)
+  apply(simp add: initial_instruction_result.simps)
+ apply(simp add: one_step.simps)
+apply(simp add: contract_turn.simps)
+oops
+
 end
