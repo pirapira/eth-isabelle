@@ -131,12 +131,8 @@ apply(case_tac n)
  apply(drule star_case; auto)
  apply(simp add: one_step.simps; auto)
  apply(simp add: world_turn.simps; auto)
-apply(simp only: no_assertion_failure_def)
-apply(simp add: initial_program_result.simps)
-apply(auto)
-apply(drule star_case; auto)
-apply(simp add: one_step.simps; auto)
-apply(simp add: world_turn.simps; auto)
-done   
+ apply(simp add: contract_turn.simps; auto)
+  apply(case_tac steps; auto)
+  oops (* The contract calls out but not enough changes are modelled *)
 
 end

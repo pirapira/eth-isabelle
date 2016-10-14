@@ -749,6 +749,7 @@ datatype program_result =
 | ProgramToWorld "contract_action * storage * (address => uint) * variable_env option"
 | ProgramInvalid
 | ProgramAnnotationFailure
+| ProgramInit (* will be used in RelationalSem *)
 
 definition decrease :: "((variable_env * constant_env * nat) * (variable_env * constant_env * nat)) set"
 where

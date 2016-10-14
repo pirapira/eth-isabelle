@@ -58,5 +58,11 @@ apply(drule star_case)
 apply(auto)
 apply(simp add: one_step.simps; auto)
 apply(simp add: world_turn.simps; auto)
+apply(simp add: contract_turn.simps; auto)
+ apply(case_tac steps; auto)
+ apply(drule star_case; auto)
+ apply(simp add: one_step.simps; auto)
+ apply(simp add: world_turn.simps)
+apply(case_tac steps; auto) 
 done
 end

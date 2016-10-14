@@ -10,23 +10,24 @@ begin
 inductive account_state_natural_change :: "account_state \<Rightarrow> account_state \<Rightarrow> bool"
 where
 natural:
-"account_address old = account_address new \<Longrightarrow>
- account_storage old = account_storage new \<Longrightarrow>
- account_code old = account_code new \<Longrightarrow>
- account_balance old \<le> account_balance new \<Longrightarrow>
- account_ongoing_calls old = account_ongoing_calls new \<Longrightarrow>
+"account_address new = account_address old \<Longrightarrow>
+ account_storage new = account_storage old \<Longrightarrow>
+ account_code new = account_code old \<Longrightarrow>
+ account_balance old \<le> account_balance old \<Longrightarrow>
+ account_ongoing_calls new = account_ongoing_calls old \<Longrightarrow>
  account_state_natural_change old new"
+ 
+declare account_state_natural_change.simps [simp]
 
 inductive world_turn :: "(account_state * program_result) \<Rightarrow> (account_state * variable_env) \<Rightarrow> bool"
 where
 (*  world_continue: "world_turn (orig, (InstructionContinue v)) (orig, v)"*)
-(* TODO  enable this with invariant.
-| world_call:
+(* TODO  enable this with invariant. *)
+  world_call: (* This excludes the reentrance, because that will be treated by the invariant *)
   "account_state_natural_change old_state new_state \<Longrightarrow>
-   build_venv_called old_state callargs next_venv \<Longrightarrow>
-   \<not> (instruction_result_continuing old_result) \<Longrightarrow>
-   world_turn (old_state, old_result) (next_state, next_venv)" *)
-  world_return_from_call:
+   build_venv_called new_state callargs next_venv \<Longrightarrow>
+   world_turn (old_state, ProgramInit) (new_state, next_venv)"
+| world_return_from_call:
   "account_state_natural_change account_state_going_out account_state_back \<Longrightarrow>
    build_venv_returned account_state_back result new_v \<Longrightarrow>
    world_turn (account_state_going_out, (ProgramToWorld (ContractCall _, _, _, _))) (account_state_back, new_v)"
@@ -41,7 +42,7 @@ where
 | world_fail_from_create:
   "account_state_natural_change account_state_going_out account_state_back \<Longrightarrow>
    build_venv_failed account_state_back = Some new_v \<Longrightarrow>
-   world_turn (account_state_going_out, (ProgramToWorld (ContractCall _, _, _, _))) (account_state_back, new_v)"
+   world_turn (account_state_going_out, (ProgramToWorld (ContractCreate _, _, _, _))) (account_state_back, new_v)"
 
 
 abbreviation next_instruction :: "variable_env \<Rightarrow> inst \<Rightarrow> bool"
@@ -55,12 +56,12 @@ inductive contract_turn :: "(account_state * variable_env) \<Rightarrow> (accoun
 where
   contract_to_world:
   "build_cenv old_account = cenv \<Longrightarrow>
-   program_sem old_venv cenv (venv_prg_sfx old_venv) n = ProgramToWorld (act, opt_v, st, bal) \<Longrightarrow>
+   program_sem old_venv cenv (venv_prg_sfx old_venv) steps = ProgramToWorld (act, opt_v, st, bal) \<Longrightarrow>
    account_state_going_out = update_account_state a act opt_v st bal \<Longrightarrow>
    contract_turn (old_account, old_venv) (account_state_going_out, ProgramToWorld (act, opt_v, st, bal))"
 | contract_annotation_failure:
   "build_cenv old_account = cenv \<Longrightarrow>
-   program_sem old_venv cenv (venv_prg_sfx old_venv) n = ProgramAnnotationFailure \<Longrightarrow>
+   program_sem old_venv cenv (venv_prg_sfx old_venv) steps = ProgramAnnotationFailure \<Longrightarrow>
    contract_turn (old_account, old_venv) (old_account, ProgramAnnotationFailure)"
 
 
@@ -72,8 +73,7 @@ step:
 inductive initial_program_result :: "account_state \<Rightarrow> (account_state * program_result) \<Rightarrow> bool"
 where
 initial:
-"bal (account_address a) = account_balance a \<Longrightarrow>
- initial_program_result a (a, ProgramToWorld (ContractFail, account_storage a, bal, None))"
+"initial_program_result a (a, ProgramInit)"
 
 (* taken from the book Concrete Semantics *)
 inductive star :: "('a \<Rightarrow> 'a \<Rightarrow> bool) \<Rightarrow> 'a \<Rightarrow> 'a \<Rightarrow> bool"
