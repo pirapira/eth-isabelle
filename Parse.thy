@@ -126,17 +126,17 @@ where
 fun parse_bytes :: "byte list \<Rightarrow> (inst list \<times> byte list) option"
 where
 "parse_bytes [] = Some ([], [])" |
-"parse_bytes (b # more) =
+"parse_bytes (b # rest) =
    (case parse_byte b of
      Complete i \<Rightarrow>
-     (case parse_bytes more of
-       None \<Rightarrow> Some ([i], more)
+     (case parse_bytes rest of
+       None \<Rightarrow> Some ([i], rest)
      | Some (tail, rest) \<Rightarrow> Some (i # tail, rest))
    | Incomplete f \<Rightarrow>
-     (case f more of
+     (case f rest of
        None \<Rightarrow> None
      | Some (i, rrest) \<Rightarrow>
-       if length rrest \<le> length more then
+       if length rrest \<le> length rest then
        (case parse_bytes rrest of
          None \<Rightarrow> Some ([i], rrest)
        | Some (tail, rest) \<Rightarrow> Some (i # tail, rest))
