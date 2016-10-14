@@ -102,7 +102,6 @@ lemma two [simp] : "2 = Suc (Suc 0)"
 apply(auto)
 done
 
-
 declare eval_annotation_def [simp]
 
 lemma fail_on_reentrance_correct :
@@ -113,8 +112,12 @@ lemma fail_on_reentrance_correct :
 apply(case_tac n)
  apply(simp)
  apply(rule AccountStep; auto)
+ apply(case_tac steps; auto)
 apply(case_tac nat; auto)
  apply(rule AccountStep; auto)
+   apply(case_tac steps; auto)
+  apply(case_tac steps; auto)
+ apply(case_tac steps; auto)
 apply(rule AccountStep; auto)
 done
 
@@ -122,14 +125,18 @@ lemma no_assertion_failure:
 "fail_on_reentrance_state n a \<Longrightarrow>
  no_assertion_failure a"
 apply(case_tac n)
- apply(simp add: no_assertion_failure_def)
- apply(simp add: reachable.simps)
+ apply(simp only: no_assertion_failure_def)
+ apply(simp add: initial_program_result.simps)
  apply(auto)
- apply(erule star.cases)
-  apply(auto)
-  apply(simp add: initial_instruction_result.simps)
- apply(simp add: one_step.simps)
-apply(simp add: contract_turn.simps)
-oops
+ apply(drule star_case; auto)
+ apply(simp add: one_step.simps; auto)
+ apply(simp add: world_turn.simps; auto)
+apply(simp only: no_assertion_failure_def)
+apply(simp add: initial_program_result.simps)
+apply(auto)
+apply(drule star_case; auto)
+apply(simp add: one_step.simps; auto)
+apply(simp add: world_turn.simps; auto)
+done   
 
 end

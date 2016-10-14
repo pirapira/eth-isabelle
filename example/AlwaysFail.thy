@@ -58,7 +58,5 @@ apply(drule star_case)
 apply(auto)
 apply(simp add: one_step.simps; auto)
 apply(simp add: world_turn.simps; auto)
- apply(simp add: account_state_natural_change.simps; auto)
-apply(simp add: account_state_natural_change.simps; auto)
 done
 end

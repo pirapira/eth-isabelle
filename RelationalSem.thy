@@ -26,14 +26,23 @@ where
    build_venv_called old_state callargs next_venv \<Longrightarrow>
    \<not> (instruction_result_continuing old_result) \<Longrightarrow>
    world_turn (old_state, old_result) (next_state, next_venv)" *)
-world_return:
+  world_return_from_call:
   "account_state_natural_change account_state_going_out account_state_back \<Longrightarrow>
    build_venv_returned account_state_back result new_v \<Longrightarrow>
-   world_turn (account_state_going_out, (ProgramToWorld (_, _, _, _))) (account_state_back, new_v)"
-| world_fail:
+   world_turn (account_state_going_out, (ProgramToWorld (ContractCall _, _, _, _))) (account_state_back, new_v)"
+| world_return_from_create:
+  "account_state_natural_change account_state_going_out account_state_back \<Longrightarrow>
+   build_venv_returned account_state_back result new_v \<Longrightarrow>
+   world_turn (account_state_going_out, (ProgramToWorld (ContractCreate _, _, _, _))) (account_state_back, new_v)"
+| world_fail_from_call:
   "account_state_natural_change account_state_going_out account_state_back \<Longrightarrow>
    build_venv_failed account_state_back = Some new_v \<Longrightarrow>
-   world_turn (account_state_going_out, (ProgramToWorld (_, _, _, _))) (account_state_back, new_v)"
+   world_turn (account_state_going_out, (ProgramToWorld (ContractCall _, _, _, _))) (account_state_back, new_v)"
+| world_fail_from_create:
+  "account_state_natural_change account_state_going_out account_state_back \<Longrightarrow>
+   build_venv_failed account_state_back = Some new_v \<Longrightarrow>
+   world_turn (account_state_going_out, (ProgramToWorld (ContractCall _, _, _, _))) (account_state_back, new_v)"
+
 
 abbreviation next_instruction :: "variable_env \<Rightarrow> inst \<Rightarrow> bool"
 where
