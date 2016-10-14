@@ -49,20 +49,20 @@ apply(rule AccountStep; auto)
 apply(case_tac steps; auto)
 done
 
+declare one_step.simps [simp]
+declare world_turn.simps [simp]
+declare contract_turn.simps [simp]
+
 lemma no_assertion_failure:
-"no_assertion_failure (always_fail_account_state initial_balance)"
+"no_assertion_failure (\<lambda> a. \<exists> initial_balance. a = (always_fail_account_state initial_balance))"
 apply(simp only: no_assertion_failure_def)
 apply(simp add: initial_program_result.simps)
 apply(auto)
-apply(drule star_case)
-apply(auto)
-apply(simp add: one_step.simps; auto)
-apply(simp add: world_turn.simps; auto)
-apply(simp add: contract_turn.simps; auto)
+  apply(case_tac steps; auto)
+  apply(rule_tac x = "account_balance ab" in exI)
+  apply(auto)
  apply(case_tac steps; auto)
- apply(drule star_case; auto)
- apply(simp add: one_step.simps; auto)
- apply(simp add: world_turn.simps)
-apply(case_tac steps; auto) 
+apply(case_tac steps; auto)
 done
+
 end

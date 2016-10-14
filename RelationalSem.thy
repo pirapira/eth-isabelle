@@ -19,14 +19,23 @@ natural:
  
 declare account_state_natural_change.simps [simp]
 
+fun callable_result :: "program_result \<Rightarrow> bool"
+where
+  "callable_result ProgramStepRunOut = True"
+| "callable_result (ProgramToWorld (act, _, _, _)) = (act \<noteq> ContractSuicide)"
+| "callable_result ProgramInvalid = False"
+| "callable_result ProgramAnnotationFailure = False"
+| "callable_result ProgramInit = True"
+
 inductive world_turn :: "(account_state * program_result) \<Rightarrow> (account_state * variable_env) \<Rightarrow> bool"
 where
 (*  world_continue: "world_turn (orig, (InstructionContinue v)) (orig, v)"*)
 (* TODO  enable this with invariant. *)
-  world_call: (* This excludes the reentrance, because that will be treated by the invariant *)
+  world_call:
   "account_state_natural_change old_state new_state \<Longrightarrow>
    build_venv_called new_state callargs next_venv \<Longrightarrow>
-   world_turn (old_state, ProgramInit) (new_state, next_venv)"
+   callable_result result \<Longrightarrow>
+   world_turn (old_state, result) (new_state, next_venv)"
 | world_return_from_call:
   "account_state_natural_change account_state_going_out account_state_back \<Longrightarrow>
    build_venv_returned account_state_back result new_v \<Longrightarrow>
@@ -57,7 +66,7 @@ where
   contract_to_world:
   "build_cenv old_account = cenv \<Longrightarrow>
    program_sem old_venv cenv (venv_prg_sfx old_venv) steps = ProgramToWorld (act, opt_v, st, bal) \<Longrightarrow>
-   account_state_going_out = update_account_state a act opt_v st bal \<Longrightarrow>
+   account_state_going_out = update_account_state old_account act opt_v st bal \<Longrightarrow>
    contract_turn (old_account, old_venv) (account_state_going_out, ProgramToWorld (act, opt_v, st, bal))"
 | contract_annotation_failure:
   "build_cenv old_account = cenv \<Longrightarrow>
@@ -136,11 +145,16 @@ where
  one_step (original, init) fin \<Longrightarrow>
  one_run original fin"
 *)
-definition no_assertion_failure :: "account_state \<Rightarrow> bool"
+
+(* [no_assertion_failure inv] takes an invariant [inv]
+ * and tells if assertion failures are impossible *)
+
+definition no_assertion_failure :: "(account_state \<Rightarrow> bool) \<Rightarrow> bool"
 where
-"no_assertion_failure a ==
-  (\<forall> init. initial_program_result a init \<longrightarrow>
-  (\<forall> fin. star one_step init fin \<longrightarrow>
+"no_assertion_failure (I :: account_state \<Rightarrow> bool) ==
+  (\<forall> init. I (fst init) \<longrightarrow>
+  (\<forall> fin. one_step init fin \<longrightarrow>
+  I (fst fin) \<and>
   snd fin \<noteq> ProgramAnnotationFailure))"
 
 (* TODO: define calls_of_code *)
