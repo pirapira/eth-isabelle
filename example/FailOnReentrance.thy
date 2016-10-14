@@ -121,18 +121,56 @@ apply(case_tac nat; auto)
 apply(rule AccountStep; auto)
 done
 
+
+inductive fail_on_reentrance_invariant :: "account_state \<Rightarrow> bool"
+where
+  depth_zero:
+    "account_address st = fail_on_reentrance_address \<Longrightarrow>
+     account_storage st 0 = 0 \<Longrightarrow>
+     account_code st = fail_on_reentrance_program \<Longrightarrow>
+     account_ongoing_calls st = [] \<Longrightarrow>
+     fail_on_reentrance_invariant st"
+| depth_one:
+    "account_code st = fail_on_reentrance_program \<Longrightarrow>
+     account_storage st 0 = 1 \<Longrightarrow>
+     account_address st = fail_on_reentrance_address \<Longrightarrow>
+     account_ongoing_calls st = [ve] \<Longrightarrow>
+     venv_prg_sfx ve = after_call \<Longrightarrow>
+     venv_storage ve 0 = 1 \<Longrightarrow>
+     venv_storage_at_call ve 0 = 0 \<Longrightarrow>
+     fail_on_reentrance_invariant st"
+
+
 lemma no_assertion_failure:
-"fail_on_reentrance_state n a \<Longrightarrow>
- no_assertion_failure a"
-apply(case_tac n)
- apply(simp only: no_assertion_failure_def)
- apply(simp add: initial_program_result.simps)
- apply(auto)
- apply(drule star_case; auto)
- apply(simp add: one_step.simps; auto)
- apply(simp add: world_turn.simps; auto)
- apply(simp add: contract_turn.simps; auto)
+"no_assertion_failure fail_on_reentrance_invariant"
+apply(simp only: no_assertion_failure_def)
+apply(rule allI)
+apply(rule impI)
+apply(erule fail_on_reentrance_invariant.cases)
+ (* the case originally depth zero *)
+ apply(simp only: one_step.simps)
+ apply(simp only: world_turn.simps; auto)
+  apply(simp only: contract_turn.simps; auto)
+   apply(case_tac steps; auto)
+   apply(rule depth_one; simp?)
+     apply(simp)
+    apply(simp)
+   apply(simp)
   apply(case_tac steps; auto)
-  oops (* The contract calls out but not enough changes are modelled *)
+ apply(simp only: contract_turn.simps; auto)
+ apply(case_tac steps; auto)
+apply(simp only: one_step.simps)
+apply(simp only: world_turn.simps)
+apply(simp only: contract_turn.simps; auto)
+  apply(case_tac steps; auto)
+ apply(rule depth_one; simp?)
+apply(case_tac steps; auto)
+apply(case_tac steps; auto)
+done
+
+   
+(* the case originally depth one *)
+                
+              
 
 end

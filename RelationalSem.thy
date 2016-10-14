@@ -19,6 +19,18 @@ natural:
  
 declare account_state_natural_change.simps [simp]
 
+inductive account_state_return_change :: "account_state \<Rightarrow> account_state \<Rightarrow> bool"
+where
+account_return:
+"account_address new = account_address old \<Longrightarrow>
+ account_storage new = account_storage old \<Longrightarrow>
+ account_code new = account_code old \<Longrightarrow>
+ account_balance old \<le> account_balance old \<Longrightarrow>
+ _ # account_ongoing_calls new = account_ongoing_calls old \<Longrightarrow>
+ account_state_return_change old new"
+
+declare account_state_return_change.simps [simp]
+
 fun callable_result :: "program_result \<Rightarrow> bool"
 where
   "callable_result ProgramStepRunOut = True"
@@ -26,6 +38,18 @@ where
 | "callable_result ProgramInvalid = False"
 | "callable_result ProgramAnnotationFailure = False"
 | "callable_result ProgramInit = True"
+
+fun returnable_result :: "program_result \<Rightarrow> bool"
+where
+  "returnable_result ProgramStepRunOut = False"
+| "returnable_result (ProgramToWorld (ContractCall _, _, _, _)) = True"
+| "returnable_result (ProgramToWorld (ContractCreate _, _, _, _)) = True"
+| "returnable_result (ProgramToWorld (ContractSuicide, _, _, _)) = False"
+| "returnable_result (ProgramToWorld (ContractFail, _, _, _)) = False"
+| "returnable_result (ProgramToWorld (ContractReturn _, _, _, _)) = False"
+| "returnable_result ProgramInit = False"
+| "returnable_result ProgramInvalid = False"
+| "returnable_result ProgramAnnotationFailure = False"
 
 inductive world_turn :: "(account_state * program_result) \<Rightarrow> (account_state * variable_env) \<Rightarrow> bool"
 where
@@ -36,22 +60,16 @@ where
    build_venv_called new_state callargs next_venv \<Longrightarrow>
    callable_result result \<Longrightarrow>
    world_turn (old_state, result) (new_state, next_venv)"
-| world_return_from_call:
-  "account_state_natural_change account_state_going_out account_state_back \<Longrightarrow>
+| world_return:
+  "account_state_return_change account_state_going_out account_state_back \<Longrightarrow>
    build_venv_returned account_state_back result new_v \<Longrightarrow>
-   world_turn (account_state_going_out, (ProgramToWorld (ContractCall _, _, _, _))) (account_state_back, new_v)"
-| world_return_from_create:
-  "account_state_natural_change account_state_going_out account_state_back \<Longrightarrow>
-   build_venv_returned account_state_back result new_v \<Longrightarrow>
-   world_turn (account_state_going_out, (ProgramToWorld (ContractCreate _, _, _, _))) (account_state_back, new_v)"
-| world_fail_from_call:
-  "account_state_natural_change account_state_going_out account_state_back \<Longrightarrow>
+   returnable_result program_r \<Longrightarrow>
+   world_turn (account_state_going_out, program_r) (account_state_back, new_v)"
+| world_fail:
+  "account_state_return_change account_state_going_out account_state_back \<Longrightarrow>
    build_venv_failed account_state_back = Some new_v \<Longrightarrow>
-   world_turn (account_state_going_out, (ProgramToWorld (ContractCall _, _, _, _))) (account_state_back, new_v)"
-| world_fail_from_create:
-  "account_state_natural_change account_state_going_out account_state_back \<Longrightarrow>
-   build_venv_failed account_state_back = Some new_v \<Longrightarrow>
-   world_turn (account_state_going_out, (ProgramToWorld (ContractCreate _, _, _, _))) (account_state_back, new_v)"
+   returnable_result result \<Longrightarrow>
+   world_turn (account_state_going_out, result) (account_state_back, new_v)"
 
 
 abbreviation next_instruction :: "variable_env \<Rightarrow> inst \<Rightarrow> bool"
