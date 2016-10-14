@@ -37,6 +37,8 @@ where
   \<rparr>
 "
 
+declare eval_annotation_def [simp]
+
 lemma always_fail_correct:
 "
   account_state_responds_to_world
@@ -44,22 +46,19 @@ lemma always_fail_correct:
   (always_fail_spec initial_balance)
 "
 apply(rule AccountStep; auto)
+apply(case_tac steps; auto)
 done
-
 
 lemma no_assertion_failure:
 "no_assertion_failure (always_fail_account_state initial_balance)"
 apply(simp only: no_assertion_failure_def)
-apply(rule allI)
-apply(rule reachable_ind)
+apply(simp add: initial_program_result.simps)
 apply(auto)
- apply(simp add: initial_instruction_result.simps)
-apply(simp add: initial_instruction_result.simps)
+apply(drule star_case)
 apply(auto)
-apply(simp add: one_step.simps)
-apply(simp add: world_turn.simps)
-apply(auto)
-
-oops
-
+apply(simp add: one_step.simps; auto)
+apply(simp add: world_turn.simps; auto)
+ apply(simp add: account_state_natural_change.simps; auto)
+apply(simp add: account_state_natural_change.simps; auto)
+done
 end

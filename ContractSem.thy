@@ -838,16 +838,16 @@ venv_returned:
 
 declare build_venv_returned.simps [simp]
 
-definition build_venv_fail :: "account_state \<Rightarrow> variable_env option"
+definition build_venv_failed :: "account_state \<Rightarrow> variable_env option"
 where
-"build_venv_fail a =
+"build_venv_failed a =
   (case account_ongoing_calls a of
      [] \<Rightarrow> None
    | recovered # _ \<Rightarrow>
       Some (recovered \<lparr>venv_stack := 0 # venv_stack recovered\<rparr>)
   )"
 
-declare build_venv_fail_def [simp]
+declare build_venv_failed_def [simp]
 
 
 abbreviation account_state_pop_ongoing_call :: "account_state \<Rightarrow> account_state"
@@ -928,7 +928,7 @@ abbreviation respond_to_fail_correctly ::
 where
 "respond_to_fail_correctly f a \<equiv>
    (\<forall> initial_venv final_state_pred resulting_action.
-      Some initial_venv = build_venv_fail a \<longrightarrow>
+      Some initial_venv = build_venv_failed a \<longrightarrow>
       f = (resulting_action, final_state_pred) \<longrightarrow>
       ( \<forall> steps.
         ( let r = program_sem initial_venv (build_cenv a) (venv_prg_sfx initial_venv) steps in
