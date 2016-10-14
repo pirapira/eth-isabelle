@@ -141,7 +141,7 @@ where
      fail_on_reentrance_invariant st"
 
 
-lemma no_assertion_failure:
+lemma invariant_kept:
 "no_assertion_failure fail_on_reentrance_invariant"
 apply(simp only: no_assertion_failure_def)
 apply(rule allI)
@@ -163,14 +163,9 @@ apply(simp only: one_step.simps)
 apply(simp only: world_turn.simps)
 apply(simp only: contract_turn.simps; auto)
   apply(case_tac steps; auto)
- apply(rule depth_one; simp?)
-apply(case_tac steps; auto)
+  apply(rule depth_one; simp?)
+ apply(case_tac steps; auto)
 apply(case_tac steps; auto)
 done
-
-   
-(* the case originally depth one *)
-                
-              
 
 end

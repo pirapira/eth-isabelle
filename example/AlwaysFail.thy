@@ -24,7 +24,7 @@ where
    , account_balance = balance
    , account_ongoing_calls = []
    \<rparr>"
-   
+
 abbreviation always_fail_spec :: "uint \<Rightarrow> response_to_world"
 where
 " always_fail_spec initial_balance ==
