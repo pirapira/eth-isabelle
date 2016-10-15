@@ -385,6 +385,8 @@ where
 "cut_memory idx 0 memory = []" |
 "cut_memory idx (Suc n) memory =
   memory idx # cut_memory (idx + 1) n memory"
+  
+declare cut_memory.simps [simp]
 
 definition call :: "variable_env \<Rightarrow> constant_env \<Rightarrow> instruction_result"
 where
@@ -852,17 +854,22 @@ venv_called:
    build_venv_called a env venv"
    
 declare build_venv_called.simps [simp]
-   
+
 abbreviation build_cenv :: "account_state \<Rightarrow> constant_env"
 where
 "build_cenv a \<equiv>
   \<lparr> cenv_program = account_code a,
     cenv_this = account_address a \<rparr>"
+    
+abbreviation is_call_like :: "inst option \<Rightarrow> bool"
+where
+"is_call_like i == (i = Some (Misc CALL) \<or> i = Some (Misc DELEGATECALL) \<or> i = Some (Misc CALLCODE) \<or> i = Some (Misc CREATE))"
 
 inductive build_venv_returned :: "account_state \<Rightarrow> return_result \<Rightarrow> variable_env \<Rightarrow> bool"
 where
 venv_returned:
 "  account_ongoing_calls a = recovered # _ \<Longrightarrow>
+   is_call_like (program_content (account_code a) (venv_pc recovered - 1)) \<Longrightarrow>
    new_bal \<ge> account_balance a \<Longrightarrow>
    build_venv_returned a r
      (
@@ -881,7 +888,9 @@ where
   (case account_ongoing_calls a of
      [] \<Rightarrow> None
    | recovered # _ \<Rightarrow>
-      Some (recovered \<lparr>venv_stack := 0 # venv_stack recovered\<rparr>)
+      (if is_call_like (program_content (account_code a) (venv_pc recovered - 1)) then
+       Some (recovered \<lparr>venv_stack := 0 # venv_stack recovered\<rparr>)
+       else None)
   )"
 
 declare build_venv_failed_def [simp]
