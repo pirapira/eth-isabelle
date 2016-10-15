@@ -143,6 +143,8 @@ where
        else None)
    )
    "
+   
+declare parse_bytes.simps [simp]
 
 value "parse_bytes [0x60, 0x60, 0x60, 0x40]"
 
@@ -156,6 +158,8 @@ value "''foobar'' :: char list"
 definition byte_of_char :: "char \<Rightarrow> byte"
 where
 "byte_of_char c = of_nat (String.nat_of_char c)"
+
+declare byte_of_char_def [simp]
 
 definition dao00 :: "char list"
 where
@@ -263,6 +267,8 @@ where
     | CHR ''e'' \<Rightarrow> 14
     | CHR ''f'' \<Rightarrow> 15
    )"
+   
+declare nat_of_hex_char_def [simp]
     
 value "nat_of_hex_char (CHR ''0'')"
 
@@ -286,6 +292,9 @@ where "dao_insts = parse_bytes dao"
 value "take 33 dao"
 
 value "parse_bytes dao"
+
+declare parse_byte_def [simp]
+declare parse_single_def [simp]
 
 value "parse_byte 111"
 
