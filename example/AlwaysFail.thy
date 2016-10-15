@@ -15,12 +15,14 @@ where
  # Pc JUMP #
  []"
 
+value "program_content (program_of_lst always_fail_code) 2"
+
 abbreviation always_fail_account_state :: "uint \<Rightarrow> account_state"
 where
 "always_fail_account_state balance ==
    \<lparr> account_address = this_address
    , account_storage = \<lambda> _. 0
-   , account_code = always_fail_code
+   , account_code = program_of_lst (always_fail_code)
    , account_balance = balance
    , account_ongoing_calls = []
    \<rparr>"
@@ -58,8 +60,8 @@ lemma no_assertion_failure:
 apply(simp only: no_assertion_failure_def)
 apply(simp add: initial_program_result.simps)
 apply(auto)
-  apply(case_tac steps; auto)
-  apply(rule_tac x = "account_balance ab" in exI)
+  apply(case_tac steps; auto)  
+  apply(rule_tac x = "account_balance ab" in exI)  
   apply(auto)
  apply(case_tac steps; auto)
 apply(case_tac steps; auto)

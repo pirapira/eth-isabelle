@@ -31,7 +31,7 @@ value "parse_bytes deed_bytes"
 
 inductive deed_inv :: "account_state \<Rightarrow> bool"
 where
-" account_code a = deed_insts \<Longrightarrow>
+" account_code a = program_of_lst deed_insts \<Longrightarrow>
   deed_inv a
 "
 
@@ -43,7 +43,12 @@ apply(simp only: no_assertion_failure_def; auto)
  apply(simp add: world_turn.simps add: contract_turn.simps)
  apply(auto)
    apply(case_tac steps; auto)
-   apply(simp split: if_splits)
-   
+   apply(case_tac "datasize bb = 0"; auto)
+  apply(case_tac steps; auto)
+  apply(case_tac "venv_pc recovered"; auto)
+  (* TODO: returned into nonsense locations... maybe we can forget about these cases? *)
+  apply(case_tac n; auto)
+   apply(case_tac "datasize recovered = 0"; auto)
+  apply(case_tac nata; auto)
 
 end

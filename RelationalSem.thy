@@ -72,23 +72,23 @@ where
    world_turn (account_state_going_out, result) (account_state_back, new_v)"
 
 
-abbreviation next_instruction :: "variable_env \<Rightarrow> inst \<Rightarrow> bool"
+abbreviation next_instruction :: "constant_env \<Rightarrow> variable_env \<Rightarrow> inst \<Rightarrow> bool"
 where
-"next_instruction v i ==
-  (case venv_prg_sfx v of
-      i' # _ \<Rightarrow> i = i'
+"next_instruction c v i ==
+  (case program_content (cenv_program c) (venv_pc v) of
+      Some i' \<Rightarrow> i = i'
     | _ \<Rightarrow> False)"
 
 inductive contract_turn :: "(account_state * variable_env) \<Rightarrow> (account_state * program_result) \<Rightarrow> bool"
 where
   contract_to_world:
   "build_cenv old_account = cenv \<Longrightarrow>
-   program_sem old_venv cenv (venv_prg_sfx old_venv) steps = ProgramToWorld (act, opt_v, st, bal) \<Longrightarrow>
+   program_sem old_venv cenv (program_length (cenv_program cenv)) steps = ProgramToWorld (act, opt_v, st, bal) \<Longrightarrow>
    account_state_going_out = update_account_state old_account act opt_v st bal \<Longrightarrow>
    contract_turn (old_account, old_venv) (account_state_going_out, ProgramToWorld (act, opt_v, st, bal))"
 | contract_annotation_failure:
   "build_cenv old_account = cenv \<Longrightarrow>
-   program_sem old_venv cenv (venv_prg_sfx old_venv) steps = ProgramAnnotationFailure \<Longrightarrow>
+   program_sem old_venv cenv (program_length (cenv_program cenv)) steps = ProgramAnnotationFailure \<Longrightarrow>
    contract_turn (old_account, old_venv) (old_account, ProgramAnnotationFailure)"
 
 
