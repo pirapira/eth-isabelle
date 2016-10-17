@@ -118,6 +118,9 @@ where
      venv_storage_at_call ve 0 = 0 \<Longrightarrow>
      fail_on_reentrance_invariant st"
 
+     
+value "program_of_lst fail_on_reentrance_program"
+
 declare one_step.simps [simp]
 declare world_turn.simps [simp]
 declare contract_turn.simps [simp]

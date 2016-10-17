@@ -13,8 +13,7 @@ datatype parse_byte_result =
 
 abbreviation "push n ==
       Incomplete (\<lambda> (rest :: byte list).
-      (if length rest < n then None
-       else Some (Stack (PUSH_N (take n rest)), drop n rest)))"
+      Some (Stack (PUSH_N (take n rest)), drop n rest))"
 
 
 definition parse_byte :: "byte \<Rightarrow> parse_byte_result"
@@ -160,30 +159,31 @@ value "parse_byte 0xa8"
    result is shorter.
 *)
 
-fun parse_bytes :: "byte list \<Rightarrow> (inst list \<times> byte list) option"
+fun parse_bytes_inner :: "nat \<Rightarrow> inst list \<Rightarrow> byte list \<Rightarrow> (inst list \<times> byte list) option"
 where
-"parse_bytes [] = Some ([], [])" |
-"parse_bytes (b # rest) =
+"parse_bytes_inner 0 _ _ = None" | 
+"parse_bytes_inner _ so_far [] = Some (rev so_far, [])" |
+"parse_bytes_inner (Suc fuel) so_far (b # rest) =
    (case parse_byte b of
      Complete i \<Rightarrow>
-     (case parse_bytes rest of
-       None \<Rightarrow> Some ([i], rest)
-     | Some (tail, rest) \<Rightarrow> Some (i # tail, rest))
+       parse_bytes_inner fuel (i # so_far) rest
    | Incomplete f \<Rightarrow>
      (case f rest of
        None \<Rightarrow> None
      | Some (i, rrest) \<Rightarrow>
-       if length rrest \<le> length rest then
-       (case parse_bytes rrest of
-         None \<Rightarrow> Some ([i], rrest)
-       | Some (tail, rest) \<Rightarrow> Some (i # tail, rest))
-       else None)
+       parse_bytes_inner fuel (i # so_far) rrest
+     )
    )
    "
 
-declare parse_bytes.simps [simp]
+declare parse_bytes_inner.simps [simp]
+
+abbreviation parse_bytes :: "byte list \<Rightarrow> (inst list \<times> byte list) option"
+where
+"parse_bytes bs == parse_bytes_inner (length bs) [] bs"
+
 declare parse_byte_def [simp]
-       
+
 
 value "parse_bytes [0x60, 0x60, 0x60, 0x40]"
 
@@ -221,9 +221,9 @@ where
     | CHR ''e'' \<Rightarrow> 14
     | CHR ''f'' \<Rightarrow> 15
    )"
-   
+
 declare int_of_hex_char_def [simp]
-    
+
 value "int_of_hex_char (CHR ''0'')"
 
 fun bytes_of_hex_content :: "char list \<Rightarrow> byte list"
