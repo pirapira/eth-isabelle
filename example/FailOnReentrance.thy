@@ -57,7 +57,7 @@ where
      account_storage st 0 = 1 \<Longrightarrow>
      account_address st = fail_on_reentrance_address \<Longrightarrow>
      account_ongoing_calls st = [ve] \<Longrightarrow>
-     venv_prg_sfx ve = after_call \<Longrightarrow>
+     venv_pc ve = 28 \<Longrightarrow>
      venv_storage ve 0 = 1 \<Longrightarrow>
      venv_storage_at_call ve 0 = 0 \<Longrightarrow>
      fail_on_reentrance_state 1 st"
@@ -98,10 +98,6 @@ declare fail_on_reentrance_spec.simps [simp]
 
 declare drop_bytes.simps [simp]
 
-lemma two [simp] : "2 = Suc (Suc 0)"
-apply(auto)
-done
-
 declare eval_annotation_def [simp]
 
 (*
@@ -136,7 +132,7 @@ where
      account_storage st 0 = 1 \<Longrightarrow>
      account_address st = fail_on_reentrance_address \<Longrightarrow>
      account_ongoing_calls st = [ve] \<Longrightarrow>
-     venv_prg_sfx ve = after_call \<Longrightarrow>
+     venv_pc ve = 28 \<Longrightarrow>
      venv_storage ve 0 = 1 \<Longrightarrow>
      venv_storage_at_call ve 0 = 0 \<Longrightarrow>
      fail_on_reentrance_invariant st"
@@ -154,15 +150,27 @@ apply(erule fail_on_reentrance_invariant.cases)
   apply(simp add: contract_turn.simps; auto)
    apply(case_tac steps; auto)
    apply(rule depth_one; simp?)
-    apply(simp)
-   apply(simp)
+     apply(auto)
+   apply(case_tac steps; auto)
+  apply(simp add: contract_turn.simps; auto)
+  apply(case_tac steps; auto)
+ apply(simp add: one_step.simps add:world_turn.simps)
+ apply(simp add: contract_turn.simps; auto)
+      apply(case_tac steps; auto)
+      apply(rule depth_one; simp?)
+     apply(case_tac steps; auto)
+    apply(case_tac steps; auto)
+    apply(rule depth_zero; auto)
+   apply(case_tac steps; auto)
+   apply(rule depth_zero; simp)
+  apply(case_tac steps; auto)
+ apply(case_tac steps; auto)
+apply(simp add: one_step.simps add:world_turn.simps; auto)
+  apply(simp add: contract_turn.simps; auto)
   apply(case_tac steps; auto)
  apply(simp add: contract_turn.simps; auto)
  apply(case_tac steps; auto)
-apply(simp add: one_step.simps add: world_turn.simps add: contract_turn.simps; auto)
-  apply(case_tac steps; auto)
-  apply(rule depth_one; simp?)
- apply(case_tac steps; auto)
+apply(simp add: contract_turn.simps; auto)
 apply(case_tac steps; auto)
 done
 

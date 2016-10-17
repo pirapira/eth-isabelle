@@ -26,7 +26,7 @@ account_return:
  account_storage new = account_storage old \<Longrightarrow>
  account_code new = account_code old \<Longrightarrow>
  account_balance old \<le> account_balance old \<Longrightarrow>
- _ # account_ongoing_calls new = account_ongoing_calls old \<Longrightarrow>
+ account_ongoing_calls new = account_ongoing_calls old \<Longrightarrow>
  account_state_return_change old new"
 
 declare account_state_return_change.simps [simp]
@@ -64,12 +64,12 @@ where
   "account_state_return_change account_state_going_out account_state_back \<Longrightarrow>
    build_venv_returned account_state_back result new_v \<Longrightarrow>
    returnable_result program_r \<Longrightarrow>
-   world_turn (account_state_going_out, program_r) (account_state_back, new_v)"
+   world_turn (account_state_going_out, program_r) (account_state_pop_ongoing_call account_state_back, new_v)"
 | world_fail:
   "account_state_return_change account_state_going_out account_state_back \<Longrightarrow>
    build_venv_failed account_state_back = Some new_v \<Longrightarrow>
    returnable_result result \<Longrightarrow>
-   world_turn (account_state_going_out, result) (account_state_back, new_v)"
+   world_turn (account_state_going_out, result) (account_state_pop_ongoing_call account_state_back, new_v)"
 
 
 abbreviation next_instruction :: "constant_env \<Rightarrow> variable_env \<Rightarrow> inst \<Rightarrow> bool"
