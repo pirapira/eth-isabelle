@@ -60,10 +60,14 @@ lemma no_assertion_failure:
 apply(simp only: no_assertion_failure_def)
 apply(simp add: initial_program_result.simps)
 apply(auto)
-  apply(case_tac steps; auto)  
-  apply(rule_tac x = "account_balance ab" in exI)  
-  apply(auto)
+ apply(drule star_case; auto)
+  apply(drule star_case; auto)
+  apply(case_tac steps; auto)
+  apply(case_tac ab; auto)
  apply(case_tac steps; auto)
+apply(drule star_case; auto)
+ apply(case_tac steps; auto)
+ apply(drule star_case; auto)
 apply(case_tac steps; auto)
 done
 
