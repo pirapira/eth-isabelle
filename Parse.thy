@@ -7,116 +7,153 @@ begin
 type_synonym "nibble" = "4 word"
 type_synonym "byte" = "8 word"
 
-datatype parse_single_result =
+datatype parse_byte_result =
   Complete inst
 | Incomplete "(byte list \<Rightarrow> (inst * byte list) option)"
 
-definition parse_single :: "nibble \<Rightarrow> nibble \<Rightarrow> parse_single_result"
-where
-  "parse_single m n = 
-    (let unknown = Unknown (word_rcat [m,n]) in
-    (if m = 0x0 then
-       Complete (if n = 0x0 then Misc STOP
-        else if n = 0x1 then Arith ADD
-        else if n = 0x2 then Arith MUL
-        else if n = 0x3 then Arith SUB
-        else if n = 0x4 then Arith DIV
-        else if n = 0x5 then Sarith SDIV
-        else if n = 0x6 then Arith MOD
-        else if n = 0x7 then Sarith SMOD
-        else if n = 0x8 then Arith ADDMOD
-        else if n = 0x9 then Arith MULMOD
-        else if n = 0xa then Arith EXP
-        else if n = 0xb then Sarith SIGNEXTEND
-        else unknown)
-      else if m = 0x1 then
-       Complete (if n = 0x0 then Arith LT
-        else if n = 0x1 then Arith GT
-        else if n = 0x2 then Sarith SLT
-        else if n = 0x3 then Sarith SGT
-        else if n = 0x4 then Arith EQ
-        else if n = 0x5 then Arith ISZERO
-        else if n = 0x6 then Bits inst_AND
-        else if n = 0x7 then Bits inst_OR
-        else if n = 0x8 then Bits inst_XOR
-        else if n = 0x9 then Bits inst_NOT
-        else if n = 0xa then Bits BYTE
-        else Unknown (word_rcat [m,n])
-        )
-      else if m = 0x2 then
-       Complete (if n = 0x0 then Arith SHA3
-        else unknown)
-      else if m = 0x3 then
-       Complete (if n = 0x0 then Info ADDRESS
-        else if n = 0x1 then Info BALANCE
-        else if n = 0x2 then Info ORIGIN
-        else if n = 0x3 then Info CALLER
-        else if n = 0x4 then Info CALLVALUE
-        else if n = 0x5 then Stack CALLDATALOAD
-        else if n = 0x6 then Info CALLDATASIZE
-        else if n = 0x7 then Memory CALLDATACOPY
-        else if n = 0x8 then Info CODESIZE
-        else if n = 0x9 then Memory CODECOPY
-        else if n = 0xa then Info GASPRICE
-        else if n = 0xb then Info EXTCODESIZE
-        else if n = 0xc then Memory EXTCODECOPY
-        else unknown)
-      else if m = 0x4 then
-       Complete (if n = 0x0 then Info BLOCKHASH
-        else if n = 0x1 then Info COINBASE
-        else if n = 0x2 then Info TIMESTAMP
-        else if n = 0x3 then Info NUMBER
-        else if n = 0x4 then Info DIFFICULTY
-        else if n = 0x5 then Info GASLIMIT
-        else unknown
-       )
-      else if m = 0x5 then
-       Complete (if n = 0x0 then Stack POP
-        else if n = 0x1 then Memory MLOAD
-        else if n = 0x2 then Memory MSTORE
-        else if n = 0x3 then Memory MSTORE8
-        else if n = 0x4 then Storage SLOAD
-        else if n = 0x5 then Storage SSTORE
-        else if n = 0x6 then Pc JUMP
-        else if n = 0x7 then Pc JUMPI
-        else if n = 0x8 then Pc PC
-        else if n = 0x9 then Memory MSIZE
-        else if n = 0xa then Info GAS
-        else if n = 0xb then Pc JUMPDEST
-        else unknown)
-      else if (m = 0x6) \<or> (m = 0x7) then
-        (let bytes = (unat m - 6) * 16 + unat n + 1 in
-        (Incomplete (\<lambda> (rest :: 8 word list).
-          if length rest < bytes then None
-          else Some (Stack (PUSH_N (take bytes rest)), (drop bytes rest))
-          ) ))
-      else if m = 0x8 then
-        Complete (Dup (unat n + 1))
-      else if m = 0x9 then
-        Complete (Swap (unat n + 1))
-      else if m = 0xa then
-        Complete (if n = 0x0 then Log LOG0
-        else if n = 0x1 then Log LOG1
-        else if n = 0x2 then Log LOG2
-        else if n = 0x3 then Log LOG3
-        else if n = 0x4 then Log LOG4
-        else unknown)
-      else if m = 0xb \<or> m = 0xc \<or> m = 0xd \<or> m = 0xe then
-        Complete unknown
-      else Complete
-      (if n = 0x0 then Misc CREATE
-       else if n = 0x1 then Misc CALL
-       else if n = 0x2 then Misc CALLCODE
-       else if n = 0x3 then Misc RETURN
-       else if n = 0xf then Misc SUICIDE
-       else unknown)))"
+abbreviation "push n ==
+      Incomplete (\<lambda> (rest :: byte list).
+      (if length rest < n then None
+       else Some (Stack (PUSH_N (take n rest)), drop n rest)))"
 
-definition parse_byte :: "byte \<Rightarrow> parse_single_result"
+
+definition parse_byte :: "byte \<Rightarrow> parse_byte_result"
 where
-"parse_byte b =
-   (let lst = word_rsplit b in
-    parse_single (lst ! 0) (lst ! 1)
-   )"
+"parse_byte =
+  (\<lambda> b. Complete (Unknown b))
+  ( 0x00 := Complete (Misc STOP)
+  , 0x01 := Complete (Arith ADD)
+  , 0x02 := Complete (Arith MUL)
+  , 0x03 := Complete (Arith SUB)
+  , 0x04 := Complete (Arith DIV)
+  , 0x05 := Complete (Sarith SDIV)
+  , 0x06 := Complete (Arith MOD)
+  , 0x07 := Complete (Sarith SMOD)
+  , 0x08 := Complete (Arith ADDMOD)
+  , 0x09 := Complete (Arith MULMOD)
+  , 0x0a := Complete (Arith EXP)
+  , 0x0b := Complete (Sarith SIGNEXTEND)
+  , 0x10 := Complete (Arith LT)
+  , 0x11 := Complete (Arith GT)
+  , 0x12 := Complete (Sarith SLT)
+  , 0x13 := Complete (Sarith SGT)
+  , 0x14 := Complete (Arith EQ)
+  , 0x15 := Complete (Arith ISZERO)
+  , 0x16 := Complete (Bits inst_AND)
+  , 0x17 := Complete (Bits inst_OR)
+  , 0x18 := Complete (Bits inst_XOR)
+  , 0x19 := Complete (Bits inst_NOT)
+  , 0x1a := Complete (Bits BYTE)
+  , 0x20 := Complete (Arith SHA3)
+  , 0x30 := Complete (Info ADDRESS)
+  , 0x31 := Complete (Info BALANCE)
+  , 0x32 := Complete (Info ORIGIN)
+  , 0x33 := Complete (Info CALLER)
+  , 0x34 := Complete (Info CALLVALUE)
+  , 0x35 := Complete (Stack CALLDATALOAD)
+  , 0x36 := Complete (Info CALLDATASIZE)
+  , 0x37 := Complete (Memory CALLDATACOPY)
+  , 0x38 := Complete (Info CODESIZE)
+  , 0x39 := Complete (Memory CODECOPY)
+  , 0x3a := Complete (Info GASPRICE)
+  , 0x3b := Complete (Info EXTCODESIZE)
+  , 0x3c := Complete (Memory EXTCODECOPY)
+  , 0x40 := Complete (Info BLOCKHASH)
+  , 0x41 := Complete (Info COINBASE)
+  , 0x42 := Complete (Info TIMESTAMP)
+  , 0x43 := Complete (Info NUMBER)
+  , 0x44 := Complete (Info DIFFICULTY)
+  , 0x45 := Complete (Info GASLIMIT)
+  , 0x50 := Complete (Stack POP)
+  , 0x51 := Complete (Memory MLOAD)
+  , 0x52 := Complete (Memory MSTORE)
+  , 0x53 := Complete (Memory MSTORE8)
+  , 0x54 := Complete (Storage SLOAD)
+  , 0x55 := Complete (Storage SSTORE)
+  , 0x56 := Complete (Pc JUMP)
+  , 0x57 := Complete (Pc JUMPI)
+  , 0x58 := Complete (Pc PC)
+  , 0x59 := Complete (Memory MSIZE)
+  , 0x5a := Complete (Info GAS)
+  , 0x5b := Complete (Pc JUMPDEST)
+  , 0x60 := push 1
+  , 0x61 := push 2
+  , 0x62 := push 3
+  , 0x63 := push 4
+  , 0x64 := push 5
+  , 0x65 := push 6
+  , 0x66 := push 7
+  , 0x67 := push 8
+  , 0x68 := push 9
+  , 0x69 := push 10
+  , 0x6a := push 11
+  , 0x6b := push 12
+  , 0x6c := push 13
+  , 0x6d := push 14
+  , 0x6e := push 15
+  , 0x6f := push 16
+  , 0x70 := push 17
+  , 0x71 := push 18
+  , 0x72 := push 19
+  , 0x73 := push 20
+  , 0x74 := push 21
+  , 0x75 := push 22
+  , 0x76 := push 23
+  , 0x77 := push 24
+  , 0x78 := push 25
+  , 0x79 := push 26
+  , 0x7a := push 27
+  , 0x7b := push 28
+  , 0x7c := push 29
+  , 0x7d := push 30
+  , 0x7e := push 31
+  , 0x7f := push 32
+  , 0x80 := Complete (Dup 1)
+  , 0x81 := Complete (Dup 2)
+  , 0x82 := Complete (Dup 3)
+  , 0x83 := Complete (Dup 4)
+  , 0x84 := Complete (Dup 5)
+  , 0x85 := Complete (Dup 6)
+  , 0x86 := Complete (Dup 7)
+  , 0x87 := Complete (Dup 8)
+  , 0x88 := Complete (Dup 9)
+  , 0x89 := Complete (Dup 10)
+  , 0x8a := Complete (Dup 11)
+  , 0x8b := Complete (Dup 12)
+  , 0x8c := Complete (Dup 13)
+  , 0x8d := Complete (Dup 14)
+  , 0x8e := Complete (Dup 15)
+  , 0x8f := Complete (Dup 16)
+  , 0x90 := Complete (Swap 1)
+  , 0x91 := Complete (Swap 2)
+  , 0x92 := Complete (Swap 3)
+  , 0x93 := Complete (Swap 4)
+  , 0x94 := Complete (Swap 5)
+  , 0x95 := Complete (Swap 6)
+  , 0x96 := Complete (Swap 7)
+  , 0x97 := Complete (Swap 8)
+  , 0x98 := Complete (Swap 9)
+  , 0x99 := Complete (Swap 10)
+  , 0x9a := Complete (Swap 11)
+  , 0x9b := Complete (Swap 12)
+  , 0x9c := Complete (Swap 13)
+  , 0x9d := Complete (Swap 14)
+  , 0x9e := Complete (Swap 15)
+  , 0x9f := Complete (Swap 16)
+  , 0xa0 := Complete (Log LOG0)
+  , 0xa1 := Complete (Log LOG1)
+  , 0xa2 := Complete (Log LOG2)
+  , 0xa3 := Complete (Log LOG3)
+  , 0xa4 := Complete (Log LOG4)
+  , 0xf0 := Complete (Misc CREATE)
+  , 0xf1 := Complete (Misc CALL)
+  , 0xf2 := Complete (Misc CALLCODE)
+  , 0xf3 := Complete (Misc RETURN)
+  , 0xf4 := Complete (Misc DELEGATECALL)
+  , 0xff := Complete (Misc SUICIDE)
+       )"
+
+value "parse_byte 0xa8"
 
 (* Now, need to parse a sequence of bytes.
    When you meet Incomplete, you have to make sure that the 
@@ -143,8 +180,10 @@ where
        else None)
    )
    "
-   
+
 declare parse_bytes.simps [simp]
+declare parse_byte_def [simp]
+       
 
 value "parse_bytes [0x60, 0x60, 0x60, 0x40]"
 
@@ -191,25 +230,6 @@ fun bytes_of_hex_content :: "char list \<Rightarrow> byte list"
 where
 "bytes_of_hex_content [] = []" |
 "bytes_of_hex_content (m # n # rest) = (word_of_int ((int_of_hex_char m) * 16 + int_of_hex_char n) # bytes_of_hex_content rest)"
-
-definition dao :: "byte list"
-where
-"dao = concat (map bytes_of_hex_content [dao00, dao01, dao02, dao03, dao04, dao05, dao06, dao07, dao08, dao09, dao0a, dao0b,
-dao0c, dao0d, dao0e, dao0f, dao10, dao11, dao12, dao13, dao14, dao15, dao16, dao17, dao18, dao19,
-dao1a])"
-
-value "dao"
-
-
-definition dao_insts :: "(inst list \<times> byte list) option"
-where "dao_insts = parse_bytes dao"
-
-value "take 33 dao"
-
-value "parse_bytes dao"
-
-declare parse_byte_def [simp]
-declare parse_single_def [simp]
 
 value "parse_byte 111"
 
