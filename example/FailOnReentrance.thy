@@ -100,25 +100,6 @@ declare drop_bytes.simps [simp]
 
 declare eval_annotation_def [simp]
 
-(*
-lemma fail_on_reentrance_correct :
-  "account_state_responds_to_world
-    (fail_on_reentrance_state n)
-    (fail_on_reentrance_spec n)
-    "
-apply(case_tac n)
- apply(simp)
- apply(rule AccountStep; auto)
- apply(case_tac steps; auto)
-apply(case_tac nat; auto)
- apply(rule AccountStep; auto)
-   apply(case_tac steps; auto)
-  apply(case_tac steps; auto)
- apply(case_tac steps; auto)
-apply(rule AccountStep; auto)
-done
-*)
-
 inductive fail_on_reentrance_invariant :: "account_state \<Rightarrow> bool"
 where
   depth_zero:
@@ -137,41 +118,49 @@ where
      venv_storage_at_call ve 0 = 0 \<Longrightarrow>
      fail_on_reentrance_invariant st"
 
+declare one_step.simps [simp]
+declare world_turn.simps [simp]
+declare contract_turn.simps [simp]
 
 lemma invariant_kept:
 "no_assertion_failure fail_on_reentrance_invariant"
 apply(simp add: no_assertion_failure_def)
 apply(rule allI)
 apply(rule impI)
-apply(erule fail_on_reentrance_invariant.cases)
- (* the case originally depth zero *)
- apply(simp add: one_step.simps)
- apply(simp add: world_turn.simps; auto)
-  apply(simp add: contract_turn.simps; auto)
+apply(rule allI)
+apply(rule allI)
+apply(rule impI)
+apply(drule star_case; auto)
    apply(case_tac steps; auto)
-   apply(rule depth_one; simp?)
-     apply(auto)
-   apply(case_tac steps; auto)
-  apply(simp add: contract_turn.simps; auto)
-  apply(case_tac steps; auto)
- apply(simp add: one_step.simps add:world_turn.simps)
- apply(simp add: contract_turn.simps; auto)
+   apply(drule fail_on_reentrance_invariant.cases; auto)
+    apply(drule star_case; auto)
+        apply(simp add: fail_on_reentrance_invariant.simps; auto)
+       apply(case_tac steps; auto)
+       apply(drule star_case; auto)
+       apply(rule depth_zero; auto)
       apply(case_tac steps; auto)
-      apply(rule depth_one; simp?)
+     apply(case_tac steps; auto)
+     apply(drule star_case; auto)
+     apply(rule depth_zero; auto)
+    apply(case_tac steps; auto)
+   apply(drule star_case; auto)
+   apply(rule depth_one; auto)
+  apply(case_tac steps; auto)
+  apply(drule fail_on_reentrance_invariant.cases; auto)
+    apply(drule star_case; auto)
+      apply(case_tac steps; auto)
+      apply(drule star_case; auto)
      apply(case_tac steps; auto)
     apply(case_tac steps; auto)
-    apply(rule depth_zero; auto)
+    apply(drule star_case; auto)
    apply(case_tac steps; auto)
-   apply(rule depth_zero; simp)
-  apply(case_tac steps; auto)
+  apply(drule star_case; auto)
+ apply(drule fail_on_reentrance_invariant.cases; auto)
  apply(case_tac steps; auto)
-apply(simp add: one_step.simps add:world_turn.simps; auto)
-  apply(simp add: contract_turn.simps; auto)
-  apply(case_tac steps; auto)
- apply(simp add: contract_turn.simps; auto)
+ apply(drule star_case; auto)
  apply(case_tac steps; auto)
-apply(simp add: contract_turn.simps; auto)
 apply(case_tac steps; auto)
+apply(drule fail_on_reentrance_invariant.cases; auto)
 done
-
+   
 end
