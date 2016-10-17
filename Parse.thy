@@ -246,9 +246,9 @@ where "dao19 = ''9054906101000a9004600160a060020a0316600160a060020a0316630221038
 definition dao1a :: "char list"
 where "dao1a = ''559150610b9956290decd9548b62a8d60345a988386fc84ba6bc95484008f6362f93160ef3e563''"
 
-definition nat_of_hex_char :: "char \<Rightarrow> nat"
+definition int_of_hex_char :: "char \<Rightarrow> int"
 where
-"nat_of_hex_char c =
+"int_of_hex_char c =
    (case c of
       CHR ''0'' \<Rightarrow> 0
     | CHR ''1'' \<Rightarrow> 1
@@ -268,14 +268,14 @@ where
     | CHR ''f'' \<Rightarrow> 15
    )"
    
-declare nat_of_hex_char_def [simp]
+declare int_of_hex_char_def [simp]
     
-value "nat_of_hex_char (CHR ''0'')"
+value "int_of_hex_char (CHR ''0'')"
 
 fun bytes_of_hex_content :: "char list \<Rightarrow> byte list"
 where
 "bytes_of_hex_content [] = []" |
-"bytes_of_hex_content (m # n # rest) = (of_nat ((nat_of_hex_char m) * 16 + nat_of_hex_char n) # bytes_of_hex_content rest)"
+"bytes_of_hex_content (m # n # rest) = (word_of_int ((int_of_hex_char m) * 16 + int_of_hex_char n) # bytes_of_hex_content rest)"
 
 definition dao :: "byte list"
 where

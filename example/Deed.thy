@@ -23,8 +23,13 @@ where "deed == ''6060604052361561006c5760e060020a600035046305b344108114''"
 
 abbreviation "deed_bytes == bytes_of_hex_content deed"
 
+value [simp] "deed_bytes"
+
 abbreviation deed_insts :: "inst list"
 where "deed_insts == fst (the (parse_bytes deed_bytes))"
+
+value "deed_insts"
+value [simp] "deed_insts"
 
 value "parse_bytes deed_bytes"
 
@@ -32,13 +37,16 @@ abbreviation deed_program :: "program"
 where
 "deed_program == program_of_lst deed_insts"
 
-value deed_program
+value [simp] deed_program
 
 inductive deed_inv :: "account_state \<Rightarrow> bool"
 where
 " account_code a = deed_program \<Longrightarrow>
   deed_inv a
 "
+
+value [simp] "program_length deed_program"
+
 
 lemma dlen : "program_length deed_program = 500"
 apply(simp)
