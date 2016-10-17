@@ -9,11 +9,10 @@ type_synonym "byte" = "8 word"
 
 datatype parse_byte_result =
   Complete inst
-| Incomplete "(byte list \<Rightarrow> (inst * byte list) option)"
+| Incomplete nat
 
 abbreviation "push n ==
-      Incomplete (\<lambda> (rest :: byte list).
-      Some (Stack (PUSH_N (take n rest)), drop n rest))"
+      Incomplete n"
 
 
 definition parse_byte :: "byte \<Rightarrow> parse_byte_result"
@@ -167,12 +166,8 @@ where
    (case parse_byte b of
      Complete i \<Rightarrow>
        parse_bytes_inner fuel (i # so_far) rest
-   | Incomplete f \<Rightarrow>
-     (case f rest of
-       None \<Rightarrow> None
-     | Some (i, rrest) \<Rightarrow>
-       parse_bytes_inner fuel (i # so_far) rrest
-     )
+   | Incomplete n  \<Rightarrow> (* TODO: maybe do a pattern match on n and rest to make it faster *)
+       parse_bytes_inner fuel (Stack (PUSH_N (take n rest (* this still copies the list... *))) # so_far) (drop n rest)
    )
    "
 

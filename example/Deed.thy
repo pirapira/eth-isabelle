@@ -51,7 +51,9 @@ value[simp] deed_insts
 
 definition deed_program :: "program"
 where
-"deed_program == program_of_lst deed_insts"
+"deed_program = program_of_lst deed_insts"
+
+declare deed_program_def [simp]
 
 value deed_program
 
@@ -64,7 +66,7 @@ where
 value "program_length deed_program"
 
 (*
-lemma dlen : "program_length deed_program = 500"
+lemma dlen : "parse_bytes deed_bytes = None"
 using [[simp_trace = true]]
 
 apply(simp)
@@ -87,8 +89,14 @@ apply(drule star_case; auto)
   apply(simp add: contract_turn.simps; auto)
   apply(case_tac steps; auto)
   apply(simp only: parse_result_def)
+  apply(simp)
+  apply(case_tac "datasize b = 0"; auto)
+  apply(simp split: if_splits)
+ apply(simp add: parse_result_def)
+ apply(simp add: contract_turn.simps; auto)
+ 
   
-
+  (* it kind-of-started again, but the parsing takes a bit too much time *)
 oops
 
 end
