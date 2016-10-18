@@ -10,12 +10,20 @@ begin
 inductive account_state_natural_change :: "account_state \<Rightarrow> account_state \<Rightarrow> bool"
 where
 natural:
-"account_address new = account_address old \<Longrightarrow>
- account_storage new = account_storage old \<Longrightarrow>
- account_code new = account_code old \<Longrightarrow>
- account_balance old \<le> account_balance old \<Longrightarrow>
- account_ongoing_calls new = account_ongoing_calls old \<Longrightarrow>
- account_state_natural_change old new"
+ "old_bal \<le> new_bal \<Longrightarrow>
+  account_state_natural_change
+   \<lparr> account_address = addr
+   , account_storage = str
+   , account_code = code
+   , account_balance = old_bal
+   , account_ongoing_calls = going
+   \<rparr>
+   \<lparr> account_address = addr
+   , account_storage = str
+   , account_code = code
+   , account_balance = new_bal
+   , account_ongoing_calls = going
+   \<rparr>"
  
 declare account_state_natural_change.simps [simp]
 

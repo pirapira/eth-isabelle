@@ -539,7 +539,9 @@ definition deed_program :: "program"
 where
 deed_program_def [simplified]: "deed_program = program_of_lst deed_insts"
 
+(*
 declare deed_program_def [simp]
+*)
 
 value deed_program
 
@@ -550,6 +552,20 @@ where
 "
 
 value [simp] "program_length deed_program"
+
+lemma prolen [simp] : "program_length deed_program = 500"
+apply(simp add: deed_program_def)
+done
+
+lemma proanno [simp] : "program_annotation deed_program n = []"
+apply(simp add: deed_program_def)
+done
+
+lemma pro_content [simp]: "program_content deed_program n = program_content_of_lst 0 deed_insts n"
+apply(simp add: deed_program_def)
+done
+
+declare bin_cat_def [simp]
 
 lemma deed_keeps_invariant :
 "no_assertion_failure deed_inv"
@@ -566,7 +582,29 @@ apply(drule star_case; auto)
  apply(drule star_case; auto)
   apply(simp add: contract_turn.simps; auto)
   apply(case_tac steps; auto)
-  
+  apply(case_tac "datasize b = 0")
+   using [[simp_trace = true]]
+   apply(simp)
+  apply(simp)
+  apply(split if_splits)
+   apply(simp)
+   apply(split if_splits)
+    apply(split if_splits)
+     apply(split if_splits)
+      apply(simp)
+     apply(simp)
+    apply(split if_splits)
+     apply(simp)
+    apply(simp)
+   apply(split if_splits)
+    apply(split if_splits)
+     apply(simp)
+    apply(simp)
+    apply(split if_splits)
+     apply(simp)
+     
+     
+     
 oops
 
 end
