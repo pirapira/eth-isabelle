@@ -26,32 +26,518 @@ where deed_b [simplified, simp]: "deed_bytes == bytes_of_hex_content deed"
 
 value [simp] "deed_bytes"
 
-(*
-lemma dlen : "parse_bytes deed_bytes = None"
-using [[simp_trace = true]]
-apply(simp)
-*)
-
-
-value "parse_bytes deed_bytes"
-
-value [simp] "parse_bytes deed_bytes"
-
-value [nbe] "parse_bytes deed_bytes"
-
-definition parse_result :: "(inst list \<times> byte list) option"
-where
-parse_result_def[simplified]: "parse_result = parse_bytes deed_bytes"
-
 definition deed_insts :: "inst list"
-where
-deed_insts_d [simplified, simp] : "deed_insts = fst (the parse_result)"
+where "deed_insts =
+Stack (PUSH_N [0x60]) #
+Stack (PUSH_N [0x40]) #
+Memory MSTORE #
+Info CALLDATASIZE #
+Arith ISZERO #
+Stack (PUSH_N [0x00, 0x6c]) #
+Pc JUMPI #
+Stack (PUSH_N [0xe0]) #
+Stack (PUSH_N [0x02]) #
+Arith EXP #
+Stack (PUSH_N [0x00]) #
+Stack CALLDATALOAD #
+Arith DIV #
+Stack (PUSH_N [0x05, 0xb3, 0x44, 0x10]) #
+Dup 2 #
+Arith EQ #
+Stack (PUSH_N [0x00, 0x6e]) #
+Pc JUMPI #
+Dup 1 #
+Stack (PUSH_N [0x0b, 0x5a, 0xb3, 0xd5]) #
+Arith EQ #
+Stack (PUSH_N [0x00, 0x7c]) #
+Pc JUMPI #
+Dup 1 #
+Stack (PUSH_N [0x13, 0xaf, 0x40, 0x35]) #
+Arith EQ #
+Stack (PUSH_N [0x00, 0x89]) #
+Pc JUMPI #
+Dup 1 #
+Stack (PUSH_N [0x2b, 0x20, 0xe3, 0x97]) #
+Arith EQ #
+Stack (PUSH_N [0x00, 0xaf]) #
+Pc JUMPI #
+Dup 1 #
+Stack (PUSH_N [0x8d, 0xa5, 0xcb, 0x5b]) #
+Arith EQ #
+Stack (PUSH_N [0x00, 0xc6]) #
+Pc JUMPI #
+Dup 1 #
+Stack (PUSH_N [0xbb, 0xe4, 0x27, 0x71]) #
+Arith EQ #
+Stack (PUSH_N [0x00, 0xdd]) #
+Pc JUMPI #
+Dup 1 #
+Stack (PUSH_N [0xfa, 0xab, 0x9d, 0x39]) #
+Arith EQ #
+Stack (PUSH_N [0x01, 0x03]) #
+Pc JUMPI #
+Dup 1 #
+Stack (PUSH_N [0xfb, 0x16, 0x69, 0xca]) #
+Arith EQ #
+Stack (PUSH_N [0x01, 0x29]) #
+Pc JUMPI #
+Pc JUMPDEST #
+Misc STOP #
+Pc JUMPDEST #
+Info CALLVALUE #
+Stack (PUSH_N [0x00, 0x02]) #
+Pc JUMPI #
+Stack (PUSH_N [0x01, 0x4a]) #
+Stack (PUSH_N [0x01]) #
+Storage SLOAD #
+Dup 2 #
+Pc JUMP #
+Pc JUMPDEST #
+Info CALLVALUE #
+Stack (PUSH_N [0x00, 0x02]) #
+Pc JUMPI #
+Stack (PUSH_N [0x00, 0x6c]) #
+Stack (PUSH_N [0x01, 0x89]) #
+Pc JUMP #
+Pc JUMPDEST #
+Info CALLVALUE #
+Stack (PUSH_N [0x00, 0x02]) #
+Pc JUMPI #
+Stack (PUSH_N [0x00, 0x6c]) #
+Stack (PUSH_N [0x04]) #
+Stack CALLDATALOAD #
+Stack (PUSH_N [0x00]) #
+Storage SLOAD #
+Info CALLER #
+Stack (PUSH_N [0x01]) #
+Stack (PUSH_N [0xa0]) #
+Stack (PUSH_N [0x02]) #
+Arith EXP #
+Arith SUB #
+Swap 1 #
+Dup 2 #
+Bits inst_AND #
+Swap 2 #
+Bits inst_AND #
+Arith EQ #
+Stack (PUSH_N [0x01, 0xf8]) #
+Pc JUMPI #
+Stack (PUSH_N [0x00, 0x02]) #
+Pc JUMP #
+Pc JUMPDEST #
+Info CALLVALUE #
+Stack (PUSH_N [0x00, 0x02]) #
+Pc JUMPI #
+Stack (PUSH_N [0x01, 0xa0]) #
+Stack (PUSH_N [0x00]) #
+Storage SLOAD #
+Stack (PUSH_N [0x01]) #
+Stack (PUSH_N [0xa0]) #
+Stack (PUSH_N [0x02]) #
+Arith EXP #
+Arith SUB #
+Bits inst_AND #
+Dup 2 #
+Pc JUMP #
+Pc JUMPDEST #
+Info CALLVALUE #
+Stack (PUSH_N [0x00, 0x02]) #
+Pc JUMPI #
+Stack (PUSH_N [0x01, 0xa0]) #
+Stack (PUSH_N [0x02]) #
+Storage SLOAD #
+Stack (PUSH_N [0x01]) #
+Stack (PUSH_N [0xa0]) #
+Stack (PUSH_N [0x02]) #
+Arith EXP #
+Arith SUB #
+Bits inst_AND #
+Dup 2 #
+Pc JUMP #
+Pc JUMPDEST #
+Info CALLVALUE #
+Stack (PUSH_N [0x00, 0x02]) #
+Pc JUMPI #
+Stack (PUSH_N [0x00, 0x6c]) #
+Stack (PUSH_N [0x04]) #
+Stack CALLDATALOAD #
+Stack (PUSH_N [0x00]) #
+Storage SLOAD #
+Info CALLER #
+Stack (PUSH_N [0x01]) #
+Stack (PUSH_N [0xa0]) #
+Stack (PUSH_N [0x02]) #
+Arith EXP #
+Arith SUB #
+Swap 1 #
+Dup 2 #
+Bits inst_AND #
+Swap 2 #
+Bits inst_AND #
+Arith EQ #
+Stack (PUSH_N [0x02, 0x57]) #
+Pc JUMPI #
+Stack (PUSH_N [0x00, 0x02]) #
+Pc JUMP #
+Pc JUMPDEST #
+Info CALLVALUE #
+Stack (PUSH_N [0x00, 0x02]) #
+Pc JUMPI #
+Stack (PUSH_N [0x00, 0x6c]) #
+Stack (PUSH_N [0x04]) #
+Stack CALLDATALOAD #
+Stack (PUSH_N [0x00]) #
+Storage SLOAD #
+Info CALLER #
+Stack (PUSH_N [0x01]) #
+Stack (PUSH_N [0xa0]) #
+Stack (PUSH_N [0x02]) #
+Arith EXP #
+Arith SUB #
+Swap 1 #
+Dup 2 #
+Bits inst_AND #
+Swap 2 #
+Bits inst_AND #
+Arith EQ #
+Stack (PUSH_N [0x02, 0xc7]) #
+Pc JUMPI #
+Stack (PUSH_N [0x00, 0x02]) #
+Pc JUMP #
+Pc JUMPDEST #
+Stack (PUSH_N [0x00, 0x6c]) #
+Stack (PUSH_N [0x04]) #
+Stack CALLDATALOAD #
+Stack (PUSH_N [0x00]) #
+Storage SLOAD #
+Info CALLER #
+Stack (PUSH_N [0x01]) #
+Stack (PUSH_N [0xa0]) #
+Stack (PUSH_N [0x02]) #
+Arith EXP #
+Arith SUB #
+Swap 1 #
+Dup 2 #
+Bits inst_AND #
+Swap 2 #
+Bits inst_AND #
+Arith EQ #
+Stack (PUSH_N [0x02, 0xe9]) #
+Pc JUMPI #
+Stack (PUSH_N [0x00, 0x02]) #
+Pc JUMP #
+Pc JUMPDEST #
+Stack (PUSH_N [0x40]) #
+Dup 1 #
+Memory MLOAD #
+Swap 2 #
+Dup 3 #
+Memory MSTORE #
+Memory MLOAD #
+Swap 1 #
+Dup 2 #
+Swap 1 #
+Arith SUB #
+Stack (PUSH_N [0x20]) #
+Arith ADD #
+Swap 1 #
+Misc RETURN #
+Pc JUMPDEST #
+Stack (PUSH_N [0x40]) #
+Memory MLOAD #
+Stack (PUSH_N [0xbb, 0x2c, 0xe2, 0xf5, 0x18, 0x03, 0xbb, 0xa1, 0x6b, 0xc8, 0x52, 0x82, 0xb4, 0x7d, 0xee, 0xea, 0x9a, 0x5c, 0x62, 0x23, 0xea, 0xbe, 0xa1, 0x07, 0x7b, 0xe6, 0x96, 0xb3, 0xf2, 0x65, 0xcf, 0x13]) #
+Swap 1 #
+Stack (PUSH_N [0x00]) #
+Swap 1 #
+Log LOG1 #
+Stack (PUSH_N [0x02, 0x54]) #
+Pc JUMPDEST #
+Stack (PUSH_N [0x02]) #
+Storage SLOAD #
+Stack (PUSH_N [0xa0]) #
+Stack (PUSH_N [0x02]) #
+Arith EXP #
+Swap 1 #
+Arith DIV #
+Stack (PUSH_N [0xff]) #
+Bits inst_AND #
+Arith ISZERO #
+Stack (PUSH_N [0x01, 0xbd]) #
+Pc JUMPI #
+Stack (PUSH_N [0x00, 0x02]) #
+Pc JUMP #
+Pc JUMPDEST #
+Stack (PUSH_N [0x40]) #
+Dup 1 #
+Memory MLOAD #
+Stack (PUSH_N [0x01]) #
+Stack (PUSH_N [0xa0]) #
+Stack (PUSH_N [0x02]) #
+Arith EXP #
+Arith SUB #
+Swap 3 #
+Swap 1 #
+Swap 3 #
+Bits inst_AND #
+Dup 3 #
+Memory MSTORE #
+Memory MLOAD #
+Swap 1 #
+Dup 2 #
+Swap 1 #
+Arith SUB #
+Stack (PUSH_N [0x20]) #
+Arith ADD #
+Swap 1 #
+Misc RETURN #
+Pc JUMPDEST #
+Stack (PUSH_N [0x40]) #
+Memory MLOAD #
+Stack (PUSH_N [0x02]) #
+Storage SLOAD #
+Stack (PUSH_N [0x01]) #
+Stack (PUSH_N [0xa0]) #
+Stack (PUSH_N [0x02]) #
+Arith EXP #
+Arith SUB #
+Swap 1 #
+Dup 2 #
+Bits inst_AND #
+Swap 2 #
+Info ADDRESS #
+Swap 1 #
+Swap 2 #
+Bits inst_AND #
+Info BALANCE #
+Dup 1 #
+Arith ISZERO #
+Stack (PUSH_N [0x08, 0xfc]) #
+Arith MUL #
+Swap 2 #
+Stack (PUSH_N [0x00]) #
+Dup 2 #
+Dup 2 #
+Dup 2 #
+Dup 6 #
+Dup 9 #
+Dup 9 #
+Misc CALL #
+Swap 4 #
+Stack POP #
+Stack POP #
+Stack POP #
+Stack POP #
+Arith ISZERO #
+Stack (PUSH_N [0x01, 0xf3]) #
+Pc JUMPI #
+Stack (PUSH_N [0xde, 0xad]) #
+Misc SUICIDE #
+Pc JUMPDEST #
+Stack (PUSH_N [0x00, 0x02]) #
+Pc JUMP #
+Pc JUMPDEST #
+Stack (PUSH_N [0x02]) #
+Dup 1 #
+Storage SLOAD #
+Stack (PUSH_N [0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff]) #
+Bits inst_NOT #
+Bits inst_AND #
+Dup 3 #
+Bits inst_OR #
+Swap 1 #
+Storage SSTORE #
+Stack (PUSH_N [0x40]) #
+Dup 1 #
+Memory MLOAD #
+Stack (PUSH_N [0x01]) #
+Stack (PUSH_N [0xa0]) #
+Stack (PUSH_N [0x02]) #
+Arith EXP #
+Arith SUB #
+Dup 4 #
+Bits inst_AND #
+Dup 2 #
+Memory MSTORE #
+Swap 1 #
+Memory MLOAD #
+Stack (PUSH_N [0xa2, 0xea, 0x98, 0x83, 0xa3, 0x21, 0xa3, 0xe9, 0x7b, 0x82, 0x66, 0xc2, 0xb0, 0x78, 0xbf, 0xee, 0xc6, 0xd5, 0x0c, 0x71, 0x1e, 0xd7, 0x1f, 0x87, 0x4a, 0x90, 0xd5, 0x00, 0xae, 0x2e, 0xaf, 0x36]) #
+Swap 2 #
+Dup 2 #
+Swap 1 #
+Arith SUB #
+Stack (PUSH_N [0x20]) #
+Arith ADD #
+Swap 1 #
+Log LOG1 #
+Pc JUMPDEST #
+Stack POP #
+Pc JUMP #
+Pc JUMPDEST #
+Stack (PUSH_N [0x02]) #
+Storage SLOAD #
+Stack (PUSH_N [0xa0]) #
+Stack (PUSH_N [0x02]) #
+Arith EXP #
+Swap 1 #
+Arith DIV #
+Stack (PUSH_N [0xff]) #
+Bits inst_AND #
+Arith ISZERO #
+Arith ISZERO #
+Stack (PUSH_N [0x02, 0x6f]) #
+Pc JUMPI #
+Stack (PUSH_N [0x00, 0x02]) #
+Pc JUMP #
+Pc JUMPDEST #
+Stack (PUSH_N [0x02]) #
+Dup 1 #
+Storage SLOAD #
+Stack (PUSH_N [0xff, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]) #
+Bits inst_NOT #
+Bits inst_AND #
+Swap 1 #
+Storage SSTORE #
+Stack (PUSH_N [0x40]) #
+Memory MLOAD #
+Stack (PUSH_N [0xde, 0xad]) #
+Swap 1 #
+Stack (PUSH_N [0x03, 0xe8]) #
+Info ADDRESS #
+Stack (PUSH_N [0x01]) #
+Stack (PUSH_N [0xa0]) #
+Stack (PUSH_N [0x02]) #
+Arith EXP #
+Arith SUB #
+Bits inst_AND #
+Info BALANCE #
+Dup 5 #
+Dup 3 #
+Arith SUB #
+Arith MUL #
+Arith DIV #
+Dup 1 #
+Arith ISZERO #
+Stack (PUSH_N [0x08, 0xfc]) #
+Arith MUL #
+Swap 2 #
+Stack (PUSH_N [0x00]) #
+Dup 2 #
+Dup 2 #
+Dup 2 #
+Dup 6 #
+Dup 9 #
+Dup 9 #
+Misc CALL #
+Swap 4 #
+Stack POP #
+Stack POP #
+Stack POP #
+Stack POP #
+Arith ISZERO #
+Arith ISZERO #
+Stack (PUSH_N [0x01, 0x5c]) #
+Pc JUMPI #
+Stack (PUSH_N [0x00, 0x02]) #
+Pc JUMP #
+Pc JUMPDEST #
+Stack (PUSH_N [0x00]) #
+Dup 1 #
+Storage SLOAD #
+Stack (PUSH_N [0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff]) #
+Bits inst_NOT #
+Bits inst_AND #
+Dup 3 #
+Bits inst_OR #
+Swap 1 #
+Storage SSTORE #
+Stack POP #
+Pc JUMP #
+Pc JUMPDEST #
+Stack (PUSH_N [0x02]) #
+Storage SLOAD #
+Stack (PUSH_N [0xa0]) #
+Stack (PUSH_N [0x02]) #
+Arith EXP #
+Swap 1 #
+Arith DIV #
+Stack (PUSH_N [0xff]) #
+Bits inst_AND #
+Arith ISZERO #
+Arith ISZERO #
+Stack (PUSH_N [0x03, 0x01]) #
+Pc JUMPI #
+Stack (PUSH_N [0x00, 0x02]) #
+Pc JUMP #
+Pc JUMPDEST #
+Dup 1 #
+Info ADDRESS #
+Stack (PUSH_N [0x01]) #
+Stack (PUSH_N [0xa0]) #
+Stack (PUSH_N [0x02]) #
+Arith EXP #
+Arith SUB #
+Bits inst_AND #
+Info BALANCE #
+Arith LT #
+Arith ISZERO #
+Stack (PUSH_N [0x03, 0x18]) #
+Pc JUMPI #
+Stack (PUSH_N [0x00, 0x02]) #
+Pc JUMP #
+Pc JUMPDEST #
+Stack (PUSH_N [0x02]) #
+Storage SLOAD #
+Stack (PUSH_N [0x40]) #
+Memory MLOAD #
+Stack (PUSH_N [0x01]) #
+Stack (PUSH_N [0xa0]) #
+Stack (PUSH_N [0x02]) #
+Arith EXP #
+Arith SUB #
+Swap 2 #
+Dup 3 #
+Bits inst_AND #
+Swap 2 #
+Info ADDRESS #
+Bits inst_AND #
+Info BALANCE #
+Dup 4 #
+Swap 1 #
+Arith SUB #
+Dup 1 #
+Arith ISZERO #
+Stack (PUSH_N [0x08, 0xfc]) #
+Arith MUL #
+Swap 2 #
+Stack (PUSH_N [0x00]) #
+Dup 2 #
+Dup 2 #
+Dup 2 #
+Dup 6 #
+Dup 9 #
+Dup 9 #
+Misc CALL #
+Swap 4 #
+Stack POP #
+Stack POP #
+Stack POP #
+Stack POP #
+Arith ISZERO #
+Arith ISZERO #
+Stack (PUSH_N [0x02, 0x54]) #
+Pc JUMPI #
+Stack (PUSH_N [0x00, 0x02]) #
+Pc JUMP #
+[]
+"
+
+declare deed_insts_def [simp]
 
 value[simp] deed_insts
 
 definition deed_program :: "program"
 where
-"deed_program = program_of_lst deed_insts"
+deed_program_def [simplified]: "deed_program = program_of_lst deed_insts"
 
 declare deed_program_def [simp]
 
@@ -63,16 +549,8 @@ where
   deed_inv a
 "
 
-value "program_length deed_program"
+value [simp] "program_length deed_program"
 
-(*
-lemma dlen : "parse_bytes deed_bytes = None"
-using [[simp_trace = true]]
-
-apply(simp)
-
-oops
-*)
 lemma deed_keeps_invariant :
 "no_assertion_failure deed_inv"
 apply(simp only: no_assertion_failure_def)
@@ -88,15 +566,7 @@ apply(drule star_case; auto)
  apply(drule star_case; auto)
   apply(simp add: contract_turn.simps; auto)
   apply(case_tac steps; auto)
-  apply(simp only: parse_result_def)
-  apply(simp)
-  apply(case_tac "datasize b = 0"; auto)
-  apply(simp split: if_splits)
- apply(simp add: parse_result_def)
- apply(simp add: contract_turn.simps; auto)
- 
   
-  (* it kind-of-started again, but the parsing takes a bit too much time *)
 oops
 
 end
