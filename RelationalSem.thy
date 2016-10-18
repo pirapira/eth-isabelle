@@ -30,12 +30,28 @@ declare account_state_natural_change.simps [simp]
 inductive account_state_return_change :: "(account_state \<Rightarrow> bool) \<Rightarrow> account_state \<Rightarrow> account_state \<Rightarrow> bool"
 where
 account_return:
-"account_address new = account_address old \<Longrightarrow>
- account_code new = account_code old \<Longrightarrow>
- account_balance old \<le> account_balance old \<Longrightarrow>
- account_ongoing_calls new = account_ongoing_calls old \<Longrightarrow>
- invariant new \<Longrightarrow>
- account_state_return_change invariant old new"
+"invariant
+ \<lparr> account_address = addr
+ , account_storage = new_str
+ , account_code = code
+ , account_balance = new_bal
+ , account_ongoing_calls = ongoing
+ \<rparr>
+ \<Longrightarrow>
+ account_state_return_change invariant
+ \<lparr> account_address = addr
+ , account_storage = old_str
+ , account_code = code
+ , account_balance = old_bal
+ , account_ongoing_calls = ongoing
+ \<rparr>
+ \<lparr> account_address = addr
+ , account_storage = new_str
+ , account_code = code
+ , account_balance = new_bal
+ , account_ongoing_calls = ongoing
+ \<rparr>
+ "
 
 declare account_state_return_change.simps [simp]
 

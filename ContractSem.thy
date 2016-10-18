@@ -15,6 +15,22 @@ definition bool_to_uint :: "bool \<Rightarrow> uint"
 where
 "bool_to_uint b = (if b then 1 else 0)"
 
+
+definition strict_if :: "bool \<Rightarrow> 'a \<Rightarrow> 'a \<Rightarrow> 'a"
+where
+"strict_if b x y = (if b then x else y)"
+
+lemma strict_if_True [simp] :
+"strict_if True a b = a"
+apply(simp add: strict_if_def)
+done
+
+lemma stricg_if_False [simp] :
+"strict_if False a b = b"
+apply(simp add: strict_if_def)
+done
+
+
 abbreviation "drop_one_element == tl"
 
 record call_arguments =
@@ -359,11 +375,10 @@ where
 "jumpi v c ==
   (case venv_stack v of
       pos # cond # rest \<Rightarrow>
-        (if cond = 0 then
-           InstructionContinue
-             (venv_advance_pc c (venv_pop_stack (Suc (Suc 0)) v))
-         else
-           jump (v\<lparr> venv_stack := pos # rest \<rparr>) c)
+        (strict_if (cond = 0)
+           (InstructionContinue
+             (venv_advance_pc c (venv_pop_stack (Suc (Suc 0)) v)))
+           (jump (v\<lparr> venv_stack := pos # rest \<rparr>) c))
     | _ \<Rightarrow> instruction_failure_result v)"
 
 abbreviation datasize :: "variable_env \<Rightarrow> uint"
@@ -794,7 +809,6 @@ where
   (let annots = program_annotation (cenv_program c) (venv_pc v) in
    List.list_all (\<lambda> annot. annot (build_aenv v c)) annots)"
 
-
 fun program_sem :: "variable_env \<Rightarrow> constant_env \<Rightarrow> int \<Rightarrow> nat \<Rightarrow> program_result"
 where
   "program_sem _ _ _ 0 = ProgramStepRunOut"
@@ -806,10 +820,9 @@ where
     | Some i \<Rightarrow>
    (case instruction_sem v c i of
         InstructionContinue new_v \<Rightarrow>
-          (if venv_pc new_v > venv_pc v then
-             program_sem new_v c (tiny_step - 1) (Suc remaining_steps)
-           else
-             program_sem new_v c (program_length (cenv_program c)) remaining_steps)
+          (strict_if (venv_pc new_v > venv_pc v)
+             (program_sem new_v c (tiny_step - 1) (Suc remaining_steps))
+             (program_sem new_v c (program_length (cenv_program c)) remaining_steps))
       | InstructionToWorld (a, st, bal, opt_pushed_v) \<Rightarrow>
         ProgramToWorld (a, st, bal, opt_pushed_v)
       | InstructionUnknown \<Rightarrow> ProgramInvalid
@@ -901,21 +914,37 @@ where
 "account_state_pop_ongoing_call orig ==
    orig\<lparr> account_ongoing_calls := tl (account_ongoing_calls orig)\<rparr>"
  
-abbreviation update_account_state :: "account_state \<Rightarrow> contract_action \<Rightarrow> storage \<Rightarrow> (address \<Rightarrow> uint) \<Rightarrow> variable_env option \<Rightarrow> account_state"
+definition update_account_state :: "account_state \<Rightarrow> contract_action \<Rightarrow> storage \<Rightarrow> (address \<Rightarrow> uint) \<Rightarrow> variable_env option \<Rightarrow> account_state"
 where
 "update_account_state prev act st bal v_opt \<equiv>
-  (case v_opt of
-    None \<Rightarrow>
-      prev\<lparr>
-        account_storage := st \<rparr>
-  | Some pushed \<Rightarrow>
-      prev\<lparr>
-        account_storage := st,
-        account_balance := bal (account_address prev),
-        account_ongoing_calls := pushed # (account_ongoing_calls prev)
-      \<rparr>
-  )
-"
+   prev \<lparr>
+     account_storage := st,
+     account_balance := (case v_opt of None \<Rightarrow> account_balance prev
+                                     | Some pushed \<Rightarrow> bal (account_address prev)),
+     account_ongoing_calls :=
+                        (case v_opt of None \<Rightarrow> account_ongoing_calls prev
+                                     | Some pushed \<Rightarrow> pushed # account_ongoing_calls prev)
+                                     \<rparr>"
+
+lemma update_account_state_None [simp] :
+"update_account_state prev act st bal None =
+   prev \<lparr>
+     account_storage := st,
+     account_balance := account_balance prev,
+     account_ongoing_calls := account_ongoing_calls prev
+   \<rparr>"
+apply(simp add: update_account_state_def)
+done
+
+lemma update_account_state_Some [simp] :
+"update_account_state prev act st bal (Some pushed) =
+   prev \<lparr>
+     account_storage := st,
+     account_balance := bal (account_address prev),
+     account_ongoing_calls := pushed # account_ongoing_calls prev
+  \<rparr>"
+apply(simp add: update_account_state_def)
+done
 
 (* Replace the coinductional future of the 
  * contract_behavior with just a condition on
@@ -997,5 +1026,10 @@ AccountStep:
 declare word_rcat_def [simp]
         unat_def [simp]
         bin_rcat_def [simp]
+
+lemma iszero_iszero [simp] :
+"((if b then (1 :: 256 word) else 0) = 0) = (\<not> b) "
+apply(auto)
+done
 
 end

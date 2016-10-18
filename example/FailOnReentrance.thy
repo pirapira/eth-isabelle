@@ -165,5 +165,5 @@ apply(drule star_case; auto)
 apply(case_tac steps; auto)
 apply(drule fail_on_reentrance_invariant.cases; auto)
 done
-   
+
 end

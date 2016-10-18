@@ -65,9 +65,8 @@ apply(auto)
   apply(case_tac steps; auto)
  apply(case_tac steps; auto)
 apply(drule star_case; auto)
- apply(case_tac steps; auto)
  apply(drule star_case; auto)
-apply(case_tac steps; auto)
+ apply(case_tac steps; auto)
 done
 
 end

@@ -581,30 +581,11 @@ apply(drule star_case; auto)
  apply(simp add: world_turn.simps; auto)
  apply(drule star_case; auto)
   apply(simp add: contract_turn.simps; auto)
-  apply(case_tac steps; auto)
-  apply(case_tac "datasize b = 0")
-   using [[simp_trace = true]]
+  apply(case_tac steps)
    apply(simp)
   apply(simp)
-  apply(split if_splits)
-   apply(simp)
-   apply(split if_splits)
-    apply(split if_splits)
-     apply(split if_splits)
-      apply(simp)
-     apply(simp)
-    apply(split if_splits)
-     apply(simp)
-    apply(simp)
-   apply(split if_splits)
-    apply(split if_splits)
-     apply(simp)
-    apply(simp)
-    apply(split if_splits)
-     apply(simp)
-     
-     
-     
+  
+
 oops
 
 end
