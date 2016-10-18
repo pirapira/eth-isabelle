@@ -584,7 +584,19 @@ apply(drule star_case; auto)
   apply(case_tac steps)
    apply(simp)
   apply(simp)
-  
+  apply(case_tac nat; auto)  (* change contract_sem back and remove these steps *)
+  apply(case_tac nata; auto)
+  apply(case_tac nat; auto)
+  apply(case_tac nata; auto)
+  apply(case_tac nat; auto)
+  apply(case_tac nata; auto)
+  apply(split if_splits; simp)
+   apply(case_tac nat)
+    apply(simp)
+   using [[simp_trace = true]]
+   apply(simp)
+   apply(case_tac nata; auto)
+   (* maybe the term for the memory is too big *)
 
 oops
 

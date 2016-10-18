@@ -16,20 +16,19 @@ where
 "bool_to_uint b = (if b then 1 else 0)"
 
 
-definition strict_if :: "bool \<Rightarrow> 'a \<Rightarrow> 'a \<Rightarrow> 'a"
+definition strict_if :: "bool \<Rightarrow> (bool \<Rightarrow> 'a) \<Rightarrow> (bool \<Rightarrow> 'a) \<Rightarrow> 'a"
 where
-"strict_if b x y = (if b then x else y)"
+"strict_if b x y = (if b then x True else y True)"
 
 lemma strict_if_True [simp] :
-"strict_if True a b = a"
+"strict_if True a b = a True"
 apply(simp add: strict_if_def)
 done
 
 lemma stricg_if_False [simp] :
-"strict_if False a b = b"
+"strict_if False a b = b True"
 apply(simp add: strict_if_def)
 done
-
 
 abbreviation "drop_one_element == tl"
 
@@ -369,6 +368,24 @@ where
           InstructionContinue v_new
       | Some _ \<Rightarrow> instruction_failure_result v
       | None \<Rightarrow> instruction_failure_result v )))"
+      
+definition blockedInstructionContinue :: "variable_env \<Rightarrow> bool \<Rightarrow> instruction_result"
+where
+"blockedInstructionContinue v _ = InstructionContinue v"
+
+lemma unblockInstructionContinue [simp] :
+"blockedInstructionContinue v True = InstructionContinue v"
+apply(simp add: blockedInstructionContinue_def)
+done
+
+definition blocked_jump :: "variable_env \<Rightarrow> constant_env \<Rightarrow> bool \<Rightarrow> instruction_result"
+where
+"blocked_jump v c _ = jump v c"
+
+lemma unblock_jump [simp]:
+"blocked_jump v c True = jump v c"
+apply(simp add: blocked_jump_def)
+done
 
 abbreviation jumpi :: "variable_env \<Rightarrow> constant_env \<Rightarrow> instruction_result"
 where
@@ -376,9 +393,9 @@ where
   (case venv_stack v of
       pos # cond # rest \<Rightarrow>
         (strict_if (cond = 0)
-           (InstructionContinue
+           (blockedInstructionContinue
              (venv_advance_pc c (venv_pop_stack (Suc (Suc 0)) v)))
-           (jump (v\<lparr> venv_stack := pos # rest \<rparr>) c))
+           (blocked_jump (v\<lparr> venv_stack := pos # rest \<rparr>) c))
     | _ \<Rightarrow> instruction_failure_result v)"
 
 abbreviation datasize :: "variable_env \<Rightarrow> uint"
@@ -809,7 +826,8 @@ where
   (let annots = program_annotation (cenv_program c) (venv_pc v) in
    List.list_all (\<lambda> annot. annot (build_aenv v c)) annots)"
 
-fun program_sem :: "variable_env \<Rightarrow> constant_env \<Rightarrow> int \<Rightarrow> nat \<Rightarrow> program_result"
+function (sequential) program_sem :: "variable_env \<Rightarrow> constant_env \<Rightarrow> int \<Rightarrow> nat \<Rightarrow> program_result"
+and blocked_program_sem :: "variable_env \<Rightarrow> constant_env \<Rightarrow> int \<Rightarrow> nat \<Rightarrow> bool \<Rightarrow> program_result"
 where
   "program_sem _ _ _ 0 = ProgramStepRunOut"
 | "program_sem v c tiny_step (Suc remaining_steps) =
@@ -821,16 +839,32 @@ where
    (case instruction_sem v c i of
         InstructionContinue new_v \<Rightarrow>
           (strict_if (venv_pc new_v > venv_pc v)
-             (program_sem new_v c (tiny_step - 1) (Suc remaining_steps))
-             (program_sem new_v c (program_length (cenv_program c)) remaining_steps))
+             (blocked_program_sem new_v c (tiny_step - 1) ((* Suc making it smaller steps *) remaining_steps))
+             (blocked_program_sem new_v c (program_length (cenv_program c)) remaining_steps))
       | InstructionToWorld (a, st, bal, opt_pushed_v) \<Rightarrow>
         ProgramToWorld (a, st, bal, opt_pushed_v)
       | InstructionUnknown \<Rightarrow> ProgramInvalid
       | InstructionAnnotationFailure \<Rightarrow> ProgramAnnotationFailure
       ))))
     "
+| "blocked_program_sem v c l p _ = program_sem v c l p"
+by pat_completeness auto
+termination by lexicographic_order
 
-declare program_sem.simps [simp]
+declare program_sem.psimps [simp]
+
+lemma unblock_program_sem [simp] : "blocked_program_sem v c l p True = program_sem v c l p"
+apply(simp add: blocked_program_sem.psimps)
+done
+
+definition program_sem_blocked :: "variable_env \<Rightarrow> constant_env \<Rightarrow> int \<Rightarrow> nat \<Rightarrow> bool \<Rightarrow> program_result"
+where
+"program_sem_blocked v c internal external _ = program_sem v c internal external"
+
+lemma program_sem_unblock :
+"program_sem_blocked v c internal external True = program_sem v c internal external"
+apply(simp add: program_sem_blocked_def)
+done
 
 record account_state =
   account_address :: address
@@ -852,20 +886,29 @@ record account_state =
 inductive build_venv_called :: "account_state => call_env => variable_env => bool"
 where
 venv_called:
-  "venv_stack venv = [] \<Longrightarrow>
-   venv_memory venv = empty_memory \<Longrightarrow>
-   venv_pc venv = 0 \<Longrightarrow>
-   venv_storage venv = account_storage a \<Longrightarrow>
-   venv_balance venv \<ge>
+  "bal \<ge>
      update_balance (account_address a)
        (\<lambda> _. account_balance a + callenv_value env)
        (callenv_balance env) \<Longrightarrow>
-   venv_caller venv = callenv_caller env \<Longrightarrow>
-   venv_value_sent venv = callenv_value env \<Longrightarrow>
-   venv_storage_at_call venv = account_storage a \<Longrightarrow>
-   venv_balance_at_call venv = venv_balance venv \<Longrightarrow>
-   build_venv_called a env venv"
-   
+   build_venv_called a env
+   \<lparr> venv_stack = []
+   , venv_memory = empty_memory
+   , venv_memory_usage = 0
+   , venv_storage = account_storage a
+   , venv_pc = 0
+   , venv_balance = bal
+   , venv_caller = callenv_caller env
+   , venv_value_sent = callenv_value env
+   , venv_data_sent = data
+   , venv_storage_at_call = account_storage a
+   , venv_balance_at_call = bal
+   , venv_origin = origin
+   , venv_gasprice = gp
+   , venv_ext_program = ext
+   , venv_block = block
+   \<rparr>
+   "
+
 declare build_venv_called.simps [simp]
 
 abbreviation build_cenv :: "account_state \<Rightarrow> constant_env"
