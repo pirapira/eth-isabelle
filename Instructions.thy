@@ -52,9 +52,9 @@ datatype arith_inst
 | ADDMOD
 | MULMOD
 | EXP
-| GT
-| EQ
-| LT
+| inst_GT
+| inst_EQ
+| inst_LT
 | ISZERO
 | SHA3
 
@@ -68,9 +68,9 @@ where
 | "arith_inst_code ADDMOD = 0x08"
 | "arith_inst_code MULMOD = 0x09"
 | "arith_inst_code EXP = 0x0a"
-| "arith_inst_code GT = 0x11"
-| "arith_inst_code LT = 0x10"
-| "arith_inst_code EQ = 0x14"
+| "arith_inst_code inst_GT = 0x11"
+| "arith_inst_code inst_LT = 0x10"
+| "arith_inst_code inst_EQ = 0x14"
 | "arith_inst_code ISZERO = 0x15"
 | "arith_inst_code SHA3 = 0x20"
 

@@ -7,7 +7,7 @@ text "Maybe that's fine."
 
 theory ContractSem
 
-imports Main "~~/src/HOL/Word/Word" "./ContractEnv" "./Instructions" "./KEC"
+imports Main "~~/src/HOL/Word/Word" "~~/src/HOL/Data_Structures/AVL_Map" "./ContractEnv" "./Instructions" "./KEC"
 
 begin
 
@@ -94,37 +94,59 @@ where
 
 declare store_byte_list_memory.simps [simp]
 
-fun store_byte_list_in_program :: "int \<Rightarrow> byte list \<Rightarrow> (int \<Rightarrow> inst option) \<Rightarrow> (int \<Rightarrow> inst option)"
-where
-  "store_byte_list_in_program _ [] orig = orig"
-| "store_byte_list_in_program pos (h # t) orig =
-     store_byte_list_in_program (pos + 1) t (orig(pos := Some (Unknown h)))"
-declare store_byte_list_in_program.simps [simp]
-
 record program = 
-  program_content :: "int \<Rightarrow> inst option"
+  program_content :: "(int * inst) avl_tree"
   program_length  :: int
   program_annotation :: "int \<Rightarrow> annotation list"
 
 (* the data region of PUSH_N instructions are encoded as
  * InstructionUnknown byte *)
  
+instantiation int :: cmp
+begin
+definition cmp_int :: "int \<Rightarrow> int \<Rightarrow> Cmp.cmp"
+where
+cmp_int_def : " cmp_int x y = (if x < y then Cmp.LT else (if x = y then Cmp.EQ else Cmp.GT))"
+
+instance proof
+ fix x y :: int show "(cmp x y = cmp.LT) = (x < y)"
+  apply(simp add: cmp_int_def)
+  done
+ fix x y :: int show "(cmp x y = cmp.EQ) = (x = y)"
+  apply(simp add: cmp_int_def)
+  done
+ fix x y :: int show "(cmp x y = cmp.GT) = (x > y)"
+  apply(simp add: cmp_int_def)
+  done
+qed
+
+end
+
+fun store_byte_list_in_program :: "int \<Rightarrow> byte list \<Rightarrow> (int * inst) avl_tree \<Rightarrow> (int * inst) avl_tree"
+where
+  "store_byte_list_in_program _ [] orig = orig"
+| "store_byte_list_in_program pos (h # t) orig =
+     store_byte_list_in_program (pos + 1) t (update pos (Unknown h) orig)"
+declare store_byte_list_in_program.simps [simp]
+
 (* program_content_of_lst position suffix, returns a mapping int \<Rightarrow> inst option
  * that maps a program counter to an instruction *)
-fun program_content_of_lst :: "int \<Rightarrow> inst list \<Rightarrow> int \<Rightarrow> inst option"
+fun program_content_of_lst :: "int \<Rightarrow> inst list \<Rightarrow> (int * inst) avl_tree"
 where
-  "program_content_of_lst _ [] = Map.empty"
+  "program_content_of_lst _ [] = Leaf"
 | "program_content_of_lst pos (Stack (PUSH_N bytes) # rest) =
    store_byte_list_in_program (pos + 1) bytes 
-   ((program_content_of_lst (pos + inst_size (Stack (PUSH_N bytes))) rest)
-    (pos \<mapsto> Stack (PUSH_N bytes)))"
+   (update pos (Stack (PUSH_N bytes)) (program_content_of_lst (pos + inst_size (Stack (PUSH_N bytes))) rest))"
 | "program_content_of_lst pos (Annotation _ # rest) =
     program_content_of_lst pos rest"
 | "program_content_of_lst pos (i # rest) =
-   (program_content_of_lst (pos + inst_size i) rest)
-   (pos \<mapsto> i)"
+   update pos i (program_content_of_lst (pos + inst_size i) rest)"
 
-declare program_content_of_lst.simps [simp]
+   (*
+declare "program_content_of_lst.simps" [simp del]
+*)
+
+(* TODO: replace this with AVL Tree *)
 
 abbreviation prepend_annotation :: "int \<Rightarrow> annotation \<Rightarrow> (int \<Rightarrow> annotation list) \<Rightarrow> (int \<Rightarrow> annotation list)"
 where
@@ -153,7 +175,7 @@ where
 abbreviation program_as_memory :: "program \<Rightarrow> memory"
 where
 "program_as_memory p idx ==
-   (case program_content p (uint idx) of
+   (case lookup (program_content p) (uint idx) of
      None \<Rightarrow> 0
    | Some inst \<Rightarrow> inst_code inst ! 0
    )"
@@ -260,7 +282,7 @@ where
 abbreviation venv_first_instruction :: "variable_env \<Rightarrow> constant_env \<Rightarrow> inst option"
 where
 "venv_first_instruction v c ==
-   program_content (cenv_program c) (venv_pc v)"
+   lookup (program_content (cenv_program c)) (venv_pc v)"
 
 abbreviation venv_advance_pc :: "constant_env \<Rightarrow> variable_env \<Rightarrow> variable_env"
 where
@@ -739,8 +761,8 @@ where
 | "instruction_sem v c (Dup n) = general_dup n v c"
 | "instruction_sem v c (Stack POP) = pop v c"
 | "instruction_sem v c (Info GASLIMIT) = stack_0_1_op v c (gas_limit v)"
-| "instruction_sem v c (Arith GT) = stack_2_1_op v c (\<lambda> a b. if a > b then 1 else 0)"
-| "instruction_sem v c (Arith EQ) = stack_2_1_op v c (\<lambda> a b. if a = b then 1 else 0)"
+| "instruction_sem v c (Arith inst_GT) = stack_2_1_op v c (\<lambda> a b. if a > b then 1 else 0)"
+| "instruction_sem v c (Arith inst_EQ) = stack_2_1_op v c (\<lambda> a b. if a = b then 1 else 0)"
 | "instruction_sem v c (Annotation a) = eval_annotation a v c"
 | "instruction_sem v c (Bits inst_AND) = stack_2_1_op v c (\<lambda> a b. a AND b)"
 | "instruction_sem v c (Bits inst_OR) = stack_2_1_op v c (\<lambda> a b. a OR b)"
@@ -781,7 +803,7 @@ where
          (if divisor = 0 then 0 else (a * b) mod divisor))"
 | "instruction_sem v c (Arith EXP) = stack_2_1_op v c
      (\<lambda> a exponent. word_of_int ((uint a) ^ (unat exponent)))"
-| "instruction_sem v c (Arith LT) = stack_2_1_op v c
+| "instruction_sem v c (Arith inst_LT) = stack_2_1_op v c
      (\<lambda> arg0 arg1. if arg0 < arg1 then 1 else 0)"
 | "instruction_sem v c (Arith SHA3) = sha3 v c"
 | "instruction_sem v c (Info ADDRESS) = stack_0_1_op v c
@@ -931,7 +953,7 @@ inductive build_venv_returned :: "account_state \<Rightarrow> return_result \<Ri
 where
 venv_returned:
 "  account_ongoing_calls a = recovered # _ \<Longrightarrow>
-   is_call_like (program_content (account_code a) (venv_pc recovered - 1)) \<Longrightarrow>
+   is_call_like (lookup (program_content (account_code a)) (venv_pc recovered - 1)) \<Longrightarrow>
    new_bal \<ge> account_balance a \<Longrightarrow>
    build_venv_returned a r
      (
@@ -950,7 +972,7 @@ where
   (case account_ongoing_calls a of
      [] \<Rightarrow> None
    | recovered # _ \<Rightarrow>
-      (if is_call_like (program_content (account_code a) (venv_pc recovered - 1)) then
+      (if is_call_like (lookup (program_content (account_code a)) (venv_pc recovered - 1)) then
        Some (recovered \<lparr>venv_stack := 0 # venv_stack recovered\<rparr>)
        else None)
   )"
@@ -1075,6 +1097,32 @@ AccountStep:
 declare word_rcat_def [simp]
         unat_def [simp]
         bin_rcat_def [simp]
+declare update.simps [simp]
+declare lookup.simps [simp]
+declare balL_def [simp]
+declare balR_def [simp]
+
+lemma nodeLL [simp] : "node Leaf a Leaf == Node 1 Leaf a Leaf"
+apply(simp add:node_def)
+done
+
+lemma nodeLN [simp] : "node Leaf a (Node rsize rl rv rr) == Node (rsize + 1) Leaf a (Node rsize rl rv rr)"
+apply(simp add:node_def)
+done
+
+lemma nodeNL [simp] : "node \<langle>lsize, ll, lv, lr\<rangle> a \<langle>\<rangle> == Node (lsize + 1) (Node lsize ll lv lr) a Leaf"
+apply(simp add: node_def)
+done
+
+lemma nodeNN [simp] : "node (Node lsize ll lv lr) a (Node rsize rl rv rr) == Node (max lsize rsize + 1) (Node lsize ll lv lr) a (Node rsize rl rv rr)"
+apply(simp add: node_def)
+done
+
+(*
+definition node :: "'a avl_tree \<Rightarrow> 'a \<Rightarrow> 'a avl_tree \<Rightarrow> 'a avl_tree" where
+"node l a r = Node (max (ht l) (ht r) + 1) l a r"
+*)
+
 
 lemma iszero_iszero [simp] :
 "((if b then (1 :: 256 word) else 0) = 0) = (\<not> b) "

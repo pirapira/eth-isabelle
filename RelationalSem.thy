@@ -101,7 +101,7 @@ where
 abbreviation next_instruction :: "constant_env \<Rightarrow> variable_env \<Rightarrow> inst \<Rightarrow> bool"
 where
 "next_instruction c v i ==
-  (case program_content (cenv_program c) (venv_pc v) of
+  (case lookup (program_content (cenv_program c)) (venv_pc v) of
       Some i' \<Rightarrow> i = i'
     | _ \<Rightarrow> False)"
 

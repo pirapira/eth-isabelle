@@ -15,7 +15,7 @@ where
  # Pc JUMP #
  []"
 
-value "program_content (program_of_lst always_fail_code) 2"
+value "lookup (program_content (program_of_lst always_fail_code)) 2"
 
 abbreviation always_fail_account_state :: "uint \<Rightarrow> account_state"
 where
@@ -40,6 +40,16 @@ where
 "
 
 declare eval_annotation_def [simp]
+
+lemma problem :
+"node \<langle> x, ll, elm, rr\<rangle> y \<langle>\<rangle> = Node (x + 1) \<langle> x, ll, elm, rr\<rangle> y \<langle>\<rangle> "
+apply(simp add: node_def)
+done
+
+lemma problem2 :
+"node \<langle>\<rangle> y \<langle>x, \<langle>\<rangle>, elm, \<langle>\<rangle>\<rangle> = Node (x + 1) \<langle>\<rangle> y \<langle> x, \<langle>\<rangle>, elm, \<langle>\<rangle>\<rangle>"
+apply(simp add: node_def)
+done
 
 lemma always_fail_correct:
 "

@@ -43,42 +43,42 @@ Stack CALLDATALOAD #
 Arith DIV #
 Stack (PUSH_N [0x05, 0xb3, 0x44, 0x10]) #
 Dup 2 #
-Arith EQ #
+Arith inst_EQ #
 Stack (PUSH_N [0x00, 0x6e]) #
 Pc JUMPI #
 Dup 1 #
 Stack (PUSH_N [0x0b, 0x5a, 0xb3, 0xd5]) #
-Arith EQ #
+Arith inst_EQ #
 Stack (PUSH_N [0x00, 0x7c]) #
 Pc JUMPI #
 Dup 1 #
 Stack (PUSH_N [0x13, 0xaf, 0x40, 0x35]) #
-Arith EQ #
+Arith inst_EQ #
 Stack (PUSH_N [0x00, 0x89]) #
 Pc JUMPI #
 Dup 1 #
 Stack (PUSH_N [0x2b, 0x20, 0xe3, 0x97]) #
-Arith EQ #
+Arith inst_EQ #
 Stack (PUSH_N [0x00, 0xaf]) #
 Pc JUMPI #
 Dup 1 #
 Stack (PUSH_N [0x8d, 0xa5, 0xcb, 0x5b]) #
-Arith EQ #
+Arith inst_EQ #
 Stack (PUSH_N [0x00, 0xc6]) #
 Pc JUMPI #
 Dup 1 #
 Stack (PUSH_N [0xbb, 0xe4, 0x27, 0x71]) #
-Arith EQ #
+Arith inst_EQ #
 Stack (PUSH_N [0x00, 0xdd]) #
 Pc JUMPI #
 Dup 1 #
 Stack (PUSH_N [0xfa, 0xab, 0x9d, 0x39]) #
-Arith EQ #
+Arith inst_EQ #
 Stack (PUSH_N [0x01, 0x03]) #
 Pc JUMPI #
 Dup 1 #
 Stack (PUSH_N [0xfb, 0x16, 0x69, 0xca]) #
-Arith EQ #
+Arith inst_EQ #
 Stack (PUSH_N [0x01, 0x29]) #
 Pc JUMPI #
 Pc JUMPDEST #
@@ -119,7 +119,7 @@ Dup 2 #
 Bits inst_AND #
 Swap 2 #
 Bits inst_AND #
-Arith EQ #
+Arith inst_EQ #
 Stack (PUSH_N [0x01, 0xf8]) #
 Pc JUMPI #
 Stack (PUSH_N [0x00, 0x02]) #
@@ -174,7 +174,7 @@ Dup 2 #
 Bits inst_AND #
 Swap 2 #
 Bits inst_AND #
-Arith EQ #
+Arith inst_EQ #
 Stack (PUSH_N [0x02, 0x57]) #
 Pc JUMPI #
 Stack (PUSH_N [0x00, 0x02]) #
@@ -199,7 +199,7 @@ Dup 2 #
 Bits inst_AND #
 Swap 2 #
 Bits inst_AND #
-Arith EQ #
+Arith inst_EQ #
 Stack (PUSH_N [0x02, 0xc7]) #
 Pc JUMPI #
 Stack (PUSH_N [0x00, 0x02]) #
@@ -221,7 +221,7 @@ Dup 2 #
 Bits inst_AND #
 Swap 2 #
 Bits inst_AND #
-Arith EQ #
+Arith inst_EQ #
 Stack (PUSH_N [0x02, 0xe9]) #
 Pc JUMPI #
 Stack (PUSH_N [0x00, 0x02]) #
@@ -478,7 +478,7 @@ Arith EXP #
 Arith SUB #
 Bits inst_AND #
 Info BALANCE #
-Arith LT #
+Arith inst_LT #
 Arith ISZERO #
 Stack (PUSH_N [0x03, 0x18]) #
 Pc JUMPI #
@@ -533,11 +533,13 @@ Pc JUMP #
 
 declare deed_insts_def [simp]
 
-value[simp] deed_insts
+value "program_of_lst deed_insts"
+
 
 definition deed_program :: "program"
 where
-deed_program_def [simplified]: "deed_program = program_of_lst deed_insts"
+deed_program_def [simplified] : "deed_program = program_of_lst deed_insts"
+(* 18:03 -- *)
 
 (*
 declare deed_program_def [simp]
