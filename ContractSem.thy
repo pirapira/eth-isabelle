@@ -25,9 +25,14 @@ lemma strict_if_True [simp] :
 apply(simp add: strict_if_def)
 done
 
-lemma stricg_if_False [simp] :
+lemma strict_if_False [simp] :
 "strict_if False a b = b True"
 apply(simp add: strict_if_def)
+done
+
+lemma weak_if_cong [cong] :
+"b0 = b1 \<Longrightarrow> strict_if b0 x y = strict_if b1 x y"
+apply(auto)
 done
 
 abbreviation "drop_one_element == tl"
@@ -101,10 +106,6 @@ record program =
   program_length  :: int
   program_annotation :: "int \<Rightarrow> annotation list"
 
-abbreviation empty_program_content :: "int \<Rightarrow> inst option"
-where
-"empty_program_content _ == None"
-  
 (* the data region of PUSH_N instructions are encoded as
  * InstructionUnknown byte *)
  
@@ -112,16 +113,16 @@ where
  * that maps a program counter to an instruction *)
 fun program_content_of_lst :: "int \<Rightarrow> inst list \<Rightarrow> int \<Rightarrow> inst option"
 where
-  "program_content_of_lst _ [] = empty_program_content"
+  "program_content_of_lst _ [] = Map.empty"
 | "program_content_of_lst pos (Stack (PUSH_N bytes) # rest) =
    store_byte_list_in_program (pos + 1) bytes 
    ((program_content_of_lst (pos + inst_size (Stack (PUSH_N bytes))) rest)
-    (pos := Some (Stack (PUSH_N bytes))))"
+    (pos \<mapsto> Stack (PUSH_N bytes)))"
 | "program_content_of_lst pos (Annotation _ # rest) =
     program_content_of_lst pos rest"
 | "program_content_of_lst pos (i # rest) =
    (program_content_of_lst (pos + inst_size i) rest)
-   (pos := Some i)"
+   (pos \<mapsto> i)"
 
 declare program_content_of_lst.simps [simp]
 
@@ -159,7 +160,7 @@ where
 
 definition empty_memory :: memory
 where
-"empty_memory _ = 0"
+"empty_memory = (\<lambda> _. 0)"
 
 record block_info =
   block_blockhash :: "uint \<Rightarrow> uint" (* This captures the whole BLOCKHASH operation *)
@@ -657,17 +658,21 @@ where
    InstructionContinue (venv_advance_pc c
      v\<lparr> venv_stack := word_of_int (venv_pc v) # venv_stack v \<rparr>)"
 
-abbreviation log :: "nat \<Rightarrow> variable_env \<Rightarrow> constant_env \<Rightarrow> instruction_result"
+definition log :: "nat \<Rightarrow> variable_env \<Rightarrow> constant_env \<Rightarrow> instruction_result"
 where
-"log n v c ==
+"log n v c =
    InstructionContinue (venv_advance_pc c
      (venv_pop_stack (Suc (Suc n)) v))"
+     
+declare log_def [simp]
 
-abbreviation list_swap :: "nat \<Rightarrow> 'a list \<Rightarrow> 'a list option"
+definition list_swap :: "nat \<Rightarrow> 'a list \<Rightarrow> 'a list option"
 where
-"list_swap n lst \<equiv>
-  if length lst < n + 1 then None else
-  Some (concat [[lst ! n], take (n - 1) (drop 1 lst) , [lst ! 0], drop (1 + n) lst])"
+"list_swap n lst =
+  (if length lst < n + 1 then None else
+  Some (concat [[lst ! n], take (n - 1) (drop 1 lst) , [lst ! 0], drop (1 + n) lst]))"
+  
+declare list_swap_def [simp]
 
 value "list_swap 1 [0, 1]"
 value "list_swap 2 [0, 1]"
@@ -675,15 +680,17 @@ value "list_swap 2 [0, 1, 2]"
 value "list_swap 3 [0, 1, 2, 3]"
 value "list_swap 1 [0, 1, 2, 3]"
 
-abbreviation swap :: "nat \<Rightarrow> variable_env \<Rightarrow> constant_env \<Rightarrow> instruction_result"
+definition swap :: "nat \<Rightarrow> variable_env \<Rightarrow> constant_env \<Rightarrow> instruction_result"
 where
-"swap n v c ==
+"swap n v c =
    (case list_swap n (venv_stack v) of
       None \<Rightarrow> instruction_failure_result v
     | Some new_stack \<Rightarrow>
       InstructionContinue (venv_advance_pc c v\<lparr> venv_stack := new_stack \<rparr>))"
 
-abbreviation sha3 :: "variable_env \<Rightarrow> constant_env \<Rightarrow> instruction_result"
+declare swap_def [simp]
+
+definition sha3 :: "variable_env \<Rightarrow> constant_env \<Rightarrow> instruction_result"
 where
 "sha3 v c ==
   (case venv_stack v of
@@ -697,15 +704,18 @@ where
   | _ \<Rightarrow> instruction_failure_result v
   )"
 
-abbreviation suicide :: "variable_env \<Rightarrow> constant_env \<Rightarrow> instruction_result"
+declare sha3_def [simp]
+
+definition suicide :: "variable_env \<Rightarrow> constant_env \<Rightarrow> instruction_result"
 where
-"suicide v c ==
+"suicide v c =
   (case venv_stack v of 
      dst # _ \<Rightarrow>
        let new_balance = (venv_balance v)(cenv_this c := 0, ucast dst := venv_balance v (cenv_this c)) in
        InstructionToWorld (ContractSuicide,venv_storage v, new_balance, None)
     | _ \<Rightarrow> instruction_failure_result v)"
 
+declare suicide_def [simp]
 
 fun instruction_sem :: "variable_env \<Rightarrow> constant_env \<Rightarrow> inst \<Rightarrow> instruction_result"
 where
@@ -832,19 +842,17 @@ where
   "program_sem _ _ _ 0 = ProgramStepRunOut"
 | "program_sem v c tiny_step (Suc remaining_steps) =
    (if tiny_step \<le> 0 then ProgramStepRunOut else
-   (if \<not> check_annotations v c then ProgramAnnotationFailure else
+   ((*if \<not> check_annotations v c then ProgramAnnotationFailure else *)
    (case venv_first_instruction v c of
       None \<Rightarrow> ProgramStepRunOut
     | Some i \<Rightarrow>
    (case instruction_sem v c i of
         InstructionContinue new_v \<Rightarrow>
           (strict_if (venv_pc new_v > venv_pc v)
-             (blocked_program_sem new_v c (tiny_step - 1) ((* Suc making it smaller steps *) remaining_steps))
+             (blocked_program_sem new_v c (tiny_step - 1) (Suc remaining_steps))
              (blocked_program_sem new_v c (program_length (cenv_program c)) remaining_steps))
-      | InstructionToWorld (a, st, bal, opt_pushed_v) \<Rightarrow>
-        ProgramToWorld (a, st, bal, opt_pushed_v)
+      | InstructionToWorld (a, st, bal, opt_pushed_v) \<Rightarrow> ProgramToWorld (a, st, bal, opt_pushed_v)
       | InstructionUnknown \<Rightarrow> ProgramInvalid
-      | InstructionAnnotationFailure \<Rightarrow> ProgramAnnotationFailure
       ))))
     "
 | "blocked_program_sem v c l p _ = program_sem v c l p"
@@ -874,14 +882,12 @@ record account_state =
                              increased at any moment *)
   account_ongoing_calls :: "variable_env list"
 
-(* account_state_update_storage is not particularly useful in
- * Isabelle/HOL where fields of records can be updated. *)
- 
-(* Currently it's shown as if the variable_env is determinined by
- * the other arguments but in reality the balance might increase.
- * This mistake will be kept until we try the managed_account_with_accumulated_income_and_spending
- * and we compare Coq and Isabelle/HOL on the same target.
- *)
+declare empty_memory_def [simp]
+
+(*
+lemma empty_update : "empty_memory (x := 0) = empty_memory"
+apply(auto)
+done*)
 
 inductive build_venv_called :: "account_state => call_env => variable_env => bool"
 where

@@ -543,8 +543,6 @@ deed_program_def [simplified]: "deed_program = program_of_lst deed_insts"
 declare deed_program_def [simp]
 *)
 
-value deed_program
-
 inductive deed_inv :: "account_state \<Rightarrow> bool"
 where
 " account_code a = deed_program \<Longrightarrow>
@@ -561,10 +559,23 @@ lemma proanno [simp] : "program_annotation deed_program n = []"
 apply(simp add: deed_program_def)
 done
 
-lemma pro_content [simp]: "program_content deed_program n = program_content_of_lst 0 deed_insts n"
-apply(simp add: deed_program_def)
+definition content_compiled :: "int \<Rightarrow> inst option"
+where
+content_compiled_def [simp] : "content_compiled == program_content_of_lst 0 deed_insts"
+
+definition x :: "int \<Rightarrow> inst option"
+where x_def [simplified] :"x == content_compiled"
+
+value [simp] x
+
+(* I want to make sure this rule can be invoked only on n being fully simplified *)
+lemma pro_content [simp]: "program_content deed_program n == x n"
+apply(simp add: deed_program_def add: x_def)
 done
 
+declare deed_insts_def [simp del]
+
+(* without this, it is impossible to jump to a word *)
 declare bin_cat_def [simp]
 
 lemma deed_keeps_invariant :
@@ -581,23 +592,33 @@ apply(drule star_case; auto)
  apply(simp add: world_turn.simps; auto)
  apply(drule star_case; auto)
   apply(simp add: contract_turn.simps; auto)
-  apply(case_tac steps)
-   apply(simp)
-  apply(simp)
-  apply(case_tac nat; auto)  (* change contract_sem back and remove these steps *)
-  apply(case_tac nata; auto)
-  apply(case_tac nat; auto)
-  apply(case_tac nata; auto)
-  apply(case_tac nat; auto)
-  apply(case_tac nata; auto)
+(*  using [[simp_trace = true]] *)
+  using [[simp_trace_new mode = normal]]
+  apply(case_tac steps; simp add: x_def)
+  
+  
+  
+  (*
+  apply(split if_splits; simp) (* this takes around 15 minutes *)
+   (* how to disable congruence rule in cases *)
   apply(split if_splits; simp)
-   apply(case_tac nat)
+   apply(case_tac "callenv_value callargs = 0") (* TODO: create an issue about if_splits tactic not working *)
     apply(simp)
-   using [[simp_trace = true]]
-   apply(simp)
-   apply(case_tac nata; auto)
+    (* I'm seeing a large program. followed by venv_pc v_env *)
+    (* The PC is specified as a hex value, so this has to be reduced *)
+    (* The venv is defined in a let, which is a bit awkward *)
+  
+  
+  
+  
+  
+  
+  
+  
    (* maybe the term for the memory is too big *)
-
+   (* maybe try to compile the basic block into a big function *)
+  
+*)
 oops
 
 end
