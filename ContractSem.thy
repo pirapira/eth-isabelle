@@ -136,11 +136,11 @@ where
   "program_content_of_lst _ [] = Leaf"
 | "program_content_of_lst pos (Stack (PUSH_N bytes) # rest) =
    store_byte_list_in_program (pos + 1) bytes 
-   (update pos (Stack (PUSH_N bytes)) (program_content_of_lst (pos + inst_size (Stack (PUSH_N bytes))) rest))"
+   (update pos (Stack (PUSH_N bytes)) (program_content_of_lst (pos + 1 + (int (length bytes))) rest))"
 | "program_content_of_lst pos (Annotation _ # rest) =
     program_content_of_lst pos rest"
 | "program_content_of_lst pos (i # rest) =
-   update pos i (program_content_of_lst (pos + inst_size i) rest)"
+   update pos i (program_content_of_lst (pos + 1) rest)"
 
    (*
 declare "program_content_of_lst.simps" [simp del]
@@ -1097,10 +1097,45 @@ AccountStep:
 declare word_rcat_def [simp]
         unat_def [simp]
         bin_rcat_def [simp]
-declare update.simps [simp]
-declare lookup.simps [simp]
-declare balL_def [simp]
-declare balR_def [simp]
+(* declare update.simps [simp] casues exponentially expensive computation *)
+(* declare lookup.simps [simp] might cause exponentially expensive computation *)
+declare update.simps [simp del]
+declare lookup.simps [simp del]
+
+(* declare balL_def [simp] *)
+(* declare balR_def [simp] *)
+
+lemma updateL [simp] : "update x y Leaf = Node 1 Leaf (x,y) Leaf"
+apply(simp add: update.simps)
+done
+
+lemma updateN_EQ [simp]: "cmp x a = EQ \<Longrightarrow> update x y (Node h l (a, b) r) = Node h l (x, y) r"
+apply(simp add: update.simps)
+done
+
+lemma updateN_GT [simp]: "cmp x a = GT \<Longrightarrow> update x y (Node h l (a, b) r) = balR l (a, b) (update x y r)"
+apply(simp add: update.simps)
+done
+
+lemma updateN_LT [simp]: "cmp x a = LT \<Longrightarrow> update x y (Node h l (a, b) r) = balL (update x y l) (a, b) r"
+apply(simp add: update.simps)
+done
+
+lemma lookupN_EQ [simp]: "cmp x a = EQ \<Longrightarrow> lookup (Node h l (a, b) r) x = Some b"
+apply(simp add: lookup.simps)
+done
+
+lemma lookupN_GT [simp]: "cmp x a = GT \<Longrightarrow> lookup (Node h l (a, b) r) x = lookup r x"
+apply(simp add: lookup.simps)
+done
+
+lemma lookupN_LT [simp]: "cmp x a = LT \<Longrightarrow> lookup (Node h l (a, b) r) x = lookup l x"
+apply(simp add: lookup.simps)
+done
+
+lemma lookupL [simp]: "lookup Leaf x = None"
+apply(simp add: lookup.simps)
+done
 
 lemma nodeLL [simp] : "node Leaf a Leaf == Node 1 Leaf a Leaf"
 apply(simp add:node_def)
@@ -1116,6 +1151,48 @@ done
 
 lemma nodeNN [simp] : "node (Node lsize ll lv lr) a (Node rsize rl rv rr) == Node (max lsize rsize + 1) (Node lsize ll lv lr) a (Node rsize rl rv rr)"
 apply(simp add: node_def)
+done
+
+lemma balL_neq [simp]:
+  "ht l \<noteq> ht r + 2 \<Longrightarrow>
+   balL l a r = node l a r"
+apply(simp add: balL_def)
+done
+
+lemma balL_eq_heavy_r [simp]:
+  "hl = ht r + 2 \<Longrightarrow>
+   ht bl < ch \<Longrightarrow>
+   balL (Node hl bl b (Node ch cl c cr)) a r = node (node bl b cl) c (node cr a r)
+   "
+apply(simp add: balL_def)
+done
+
+lemma balL_eq_heavy_l [simp]:
+  "hl = ht r + 2 \<Longrightarrow>
+   ht bl \<ge> ht br \<Longrightarrow>
+   balL (Node hl bl b br) a r = node bl b (node br a r)"
+apply(simp add: balL_def)
+done
+
+lemma balR_neq [simp]:
+  "ht r \<noteq> ht l + 2 \<Longrightarrow>
+   balR l a r = node l a r"
+apply(simp add: balR_def)
+done
+
+lemma balR_eq_heavy_l [simp]:
+  "bh = ht l + 2 \<Longrightarrow>
+   ch > ht br \<Longrightarrow>
+   balR l a (Node bh (Node ch cl c cr) b br) =
+   node (node l a cl) c (node cr b br)"
+apply(simp add: balR_def)
+done
+
+lemma balR_eq_heavy_r [simp]:
+  "bh = ht l + 2 \<Longrightarrow>
+   ht bl \<le> ht br \<Longrightarrow>
+   balR l a (Node bh bl b br) = node (node l a bl) b br"
+apply(simp add: balR_def)
 done
 
 (*

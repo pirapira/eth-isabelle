@@ -37,6 +37,7 @@ Stack (PUSH_N [0x00, 0x6c]) #
 Pc JUMPI #
 Stack (PUSH_N [0xe0]) #
 Stack (PUSH_N [0x02]) #
+(*
 Arith EXP #
 Stack (PUSH_N [0x00]) #
 Stack CALLDATALOAD #
@@ -527,19 +528,27 @@ Arith ISZERO #
 Stack (PUSH_N [0x02, 0x54]) #
 Pc JUMPI #
 Stack (PUSH_N [0x00, 0x02]) #
-Pc JUMP #
+Pc JUMP # *)
 []
 "
 
 declare deed_insts_def [simp]
 
-value "program_of_lst deed_insts"
+
+lemma test : "program_content (program_of_lst deed_insts) = Leaf"
+using [[simp_trace_new interactive mode = full]]
+
+apply(simp)
 
 
 definition deed_program :: "program"
 where
 deed_program_def [simplified] : "deed_program = program_of_lst deed_insts"
-(* 18:03 -- *)
+(* half: 12: 42 -- *)
+
+(* 12:37 -- *)
+
+(* maybe this computation can also be done offline *)
 
 (*
 declare deed_program_def [simp]
@@ -561,17 +570,17 @@ lemma proanno [simp] : "program_annotation deed_program n = []"
 apply(simp add: deed_program_def)
 done
 
-definition content_compiled :: "int \<Rightarrow> inst option"
+definition content_compiled :: "(int * inst, nat) tree"
 where
 content_compiled_def [simp] : "content_compiled == program_content_of_lst 0 deed_insts"
 
-definition x :: "int \<Rightarrow> inst option"
+definition x :: "(int * inst, nat) tree"
 where x_def [simplified] :"x == content_compiled"
 
 value [simp] x
 
 (* I want to make sure this rule can be invoked only on n being fully simplified *)
-lemma pro_content [simp]: "program_content deed_program n == x n"
+lemma pro_content [simp]: "lookup (program_content deed_program) n == lookup x n"
 apply(simp add: deed_program_def add: x_def)
 done
 
@@ -595,7 +604,7 @@ apply(drule star_case; auto)
  apply(drule star_case; auto)
   apply(simp add: contract_turn.simps; auto)
 (*  using [[simp_trace = true]] *)
-  using [[simp_trace_new mode = normal]]
+(*  using [[simp_trace_new mode = normal]] *)
   apply(case_tac steps; simp add: x_def)
   
   
