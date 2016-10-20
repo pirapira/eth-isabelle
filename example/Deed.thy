@@ -37,7 +37,6 @@ Stack (PUSH_N [0x00, 0x6c]) #
 Pc JUMPI #
 Stack (PUSH_N [0xe0]) #
 Stack (PUSH_N [0x02]) #
-(*
 Arith EXP #
 Stack (PUSH_N [0x00]) #
 Stack CALLDATALOAD #
@@ -528,39 +527,47 @@ Arith ISZERO #
 Stack (PUSH_N [0x02, 0x54]) #
 Pc JUMPI #
 Stack (PUSH_N [0x00, 0x02]) #
-Pc JUMP # *)
+Pc JUMP #
 []
 "
 
 declare deed_insts_def [simp]
 
-
+(*
 lemma test : "program_content (program_of_lst deed_insts) = Leaf"
 using [[simp_trace_new interactive mode = full]]
 
 apply(simp)
+*)
 
+value "int (length deed_insts)"
+
+definition content_compiled :: "(int * inst, nat) tree"
+where
+content_compiled_def [simplified] : "content_compiled == program_content_of_lst 0 deed_insts"
 
 definition deed_program :: "program"
 where
-deed_program_def [simplified] : "deed_program = program_of_lst deed_insts"
-(* half: 12: 42 -- *)
+deed_program_def: "deed_program =
+  \<lparr> program_content = content_compiled
+  , program_length = int (length deed_insts)
+  , program_annotation = program_annotation_of_lst 0 deed_insts
+  \<rparr>"
 
-(* 12:37 -- *)
+(* 131, 26 sec
+   204, 48 sec
+   294, 91 sec
+   374, 193 sec
+   500, 500 sec?
+   *)
 
 (* maybe this computation can also be done offline *)
-
-(*
-declare deed_program_def [simp]
-*)
 
 inductive deed_inv :: "account_state \<Rightarrow> bool"
 where
 " account_code a = deed_program \<Longrightarrow>
   deed_inv a
 "
-
-value [simp] "program_length deed_program"
 
 lemma prolen [simp] : "program_length deed_program = 500"
 apply(simp add: deed_program_def)
@@ -570,18 +577,20 @@ lemma proanno [simp] : "program_annotation deed_program n = []"
 apply(simp add: deed_program_def)
 done
 
-definition content_compiled :: "(int * inst, nat) tree"
-where
-content_compiled_def [simp] : "content_compiled == program_content_of_lst 0 deed_insts"
+declare content_compiled_def [simp]
 
 definition x :: "(int * inst, nat) tree"
 where x_def [simplified] :"x == content_compiled"
 
+declare content_compiled_def [simp del]
+
 value [simp] x
+
+declare deed_program_def [simp del]
 
 (* I want to make sure this rule can be invoked only on n being fully simplified *)
 lemma pro_content [simp]: "lookup (program_content deed_program) n == lookup x n"
-apply(simp add: deed_program_def add: x_def)
+apply(simp add: deed_program_def add: x_def add: content_compiled_def)
 done
 
 declare deed_insts_def [simp del]
@@ -606,8 +615,17 @@ apply(drule star_case; auto)
 (*  using [[simp_trace = true]] *)
 (*  using [[simp_trace_new mode = normal]] *)
   apply(case_tac steps; simp add: x_def)
-  
-  
+  apply(split if_splits)
+   apply(simp add: x_def)
+  apply(simp add: x_def)
+  apply(split if_splits)
+   apply(simp add: x_def)
+   apply(case_tac "callenv_value callargs = 0") (* if_splits should work *)
+   apply(simp)
+    apply(simp add: x_def)
+   apply(simp)
+   apply(simp add: x_def)
+  (* here I need to decompose case strict_if b A C into something else *)
   
   (*
   apply(split if_splits; simp) (* this takes around 15 minutes *)

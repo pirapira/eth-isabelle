@@ -1153,16 +1153,34 @@ lemma nodeNN [simp] : "node (Node lsize ll lv lr) a (Node rsize rl rv rr) == Nod
 apply(simp add: node_def)
 done
 
-lemma balL_neq [simp]:
-  "ht l \<noteq> ht r + 2 \<Longrightarrow>
-   balL l a r = node l a r"
+lemma balL_neq_NL [simp]:
+  "lh \<noteq> Suc (Suc 0) \<Longrightarrow>
+   balL (Node lh ll b lr) a Leaf = node (Node lh ll b lr) a Leaf"
 apply(simp add: balL_def)
 done
 
-lemma balL_eq_heavy_r [simp]:
-  "hl = ht r + 2 \<Longrightarrow>
+lemma balL_neq_Lr [simp]:
+  "balL Leaf a r = node Leaf a r"
+apply(simp add: balL_def)
+done
+
+lemma balL_neq_NN [simp]:
+  "lh \<noteq> Suc (Suc rh) \<Longrightarrow>
+   balL (Node lh ll lx lr) a (Node rh rl rx rr) = node (Node lh ll lx lr) a (Node rh rl rx rr)"
+apply(simp add: balL_def)
+done
+
+lemma balL_eq_heavy_r_rL [simp]:
+  "ht bl < ch \<Longrightarrow>
+   balL (Node (Suc (Suc 0)) bl b (Node ch cl c cr)) a Leaf = node (node bl b cl) c (node cr a Leaf)
+   "
+apply(simp add: balL_def)
+done
+
+lemma balL_eq_heavy_r_rN [simp]:
+  "hl = Suc (Suc rh) \<Longrightarrow>
    ht bl < ch \<Longrightarrow>
-   balL (Node hl bl b (Node ch cl c cr)) a r = node (node bl b cl) c (node cr a r)
+   balL (Node hl bl b (Node ch cl c cr)) a (Node rh rl rx rr) = node (node bl b cl) c (node cr a (Node rh rl rx rr))
    "
 apply(simp add: balL_def)
 done
@@ -1174,9 +1192,20 @@ lemma balL_eq_heavy_l [simp]:
 apply(simp add: balL_def)
 done
 
-lemma balR_neq [simp]:
-  "ht r \<noteq> ht l + 2 \<Longrightarrow>
-   balR l a r = node l a r"
+lemma balR_neq_xL [simp]:
+  "balR l a Leaf = node l a Leaf"
+apply(simp add: balR_def)
+done
+
+lemma balR_neq_LN [simp]:
+  "rh \<noteq> Suc (Suc 0) \<Longrightarrow>
+   balR Leaf a (Node rh rl rx rr) = node Leaf a (Node rh rl rx rr)"
+apply(simp add: balR_def)
+done
+
+lemma balR_neq_NN [simp]:
+  "rh \<noteq> Suc (Suc lh) \<Longrightarrow>
+   balR (Node lh ll lx lr) a (Node rh rl rx rr) = node (Node lh ll lx lr) a (Node rh rl rx rr)"
 apply(simp add: balR_def)
 done
 
