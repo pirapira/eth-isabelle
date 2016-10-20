@@ -598,6 +598,19 @@ declare deed_insts_def [simp del]
 (* without this, it is impossible to jump to a word *)
 declare bin_cat_def [simp]
 
+lemma strict_if_split :
+"P (strict_if b A B) =
+ (\<not> (b \<and> \<not> P (A True) \<or> \<not> b \<and> \<not> P (B True)))"
+apply(case_tac b; auto)
+done
+
+declare deed_inv.simps [simp]
+        one_step.simps [simp]
+        world_turn.simps [simp]
+        contract_turn.simps [simp]
+        x_def [simp]
+
+        
 lemma deed_keeps_invariant :
 "no_assertion_failure deed_inv"
 apply(simp only: no_assertion_failure_def)
@@ -607,24 +620,38 @@ apply(rule impI)
 apply(rule allI)
 apply(rule impI)
 apply(drule star_case; auto)
- apply(simp only: deed_inv.simps; auto)
- apply(simp add: one_step.simps; auto)
- apply(simp add: world_turn.simps; auto)
- apply(drule star_case; auto)
-  apply(simp add: contract_turn.simps; auto)
 (*  using [[simp_trace = true]] *)
 (*  using [[simp_trace_new mode = normal]] *)
-  apply(case_tac steps; simp add: x_def)
-  apply(split if_splits)
-   apply(simp add: x_def)
-  apply(simp add: x_def)
-  apply(split if_splits)
-   apply(simp add: x_def)
-   apply(case_tac "callenv_value callargs = 0") (* if_splits should work *)
-   apply(simp)
-    apply(simp add: x_def)
-   apply(simp)
-   apply(simp add: x_def)
+   apply(case_tac steps; auto)
+   apply(split if_splits; auto)
+    apply(drule star_case; auto)
+   apply(split strict_if_split; auto)
+    apply(drule star_case; auto)
+   apply(split strict_if_split; auto)
+    apply(drule star_case; auto)
+   apply(drule star_case; auto)
+  apply(case_tac steps; auto)
+  apply(split strict_if_split; auto)
+   apply(split strict_if_split; auto)
+    apply(drule star_case; auto)
+   apply(split strict_if_split; auto)
+    apply(drule star_case; auto)
+   apply(drule star_case; auto)
+  apply(drule star_case; auto)
+ apply(case_tac steps; auto)
+ apply(split strict_if_split; auto)
+ apply(split strict_if_split; auto)
+ apply(split strict_if_split; auto)
+apply(case_tac steps; auto)
+apply(split strict_if_split; auto)
+apply(split strict_if_split; auto)
+apply(split strict_if_split; auto)
+done
+
+  
+  
+  
+   
   (* here I need to decompose case strict_if b A C into something else *)
   
   (*
