@@ -565,9 +565,10 @@ deed_program_def: "deed_program =
 
 inductive deed_inv :: "account_state \<Rightarrow> bool"
 where
-" account_code a = deed_program \<Longrightarrow>
+alive: " account_code a = deed_program \<Longrightarrow>
   deed_inv a
 "
+| dead: "account_code a = empty_program \<Longrightarrow> deed_inv a"
 
 lemma prolen [simp] : "program_length deed_program = 500"
 apply(simp add: deed_program_def)
@@ -620,33 +621,38 @@ apply(rule impI)
 apply(rule allI)
 apply(rule impI)
 apply(drule star_case; auto)
-(*  using [[simp_trace = true]] *)
-(*  using [[simp_trace_new mode = normal]] *)
+       apply(case_tac steps; auto)
+       apply(split if_splits; auto)
+        apply(drule star_case; auto)
+       apply(split strict_if_split; auto)
+        apply(drule star_case; auto)
+       apply(split strict_if_split; auto)
+        apply(drule star_case; auto)
+       apply(drule star_case; auto)
+      apply(case_tac steps; auto)
+      apply(split strict_if_split; auto)
+       apply(split strict_if_split; auto)
+        apply(drule star_case; auto)
+       apply(split strict_if_split; auto)
+        apply(drule star_case; auto)
+       apply(drule star_case; auto)
+      apply(drule star_case; auto)
+     apply(case_tac steps; auto)
+     apply(split strict_if_split; auto)
+     apply(split strict_if_split; auto)
+     apply(split strict_if_split; auto)
+    apply(case_tac steps; auto)
+    apply(split strict_if_split; auto)
+    apply(split strict_if_split; auto)
+   apply(split strict_if_split; auto)
    apply(case_tac steps; auto)
-   apply(split if_splits; auto)
-    apply(drule star_case; auto)
-   apply(split strict_if_split; auto)
-    apply(drule star_case; auto)
-   apply(split strict_if_split; auto)
-    apply(drule star_case; auto)
-   apply(drule star_case; auto)
+   apply(simp add: empty_program_def)
   apply(case_tac steps; auto)
-  apply(split strict_if_split; auto)
-   apply(split strict_if_split; auto)
-    apply(drule star_case; auto)
-   apply(split strict_if_split; auto)
-    apply(drule star_case; auto)
-   apply(drule star_case; auto)
-  apply(drule star_case; auto)
+  apply(simp add: empty_program_def)
  apply(case_tac steps; auto)
- apply(split strict_if_split; auto)
- apply(split strict_if_split; auto)
- apply(split strict_if_split; auto)
+ apply(simp add: empty_program_def)
 apply(case_tac steps; auto)
-apply(split strict_if_split; auto)
-apply(split strict_if_split; auto)
-apply(split strict_if_split; auto)
+apply(simp add: empty_program_def)
 done
-
 
 end

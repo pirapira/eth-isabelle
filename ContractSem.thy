@@ -1011,24 +1011,36 @@ where
                                      | Some pushed \<Rightarrow> pushed # account_ongoing_calls prev)
                                      \<rparr>)"
 
+lemma update_account_state_Suicide [simp] :
+"update_account_state prev ContractSuicide st bal v_opt =
+     prev\<lparr> account_storage := empty_storage
+         , account_balance := 0
+         , account_code := empty_program
+         \<rparr>
+"
+apply(simp add: update_account_state_def)
+done
+                                     
 lemma update_account_state_None [simp] :
-"update_account_state prev act st bal None =
+"act \<noteq> ContractSuicide \<Longrightarrow>
+ update_account_state prev act st bal None =
    prev \<lparr>
      account_storage := st,
      account_balance := account_balance prev,
      account_ongoing_calls := account_ongoing_calls prev
    \<rparr>"
-apply(simp add: update_account_state_def)
+apply(case_tac act; simp add: update_account_state_def)
 done
 
 lemma update_account_state_Some [simp] :
-"update_account_state prev act st bal (Some pushed) =
+"act \<noteq> ContractSuicide \<Longrightarrow>
+ update_account_state prev act st bal (Some pushed) =
    prev \<lparr>
      account_storage := st,
      account_balance := bal (account_address prev),
      account_ongoing_calls := pushed # account_ongoing_calls prev
   \<rparr>"
-apply(simp add: update_account_state_def)
+apply(case_tac act; simp add: update_account_state_def)
 done
 
 (* Replace the coinductional future of the 
