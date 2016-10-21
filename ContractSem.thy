@@ -99,13 +99,14 @@ record program =
   program_length  :: int
   program_annotation :: "int \<Rightarrow> annotation list"
 
-definition empty_program :: program
+abbreviation empty_program :: program
 where
-"empty_program =
+"empty_program ==
   \<lparr> program_content = \<langle>\<rangle>
   , program_length = 0
   , program_annotation = (\<lambda> _. []) \<rparr>"
-  
+
+
 (* the data region of PUSH_N instructions are encoded as
  * InstructionUnknown byte *)
  
