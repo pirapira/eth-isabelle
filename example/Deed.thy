@@ -646,13 +646,9 @@ apply(drule star_case; auto)
     apply(split strict_if_split; auto)
    apply(split strict_if_split; auto)
    apply(case_tac steps; auto)
-   apply(simp add: empty_program_def)
   apply(case_tac steps; auto)
-  apply(simp add: empty_program_def)
  apply(case_tac steps; auto)
- apply(simp add: empty_program_def)
 apply(case_tac steps; auto)
-apply(simp add: empty_program_def)
 done
 
 end

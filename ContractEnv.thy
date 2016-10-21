@@ -15,6 +15,8 @@ definition empty_storage :: storage
 where
 "empty_storage = (\<lambda> _. 0)"
 
+declare empty_storage_def [simp]
+
 (* The environment visible for annotations *)
 record aenv =
   aenv_stack :: "uint list"
