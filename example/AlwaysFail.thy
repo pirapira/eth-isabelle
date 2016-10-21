@@ -15,7 +15,8 @@ where
  # Pc JUMP #
  []"
 
-value "lookup (program_content (program_of_lst always_fail_code)) 2"
+
+value "(program_content (program_of_lst always_fail_code))"
 
 abbreviation always_fail_account_state :: "uint \<Rightarrow> account_state"
 where

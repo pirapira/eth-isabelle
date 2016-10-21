@@ -537,7 +537,7 @@ declare deed_insts_def [simp]
 lemma test : "program_content (program_of_lst deed_insts) = Leaf"
 using [[simp_trace_new interactive mode = full]]
 
-apply(simp)
+oops
 *)
 
 value "int (length deed_insts)"
@@ -648,33 +648,5 @@ apply(split strict_if_split; auto)
 apply(split strict_if_split; auto)
 done
 
-  
-  
-  
-   
-  (* here I need to decompose case strict_if b A C into something else *)
-  
-  (*
-  apply(split if_splits; simp) (* this takes around 15 minutes *)
-   (* how to disable congruence rule in cases *)
-  apply(split if_splits; simp)
-   apply(case_tac "callenv_value callargs = 0") (* TODO: create an issue about if_splits tactic not working *)
-    apply(simp)
-    (* I'm seeing a large program. followed by venv_pc v_env *)
-    (* The PC is specified as a hex value, so this has to be reduced *)
-    (* The venv is defined in a let, which is a bit awkward *)
-  
-  
-  
-  
-  
-  
-  
-  
-   (* maybe the term for the memory is too big *)
-   (* maybe try to compile the basic block into a big function *)
-  
-*)
-oops
 
 end

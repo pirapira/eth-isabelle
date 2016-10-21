@@ -99,6 +99,13 @@ record program =
   program_length  :: int
   program_annotation :: "int \<Rightarrow> annotation list"
 
+definition empty_program :: program
+where
+"empty_program =
+  \<lparr> program_content = \<langle>\<rangle>
+  , program_length = 0
+  , program_annotation = (\<lambda> _. []) \<rparr>"
+  
 (* the data region of PUSH_N instructions are encoded as
  * InstructionUnknown byte *)
  
@@ -988,6 +995,13 @@ where
 definition update_account_state :: "account_state \<Rightarrow> contract_action \<Rightarrow> storage \<Rightarrow> (address \<Rightarrow> uint) \<Rightarrow> variable_env option \<Rightarrow> account_state"
 where
 "update_account_state prev act st bal v_opt \<equiv>
+   (case act of
+     ContractSuicide \<Rightarrow>
+     prev\<lparr> account_storage := empty_storage
+         , account_balance := 0
+         , account_code := empty_program
+         \<rparr>
+   | _ \<Rightarrow>
    prev \<lparr>
      account_storage := st,
      account_balance := (case v_opt of None \<Rightarrow> account_balance prev
@@ -995,7 +1009,7 @@ where
      account_ongoing_calls :=
                         (case v_opt of None \<Rightarrow> account_ongoing_calls prev
                                      | Some pushed \<Rightarrow> pushed # account_ongoing_calls prev)
-                                     \<rparr>"
+                                     \<rparr>)"
 
 lemma update_account_state_None [simp] :
 "update_account_state prev act st bal None =
@@ -1223,11 +1237,6 @@ lemma balR_eq_heavy_r [simp]:
    balR l a (Node bh bl b br) = node (node l a bl) b br"
 apply(simp add: balR_def)
 done
-
-(*
-definition node :: "'a avl_tree \<Rightarrow> 'a \<Rightarrow> 'a avl_tree \<Rightarrow> 'a avl_tree" where
-"node l a r = Node (max (ht l) (ht r) + 1) l a r"
-*)
 
 
 lemma iszero_iszero [simp] :

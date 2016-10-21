@@ -62,6 +62,8 @@ where
      venv_storage_at_call ve 0 = 0 \<Longrightarrow>
      fail_on_reentrance_state 1 st"
 
+value "program_of_lst fail_on_reentrance_program"     
+
 declare fail_on_reentrance_state.simps [simp]
 
 abbreviation something_to_call :: call_arguments
