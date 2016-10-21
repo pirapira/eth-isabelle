@@ -51,12 +51,14 @@ where
      account_storage st 0 = 0 \<Longrightarrow>
      account_code st = program_of_lst fail_on_reentrance_program \<Longrightarrow>
      account_ongoing_calls st = [] \<Longrightarrow>
+     account_killed st = False \<Longrightarrow>
      fail_on_reentrance_state 0 st"
 | depth_one:
     "account_code st = program_of_lst fail_on_reentrance_program \<Longrightarrow>
      account_storage st 0 = 1 \<Longrightarrow>
      account_address st = fail_on_reentrance_address \<Longrightarrow>
      account_ongoing_calls st = [ve] \<Longrightarrow>
+     account_killed st = False \<Longrightarrow>
      venv_pc ve = 28 \<Longrightarrow>
      venv_storage ve 0 = 1 \<Longrightarrow>
      venv_storage_at_call ve 0 = 0 \<Longrightarrow>
@@ -109,12 +111,14 @@ where
      account_storage st 0 = 0 \<Longrightarrow>
      account_code st = program_of_lst fail_on_reentrance_program \<Longrightarrow>
      account_ongoing_calls st = [] \<Longrightarrow>
+     account_killed st = False \<Longrightarrow>
      fail_on_reentrance_invariant st"
 | depth_one:
     "account_code st = program_of_lst fail_on_reentrance_program \<Longrightarrow>
      account_storage st 0 = 1 \<Longrightarrow>
      account_address st = fail_on_reentrance_address \<Longrightarrow>
      account_ongoing_calls st = [ve] \<Longrightarrow>
+     account_killed st = False \<Longrightarrow>
      venv_pc ve = 28 \<Longrightarrow>
      venv_storage ve 0 = 1 \<Longrightarrow>
      venv_storage_at_call ve 0 = 0 \<Longrightarrow>
@@ -135,37 +139,42 @@ apply(rule impI)
 apply(rule allI)
 apply(rule allI)
 apply(rule impI)
-apply(drule star_case; auto)
-   apply(case_tac steps; auto)
-   apply(drule fail_on_reentrance_invariant.cases; auto)
+apply(erule fail_on_reentrance_invariant.cases; simp)
+ apply(drule star_case; auto)
+     apply(rule depth_zero; auto)
+    apply(case_tac steps; auto)
     apply(drule star_case; auto)
-        apply(simp add: fail_on_reentrance_invariant.simps; auto)
+        apply(rule depth_one; auto)
+          apply(simp)
+         apply(simp)
+        apply(simp)
        apply(case_tac steps; auto)
        apply(drule star_case; auto)
        apply(rule depth_zero; auto)
-      apply(case_tac steps; auto)
+       apply(case_tac steps; auto)
      apply(case_tac steps; auto)
      apply(drule star_case; auto)
      apply(rule depth_zero; auto)
     apply(case_tac steps; auto)
+   apply(case_tac steps; auto)
    apply(drule star_case; auto)
-   apply(rule depth_one; auto)
-  apply(case_tac steps; auto)
-  apply(drule fail_on_reentrance_invariant.cases; auto)
-    apply(drule star_case; auto)
-      apply(case_tac steps; auto)
+   apply(case_tac steps; auto)
       apply(drule star_case; auto)
-     apply(case_tac steps; auto)
+     apply(case_tac steps;auto)
     apply(case_tac steps; auto)
     apply(drule star_case; auto)
    apply(case_tac steps; auto)
-  apply(drule star_case; auto)
- apply(drule fail_on_reentrance_invariant.cases; auto)
+  apply(case_tac steps; auto)
  apply(case_tac steps; auto)
- apply(drule star_case; auto)
+apply(drule star_case; auto)
+    apply(rule depth_one; auto)
+   apply(case_tac steps; auto)
+   apply(drule star_case; auto)
+   apply(rule depth_one; auto)
+  apply(case_tac steps; auto)
+  apply(drule star_case; auto)
  apply(case_tac steps; auto)
 apply(case_tac steps; auto)
-apply(drule fail_on_reentrance_invariant.cases; auto)
 done
 
 end

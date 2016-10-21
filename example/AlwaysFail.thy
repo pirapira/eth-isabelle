@@ -26,6 +26,7 @@ where
    , account_code = program_of_lst (always_fail_code)
    , account_balance = balance
    , account_ongoing_calls = []
+   , account_killed = False
    \<rparr>"
 
 abbreviation always_fail_spec :: "uint \<Rightarrow> response_to_world"
@@ -74,10 +75,11 @@ apply(auto)
  apply(drule star_case; auto)
   apply(drule star_case; auto)
   apply(case_tac steps; auto)
- apply(case_tac steps; auto)
-apply(drule star_case; auto)
  apply(drule star_case; auto)
+apply(drule star_case; auto)
  apply(case_tac steps; auto)
+ apply(drule star_case; auto)
+apply(case_tac steps; auto)
 done
 
 end

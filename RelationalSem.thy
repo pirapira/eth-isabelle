@@ -17,14 +17,16 @@ natural:
    , account_code = code
    , account_balance = old_bal
    , account_ongoing_calls = going
+   , account_killed = killed
    \<rparr>
    \<lparr> account_address = addr
    , account_storage = str
    , account_code = code
    , account_balance = new_bal
    , account_ongoing_calls = going
+   , account_killed = killed
    \<rparr>"
- 
+
 declare account_state_natural_change.simps [simp]
 
 inductive account_state_return_change :: "(account_state \<Rightarrow> bool) \<Rightarrow> account_state \<Rightarrow> account_state \<Rightarrow> bool"
@@ -36,6 +38,7 @@ account_return:
  , account_code = code
  , account_balance = new_bal
  , account_ongoing_calls = ongoing
+ , account_killed = killed
  \<rparr>
  \<Longrightarrow>
  account_state_return_change invariant
@@ -44,12 +47,14 @@ account_return:
  , account_code = code
  , account_balance = old_bal
  , account_ongoing_calls = ongoing
+ , account_killed = killed
  \<rparr>
  \<lparr> account_address = addr
  , account_storage = new_str
  , account_code = code
  , account_balance = new_bal
  , account_ongoing_calls = ongoing
+ , account_killed = killed
  \<rparr>
  "
 

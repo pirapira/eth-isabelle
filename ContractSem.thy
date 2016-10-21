@@ -911,6 +911,7 @@ record account_state =
   account_balance :: uint (* TODO: model the fact that this can be
                              increased at any moment *)
   account_ongoing_calls :: "variable_env list"
+  account_killed :: bool
 
 declare empty_memory_def [simp]
 
@@ -992,55 +993,68 @@ abbreviation account_state_pop_ongoing_call :: "account_state \<Rightarrow> acco
 where
 "account_state_pop_ongoing_call orig ==
    orig\<lparr> account_ongoing_calls := tl (account_ongoing_calls orig)\<rparr>"
- 
+   
+abbreviation empty_account :: "address \<Rightarrow> account_state"
+where
+"empty_account addr ==
+ \<lparr> account_address = addr
+ , account_storage = empty_storage
+ , account_code = empty_program
+ , account_balance = 0
+ , account_ongoing_calls = []
+ , account_killed = False
+ \<rparr>"
+
+definition clean_killed :: "account_state \<Rightarrow> account_state"
+where
+"clean_killed prev =
+  (if account_ongoing_calls prev = [] \<and> account_killed prev = True then
+     empty_account (account_address prev)
+   else prev)
+"
+
+declare clean_killed_def [simp]
+   
 definition update_account_state :: "account_state \<Rightarrow> contract_action \<Rightarrow> storage \<Rightarrow> (address \<Rightarrow> uint) \<Rightarrow> variable_env option \<Rightarrow> account_state"
 where
 "update_account_state prev act st bal v_opt \<equiv>
-   (case act of
-     ContractSuicide \<Rightarrow>
-     prev\<lparr> account_storage := empty_storage
-         , account_balance := 0
-         , account_code := empty_program
-         \<rparr>
-   | _ \<Rightarrow>
-   prev \<lparr>
+   clean_killed
+   (prev \<lparr>
      account_storage := st,
      account_balance := (case v_opt of None \<Rightarrow> account_balance prev
                                      | Some pushed \<Rightarrow> bal (account_address prev)),
      account_ongoing_calls :=
                         (case v_opt of None \<Rightarrow> account_ongoing_calls prev
-                                     | Some pushed \<Rightarrow> pushed # account_ongoing_calls prev)
+                                     | Some pushed \<Rightarrow> pushed # account_ongoing_calls prev),
+     account_killed :=
+       (case act of ContractSuicide \<Rightarrow> True
+                  | _ \<Rightarrow> account_killed prev)
                                      \<rparr>)"
-
-lemma update_account_state_Suicide [simp] :
-"update_account_state prev ContractSuicide st bal v_opt =
-     prev\<lparr> account_storage := empty_storage
-         , account_balance := 0
-         , account_code := empty_program
-         \<rparr>
-"
-apply(simp add: update_account_state_def)
-done
                                      
 lemma update_account_state_None [simp] :
-"act \<noteq> ContractSuicide \<Longrightarrow>
- update_account_state prev act st bal None =
-   prev \<lparr>
+"update_account_state prev act st bal None =
+   clean_killed
+   (prev \<lparr>
      account_storage := st,
      account_balance := account_balance prev,
-     account_ongoing_calls := account_ongoing_calls prev
-   \<rparr>"
+     account_ongoing_calls := account_ongoing_calls prev,
+     account_killed :=
+       (case act of ContractSuicide \<Rightarrow> True
+                  | _ \<Rightarrow> account_killed prev)
+   \<rparr>)"
 apply(case_tac act; simp add: update_account_state_def)
 done
 
 lemma update_account_state_Some [simp] :
-"act \<noteq> ContractSuicide \<Longrightarrow>
- update_account_state prev act st bal (Some pushed) =
-   prev \<lparr>
+"update_account_state prev act st bal (Some pushed) =
+   clean_killed
+   (prev \<lparr>
      account_storage := st,
      account_balance := bal (account_address prev),
-     account_ongoing_calls := pushed # account_ongoing_calls prev
-  \<rparr>"
+     account_ongoing_calls := pushed # account_ongoing_calls prev,
+     account_killed := (case act of ContractSuicide \<Rightarrow> True
+                  | _ \<Rightarrow> account_killed prev)
+  \<rparr>)"
 apply(case_tac act; simp add: update_account_state_def)
 done
 
