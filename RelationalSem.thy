@@ -140,7 +140,7 @@ lemma star_case :
 apply(induction rule: star.induct; auto)
 done
 
-lemma no_entry_fail [dest]:
+lemma no_entry_fail [dest!]:
 "star (one_step I)
       (a, ProgramToWorld (ContractFail, st, bal, v_opt))
       (b, c) \<Longrightarrow> b = a \<and> c = ProgramToWorld (ContractFail, st, bal, v_opt)"
@@ -148,7 +148,7 @@ apply(drule star_case; simp)
 apply(simp add: one_step.simps add: world_turn.simps)
 done
 
-lemma no_entry_return [dest]:
+lemma no_entry_return [dest!]:
 "star (one_step I)
       (a, ProgramToWorld (ContractReturn data, st, bal, v_opt))
       (b, c) \<Longrightarrow> b = a \<and> c = ProgramToWorld (ContractReturn data, st, bal, v_opt)"
@@ -156,7 +156,15 @@ apply(drule star_case; simp)
 apply(simp add: one_step.simps add: world_turn.simps)
 done
 
-lemma no_entry_annotation_failure [dest]:
+lemma no_entry_suicide [dest!]:
+"star (one_step I)
+      (a, ProgramToWorld (ContractSuicide, st, bal, v_opt))
+      (b, c) \<Longrightarrow> b = a \<and> c = ProgramToWorld (ContractSuicide, st, bal, v_opt)"
+apply(drule star_case; simp)
+apply(simp add: one_step.simps add: world_turn.simps)
+done
+
+lemma no_entry_annotation_failure [dest!]:
 "star (one_step I)
       (a, ProgramAnnotationFailure)
       (b, c) \<Longrightarrow> b = a \<and> c = ProgramAnnotationFailure"

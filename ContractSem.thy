@@ -1008,12 +1008,32 @@ where
 definition clean_killed :: "account_state \<Rightarrow> account_state"
 where
 "clean_killed prev =
-  (if account_ongoing_calls prev = [] \<and> account_killed prev = True then
+  (if account_ongoing_calls prev = [] \<and> account_killed prev then
      empty_account (account_address prev)
    else prev)
 "
 
-declare clean_killed_def [simp]
+lemma clean_killed_yes [simp] :
+"account_ongoing_calls prev = [] \<Longrightarrow>
+ account_killed prev \<Longrightarrow>
+ clean_killed prev = empty_account (account_address prev)"
+apply(simp add: clean_killed_def)
+done
+
+lemma clean_killed_not_killed [simp] :
+"account_ongoing_calls prev \<noteq> [] \<Longrightarrow>
+ clean_killed prev = prev
+"
+apply(simp add: clean_killed_def)
+done
+
+lemma clean_killed_no_still [simp] :
+"\<not> account_killed prev \<Longrightarrow>
+ clean_killed prev = prev
+ "
+apply(simp add: clean_killed_def)
+done
+
    
 definition update_account_state :: "account_state \<Rightarrow> contract_action \<Rightarrow> storage \<Rightarrow> (address \<Rightarrow> uint) \<Rightarrow> variable_env option \<Rightarrow> account_state"
 where
