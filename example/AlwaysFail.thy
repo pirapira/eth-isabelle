@@ -73,12 +73,9 @@ apply(simp only: no_assertion_failure_def)
 apply(simp add: initial_program_result.simps)
 apply(auto)
  apply(drule star_case; auto)
-  apply(drule star_case; auto)
-  apply(case_tac steps; auto)
- apply(drule star_case; auto)
-apply(drule star_case; auto)
  apply(case_tac steps; auto)
  apply(drule star_case; auto)
+apply(case_tac steps; auto)
 apply(case_tac steps; auto)
 done
 

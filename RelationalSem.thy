@@ -167,6 +167,30 @@ lemma star_case :
 apply(induction rule: star.induct; auto)
 done
 
+lemma no_entry_fail [dest]:
+"star (one_step I)
+      (a, ProgramToWorld (ContractFail, st, bal, v_opt))
+      (b, c) \<Longrightarrow> b = a \<and> c = ProgramToWorld (ContractFail, st, bal, v_opt)"
+apply(drule star_case; simp)
+apply(simp add: one_step.simps add: world_turn.simps)
+done
+
+lemma no_entry_return [dest]:
+"star (one_step I)
+      (a, ProgramToWorld (ContractReturn data, st, bal, v_opt))
+      (b, c) \<Longrightarrow> b = a \<and> c = ProgramToWorld (ContractReturn data, st, bal, v_opt)"
+apply(drule star_case; simp)
+apply(simp add: one_step.simps add: world_turn.simps)
+done
+
+lemma no_entry_annotation_failure [dest]:
+"star (one_step I)
+      (a, ProgramAnnotationFailure)
+      (b, c) \<Longrightarrow> b = a \<and> c = ProgramAnnotationFailure"
+apply(drule star_case; simp)
+apply(simp add: one_step.simps add: world_turn.simps)
+done
+
 definition no_assertion_failure :: "(account_state \<Rightarrow> bool) \<Rightarrow> bool"
 where
 "no_assertion_failure (I :: account_state \<Rightarrow> bool) ==
