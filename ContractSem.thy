@@ -1021,8 +1021,8 @@ where
    clean_killed
    (prev \<lparr>
      account_storage := st,
-     account_balance := (case v_opt of None \<Rightarrow> account_balance prev
-                                     | Some pushed \<Rightarrow> bal (account_address prev)),
+     account_balance := (case act of ContractFail \<Rightarrow> account_balance prev
+                                   |  _ \<Rightarrow> bal (account_address prev)),
      account_ongoing_calls :=
                         (case v_opt of None \<Rightarrow> account_ongoing_calls prev
                                      | Some pushed \<Rightarrow> pushed # account_ongoing_calls prev),
@@ -1030,13 +1030,14 @@ where
        (case act of ContractSuicide \<Rightarrow> True
                   | _ \<Rightarrow> account_killed prev)
                                      \<rparr>)"
-                                     
+
 lemma update_account_state_None [simp] :
 "update_account_state prev act st bal None =
    clean_killed
    (prev \<lparr>
      account_storage := st,
-     account_balance := account_balance prev,
+     account_balance := (case act of ContractFail \<Rightarrow> account_balance prev
+                                   |  _ \<Rightarrow> bal (account_address prev)),
      account_ongoing_calls := account_ongoing_calls prev,
      account_killed :=
        (case act of ContractSuicide \<Rightarrow> True
@@ -1050,7 +1051,8 @@ lemma update_account_state_Some [simp] :
    clean_killed
    (prev \<lparr>
      account_storage := st,
-     account_balance := bal (account_address prev),
+     account_balance := (case act of ContractFail \<Rightarrow> account_balance prev
+                                   |  _ \<Rightarrow> bal (account_address prev)),
      account_ongoing_calls := pushed # account_ongoing_calls prev,
      account_killed := (case act of ContractSuicide \<Rightarrow> True
                   | _ \<Rightarrow> account_killed prev)
