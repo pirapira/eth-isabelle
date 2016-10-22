@@ -60,13 +60,13 @@ account_return:
 
 declare account_state_return_change.simps [simp]
 
-fun callable_result :: "program_result \<Rightarrow> bool"
+fun callable_result :: "program_result \<Rightarrow> call_env \<Rightarrow> bool"
 where
-  "callable_result ProgramStepRunOut = False"
-| "callable_result (ProgramToWorld (_, _, _, _)) = False" (* The reentrance is contained in account_state_return_change *)
-| "callable_result ProgramInvalid = False"
-| "callable_result ProgramAnnotationFailure = False"
-| "callable_result ProgramInit = True"
+  "callable_result ProgramStepRunOut _= False"
+| "callable_result (ProgramToWorld (_, _, _, _)) _ = False" (* The reentrance is contained in account_state_return_change *)
+| "callable_result ProgramInvalid _ = False"
+| "callable_result ProgramAnnotationFailure _ = False"
+| "callable_result (ProgramInit c) c' = (c = c')"
 
 fun returnable_result :: "program_result \<Rightarrow> bool"
 where
@@ -78,7 +78,7 @@ where
   (* because we are not modeling nested calls here, the effect of the nested calls are modeled in
    * account_state_return_change *)
 | "returnable_result (ProgramToWorld (ContractReturn _, _, _, _)) = False"
-| "returnable_result ProgramInit = False"
+| "returnable_result (ProgramInit _) = False"
 | "returnable_result ProgramInvalid = False"
 | "returnable_result ProgramAnnotationFailure = False"
 
@@ -89,7 +89,7 @@ where
   world_call:
   "account_state_natural_change old_state new_state \<Longrightarrow>
    build_venv_called new_state callargs next_venv \<Longrightarrow>
-   callable_result result \<Longrightarrow>
+   callable_result result callargs \<Longrightarrow>
    world_turn _ (old_state, result) (new_state, next_venv)"
 | world_return:
   "account_state_return_change I account_state_going_out account_state_back \<Longrightarrow>
@@ -128,38 +128,11 @@ where
 step:
 "world_turn I a b \<Longrightarrow> contract_turn b c \<Longrightarrow> one_step I a c"
 
-inductive initial_program_result :: "account_state \<Rightarrow> (account_state * program_result) \<Rightarrow> bool"
-where
-initial:
-"initial_program_result a (a, ProgramInit)"
-
 (* taken from the book Concrete Semantics *)
 inductive star :: "('a \<Rightarrow> 'a \<Rightarrow> bool) \<Rightarrow> 'a \<Rightarrow> 'a \<Rightarrow> bool"
 where
 refl: "star r x x" |
 step: "r x y \<Longrightarrow> star r y z \<Longrightarrow> star r x z"
-
-lemma star_case' :
-"
-star r init dst \<Longrightarrow>
-(P init) \<Longrightarrow>
-(\<forall> next future. r init next \<longrightarrow>
- star r next future \<longrightarrow> (P future))
-\<Longrightarrow> P dst
-"
-apply(induction rule: star.induct; auto)
-done
-
-lemma star_case'' :
-"
-P init \<Longrightarrow>
-(\<forall> next future. r init next \<longrightarrow>
- star r next future \<longrightarrow> P future) \<Longrightarrow>
-star r init dst \<longrightarrow> P dst
-"
-apply(auto)
-apply(drule star_case'; auto)
-done
 
 lemma star_case :
 "star r a c \<Longrightarrow>
@@ -194,9 +167,23 @@ done
 definition no_assertion_failure :: "(account_state \<Rightarrow> bool) \<Rightarrow> bool"
 where
 "no_assertion_failure (I :: account_state \<Rightarrow> bool) ==
-  (\<forall> init. I (fst init) \<longrightarrow> snd init = ProgramInit \<longrightarrow>
+  (\<forall> init callenv. I (fst init) \<longrightarrow> snd init = ProgramInit callenv \<longrightarrow>
   (\<forall> fin. star (one_step I) init fin \<longrightarrow>
   I (fst fin) \<and>
   snd fin \<noteq> ProgramAnnotationFailure))"
+  
+definition pre_post_conditions ::
+"(account_state \<Rightarrow> bool) \<Rightarrow> (account_state \<Rightarrow> call_env \<Rightarrow> bool) \<Rightarrow>
+ (account_state \<Rightarrow> call_env \<Rightarrow> (account_state \<times> program_result) \<Rightarrow> bool) \<Rightarrow> bool"
+where
+"pre_post_conditions (I :: account_state \<Rightarrow> bool) (precondition :: account_state \<Rightarrow> call_env\<Rightarrow> bool)
+(postcondition :: (account_state \<Rightarrow> call_env \<Rightarrow> (account_state \<times> program_result) \<Rightarrow> bool)) ==
+  (\<forall> initial_account initial_call. I initial_account \<longrightarrow> precondition initial_account initial_call \<longrightarrow>
+  (\<forall> fin. star (one_step I) (initial_account, ProgramInit initial_call) fin \<longrightarrow>
+  snd fin \<noteq> ProgramAnnotationFailure \<and>
+  (\<forall> fin_observed. account_state_natural_change (fst fin) fin_observed \<longrightarrow>
+  I fin_observed \<and>
+  postcondition initial_account initial_call (fin_observed, snd fin))))
+"
 
 end

@@ -858,7 +858,7 @@ datatype program_result =
 | ProgramToWorld "contract_action * storage * (address => uint) * variable_env option"
 | ProgramInvalid
 | ProgramAnnotationFailure
-| ProgramInit (* will be used in RelationalSem *)
+| ProgramInit call_env (* will be used in RelationalSem *)
 
 abbreviation check_annotations :: "variable_env \<Rightarrow> constant_env \<Rightarrow> bool"
 where

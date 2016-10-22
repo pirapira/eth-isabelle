@@ -69,8 +69,7 @@ declare contract_turn.simps [simp]
 
 lemma no_assertion_failure:
 "no_assertion_failure (\<lambda> a. \<exists> initial_balance. a = (always_fail_account_state initial_balance))"
-apply(simp only: no_assertion_failure_def)
-apply(simp add: initial_program_result.simps)
+apply(simp add: no_assertion_failure_def)
 apply(auto)
  apply(drule star_case; auto)
  apply(case_tac steps; auto)
@@ -78,5 +77,11 @@ apply(auto)
 apply(case_tac steps; auto)
 apply(case_tac steps; auto)
 done
+
+lemma balance_no_decrease:
+"
+no_assertion_failure (\<lambda> a. \<exists> initial_balance. a = (always_fail_account_state initial_balance))
+"
+
 
 end
