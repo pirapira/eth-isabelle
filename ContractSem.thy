@@ -923,10 +923,8 @@ done*)
 inductive build_venv_called :: "account_state => call_env => variable_env => bool"
 where
 venv_called:
-  "bal \<ge>
-     update_balance (account_address a)
-       (\<lambda> _. account_balance a + callenv_value env)
-       (callenv_balance env) \<Longrightarrow>
+  "bal (account_address a) \<ge>
+       account_balance a + callenv_value env \<Longrightarrow>
    build_venv_called a env
    \<lparr> venv_stack = []
    , venv_memory = empty_memory
@@ -953,7 +951,7 @@ where
 "build_cenv a \<equiv>
   \<lparr> cenv_program = account_code a,
     cenv_this = account_address a \<rparr>"
-    
+
 abbreviation is_call_like :: "inst option \<Rightarrow> bool"
 where
 "is_call_like i == (i = Some (Misc CALL) \<or> i = Some (Misc DELEGATECALL) \<or> i = Some (Misc CALLCODE) \<or> i = Some (Misc CREATE))"
