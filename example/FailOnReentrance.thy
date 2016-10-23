@@ -126,7 +126,7 @@ where
      
 value "program_of_lst fail_on_reentrance_program"
 
-declare one_step.simps [simp]
+declare one_round.simps [simp]
 declare world_turn.simps [simp]
 declare contract_turn.simps [simp]
 

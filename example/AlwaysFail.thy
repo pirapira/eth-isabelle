@@ -63,7 +63,7 @@ apply(rule AccountStep; auto)
 apply(case_tac steps; auto)
 done
 
-declare one_step.simps [simp]
+declare one_round.simps [simp]
 declare world_turn.simps [simp]
 declare contract_turn.simps [simp]
 

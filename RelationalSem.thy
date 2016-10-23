@@ -125,10 +125,10 @@ where
    contract_turn (old_account, old_venv) (old_account, ProgramAnnotationFailure)"
 
 
-inductive one_step :: "(account_state \<Rightarrow> bool) \<Rightarrow> (account_state * program_result) \<Rightarrow> (account_state * program_result) \<Rightarrow> bool"
+inductive one_round :: "(account_state \<Rightarrow> bool) \<Rightarrow> (account_state * program_result) \<Rightarrow> (account_state * program_result) \<Rightarrow> bool"
 where
-step:
-"world_turn I a b \<Longrightarrow> contract_turn b c \<Longrightarrow> one_step I a c"
+round:
+"world_turn I a b \<Longrightarrow> contract_turn b c \<Longrightarrow> one_round I a c"
 
 (* taken from the book Concrete Semantics *)
 inductive star :: "('a \<Rightarrow> 'a \<Rightarrow> bool) \<Rightarrow> 'a \<Rightarrow> 'a \<Rightarrow> bool"
@@ -143,42 +143,42 @@ apply(induction rule: star.induct; auto)
 done
 
 lemma no_entry_fail [dest!]:
-"star (one_step I)
+"star (one_round I)
       (a, ProgramToWorld (ContractFail, st, bal, v_opt))
       (b, c) \<Longrightarrow> b = a \<and> c = ProgramToWorld (ContractFail, st, bal, v_opt)"
 apply(drule star_case; simp)
-apply(simp add: one_step.simps add: world_turn.simps)
+apply(simp add: one_round.simps add: world_turn.simps)
 done
 
 lemma no_entry_return [dest!]:
-"star (one_step I)
+"star (one_round I)
       (a, ProgramToWorld (ContractReturn data, st, bal, v_opt))
       (b, c) \<Longrightarrow> b = a \<and> c = ProgramToWorld (ContractReturn data, st, bal, v_opt)"
 apply(drule star_case; simp)
-apply(simp add: one_step.simps add: world_turn.simps)
+apply(simp add: one_round.simps add: world_turn.simps)
 done
 
 lemma no_entry_suicide [dest!]:
-"star (one_step I)
+"star (one_round I)
       (a, ProgramToWorld (ContractSuicide, st, bal, v_opt))
       (b, c) \<Longrightarrow> b = a \<and> c = ProgramToWorld (ContractSuicide, st, bal, v_opt)"
 apply(drule star_case; simp)
-apply(simp add: one_step.simps add: world_turn.simps)
+apply(simp add: one_round.simps add: world_turn.simps)
 done
 
 lemma no_entry_annotation_failure [dest!]:
-"star (one_step I)
+"star (one_round I)
       (a, ProgramAnnotationFailure)
       (b, c) \<Longrightarrow> b = a \<and> c = ProgramAnnotationFailure"
 apply(drule star_case; simp)
-apply(simp add: one_step.simps add: world_turn.simps)
+apply(simp add: one_round.simps add: world_turn.simps)
 done
 
 definition no_assertion_failure :: "(account_state \<Rightarrow> bool) \<Rightarrow> bool"
 where
 "no_assertion_failure (I :: account_state \<Rightarrow> bool) ==
   (\<forall> init callenv. I (fst init) \<longrightarrow> snd init = ProgramInit callenv \<longrightarrow>
-  (\<forall> fin. star (one_step I) init fin \<longrightarrow>
+  (\<forall> fin. star (one_round I) init fin \<longrightarrow>
   I (fst fin) \<and>
   snd fin \<noteq> ProgramAnnotationFailure))"
   
@@ -190,7 +190,7 @@ where
 (postcondition :: (account_state \<Rightarrow> call_env \<Rightarrow> (account_state \<times> program_result) \<Rightarrow> bool)) ==
   (\<forall> initial_account initial_call. I initial_account \<longrightarrow>
      precondition initial_account initial_call \<longrightarrow>
-  (\<forall> fin. star (one_step I) (initial_account, ProgramInit initial_call) fin \<longrightarrow>
+  (\<forall> fin. star (one_round I) (initial_account, ProgramInit initial_call) fin \<longrightarrow>
   snd fin \<noteq> ProgramAnnotationFailure \<and>
   (\<forall> fin_observed. account_state_natural_change (fst fin) fin_observed \<longrightarrow>
   I fin_observed \<and>

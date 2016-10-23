@@ -600,7 +600,7 @@ apply(case_tac b; auto)
 done
 
 declare deed_inv.simps [simp]
-        one_step.simps [simp]
+        one_round.simps [simp]
         world_turn.simps [simp]
         contract_turn.simps [simp]
         x_def [simp]
