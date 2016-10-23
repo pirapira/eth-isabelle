@@ -1,9 +1,10 @@
 session "eth-isabelle" = "HOL" +
   options [document = pdf, document_output = "output"]
   theories [document = false]
-    (* Foo *)
+    "~~/src/HOL/Word/Word"
     (* Bar *)
   theories
-    (* Baz *)
+    ContractEnv
+    Instructions
   document_files
     "root.tex"

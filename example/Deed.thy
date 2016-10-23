@@ -1,6 +1,6 @@
 theory Deed
 
-imports Main "../Parse" "../RelationalSem"
+imports Main (* "../Parse" *) "../RelationalSem"
 
 begin
 

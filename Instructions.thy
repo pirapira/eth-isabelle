@@ -1,13 +1,28 @@
+section {* EVM Instructions *}
+
+text {* This section lists the EVM instructions and their byte representations.
+I also introduce an assertion opcode, whose byte representation is empty.
+The assertion opcode specifies a property about the state of the EVM at
+that position of the program.
+*}
+
+text {* In Isabelle/HOL, it is very expensive to define a single inductive type
+that contains all opcodes.  When I do it, Isabelle/HOL automatically proves every
+opcode is different from any other opcode, but this process has the computational
+complexity of the square of the number of opcodes.  Instead, I define multiple
+smaller indcutive types and at the end define the whole opcode set.  *}
+
 theory Instructions
 
 imports Main "~~/src/HOL/Word/Word" "./ContractEnv"
 
 begin
 
-text "The set of instructions can be defined inductively, or"
-text "just as a nibble.  I choose the inductive definition."
+subsection "Bit Operations"
 
-type_synonym byte = "8 word"
+text {* Some instructions have \texttt{inst\_} in front.  Because names like AND,
+OR and XOR are taken by the machine word library.
+*}
 
 datatype bits_inst
 = inst_AND
@@ -15,6 +30,10 @@ datatype bits_inst
 | inst_XOR
 | inst_NOT
 | BYTE
+
+text {* These opcodes are represented by the following bytes.
+Most opcodes are represented by a single byte.
+*}
 
 fun bits_inst_code :: "bits_inst \<Rightarrow> byte"
 where
@@ -25,6 +44,8 @@ where
 | "bits_inst_code BYTE = 0x1a"
 
 declare bits_inst_code.simps [simp]
+
+subsection "Signed Arithmetics"
 
 datatype sarith_inst
 = SDIV
@@ -42,6 +63,8 @@ where
 | "sarith_inst_code SIGNEXTEND = 0x0b"
 
 declare sarith_inst_code.simps [simp]
+
+subsection "Unsigned Arithmetics"
 
 datatype arith_inst
 = ADD
@@ -75,6 +98,8 @@ where
 | "arith_inst_code SHA3 = 0x20"
 
 declare arith_inst_code.simps [simp]
+
+subsection "Informational Opcodes"
 
 datatype info_inst =
     ADDRESS
@@ -115,6 +140,11 @@ where
 
 declare info_inst_code.simps [simp]
 
+subsection "Duplicating Stack Elements"
+
+text {* There are 16 opcodes for duplicating a stack element.  These opcodes takes
+a stack element and duplicate it on top of the stack. *}
+
 type_synonym dup_inst = nat
 
 abbreviation dup_inst_code :: "dup_inst \<Rightarrow> byte"
@@ -123,6 +153,8 @@ where
    (if n < 1 then undefined
     else (if n > 16 then undefined
     else (word_of_int (int n)) + 0x7f))"
+    
+subsection {* Memory Operations *}
 
 datatype memory_inst =
     MLOAD
@@ -145,6 +177,8 @@ where
 
 declare memory_inst_code.simps [simp]
 
+subsection {* Storage Operations *}
+
 datatype storage_inst =
     SLOAD
   | SSTORE
@@ -155,6 +189,8 @@ where
 | "storage_inst_code SSTORE = 0x55"
 
 declare storage_inst_code.simps [simp]
+
+subsection {* Program-Counter Opcodes *}
 
 datatype pc_inst =
     JUMP
@@ -171,11 +207,18 @@ where
 
 declare pc_inst_code.simps [simp]
 
+subsection {* Stack Opcodes *}
+
 datatype stack_inst =
     POP
   | PUSH_N "8 word list"
   | CALLDATALOAD
 
+text {* The PUSH opcodes are longer because they contain immediate values.
+Here the immediate value is represented by a list of bytes.  Depending on the
+length of the list, the PUSH operation takes different opcodes.
+*}
+  
 fun stack_inst_code :: "stack_inst \<Rightarrow> byte list"
 where
   "stack_inst_code POP = [0x50]"
@@ -195,6 +238,8 @@ where
   (if n < 1 then undefined else
   (if n > 16 then undefined else
    word_of_int (int n) + 0x8f))"
+   
+subsection {* Logging Opcodes *}
 
 datatype log_inst
   = LOG0
@@ -212,6 +257,11 @@ where
 | "log_inst_code LOG4 = 0xa4"
 
 declare log_inst_code.simps [simp]
+
+subsection {* Miscellaneous Opcodes *}
+
+text {* This section contains the opcodes that alter the account-wise control flow. *}
+
 
 datatype misc_inst
   = STOP
@@ -234,7 +284,17 @@ where
 
 declare misc_inst_code.simps [simp]
 
+subsection {* Annotation Opcode *}
+
+text {* The annotation opcode is just a predicate over @{typ aenv}.
+A predicate modelled as a function returning a boolean.
+*}
+
 type_synonym annotation = "aenv \<Rightarrow> bool"
+
+subsection {* The Whole Opcode Set *}
+
+text {* The small inductive sets above are here combined into a single type. *}
 
 datatype inst =
     Unknown byte
@@ -251,6 +311,8 @@ datatype inst =
   | Log log_inst
   | Misc misc_inst
   | Annotation annotation
+
+text {* And the byte representation of these opcodes are defined. *}
 
 fun inst_code :: "inst \<Rightarrow> byte list"
 where
@@ -271,10 +333,15 @@ where
 
 declare inst_code.simps [simp]
 
+text {* The size of an opcode is useful for parsing a hex representation of an
+EVM code.  *}
+
 abbreviation inst_size :: "inst \<Rightarrow> int"
 where
 "inst_size i == int (length (inst_code i))"
 
+text {* This can also be used to find jump destinations from a sequence of opcodes.
+*}
 
 fun drop_bytes :: "inst list \<Rightarrow> nat \<Rightarrow> inst list"
 where
@@ -286,6 +353,8 @@ where
 
 declare drop_bytes.simps [simp]
 
+text {* Also it is possible to compute the size of a program as the number of bytes, *}
+
 fun program_size :: "inst list \<Rightarrow> nat"
 where
   "program_size (Stack (PUSH_N v) # rest) = length v + 1 + program_size rest"
@@ -295,6 +364,7 @@ where
 
 declare program_size.simps [simp]
 
+text {* as well as computing the byte representation of the program. *}
 
 fun program_code :: "inst list \<Rightarrow> byte list"
 where
