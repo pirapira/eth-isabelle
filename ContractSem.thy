@@ -237,9 +237,9 @@ where
      max s ((uint f + uint l + 31) div 32))
 "
 
-definition update_balance :: "address \<Rightarrow> (uint \<Rightarrow> uint) \<Rightarrow> (address \<Rightarrow> uint) \<Rightarrow> (address \<Rightarrow> uint)"
+abbreviation update_balance :: "address \<Rightarrow> (uint \<Rightarrow> uint) \<Rightarrow> (address \<Rightarrow> uint) \<Rightarrow> (address \<Rightarrow> uint)"
 where
-"update_balance a newbal orig = orig(a := newbal (orig a))"
+"update_balance a newbal orig == orig(a := newbal (orig a))"
 
 datatype instruction_result =
   InstructionUnknown
@@ -991,7 +991,8 @@ abbreviation account_state_pop_ongoing_call :: "account_state \<Rightarrow> acco
 where
 "account_state_pop_ongoing_call orig ==
    orig\<lparr> account_ongoing_calls := tl (account_ongoing_calls orig)\<rparr>"
-   
+
+(* This happens at the end of a tansaction.  *)
 abbreviation empty_account :: "address \<Rightarrow> account_state"
 where
 "empty_account addr ==
@@ -1003,41 +1004,11 @@ where
  , account_killed = False
  \<rparr>"
 
-definition clean_killed :: "account_state \<Rightarrow> account_state"
-where
-"clean_killed prev =
-  (if account_ongoing_calls prev = [] \<and> account_killed prev then
-     empty_account (account_address prev)
-   else prev)
-"
-
-lemma clean_killed_yes [simp] :
-"account_ongoing_calls prev = [] \<Longrightarrow>
- account_killed prev \<Longrightarrow>
- clean_killed prev = empty_account (account_address prev)"
-apply(simp add: clean_killed_def)
-done
-
-lemma clean_killed_not_killed [simp] :
-"account_ongoing_calls prev \<noteq> [] \<Longrightarrow>
- clean_killed prev = prev
-"
-apply(simp add: clean_killed_def)
-done
-
-lemma clean_killed_no_still [simp] :
-"\<not> account_killed prev \<Longrightarrow>
- clean_killed prev = prev
- "
-apply(simp add: clean_killed_def)
-done
-
    
 definition update_account_state :: "account_state \<Rightarrow> contract_action \<Rightarrow> storage \<Rightarrow> (address \<Rightarrow> uint) \<Rightarrow> variable_env option \<Rightarrow> account_state"
 where
 "update_account_state prev act st bal v_opt \<equiv>
-   clean_killed
-   (prev \<lparr>
+   prev \<lparr>
      account_storage := st,
      account_balance := (case act of ContractFail \<Rightarrow> account_balance prev
                                    |  _ \<Rightarrow> bal (account_address prev)),
@@ -1047,11 +1018,10 @@ where
      account_killed :=
        (case act of ContractSuicide \<Rightarrow> True
                   | _ \<Rightarrow> account_killed prev)
-                                     \<rparr>)"
+                                     \<rparr>"
 
 lemma update_account_state_None [simp] :
 "update_account_state prev act st bal None =
-   clean_killed
    (prev \<lparr>
      account_storage := st,
      account_balance := (case act of ContractFail \<Rightarrow> account_balance prev
@@ -1066,7 +1036,6 @@ done
 
 lemma update_account_state_Some [simp] :
 "update_account_state prev act st bal (Some pushed) =
-   clean_killed
    (prev \<lparr>
      account_storage := st,
      account_balance := (case act of ContractFail \<Rightarrow> account_balance prev

@@ -618,18 +618,39 @@ apply(rule impI)
 apply(drule star_case; auto)
      apply(case_tac steps; auto)
      apply(split if_splits; auto)
-      apply(split if_splits; auto)
-     apply(split strict_if_split; auto)
-      apply(split if_splits; auto)
      
+oops (* maybe just focus on the next lemma *)
+      
+(*     
 done
+*)
+
+(* declare fresh_not_killed_def [simp] *)
 
 lemma deed_only_registrar_can_spend :
 "pre_post_conditions deed_inv
- (\<lambda> init_state init_call. account_storage init_state 0 \<noteq> ucast (callenv_caller init_call))
+ (\<lambda> init_state init_call. account_storage init_state 0 \<noteq> ucast (callenv_caller init_call)
+ \<and> callenv_value init_call + account_balance init_state \<ge> account_balance init_state
+ )
  (\<lambda> init_state _ (post_state, _). account_balance init_state \<le> account_balance post_state)
 "
-
-
+apply(simp add: pre_post_conditions_def; auto)
+     apply(drule star_case; auto)
+      apply(case_tac steps; auto)
+      apply(split strict_if_split; auto)
+      apply(split strict_if_split; auto)
+      apply(split strict_if_split; auto)
+     apply(case_tac steps; auto)
+     apply(split strict_if_split; auto)
+     apply(split strict_if_split; auto)
+     apply(split strict_if_split; auto)
+    apply(drule star_case; auto)
+    apply(case_tac steps; auto)
+    apply(split strict_if_split; auto)
+     apply(split strict_if_split; auto)
+      apply(simp add: fresh_not_killed_def)
+      apply(case_tac killeda; auto)
+     apply(split strict_if_split; auto)
+      
 
 end

@@ -26,6 +26,17 @@ natural:
    , account_ongoing_calls = going
    , account_killed = killed
    \<rparr>"
+| cleaned: (* This happens only at the end of a transaction, but we don't know the transaction boundaries.  
+              So this can happen at any moment when there are no ongoing calls.  *)
+  "account_state_natural_change
+  \<lparr> account_address = addr
+  , account_storage = str
+  , account_code = code
+  , account_balance = old_bal
+  , account_ongoing_calls = []
+  , account_killed = True
+  \<rparr>
+  (empty_account addr)"
 
 declare account_state_natural_change.simps [simp]
 
