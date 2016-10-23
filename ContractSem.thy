@@ -1,9 +1,7 @@
-text "This is a port of ContractSem.v in pirapira/evmverif"
+section "A Contract Centric View of the EVM"
 
-text "The main difficulty is to avoid the use of coinduction"
-
-text "One way is, in the specification, talk about some concrete state."
-text "Maybe that's fine."
+text {* Here is a presentation of the Ethereum Virtual Machine (EVM) in a form
+suitable for formal verification of a single account.  *}
 
 theory ContractSem
 
@@ -11,31 +9,80 @@ imports Main "~~/src/HOL/Word/Word" "~~/src/HOL/Data_Structures/AVL_Map" "./Cont
 
 begin
 
+subsection "Utility Functions"
+
+text {* Here is one function that converts a boolean value into an EVM machine word. *}
+
 definition bool_to_uint :: "bool \<Rightarrow> uint"
 where
 "bool_to_uint b = (if b then 1 else 0)"
 
+text {* The following function is an if sentence, but with some strict control
+over the evaluation order.  By default, neither the then-clause nor the else-clause
+is simplified during proofs.  This prevents the automatic simplifier from
+computing the results of both the then-clause and the else-clause.
+*}
 
 definition strict_if :: "bool \<Rightarrow> (bool \<Rightarrow> 'a) \<Rightarrow> (bool \<Rightarrow> 'a) \<Rightarrow> 'a"
 where
 "strict_if b x y = (if b then x True else y True)"
+
+text {* When the if-condition is known to be True, the simplifier can
+proceed into the then-clause.  *}
 
 lemma strict_if_True [simp] :
 "strict_if True a b = a True"
 apply(simp add: strict_if_def)
 done
 
+text {* When the if-condition is known to be False, the simplifier
+can proceed into the else-clause. *}
+
 lemma strict_if_False [simp] :
 "strict_if False a b = b True"
 apply(simp add: strict_if_def)
 done
+
+text {* When the if-condition is not known to be either True or False,
+the simplifier is allowed to perform computation on the if-condition. *}
 
 lemma weak_if_cong [cong] :
 "b0 = b1 \<Longrightarrow> strict_if b0 x y = strict_if b1 x y"
 apply(auto)
 done
 
-abbreviation "drop_one_element == tl"
+subsection "The Interaction between the Contract and the World"
+
+text "In this development, the EVM execution is seen as an interaction between the contract
+and the rest of the world.  The world can call into the contract.  The contract can reply by just
+finishing or failing, but it can also call an account.  When the contract calls an account,
+this is seen as an action towards the world, because the world then has to decide the
+result of this call.  The world can say that the call finished successfully or in an exceptional
+state.  The world can also say that the call resulted in a reentrancy.  In other words,
+the world can call the contract again.  The whole process is captured as a game between
+the world and the contract."
+
+subsubsection "The World's Moves"
+
+record call_env =
+  callenv_gaslimit :: uint
+  callenv_value :: uint
+  callenv_data :: "byte list"
+  callenv_caller :: address
+  callenv_timestamp :: uint
+  callenv_blocknum :: uint
+  callenv_balance :: "address \<Rightarrow> uint"
+
+record return_result =
+  return_data :: "byte list"
+  return_balance :: "address \<Rightarrow> uint"
+
+datatype world_action =
+  WorldCall call_env
+| WorldRet return_result
+| WorldFail
+
+subsubsection "The Contract's Moves"
 
 record call_arguments =
   callarg_gaslimit :: uint
@@ -50,19 +97,6 @@ record create_arguments =
   createarg_value :: uint
   createarg_code :: "byte list"
 
-record return_result =
-  return_data :: "byte list"
-  return_balance :: "address \<Rightarrow> uint"
-
-record call_env =
-  callenv_gaslimit :: uint
-  callenv_value :: uint
-  callenv_data :: "byte list"
-  callenv_caller :: address
-  callenv_timestamp :: uint
-  callenv_blocknum :: uint
-  callenv_balance :: "address \<Rightarrow> uint"
-
 datatype contract_action =
   ContractCall call_arguments
 | ContractCreate create_arguments
@@ -70,29 +104,10 @@ datatype contract_action =
 | ContractSuicide
 | ContractReturn "byte list"
 
-text "response_to_world is not ported"
-text "We will be checking the resulting state"
+subsection "Program Representation"
 
-datatype world_action =
-  WorldCall call_env
-| WorldRet return_result
-| WorldFail
-
-type_synonym world = "world_action list"
-
-datatype action =
-  ActionByWorld world_action
-| ActionByContract contract_action
-
-type_synonym history = "action list"
-
-fun store_byte_list_memory :: "uint \<Rightarrow> byte list \<Rightarrow> memory \<Rightarrow> memory"
-where
-  "store_byte_list_memory _ [] orig = orig"
-| "store_byte_list_memory pos (h # t) orig =
-     store_byte_list_memory (pos + 1) t (orig(pos := h))"
-
-declare store_byte_list_memory.simps [simp]
+text "For performance reasons, the instructions are stored in an AVL tree that allows
+looking up instructions from the program counters."
 
 record program = 
   program_content :: "(int * inst) avl_tree"
@@ -107,9 +122,8 @@ where
   , program_annotation = (\<lambda> _. []) \<rparr>"
 
 
-(* the data region of PUSH_N instructions are encoded as
- * InstructionUnknown byte *)
- 
+subsection "Translating an Instruction List into a Program"
+  
 instantiation int :: cmp
 begin
 definition cmp_int :: "int \<Rightarrow> int \<Rightarrow> Cmp.cmp"
@@ -130,6 +144,9 @@ qed
 
 end
 
+text {* the data region of PUSH\_N instructions are encoded as
+ InstructionUnknown byte *}
+ 
 fun store_byte_list_in_program :: "int \<Rightarrow> byte list \<Rightarrow> (int * inst) avl_tree \<Rightarrow> (int * inst) avl_tree"
 where
   "store_byte_list_in_program _ [] orig = orig"
@@ -150,12 +167,7 @@ where
 | "program_content_of_lst pos (i # rest) =
    update pos i (program_content_of_lst (pos + 1) rest)"
 
-   (*
-declare "program_content_of_lst.simps" [simp del]
-*)
-
 (* TODO: replace this with AVL Tree *)
-
 abbreviation prepend_annotation :: "int \<Rightarrow> annotation \<Rightarrow> (int \<Rightarrow> annotation list) \<Rightarrow> (int \<Rightarrow> annotation list)"
 where
 "prepend_annotation pos annot orig ==
@@ -179,6 +191,7 @@ where
   , program_annotation = program_annotation_of_lst 0 lst
   \<rparr>"
 
+subsection {* Program as a Byte Sequence *}
 
 abbreviation program_as_memory :: "program \<Rightarrow> memory"
 where
@@ -217,29 +230,11 @@ record variable_env =
   venv_ext_program :: "address \<Rightarrow> program"
   venv_block :: block_info
 
-
 record constant_env =
   cenv_program :: program
   cenv_this :: address
 
-(* TODO: keep track of the gas consumption in variable_env.  This is issue #7 *)
-definition gas_limit :: "variable_env \<Rightarrow> uint"
-where "gas_limit = undefined"
-
-(* This M function is defined at the end of H.1. in the yellow paper.
- * The purpose of this is to update the memory usage.
- *)
-abbreviation M :: "int \<Rightarrow> uint \<Rightarrow> uint \<Rightarrow> int"
-where
-"M s f l ==
-
-  (if l = 0 then s else
-     max s ((uint f + uint l + 31) div 32))
-"
-
-abbreviation update_balance :: "address \<Rightarrow> (uint \<Rightarrow> uint) \<Rightarrow> (address \<Rightarrow> uint) \<Rightarrow> (address \<Rightarrow> uint)"
-where
-"update_balance a newbal orig == orig(a := newbal (orig a))"
+subsection {* The Result of an Instruction *}
 
 datatype instruction_result =
   InstructionUnknown
@@ -262,8 +257,29 @@ abbreviation instruction_return_result :: "byte list \<Rightarrow> variable_env 
 where
 "instruction_return_result x v == InstructionToWorld (ContractReturn x, venv_storage v, venv_balance v, None)"
 
-(* venv_update_x functions are not useful in Isabelle/HOL,
- * where field updates are supported already. *)
+subsection {* Useful Functions for Defining EVM Operations *}
+
+text {* Currently the GAS instruction is modelled to return random numbers.
+The random number is not known to be of any value.
+*}
+
+definition gas_limit :: "variable_env \<Rightarrow> uint"
+where "gas_limit _ = undefined"
+
+(* This M function is defined at the end of H.1. in the yellow paper.
+ * The purpose of this is to update the memory usage.
+ *)
+abbreviation M :: "int \<Rightarrow> uint \<Rightarrow> uint \<Rightarrow> int"
+where
+"M s f l ==
+
+  (if l = 0 then s else
+     max s ((uint f + uint l + 31) div 32))
+"
+
+abbreviation update_balance :: "address \<Rightarrow> (uint \<Rightarrow> uint) \<Rightarrow> (address \<Rightarrow> uint) \<Rightarrow> (address \<Rightarrow> uint)"
+where
+"update_balance a newbal orig == orig(a := newbal (orig a))"
 
 fun venv_pop_stack :: "nat \<Rightarrow> variable_env \<Rightarrow> variable_env"
 where
@@ -297,7 +313,7 @@ where
 "venv_advance_pc c v \<equiv> 
   v\<lparr> venv_pc := venv_pc v + inst_size (the (venv_first_instruction v c))  \<rparr>"
 
-    
+
 abbreviation stack_0_0_op :: "variable_env \<Rightarrow> constant_env \<Rightarrow> instruction_result"
 where
 "stack_0_0_op v c == InstructionContinue (venv_advance_pc c v)"
@@ -351,6 +367,8 @@ where
             v\<lparr>venv_stack := f operand0 operand1 operand2 # rest\<rparr>)
    | _ \<Rightarrow> instruction_failure_result v
    )"
+   
+subsection {* Definition of EVM Operations *}
 
 abbreviation sload :: "variable_env \<Rightarrow> uint \<Rightarrow> uint"
 where
@@ -588,6 +606,14 @@ where
    (let duplicated = venv_stack v ! (n - 1) in
     InstructionContinue (venv_advance_pc c v\<lparr> venv_stack := duplicated # venv_stack v \<rparr>)))
 "
+
+fun store_byte_list_memory :: "uint \<Rightarrow> byte list \<Rightarrow> memory \<Rightarrow> memory"
+where
+  "store_byte_list_memory _ [] orig = orig"
+| "store_byte_list_memory pos (h # t) orig =
+     store_byte_list_memory (pos + 1) t (orig(pos := h))"
+
+declare store_byte_list_memory.simps [simp]
 
 abbreviation store_word_memory :: "uint \<Rightarrow> uint \<Rightarrow> memory \<Rightarrow> memory"
 where
@@ -853,6 +879,8 @@ where
 | "instruction_sem v c (Info GAS) = stack_0_1_op v c (gas_limit v)"
 | "instruction_sem v c (Memory MSIZE) = stack_0_1_op v c (word_of_int (venv_memory_usage v))"
 
+subsection {* Programs' Answer to the World *}
+
 datatype program_result =
   ProgramStepRunOut
 | ProgramToWorld "contract_action * storage * (address => uint) * variable_env option"
@@ -865,7 +893,7 @@ where
 "check_annotations v c ==
   (let annots = program_annotation (cenv_program c) (venv_pc v) in
    List.list_all (\<lambda> annot. annot (build_aenv v c)) annots)"
-
+   
 function (sequential) program_sem :: "variable_env \<Rightarrow> constant_env \<Rightarrow> int \<Rightarrow> nat \<Rightarrow> program_result"
 and blocked_program_sem :: "variable_env \<Rightarrow> constant_env \<Rightarrow> int \<Rightarrow> nat \<Rightarrow> bool \<Rightarrow> program_result"
 where
@@ -904,6 +932,8 @@ lemma program_sem_unblock :
 apply(simp add: program_sem_blocked_def)
 done
 
+subsection {* Account's State *}
+
 record account_state =
   account_address :: address
   account_storage :: storage
@@ -913,12 +943,9 @@ record account_state =
   account_ongoing_calls :: "variable_env list"
   account_killed :: bool
 
-declare empty_memory_def [simp]
+subsection {* Environment Construction before EVM Execution *}
 
-(*
-lemma empty_update : "empty_memory (x := 0) = empty_memory"
-apply(auto)
-done*)
+declare empty_memory_def [simp]
 
 inductive build_venv_called :: "account_state => call_env => variable_env => bool"
 where
@@ -986,6 +1013,7 @@ where
 
 declare build_venv_failed_def [simp]
 
+subsection {* Account State Update after EVM Execution *}
 
 abbreviation account_state_pop_ongoing_call :: "account_state \<Rightarrow> account_state"
 where
@@ -1047,9 +1075,10 @@ lemma update_account_state_Some [simp] :
 apply(case_tac act; simp add: update_account_state_def)
 done
 
-(* Replace the coinductional future of the 
- * contract_behavior with just a condition on
- * the resulting account_state *)
+subsection "Functional Correctness"
+
+text {* The definitions in this subsection are not used in the analysis of Deed contract
+currently.  *}
 
 type_synonym contract_behavior = "contract_action * (account_state \<Rightarrow> bool)"
 
@@ -1123,6 +1152,8 @@ AccountStep:
    (\<forall> a. precond a \<longrightarrow> respond_to_fail_correctly f a) \<Longrightarrow>
    account_state_responds_to_world precond
    \<lparr> when_called = c, when_returned = r, when_failed = f \<rparr>"
+
+subsection {* Controlling the Isabelle Simplifier *}
 
 declare word_rcat_def [simp]
         unat_def [simp]

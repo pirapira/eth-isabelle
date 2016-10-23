@@ -22,7 +22,7 @@ text "1.2 Keccak-f permutations"
 
 text "Keccak-f[?] which variant will be used later?"
 
-text "https://github.com/mjosaarinen/tiny_sha3/blob/master/sha3.c is more readable."
+text {* https://github.com/mjosaarinen/tiny\_sha3/blob/master/sha3.c is more readable. *}
 
 definition "rotl64 (x :: 64 word) n = (word_rotl n x :: 64 word)"
 
