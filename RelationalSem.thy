@@ -71,14 +71,6 @@ account_return:
 
 declare account_state_return_change.simps [simp]
 
-fun callable_result :: "program_result \<Rightarrow> call_env \<Rightarrow> bool"
-where
-  "callable_result ProgramStepRunOut _= False"
-| "callable_result (ProgramToWorld (_, _, _, _)) _ = False" (* The reentrance is contained in account_state_return_change *)
-| "callable_result ProgramInvalid _ = False"
-| "callable_result ProgramAnnotationFailure _ = False"
-| "callable_result (ProgramInit c) c' = (c = c')"
-
 fun returnable_result :: "program_result \<Rightarrow> bool"
 where
   "returnable_result ProgramStepRunOut = False"
@@ -98,10 +90,9 @@ where
 (*  world_continue: "world_turn (orig, (InstructionContinue v)) (orig, v)"*)
 (* TODO  enable this with invariant. *)
   world_call:
-  "account_state_natural_change old_state new_state \<Longrightarrow>
-   build_venv_called new_state callargs next_venv \<Longrightarrow>
-   callable_result result callargs \<Longrightarrow>
-   world_turn _ (old_state, result) (new_state, next_venv)"
+  "
+   build_venv_called old_state callargs next_venv \<Longrightarrow>
+   world_turn I (old_state, ProgramInit callargs) (old_state, next_venv)"
 | world_return:
   "account_state_return_change I account_state_going_out account_state_back \<Longrightarrow>
    build_venv_returned account_state_back result new_v \<Longrightarrow>
@@ -197,7 +188,8 @@ definition pre_post_conditions ::
 where
 "pre_post_conditions (I :: account_state \<Rightarrow> bool) (precondition :: account_state \<Rightarrow> call_env\<Rightarrow> bool)
 (postcondition :: (account_state \<Rightarrow> call_env \<Rightarrow> (account_state \<times> program_result) \<Rightarrow> bool)) ==
-  (\<forall> initial_account initial_call. I initial_account \<longrightarrow> precondition initial_account initial_call \<longrightarrow>
+  (\<forall> initial_account initial_call. I initial_account \<longrightarrow>
+     precondition initial_account initial_call \<longrightarrow>
   (\<forall> fin. star (one_step I) (initial_account, ProgramInit initial_call) fin \<longrightarrow>
   snd fin \<noteq> ProgramAnnotationFailure \<and>
   (\<forall> fin_observed. account_state_natural_change (fst fin) fin_observed \<longrightarrow>

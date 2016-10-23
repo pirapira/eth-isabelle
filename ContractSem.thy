@@ -923,7 +923,7 @@ done*)
 inductive build_venv_called :: "account_state => call_env => variable_env => bool"
 where
 venv_called:
-  "bal (account_address a) \<ge>
+  "bal (account_address a) = (* natural increase is taken care of in RelationalSem.thy *)
        account_balance a + callenv_value env \<Longrightarrow>
    build_venv_called a env
    \<lparr> venv_stack = []
