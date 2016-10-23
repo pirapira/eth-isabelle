@@ -136,7 +136,6 @@ lemma invariant_kept:
 apply(simp add: no_assertion_failure_def)
 apply(rule allI)
 apply(rule impI)
-apply(rule impI)
 apply(rule allI)
 apply(rule impI)
 apply(drule fail_on_reentrance_invariant.cases; auto)

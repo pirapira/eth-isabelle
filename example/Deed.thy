@@ -631,6 +631,7 @@ lemma deed_only_registrar_can_spend :
 "pre_post_conditions deed_inv
  (\<lambda> init_state init_call. account_storage init_state 0 \<noteq> ucast (callenv_caller init_call)
  \<and> callenv_value init_call + account_balance init_state \<ge> account_balance init_state
+ \<and> \<not> (account_killed init_state)
  )
  (\<lambda> init_state _ (post_state, _). account_balance init_state \<le> account_balance post_state)
 "

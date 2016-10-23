@@ -85,8 +85,12 @@ pre_post_conditions (\<lambda> a. \<exists> initial_balance. a = (always_fail_ac
 (\<lambda> initial_state _ (post_state, _). account_balance initial_state \<le> account_balance post_state)
 "
 apply(simp add: pre_post_conditions_def; auto)
-      apply(drule star_case; auto)
+         apply(drule star_case; auto)
+        apply(case_tac steps; auto)
+        apply(case_tac steps; auto)
+       apply(drule star_case; auto)
        apply(case_tac steps; auto)
+      apply(drule star_case; auto)
       apply(case_tac steps; auto)
      apply(drule star_case; auto)
      apply(case_tac steps; auto)
@@ -98,7 +102,7 @@ apply(simp add: pre_post_conditions_def; auto)
   apply(case_tac steps; auto)
  apply(drule star_case; auto)
  apply(case_tac steps; auto)
-apply(drule star_case; auto)
+ apply(drule star_case; auto)
 apply(case_tac steps; auto)
 done
 
