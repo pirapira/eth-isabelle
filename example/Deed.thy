@@ -618,12 +618,20 @@ apply(rule impI)
 apply(drule star_case; auto)
      apply(case_tac steps; auto)
      apply(split if_splits; auto)
-     
-oops (* maybe just focus on the next lemma *)
-      
-(*     
+     apply(split strict_if_split; auto)
+     apply(split strict_if_split; auto)
+    apply(case_tac steps; auto)
+    apply(split strict_if_split; auto)
+    apply(split strict_if_split; auto)
+    apply(split strict_if_split; auto)
+   apply(case_tac steps; auto)
+   apply(split strict_if_split; auto)
+   apply(split strict_if_split; auto)
+   apply(split strict_if_split; auto)
+  apply(case_tac steps; auto)
+ apply(case_tac steps; auto)
+apply(case_tac steps; auto)
 done
-*)
 
 (* declare fresh_not_killed_def [simp] *)
 
