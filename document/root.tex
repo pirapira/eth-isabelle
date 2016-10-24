@@ -46,6 +46,80 @@
 
 \section{Introduction}
 
+This document describes a formal verification result about one contract in
+an Ethereum Name Service implementation.  The verified contract is relatively small,
+but this is the first ``real''\footnote{The word ``real'' means it's
+produced by the Solidity compiler and aimed for production.}
+contract that I have analyzed.
+
+This has some issues (the EVM implementation is not tested against
+others!), but I'm publishing this already because this project makes a
+good example on the amount of work (and the level of detail) required to
+verify a smart contract using machine-assisted logical inference.  At this
+point already, if I were to
+implement a smart contract that holds more than 100k dollars, and if
+I'm in charge of controlling the schedule, I would consider this kind of
+development (the other option is try-small first).
+
+\subsection{Which Smart Contract is this about}
+
+The target of the verification is the \texttt{Deed} contract,
+which can be found here. %TODO: turn this into a link
+The current development uses the bytecode obtained from the
+Solidity compiler version
+\texttt{2d9109ba453d49547778c39a506b0ed492305c16}. %TODO turn this
+                                %into a link
+
+\subsection{What is Proven}
+
+The proven property is about one invocation of the Deed contract.
+In short, ``only the registrar can decrease the balance.''
+The invocation can be deep into the nested reentrancy calls, but pick
+one of these.
+There are assumptions and there are conclusions.
+
+Assumptions:
+\begin{itemize}
+  \item the account has the bytecode of the Deed contract or the
+    account has no code;
+  \item the caller does not have the address stored at index~0 of the
+    account's storage (i.e. is not the registrar);
+  \item the account's balance and the sent value added together do not
+    overflow the range of 256-but unsigned integers;
+  \item the account is not marked as killed when the account is called.
+\end{itemize}
+
+Conclusions:
+\begin{itemize}
+  \item the account's balance after the call is not smaller than the
+    account's balance before the call;
+  \item the account is not marked as killed after the call.
+\end{itemize}
+
+
+\subsection{What can Go Wrong}
+
+The analysis cuts corners but it is reasonablly equipped for safety
+properties (i.e. ``certain changes never happen on the account
+state'').  The analysis considers reentrancy, the account erasure after execution
+of the \texttt{SUICIDE} opcode, the byte level organization of EVM
+memory and storage, and the fact that the balance of an account can
+increase even when the code of the account is not invoked.
+The analysis is not aware of out-of-gas failures and the stack depth
+failures, but the analysis does not miss any kind of account state
+changes because of that.
+
+The biggest pitfall currently is the EVM implementation in
+Isabelle/HOL.  Although this is a new EVM implmentation, it is not
+tested against the standard EVM tests!  This is already wrong.
+So, after getting this document in shape, the next thing I try is to
+test the new EVM implementation against the standard EVM tests.
+
+Still the new EVM implementation was worth creating as shown below.
+It allows us to reason about all possible executions!
+
+\subsection{Links}
+
 To get updates on similar projects, follow \url{http://gitter.im/ethereum/formal-methods}.
 
 % generated text of all theories
