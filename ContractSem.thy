@@ -261,6 +261,10 @@ subsection {* Useful Functions for Defining EVM Operations *}
 
 text {* Currently the GAS instruction is modelled to return random numbers.
 The random number is not known to be of any value.
+However, the value is not unknown enough in this formalization because
+the value is only dependent on the variable environment (which does not
+keep track of the remaining gas.  This is not a problem as long as
+we are analyzing a single invocation of a loopless contract.
 *}
 
 definition gas_limit :: "variable_env \<Rightarrow> uint"
