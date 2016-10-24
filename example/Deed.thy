@@ -695,12 +695,16 @@ apply(simp add: pre_post_conditions_def; auto)
     apply(case_tac steps; auto)
    apply(drule star_case; auto)
    apply(case_tac steps; auto)
+   apply(case_tac initial_account; auto)
   apply(drule star_case; auto)
   apply(case_tac steps; auto)
+  apply(case_tac initial_account; auto)
+ apply(case_tac initial_account; auto)
  apply(drule star_case; auto)
  apply(case_tac steps; auto)
 apply(drule star_case; auto)
 apply(case_tac steps; auto)
+apply(case_tac initial_account; auto)
 done
-    
+
 end

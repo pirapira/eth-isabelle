@@ -903,7 +903,8 @@ and blocked_program_sem :: "variable_env \<Rightarrow> constant_env \<Rightarrow
 where
   "program_sem _ _ _ 0 = ProgramStepRunOut"
 | "program_sem v c tiny_step (Suc remaining_steps) =
-   (if tiny_step \<le> 0 then ProgramStepRunOut else
+   (if tiny_step \<le> 0 then
+     ProgramToWorld(ContractFail, venv_storage_at_call v, venv_balance_at_call v, None) else
    ((*if \<not> check_annotations v c then ProgramAnnotationFailure else *)
    (case venv_first_instruction v c of
       None \<Rightarrow> ProgramStepRunOut
