@@ -703,18 +703,27 @@ where
       (if venv_balance v (cenv_this c) < val then
          instruction_failure_result v
        else
-         let code = cut_memory code_start (unat code_len) (venv_memory v) in
-         let new_balance = update_balance (cenv_this c) (\<lambda> orig. orig - val) (venv_balance v) in
+         let code =
+            cut_memory code_start
+              (unat code_len) (venv_memory v) in
+         let new_balance =
+            update_balance (cenv_this c)
+              (\<lambda> orig. orig - val) (venv_balance v) in
          InstructionToWorld
            (ContractCreate
              (\<lparr> createarg_value = val
               , createarg_code = code \<rparr>),
-            venv_storage v, update_balance (cenv_this c) (\<lambda> orig. orig - val) (venv_balance v),
-            Some (* when returning to this invocation, use the following variable environment *)
-              ((venv_advance_pc c v)\<lparr> venv_stack := rest
-                , venv_balance := update_balance (cenv_this c) (\<lambda> orig. orig - val) (venv_balance v)
-                , venv_memory_usage := M (venv_memory_usage v) code_start code_len \<rparr>
-              )))
+            venv_storage v,
+            update_balance (cenv_this c)
+              (\<lambda> orig. orig - val) (venv_balance v),
+            Some (* save the variable environment for returns *)
+              ((venv_advance_pc c v)
+               \<lparr> venv_stack := rest
+               , venv_balance :=
+                   update_balance (cenv_this c)
+                     (\<lambda> orig. orig - val) (venv_balance v)
+               , venv_memory_usage :=
+                   M (venv_memory_usage v) code_start code_len \<rparr>)))
   | _ \<Rightarrow> instruction_failure_result v)"
 
   
@@ -724,8 +733,7 @@ definition
 "venv_returned_bytes v =
   (case venv_stack v of
     e0 # e1 # _ \<Rightarrow> cut_memory e0 (Word.unat e1) (venv_memory v)
-  | _ \<Rightarrow> []
-)"
+  | _ \<Rightarrow> [])"
 
 text "RETURN is modeled like this:"
 abbreviation ret :: "variable_env \<Rightarrow> constant_env \<Rightarrow> instruction_result"
@@ -740,20 +748,23 @@ where
    | _ \<Rightarrow> instruction_failure_result v)"
 
 text "STOP is a simpler than RETURN:"
-abbreviation stop :: "variable_env \<Rightarrow> constant_env \<Rightarrow> instruction_result"
+abbreviation stop ::
+"variable_env \<Rightarrow> constant_env \<Rightarrow> instruction_result"
 where
 "stop v c \<equiv> InstructionToWorld (ContractReturn [], venv_storage v, venv_balance v, None)"
 
 text "POP:"
-abbreviation pop :: "variable_env \<Rightarrow> constant_env \<Rightarrow> instruction_result"
+abbreviation pop ::
+"variable_env \<Rightarrow> constant_env \<Rightarrow> instruction_result"
 where
 "pop v c \<equiv> InstructionContinue (venv_advance_pc c
              v\<lparr>venv_stack := tl (venv_stack v)\<rparr>)"
 
 text "The DUP instructions:"
-abbreviation general_dup :: "nat \<Rightarrow> variable_env \<Rightarrow> constant_env \<Rightarrow> instruction_result"
+abbreviation general_dup ::
+"nat \<Rightarrow> variable_env \<Rightarrow> constant_env \<Rightarrow> instruction_result"
 where
-"general_dup n v c ==
+"general_dup n v c \<equiv>
    (if n > length (venv_stack v) then instruction_failure_result v else
    (let duplicated = venv_stack v ! (n - 1) in
     InstructionContinue (venv_advance_pc c v\<lparr> venv_stack := duplicated # venv_stack v \<rparr>)))
