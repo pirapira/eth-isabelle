@@ -373,14 +373,11 @@ where
 "update_balance a f orig \<equiv> orig(a := f (orig a))"
 
 text {* Popping stack elements: *}
-fun venv_pop_stack ::
+abbreviation venv_pop_stack ::
 "nat (* how many elements to pop *) \<Rightarrow> variable_env \<Rightarrow> variable_env"
 where
-  "venv_pop_stack 0 v = v"
-| "venv_pop_stack (Suc n) v =
-   venv_pop_stack n v\<lparr> venv_stack := tl (venv_stack v) \<rparr>"
-
-declare venv_pop_stack.simps [simp]
+ "venv_pop_stack n v ==
+   v\<lparr> venv_stack := drop n (venv_stack v) \<rparr>"
 
 text {* Peeking the topmost element of the stack: *}
 abbreviation venv_stack_top :: "variable_env \<Rightarrow> uint option"
@@ -972,6 +969,12 @@ declare suicide_def [simp]
 
 text "Finally, using the above definitions, I can define a function that operates an instruction
 on the execution environments."
+
+lemma "Word.word_rcat [(0x01 :: byte), 0x02] = (0x0102 :: uint)"
+apply(simp add: word_rcat_def)
+apply(simp add: bin_rcat_def)
+apply(simp add: bin_cat_def)
+done
 
 fun instruction_sem :: "variable_env \<Rightarrow> constant_env \<Rightarrow> inst \<Rightarrow> instruction_result"
 where
