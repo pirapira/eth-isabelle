@@ -1072,8 +1072,7 @@ where
 | "program_sem v c tiny_step (Suc remaining_steps) =
    (if tiny_step \<le> 0 then
      ProgramToWorld(ContractFail, venv_storage_at_call v, venv_balance_at_call v, None) else
-   ((*if \<not> check_annotations v c then ProgramAnnotationFailure else
-       (* turned off becaue I have no annotations in the Deed contract *)*)
+   (if \<not> check_annotations v c then ProgramAnnotationFailure else
    (case venv_next_instruction v c of
       None \<Rightarrow> ProgramStepRunOut
     | Some i \<Rightarrow>

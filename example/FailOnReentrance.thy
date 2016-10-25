@@ -71,7 +71,7 @@ declare fail_on_reentrance_state.simps [simp]
 abbreviation something_to_call :: call_arguments
 where
 "something_to_call ==
- \<lparr> callarg_gaslimit = 0
+ \<lparr> callarg_gas = 0
  , callarg_code = 0
  , callarg_recipient = 0
  , callarg_value = 0
