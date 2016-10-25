@@ -64,28 +64,43 @@ the world and the contract."
 
 subsubsection "The World's Moves"
 
+text {* The world can call into our contract. *}
+text {* Then the world provides us with the following information.*}
+
 record call_env =
-  callenv_gaslimit :: uint
-  callenv_value :: uint
-  callenv_data :: "byte list"
-  callenv_caller :: address
-  callenv_timestamp :: uint
-  callenv_blocknum :: uint
-  callenv_balance :: "address \<Rightarrow> uint"
+  callenv_gaslimit :: uint -- {* the current block's gas limit *}
+  callenv_value :: uint -- {* the amount of Eth sent along*}
+  callenv_data :: "byte list" -- {* the data sent along *}
+  callenv_caller :: address -- {* the caller's address *}
+  callenv_timestamp :: uint -- {* the timestamp of the current block *}
+  callenv_blocknum :: uint -- {* the block number of the current block *}
+  callenv_balance :: "address \<Rightarrow> uint" -- {* the balances of all accounts *}
+  
+text {* After our contract calls accounts, the world can make those accounts
+return into our contracts.  The return value is not under control of our current
+contract, so it is the world's move.  In that case, the world provides the
+following information.*}
 
 record return_result =
-  return_data :: "byte list"
-  return_balance :: "address \<Rightarrow> uint"
+  return_data :: "byte list" -- {* the returned data *}
+  return_balance :: "address \<Rightarrow> uint" -- {* the balance of all accounts at the moment of the return*}
+
+text {* For the reentrancy problem, even this account's balance might have changed at this moment. *}
+text {* @{typ return_result} type is also used when our contract returns, as we will see. *}
+
+text {* With these definitions now we can define the world's actions.  In addition to call and return,
+there is another clause for ``failing into'' the account.  This happens when our contract calls
+an account but the called account fails. *}
 
 datatype world_action =
-  WorldCall call_env
-| WorldRet return_result
-| WorldFail
+  WorldCall call_env -- {* The world calls into the account *}
+| WorldRet return_result -- {* The world returns into the account *}
+| WorldFail -- {* The world fails into the account *}
 
 subsubsection "The Contract's Moves"
 
 record call_arguments =
-  callarg_gaslimit :: uint
+  callarg_gas :: uint
   callarg_code :: address
   callarg_recipient :: address
   callarg_value :: uint
@@ -483,7 +498,7 @@ where
      else
        InstructionToWorld
          (ContractCall
-           (\<lparr> callarg_gaslimit = e0,
+           (\<lparr> callarg_gas = e0,
               callarg_code = Word.ucast e1,
               callarg_recipient = Word.ucast e1,
               callarg_value = e2,
@@ -511,7 +526,7 @@ where
      else
        InstructionToWorld
          (ContractCall
-           (\<lparr> callarg_gaslimit = e0,
+           (\<lparr> callarg_gas = e0,
               callarg_code = Word.ucast e1,
               callarg_recipient = Word.ucast e1,
               callarg_value = venv_value_sent v,
@@ -538,7 +553,7 @@ where
      else
        InstructionToWorld
          (ContractCall
-           (\<lparr> callarg_gaslimit = e0,
+           (\<lparr> callarg_gas = e0,
               callarg_code = ucast e1,
               callarg_recipient = cenv_this c,
               callarg_value = e2,
