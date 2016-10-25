@@ -1065,6 +1065,15 @@ where
   (let annots = program_annotation (cenv_program c) (venv_pc v) in
    List.list_all (\<lambda> annot. annot (build_aenv v c)) annots)"
 
+   
+text {* The program execution takes two counters.
+One counter is decremented for each instruction.
+The other counter is decremented when a backward-jump happens.
+This setup allows an easy termination proof.
+Also, during the proofs, I can do case analysis on the number of backwad jumps
+rather than the number of instructions.
+*}
+
 function (sequential) program_sem :: "variable_env \<Rightarrow> constant_env \<Rightarrow> int \<Rightarrow> nat \<Rightarrow> program_result"
 and blocked_program_sem :: "variable_env \<Rightarrow> constant_env \<Rightarrow> int \<Rightarrow> nat \<Rightarrow> bool \<Rightarrow> program_result"
 where
@@ -1091,6 +1100,8 @@ termination by lexicographic_order
 
 declare program_sem.psimps [simp]
 
+text {* The following lemma is just for controlling the Isabelle/HOL simplifier. *}
+
 lemma unblock_program_sem [simp] : "blocked_program_sem v c l p True = program_sem v c l p"
 apply(simp add: blocked_program_sem.psimps)
 done
@@ -1106,70 +1117,112 @@ done
 
 subsection {* Account's State *}
 
+text {* In the bigger picture, a contract invocation changes accounts' states.
+The Yellow Paper states that an account has a storage, a piece of code and a balance.
+Since I am interested in account states in the middle of a transaction, I also need to
+keep track of the ongoing executions of a single account.  Also I need to keep track of
+a flag indicating if the account has already marked for erasure.
+*}
+
 record account_state =
   account_address :: address
   account_storage :: storage
   account_code :: program
-  account_balance :: uint (* TODO: model the fact that this can be
-                             increased at any moment *)
+  account_balance :: uint
   account_ongoing_calls :: "variable_env list"
+  -- {* The variable environments that are executing on this account, but waiting for calls to finish *}
   account_killed :: bool
+  -- {* The boolean that indicates the account has executed SUICIDE in this transaction.
+  The flag causes a destruction of the contract at the end of a transaction.
+  *}
 
 subsection {* Environment Construction before EVM Execution *}
 
-declare empty_memory_def [simp]
+text {* I need to connect the account state and the program execution environments.
+First I construct program execution environments from an account state.
+*}
 
+text {* Given an account state and a call from the world
+we can judge if a variable environment is possible or not.
+The block state is arbitrary.  This means we verify properties that hold
+on whatever block numbers and whatever difficulties and so on.
+The origin of the transaction is also considered arbitrary.
+*}
 inductive build_venv_called :: "account_state => call_env => variable_env => bool"
 where
 venv_called:
   "bal (account_address a) = (* natural increase is taken care of in RelationalSem.thy *)
-       account_balance a + callenv_value env \<Longrightarrow>
+       account_balance a \<Longrightarrow>
    build_venv_called a env
-   \<lparr> venv_stack = []
-   , venv_memory = empty_memory
-   , venv_memory_usage = 0
-   , venv_storage = account_storage a
-   , venv_pc = 0
-   , venv_balance = bal
-   , venv_caller = callenv_caller env
-   , venv_value_sent = callenv_value env
-   , venv_data_sent = data
-   , venv_storage_at_call = account_storage a
-   , venv_balance_at_call = bal
-   , venv_origin = origin
-   , venv_ext_program = ext
-   , venv_block = block
+   \<lparr> venv_stack = [] (* The stack is initialized for every invocation *)
+   , venv_memory = empty_memory (* The memory is also initialized for every invocation *)
+   , venv_memory_usage = 0 (* The memory usage is initialized. *)
+   , venv_storage = account_storage a (* The storage is taken from the account state *)
+   , venv_pc = 0 (* The program counter is initialized to zero *)
+   , venv_balance = bal(account_address a := bal (account_address a) + callenv_value env) 
+                        (* The balance is arbitrary, except that the balance of this account
+                           is as specified in the account state plus the sent amount. *)
+   , venv_caller = callenv_caller env (* the caller is specified by the world *)
+   , venv_value_sent = callenv_value env (* the sent value is specified by the world *)
+   , venv_data_sent = callenv_data env (* the sent data is specified by the world *)
+   , venv_storage_at_call = account_storage a (* the snapshot of the storage is remembered in case of failure *)
+   , venv_balance_at_call = bal (* the snapshot of the balance is remembered in case of failure *)
+   , venv_origin = origin (* the origin of the transaction is arbitrarily chosen *)
+   , venv_ext_program = ext (* the codes of the external programs are arbitrary. *)
+   , venv_block = block (* the block information is chosen arbitrarily. *)
    \<rparr>
    "
 
 declare build_venv_called.simps [simp]
+
+text {* Similarly we can construct the constant environment.
+Construction of the constant environment is much simpler than that of 
+a variable environment. 
+*}
 
 abbreviation build_cenv :: "account_state \<Rightarrow> constant_env"
 where
 "build_cenv a \<equiv>
   \<lparr> cenv_program = account_code a,
     cenv_this = account_address a \<rparr>"
+    
+text "Next we turn to the case where the world returns back to the account after the account has
+called an account.  In this case, the account should contain one ongoing execution that is waiting
+for a call to return."
+
+text "An instruction is ``call-like'' when it calls an account and waits for it to return."
 
 abbreviation is_call_like :: "inst option \<Rightarrow> bool"
 where
-"is_call_like i == (i = Some (Misc CALL) \<or> i = Some (Misc DELEGATECALL) \<or> i = Some (Misc CALLCODE) \<or> i = Some (Misc CREATE))"
+"is_call_like i == (i = Some (Misc CALL) \<or> i = Some (Misc DELEGATECALL) 
+                 \<or> i = Some (Misc CALLCODE) \<or> i = Some (Misc CREATE))"
+
+text {* When an account returns to our contract, the variable environment is
+recovered from the stack of the ongoing calls.  However, due to reentrancy,
+the balance and the storage of our contract might have changed.  So the
+balance and the storage are taken from the account state provided.
+Moreover, the balance of
+our contract might increase because some other contracts might have destroyed themselves,
+transferring value to our contract.*}
 
 inductive build_venv_returned :: "account_state \<Rightarrow> return_result \<Rightarrow> variable_env \<Rightarrow> bool"
 where
 venv_returned:
-"  account_ongoing_calls a = recovered # _ \<Longrightarrow>
+"  account_ongoing_calls a = recovered # _ \<Longrightarrow> (* finding an ongoing call *)
    is_call_like (lookup (program_content (account_code a)) (venv_pc recovered - 1)) \<Longrightarrow>
-   new_bal \<ge> account_balance a \<Longrightarrow>
+   new_bal \<ge> account_balance a \<Longrightarrow> (* the balance might have increased from the account state *)
    build_venv_returned a r
-     (
-              recovered \<lparr>
-                venv_stack := 1 # venv_stack recovered
-              , venv_storage := account_storage a
-              , venv_balance := (update_balance (account_address a)
-                                   (\<lambda> _. new_bal) (return_balance r))
-            \<rparr>)"
+     (recovered \<lparr>
+         venv_stack := 1 # venv_stack recovered (* 1 is pushed, indicating a return *)
+       , venv_storage := account_storage a
+       , venv_balance := (update_balance (account_address a)
+                            (\<lambda> _. new_bal) (return_balance r))
+     \<rparr>)"
 
 declare build_venv_returned.simps [simp]
+
+text {* The situation is much simpler when an ongoing call has failed because anything 
+meanwhile has no effects. *}
 
 definition build_venv_failed :: "account_state \<Rightarrow> variable_env option"
 where
@@ -1178,7 +1231,7 @@ where
      [] \<Rightarrow> None
    | recovered # _ \<Rightarrow>
       (if is_call_like (lookup (program_content (account_code a)) (venv_pc recovered - 1)) then
-       Some (recovered \<lparr>venv_stack := 0 # venv_stack recovered\<rparr>)
+       Some (recovered \<lparr>venv_stack := 0 # venv_stack recovered\<rparr>) (* 0 is pushed, indicating failure*)
        else None)
   )"
 
@@ -1186,12 +1239,18 @@ declare build_venv_failed_def [simp]
 
 subsection {* Account State Update after EVM Execution *}
 
+text {* Of course the other direction exists for constructing an account state after
+the program executes. *}
+
+text {* The first definition is about forgetting one ongoing call. *}
+
 abbreviation account_state_pop_ongoing_call :: "account_state \<Rightarrow> account_state"
 where
 "account_state_pop_ongoing_call orig ==
    orig\<lparr> account_ongoing_calls := tl (account_ongoing_calls orig)\<rparr>"
 
-(* This happens at the end of a tansaction.  *)
+text {* Second I define the empty account, which replaces an account that has
+destroyed itself. *}
 abbreviation empty_account :: "address \<Rightarrow> account_state"
 where
 "empty_account addr ==
@@ -1203,7 +1262,8 @@ where
  , account_killed = False
  \<rparr>"
 
-   
+text {* And after our contract makes a move, the account state is updated as follows.
+*}
 definition update_account_state :: "account_state \<Rightarrow> contract_action \<Rightarrow> storage \<Rightarrow> (address \<Rightarrow> uint) \<Rightarrow> variable_env option \<Rightarrow> account_state"
 where
 "update_account_state prev act st bal v_opt \<equiv>
@@ -1218,7 +1278,11 @@ where
        (case act of ContractSuicide \<Rightarrow> True
                   | _ \<Rightarrow> account_killed prev)
                                      \<rparr>"
-
+                                     
+text {* The above definition should be expanded automatically only when
+the last argument is known to be None or Some \_.
+*}
+                                     
 lemma update_account_state_None [simp] :
 "update_account_state prev act st bal None =
    (prev \<lparr>
@@ -1249,7 +1313,8 @@ done
 subsection "Functional Correctness"
 
 text {* The definitions in this subsection are not used in the analysis of Deed contract
-currently.  *}
+currently.  They are useful when we write down the expected behavior of a contract as
+a function in Isabelle/HOL, and compare the function against the actual implementation. *}
 
 type_synonym contract_behavior = "contract_action * (account_state \<Rightarrow> bool)"
 
@@ -1325,6 +1390,11 @@ AccountStep:
    \<lparr> when_called = c, when_returned = r, when_failed = f \<rparr>"
 
 subsection {* Controlling the Isabelle Simplifier *}
+
+text {* This subsection contains simplification rules for the Isabelle simplifier.
+The main purpose is to prevent the AVL tree implementation to compute both the
+left insertion and the right insertion when actually only one of these happens.
+*}
 
 declare word_rcat_def [simp]
         unat_def [simp]
