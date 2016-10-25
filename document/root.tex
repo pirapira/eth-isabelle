@@ -52,8 +52,12 @@ but this is the first ``real''\footnote{The word ``real'' means it's
 produced by the Solidity compiler and aimed for production.}
 contract that I have analyzed.
 
-This has some issues (the EVM implementation is not tested against
-others!), but I'm publishing this already because this project makes a
+The verification is far from perfect.
+I'm still finding more problems in the
+formalization than in the contracts.  The EVM implementation is not tested against
+others!
+
+I'm publishing this already because this project makes a
 good example on the amount of work (and the level of detail) required to
 verify a smart contract using machine-assisted logical inference.  At this
 point already, if I were to
@@ -61,13 +65,16 @@ implement a smart contract that holds more than 100k dollars, and if
 I'm in charge of controlling the schedule, I would consider this kind of
 development (the other option is try-small first).
 
-\subsection{Which Smart Contract is this about}
+\subsection{Which Smart Contract this Document is about}
 
 The target of the verification is the \texttt{Deed} contract%
-\footnote{\url{https://github.com/Arachnid/ens/blob/f3334337083728728da56824a5d0a30a8712b60c/HashRegistrarSimplified.sol#L25}},
+\footnote{\url{https://github.com/Arachnid/ens/blob/f3334337083728728da56824a5d0a30a8712b60c/HashRegistrarSimplified.sol\#L25}},
 which is a part of the Ethereum Name Service.
 The current development uses the bytecode obtained from the
 Solidity compiler version \url{https://github.com/ethereum/solidity/tree/2d9109ba453d49547778c39a506b0ed492305c16}.
+
+Most parts of this document is generic to all Ethereum smart
+contracts.  Only the last section is specific to the Deed contract.
 
 \subsection{What is Proven}
 
@@ -116,6 +123,15 @@ test the new EVM implementation against the standard EVM tests.
 
 Still the new EVM implementation was worth creating as shown below.
 It allows us to reason about all possible executions!
+
+\subsection{Verifying Other Contracts}
+
+Apart from the gas calculation, all the necessary definitoins are
+already there for verifying other contracts.  The amount of work is
+different for every smart contract.  It would be relatively
+straighforward to do something similar for
+contracts without loops.  For contracts with loops, some more
+sophisticated lemmata are necessary.
 
 \subsection{Links}
 
