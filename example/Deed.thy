@@ -1,24 +1,29 @@
+section {* Verification of the Deed Contract *}
+
 theory Deed
 
-imports Main (* "../Parse" *) "../RelationalSem"
+imports Main "../RelationalSem"
 
 begin
 
-value bytes_of_hex_content
+subsection {* The code under verification. *}
 
-(*
+text {*  The code under verification comes from these commits:
+\begin{verbatim}
 ens: f3334337083728728da56824a5d0a30a8712b60c
 solidity: 2d9109ba453d49547778c39a506b0ed492305c16
-
+\end{verbatim}
+and is produced with this command.
+\begin{verbatim}
 $ solc/solc --bin-runtime
-*)
-(*
-abbreviation deed :: "char list"
-where "deed == ''6060604052361561006c5760e060020a600035046305b34410811461006e5780630b5ab3d51461007c57806313af4035146100895780632b20e397146100af5780638da5cb5b146100c6578063bbe42771146100dd578063faab9d3914610103578063fb1669ca14610129575b005b346100025761014a60015481565b346100025761006c610189565b346100025761006c60043560005433600160a060020a039081169116146101f857610002565b34610002576101a0600054600160a060020a031681565b34610002576101a0600254600160a060020a031681565b346100025761006c60043560005433600160a060020a0390811691161461025757610002565b346100025761006c60043560005433600160a060020a039081169116146102c757610002565b61006c60043560005433600160a060020a039081169116146102e957610002565b60408051918252519081900360200190f35b6040517fbb2ce2f51803bba16bc85282b47deeea9a5c6223eabea1077be696b3f265cf1390600090a16102545b60025460a060020a900460ff16156101bd57610002565b60408051600160a060020a03929092168252519081900360200190f35b604051600254600160a060020a0390811691309091163180156108fc02916000818181858888f19350505050156101f35761deadff5b610002565b6002805473ffffffffffffffffffffffffffffffffffffffff19168217905560408051600160a060020a038316815290517fa2ea9883a321a3e97b8266c2b078bfeec6d50c711ed71f874a90d500ae2eaf369181900360200190a15b50565b60025460a060020a900460ff16151561026f57610002565b6002805474ff00000000000000000000000000000000000000001916905560405161dead906103e830600160a060020a031631848203020480156108fc02916000818181858888f19350505050151561015c57610002565b6000805473ffffffffffffffffffffffffffffffffffffffff19168217905550565b60025460a060020a900460ff16151561030157610002565b8030600160a060020a031631101561031857610002565b600254604051600160a060020a039182169130163183900380156108fc02916000818181858888f1935050505015156102545761000256''"
-*)
-(* it seems like the storage index 0 contains the registrar *)
+\end{verbatim}
 
-value [simp] "deed_bytes"
+The hex code looks like this\\
+\texttt{6060604052361561006c5760e060020a6000350463...}
+
+I parsed this hex code in a Ruby parser\footnote{Available in \url{https://github.com/piraira/eth-isabelle}}
+and obtained the following list of instructions.
+*}
 
 definition deed_insts :: "inst list"
 where "deed_insts =
@@ -527,18 +532,16 @@ Pc JUMP #
 
 declare deed_insts_def [simp]
 
-(*
-lemma test : "program_content (program_of_lst deed_insts) = Leaf"
-using [[simp_trace_new interactive mode = full]]
-
-oops
-*)
-
-value "int (length deed_insts)"
+text {* The next definition translates the list of instructions into an AVL tree.
+This single step takes around 10 minutes.  So I need a program that takes a hex code
+and produces a binary tree literal in Isabelle/HOL.*} 
 
 definition content_compiled :: "(int * inst, nat) tree"
 where
 content_compiled_def [simplified] : "content_compiled == program_content_of_lst 0 deed_insts"
+
+text {* The program that appears in the statements of the following lemmata is defined here.
+*}
 
 definition deed_program :: "program"
 where
@@ -547,15 +550,11 @@ deed_program_def: "deed_program =
   , program_length = int (length deed_insts)
   , program_annotation = program_annotation_of_lst 0 deed_insts
   \<rparr>"
+  
+subsection {* The Invariant *}
 
-(* 131, 26 sec
-   204, 48 sec
-   294, 91 sec
-   374, 193 sec
-   500, 500 sec?
-   *)
-
-(* maybe this computation can also be done offline *)
+text {* The invariant is simple.  The code of the account is either the one defined above or empty.
+We have to allow the empty case because this contract might destroy itself. *}
 
 inductive deed_inv :: "account_state \<Rightarrow> bool"
 where
@@ -564,13 +563,23 @@ alive: " account_code a = deed_program \<Longrightarrow>
 "
 | dead: "account_code a = empty_program \<Longrightarrow> deed_inv a"
 
+text {* The program length lookup is optimized. *}
+
 lemma prolen [simp] : "program_length deed_program = 500"
 apply(simp add: deed_program_def)
 done
 
+text {* The program annotation lookup is also optimized.
+There are no annotations in the program under verification.
+*}
 lemma proanno [simp] : "program_annotation deed_program n = []"
 apply(simp add: deed_program_def)
 done
+
+text {* Here, a term called @{term x} is defined.  @{term x} is
+by definition equal to the binary tree containing the program,
+and its definition can be expanded automatically during the proofs.
+*}
 
 declare content_compiled_def [simp]
 
@@ -579,18 +588,19 @@ where x_def [simplified] :"x == content_compiled"
 
 declare content_compiled_def [simp del]
 
-value [simp] x
-
 declare deed_program_def [simp del]
 
-(* I want to make sure this rule can be invoked only on n being fully simplified *)
+text {* Whenever the content of the program is being looked up,
+the term @{term x} appears, allowing further expansion.  Otherwise,
+@{term "program_content deed_program"} stays as just two words.
+This makes sure that the intermediate goals do not contain the
+big binary tree as a literal.
+*}
 lemma pro_content [simp]: "lookup (program_content deed_program) n == lookup x n"
 apply(simp add: deed_program_def add: x_def add: content_compiled_def)
 done
 
 declare deed_insts_def [simp del]
-
-(* without this, it is impossible to jump to a word *)
 declare bin_cat_def [simp]
 
 lemma strict_if_split :
@@ -605,6 +615,10 @@ declare deed_inv.simps [simp]
         contract_turn.simps [simp]
         x_def [simp]
 
+subsection {* Proof that the Invariant is Kept *}
+
+text {* The following lemma states that, if the account's code is either empty or the
+Deed contract's code, that is still the case after an invocation.  *}
         
 lemma deed_keeps_invariant :
 "no_assertion_failure deed_inv"
@@ -633,7 +647,24 @@ apply(drule star_case; auto)
 apply(case_tac steps; auto)
 done
 
-(* declare fresh_not_killed_def [simp] *)
+
+subsection {* Proof about the Case when the Caller is Not the Registrar *}
+
+text {*
+If 
+\begin{itemize}
+\item the caller is not equal to the address stored at index~0,
+\item the sent value does not overflow the account's balance,
+\item the account is not marked for destruction at the time of invocation,
+\item and the invariant holds at the time of invocation,
+\end{itemize}
+then, after the invocation,
+\begin{itemize}
+\item the invariant is still kept,
+\item the balance of the acount is not smaller, and 
+\item the account is still not marked for destruction.
+\end{itemize}
+*}
 
 lemma deed_only_registrar_can_spend :
 "pre_post_conditions deed_inv
@@ -706,5 +737,8 @@ apply(drule star_case; auto)
 apply(case_tac steps; auto)
 apply(case_tac initial_account; auto)
 done
+
+text {* It takes 15 minutes to compile this proof on my machine.  Most of the time is spent
+translating the list of instructions into an AVL tree. *}
 
 end

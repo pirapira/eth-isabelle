@@ -2,7 +2,7 @@ section {* EVM Instructions *}
 
 text {* This section lists the EVM instructions and their byte representations.
 I also introduce an assertion opcode, whose byte representation is empty.
-The assertion opcode specifies a property about the state of the EVM at
+The assertion opcode requires a property about the state of the EVM at
 that position of the program.
 *}
 
@@ -26,7 +26,7 @@ belongs to this type.  It is also understood that every one of these five elemen
 is different from any of the other four.
 *}
 
-text {* Some instructions have \texttt{inst\_} in front.  Because names like AND,
+text {* Some instructions have \texttt{inst\_} in front because names like AND,
 OR and XOR are taken by the machine word library.
 *}
 
@@ -114,23 +114,22 @@ declare arith_inst_code.simps [simp]
 subsection "Informational Opcodes"
 
 datatype info_inst =
-    ADDRESS -- {* The address of the account currently running *}
-  | BALANCE -- {* The Eth balance of the specified account *}
-  | ORIGIN -- {* The address of the external account that started the transaction *}
-  | CALLER -- {* The immediate caller of this invocation *}
-  | CALLVALUE -- {* The Eth amount sent along this invocation *}
+    ADDRESS -- {* the address of the account currently running *}
+  | BALANCE -- {* the Eth balance of the specified account *}
+  | ORIGIN -- {* the address of the external account that started the transaction *}
+  | CALLER -- {* the immediate caller of this invocation *}
+  | CALLVALUE -- {* the Eth amount sent along this invocation *}
   | CALLDATASIZE -- {* The number of bytes sent along this invocation *}
-  | CODESIZE -- {* The number of bytes in the code of the account currently running *}
-  | GASPRICE -- {* The current gas price *}
-  | EXTCODESIZE -- {* The size of a code of the specified account *}
-  | BLOCKHASH -- {* The block hash of a specified block among the recent blocks. *}
-  | COINBASE -- {* The address of the miner that validates the current block. *}
-  | TIMESTAMP -- {* The date and time of the block. *}
-  | NUMBER -- {* The block number *}
-  | DIFFICULTY -- {* The current difficulty *}
-  | GASLIMIT -- {* The current block gas limit *}
-  | GAS -- {* The remaining gas for the current execution. This changes after every instruction
-  is executed.  *}
+  | CODESIZE -- {* the number of bytes in the currently running code *}
+  | GASPRICE -- {* the current gas price *}
+  | EXTCODESIZE -- {* the size of a code of the specified account *}
+  | BLOCKHASH -- {* the block hash of a specified block among the recent blocks. *}
+  | COINBASE -- {* the address of the miner that validates the current block. *}
+  | TIMESTAMP -- {* the date and time of the block. *}
+  | NUMBER -- {* the block number *}
+  | DIFFICULTY -- {* the current difficulty *}
+  | GASLIMIT -- {* the current block gas limit *}
+  | GAS -- {* the remaining gas for the current execution  *}
   
 fun info_inst_code :: "info_inst \<Rightarrow> byte"
 where
@@ -163,14 +162,15 @@ type_synonym dup_inst = nat
 abbreviation dup_inst_code :: "dup_inst \<Rightarrow> byte"
 where
 "dup_inst_code n ==
-   (if n < 1 then undefined (*-- There is no DUP0 instruction. *)
-    else (if n > 16 then undefined (* -- There are no DUP16 instruction and on. *)
-    else (word_of_int (int n)) + 0x7f))" -- {* 0x80 stands for DUP1 until 0x9f for DUP16. *}
+   (if n < 1 then undefined (* There is no DUP0 instruction. *)
+    else (if n > 16 then undefined (* There are no DUP16 instruction and on. *)
+    else (word_of_int (int n)) + 0x7f))"
+-- {* 0x80 stands for DUP1 until 0x9f for DUP16. *}
 
 subsection {* Memory Operations *}
 
 datatype memory_inst =
-    MLOAD -- {* reading one machine word from the memory, beginning from the specified offset *}
+    MLOAD -- {* reading one word from the memory from the specified offset *}
   | MSTORE -- {* writing one machine word to the memory *}
   | MSTORE8 -- {* writing one byte to the memory *}
   | CALLDATACOPY -- {* copying the caller's data to the memory *}
@@ -194,7 +194,7 @@ subsection {* Storage Operations *}
 
 datatype storage_inst =
     SLOAD -- {* reading one word from the storage *}
-  | SSTORE -- {* writing one word to the storage *}
+  | SSTORE -- {* writing one word to the storage. *}
 
 fun storage_inst_code :: "storage_inst \<Rightarrow> byte"
 where
@@ -211,7 +211,7 @@ datatype pc_inst =
   | PC -- {* the current location in the code *}
   | JUMPDEST -- {* a no-op instruction located to indicate jump destinations. *}
 
-text {* If a jump occurs to a location where JUMPDEST is not found, the execution fails.
+text {* If a jump occurs to a location where @{term JUMPDEST} is not found, the execution fails.
 *}
 
 
@@ -229,9 +229,10 @@ subsection {* Stack Opcodes *}
 datatype stack_inst =
     POP -- {* throwing away the topmost element of the stack *}
   | PUSH_N "8 word list" -- {* pushing an element to the stack *}
-  | CALLDATALOAD -- {* pushing a word to the stack, taken from the caller's data *}
+  | CALLDATALOAD -- {* pushing a word to the stack, taken from the caller's data. *}
 
-text {* The PUSH opcodes are longer because they contain immediate values.
+text {* The PUSH instructions have longer byte representations than the other instructions
+because they contain immediate values.
 Here the immediate value is represented by a list of bytes.  Depending on the
 length of the list, the PUSH operation takes different opcodes.
 *}
@@ -240,9 +241,9 @@ fun stack_inst_code :: "stack_inst \<Rightarrow> byte list"
 where
   "stack_inst_code POP = [0x50]"
 | "stack_inst_code (PUSH_N lst) =
-     (if (size lst) < 1 then undefined
-      else (if (size lst) > 32 then undefined
-      else word_of_int (int (size lst)) + 0x5f)) # lst"
+   (if (size lst) < 1 then undefined (* there is no PUSH0 instruction *)
+    else (if (size lst) > 32 then undefined (* there are no PUSH33 and so on *)
+    else word_of_int (int (size lst)) + 0x5f)) # lst" (* 0x60 is PUSH1, ..., 0x7f is PUSH32 *)
 | "stack_inst_code CALLDATALOAD = [0x35]"
 
 declare stack_inst_code.simps [simp]
@@ -252,20 +253,15 @@ type_synonym swap_inst = nat
 abbreviation swap_inst_code :: "swap_inst \<Rightarrow> byte"
 where
 "swap_inst_code n ==
-  (if n < 1 then undefined else
-  (if n > 16 then undefined else
-   word_of_int (int n) + 0x8f))"
+  (if n < 1 then undefined else   (* there is no SWAP0 *)
+  (if n > 16 then undefined else  (* there are no SWAP17 and on *)
+   word_of_int (int n) + 0x8f))"  (* 0x90 is SWAP1, ..., 0x9f is SWAP16 *)
    
 subsection {* Logging Opcodes *}
 
 text "There are instructions for logging events with different number of arguments."
 
-datatype log_inst
-  = LOG0
-  | LOG1
-  | LOG2
-  | LOG3
-  | LOG4
+datatype log_inst = LOG0 | LOG1 | LOG2 | LOG3 | LOG4
 
 fun log_inst_code :: "log_inst \<Rightarrow> byte"
 where
@@ -285,11 +281,13 @@ datatype misc_inst
   = STOP -- {* finishing the execution normally, with the empty return data *}
   | CREATE -- {* deploying some code in an account *}
   | CALL -- {* calling (i.e. sending a message to) an account *}
-  | CALLCODE -- {* calling into this account, but the executed code can be some other account's *}
-  | DELEGATECALL -- {* calling into this account, the executed code can be some other account's
+  | CALLCODE -- {* calling into the current account with some other account's code *}
+  | DELEGATECALL
+  -- {* calling into this account, the executed code can be some other account's
                        but the sent value and the sent data are unchanged. *}
   | RETURN -- {* finishing the execution normally with data *}
-  | SUICIDE -- {* send all remaining Eth balance to the specified account,
+  | SUICIDE
+  -- {* send all remaining Eth balance to the specified account,
                   finishing the execution normally, and flagging the current account for deletion *}
 
 fun misc_inst_code :: "misc_inst \<Rightarrow> byte"

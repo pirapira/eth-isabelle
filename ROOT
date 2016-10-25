@@ -10,5 +10,6 @@ session "eth-isabelle" = "HOL" +
     Instructions
     ContractSem
     RelationalSem
+    "example/Deed"
   document_files
     "root.tex"

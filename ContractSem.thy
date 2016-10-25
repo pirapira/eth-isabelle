@@ -11,12 +11,6 @@ begin
 
 subsection "Utility Functions"
 
-text {* Here is one function that converts a boolean value into an EVM machine word. *}
-
-definition bool_to_uint :: "bool \<Rightarrow> uint"
-where
-"bool_to_uint b = (if b then 1 else 0)"
-
 text {* The following function is an if sentence, but with some strict control
 over the evaluation order.  By default, neither the then-clause nor the else-clause
 is simplified during proofs.  This prevents the automatic simplifier from
@@ -46,7 +40,7 @@ done
 text {* When the if-condition is not known to be either True or False,
 the simplifier is allowed to perform computation on the if-condition. *}
 
-lemma weak_if_cong [cong] :
+lemma strict_if_cong [cong] :
 "b0 = b1 \<Longrightarrow> strict_if b0 x y = strict_if b1 x y"
 apply(auto)
 done
@@ -64,8 +58,12 @@ the world and the contract."
 
 subsubsection "The World's Moves"
 
-text {* The world can call into our contract. *}
-text {* Then the world provides us with the following information.*}
+text {* The world can call into our contract.
+Then the world provides our\footnote{
+The contract's behavior is controlled by a concrete code, but the world's behavior is unrestricted.
+So when I get emotional I call the contract ``our'' contract.
+} contract
+with the following information.*}
 
 record call_env =
   callenv_gaslimit :: uint -- {* the current block's gas limit *}
@@ -74,7 +72,7 @@ record call_env =
   callenv_caller :: address -- {* the caller's address *}
   callenv_timestamp :: uint -- {* the timestamp of the current block *}
   callenv_blocknum :: uint -- {* the block number of the current block *}
-  callenv_balance :: "address \<Rightarrow> uint" -- {* the balances of all accounts *}
+  callenv_balance :: "address \<Rightarrow> uint" -- {* the balances of all accounts. *}
   
 text {* After our contract calls accounts, the world can make those accounts
 return into our contracts.  The return value is not under control of our current
@@ -83,23 +81,24 @@ following information.*}
 
 record return_result =
   return_data :: "byte list" -- {* the returned data *}
-  return_balance :: "address \<Rightarrow> uint" -- {* the balance of all accounts at the moment of the return*}
+  return_balance :: "address \<Rightarrow> uint"
+  -- {* the balance of all accounts at the moment of the return*}
 
-text {* For the reentrancy problem, even this account's balance might have changed at this moment. *}
-text {* @{typ return_result} type is also used when our contract returns, as we will see. *}
+text {* Even our account's balance (and its storage) might have changed at this moment.
+@{typ return_result} type is also used when our contract returns, as we will see. *}
 
 text {* With these definitions now we can define the world's actions.  In addition to call and return,
-there is another clause for ``failing into'' the account.  This happens when our contract calls
+there is another clause for failing back to the account.  This happens when our contract calls
 an account but the called account fails. *}
 
 datatype world_action =
-  WorldCall call_env -- {* The world calls into the account *}
-| WorldRet return_result -- {* The world returns into the account *}
-| WorldFail -- {* The world fails into the account *}
+  WorldCall call_env -- {* the world calls into the account *}
+| WorldRet return_result -- {* the world returns back to the account *}
+| WorldFail -- {* the world fails back to the account. *}
 
 subsubsection "The Contract's Moves"
 
-text {* After being entered, the contract can respond by calling an account, creating (or deploying
+text {* After being invoked, the contract can respond by calling an account, creating (or deploying
 a smart contract, destroying itself, returning, or failing.  When the contract calls an account,
 the contract provides the following information.*}
 
@@ -134,9 +133,11 @@ text "For performance reasons, the instructions are stored in an AVL tree that a
 looking up instructions from the program counters."
 
 record program = 
-  program_content :: "(int * inst) avl_tree" -- {* a binary search tree from positions to instructions *}
-  program_length  :: int -- {* The length of the program in bytes *}
-  program_annotation :: "int \<Rightarrow> annotation list" -- {* a mapping from positions to annotations *}
+  program_content :: "(int * inst) avl_tree"
+  -- {* a binary search tree that allows looking up instructions from positions *}
+  program_length  :: int -- {* the length of the program in bytes *}
+  program_annotation :: "int \<Rightarrow> annotation list"
+  -- {* a mapping from positions to annotations *}
 
 text {* The empty program is easy to define. *}
 
@@ -160,7 +161,8 @@ instantiation int :: cmp
 begin
 definition cmp_int :: "int \<Rightarrow> int \<Rightarrow> Cmp.cmp"
 where
-cmp_int_def : " cmp_int x y = (if x < y then Cmp.LT else (if x = y then Cmp.EQ else Cmp.GT))"
+cmp_int_def : " cmp_int x y =
+  (if x < y then Cmp.LT else (if x = y then Cmp.EQ else Cmp.GT))"
 
 instance proof
  fix x y :: int show "(cmp x y = cmp.LT) = (x < y)"
@@ -179,11 +181,13 @@ end
 subsubsection {* Storing the immediate values in the AVL tree *}
 
 text {* The data region of PUSH\_N instructions are encoded as
- Unknown instructions. *}
+ Unknown instructions.  Here is a utility function that
+ inserts a byte sequence after a specified index in the AVL tree. *}
 
-fun store_byte_list_in_program :: "int (* initial position *) \<Rightarrow> byte list (* the data *) \<Rightarrow>
-                                   (int * inst) avl_tree (* original AVL *)  \<Rightarrow>
-                                   (int * inst) avl_tree (* result *)"
+fun store_byte_list_in_program ::
+  "int (* initial position in the AVL *) \<Rightarrow> byte list (* the data *) \<Rightarrow>
+   (int * inst) avl_tree (* original AVL *)  \<Rightarrow>
+   (int * inst) avl_tree (* result *)"
 where
   "store_byte_list_in_program _ [] orig = orig"
 | "store_byte_list_in_program pos (h # t) orig =
@@ -192,29 +196,39 @@ declare store_byte_list_in_program.simps [simp]
 
 subsubsection {* Storing a program in the AVL tree *}
 
-fun program_content_of_lst :: "int (* initial position *) \<Rightarrow> inst list (* instructions *)
-                           \<Rightarrow> (int * inst) avl_tree (*result *)"
+text {* Here is a function that stores a list of instructions in the AVL tree.
+The initial key is specified.  The following keys are computed using the sizes
+of instructions being inserted.
+*}
+
+fun program_content_of_lst ::
+  "int (* initial position in the AVL *) \<Rightarrow> inst list (* instructions *)
+   \<Rightarrow> (int * inst) avl_tree (* result *)"
 where
   "program_content_of_lst _ [] = Leaf"
   -- {* the empty program is translated into the empty tree. *}
 | "program_content_of_lst pos (Stack (PUSH_N bytes) # rest) =
    store_byte_list_in_program (pos + 1) bytes 
-   (update pos (Stack (PUSH_N bytes)) (program_content_of_lst (pos + 1 + (int (length bytes))) rest))"
-  -- {* The PUSH instruction is translated together with the bytes in the immediate value. *}
+   (update pos (Stack (PUSH_N bytes))
+          (program_content_of_lst (pos + 1 + (int (length bytes))) rest))"
+  -- {* The PUSH instruction is translated together with the immediate value. *}
 | "program_content_of_lst pos (Annotation _ # rest) =
     program_content_of_lst pos rest"
-  -- {* Annotations are skipped because they do not belong here. *}
+  -- {* Annotations are skipped because they do not belong in this AVL tree. *}
 | "program_content_of_lst pos (i # rest) =
    update pos i (program_content_of_lst (pos + 1) rest)"
   -- {* The other instructions are simply inserted into the AVL tree. *}
 
 subsubsection {* Storing annotations in a program in a mapping *}
 
-(* TODO: replace this with AVL Tree *)
+text {* Annotations are stored in a mapping that maps positions into lists of annotations.
+The rationale for this data structure is that a single position might contain multiple annotations.
+Here is a function that inserts an annotation
+at a specified position. *}
+
 abbreviation prepend_annotation :: "int \<Rightarrow> annotation \<Rightarrow> (int \<Rightarrow> annotation list) \<Rightarrow> (int \<Rightarrow> annotation list)"
 where
-"prepend_annotation pos annot orig ==
- orig(pos := annot # orig pos)"
+"prepend_annotation pos annot orig \<equiv> orig(pos := annot # orig pos)"
 text {* Currently annotations are inserted into a mapping with Isabelle/HOL's mapping updates.
 When this causes performance problems, I need to switch to AVL trees again.
 *}
@@ -225,7 +239,8 @@ where
 | "program_annotation_of_lst pos (Annotation annot # rest) =
     prepend_annotation pos annot (program_annotation_of_lst pos rest)"
 | "program_annotation_of_lst pos (i # rest) =
-   (program_annotation_of_lst (pos + inst_size i) rest)" -- {* Ordinary instructions are skipped. *}
+   (program_annotation_of_lst (pos + inst_size i) rest)"
+   -- {* Ordinary instructions are skipped. *}
 
 declare program_annotation_of_lst.simps [simp]
 
@@ -235,7 +250,7 @@ text {* The results of the above translations are packed together in a record. *
 
 abbreviation program_of_lst :: "inst list \<Rightarrow> program"
 where
-"program_of_lst lst ==
+"program_of_lst lst \<equiv>
   \<lparr> program_content = program_content_of_lst 0 lst
   , program_length = int (length lst)
   , program_annotation = program_annotation_of_lst 0 lst
@@ -275,15 +290,15 @@ text {* The variable environment contains information that are relatively volati
 record variable_env =
   venv_stack :: "uint list"
   venv_memory :: memory
-  venv_memory_usage :: int -- {* the current memory usage, which is returned by MSIZE *}
+  venv_memory_usage :: int -- {* the current memory usage *}
   venv_storage :: storage
   venv_pc :: int -- {* the program counter *}
   venv_balance :: "address \<Rightarrow> uint" -- {* balances of all accounts *}
   venv_caller :: address -- {* the caller's address *}
   venv_value_sent :: uint -- {* the amount of Eth sent along the current invocation *}
   venv_data_sent :: "byte list" -- {* the data sent along the current invocation *}
-  venv_storage_at_call :: storage -- {* the storage content at the time of this invocation*}
-  venv_balance_at_call :: "address \<Rightarrow> uint" -- {* the balances of all accounts at the invocation *}
+  venv_storage_at_call :: storage -- {* the storage content at the invocation*}
+  venv_balance_at_call :: "address \<Rightarrow> uint" -- {* the balances at the invocation *}
   venv_origin :: address -- {* the external account that started the current transaction *}
   venv_ext_program :: "address \<Rightarrow> program" -- {* the codes of all accounts *}
   venv_block :: block_info -- {* the current block *}
@@ -291,8 +306,8 @@ record variable_env =
 text {* The constant environment contains information that are rather stable. *}
 
 record constant_env =
-  cenv_program :: program -- {* The code in the account under verification. *}
-  cenv_this :: address -- {* The address of the account under verification. *}
+  cenv_program :: program -- {* the code in the account under verification. *}
+  cenv_this :: address -- {* the address of the account under verification. *}
 
 subsection {* The Result of an Instruction *}
 
@@ -300,27 +315,28 @@ text {* The result of program execution is microscopically defined by results of
 executions.  The execution of a single instruction can result in the following cases: *}
 
 datatype instruction_result =
-  InstructionContinue variable_env -- {* The EVM should continue with a variable environment *}
-| InstructionAnnotationFailure -- {* The annotation turned out to be false. *}
+  InstructionContinue variable_env -- {* the execution should continue. *}
+| InstructionAnnotationFailure -- {* the annotation turned out to be false. *}
 | InstructionToWorld
-   " contract_action (* The contract's move *)
-   * storage (* The new storage content *)
-   * (address \<Rightarrow> uint) (* The new balance of all accounts *)
-   * variable_env option (* The variable environment to return to, in case our account is calling
-                          * an account *)"
-text {*-- the execution has stopped; either for the moment just calling out another account, or
+-- {* the execution has stopped; either for the moment just calling out another account, or
 finally finishing the current invocation.
 *}  
+   " contract_action   (* the contract's move *)
+   * storage           (* the new storage content *)
+   * (address \<Rightarrow> uint) (* the new balance of all accounts *)
+   * variable_env option (* the variable environment to return to *)"
 
 text {* When the contract fails, the result of the instruction always looks like this: *}
 abbreviation instruction_failure_result :: "variable_env \<Rightarrow> instruction_result"
 where
-"instruction_failure_result v == InstructionToWorld (ContractFail, venv_storage_at_call v, venv_balance_at_call v, None)"
+"instruction_failure_result v \<equiv>
+  InstructionToWorld (ContractFail, venv_storage_at_call v, venv_balance_at_call v, None)"
 
 text {* When the contract returns, the result of the instruction always looks like this: *}
 abbreviation instruction_return_result :: "byte list \<Rightarrow> variable_env \<Rightarrow> instruction_result"
 where
-"instruction_return_result x v == InstructionToWorld (ContractReturn x, venv_storage v, venv_balance v, None)"
+"instruction_return_result x v \<equiv>
+  InstructionToWorld (ContractReturn x, venv_storage v, venv_balance v, None)"
 
 subsection {* Useful Functions for Defining EVM Operations *}
 
@@ -328,8 +344,9 @@ text {* Currently the GAS instruction is modelled to return random numbers.
 The random number is not known to be of any value.
 However, the value is not unknown enough in this formalization because
 the value is only dependent on the variable environment (which does not
-keep track of the remaining gas.  This is not a problem as long as
-we are analyzing a single invocation of a loopless contract.
+keep track of the remaining gas).  This is not a problem as long as
+we are analyzing a single invocation of a loopless contract, but
+will be fixed.
 *}
 
 definition gas :: "variable_env \<Rightarrow> uint"
@@ -338,20 +355,26 @@ where "gas _ = undefined"
 text {* This M function is defined at the end of H.1. in the yellow paper.
 The purpose of this is to update the memory usage. *}
 
-abbreviation M :: "int (* original memory usage *) \<Rightarrow> uint (* beginning of the used memory *)
-                   \<Rightarrow> uint (* used size *) \<Rightarrow> int (* the updated memory usage *)"
+abbreviation M ::
+"int (* original memory usage *) \<Rightarrow> uint (* beginning of the used memory *)
+ \<Rightarrow> uint (* used size *) \<Rightarrow> int (* the updated memory usage *)"
 where
-"M s f l ==
+"M s f l \<equiv>
   (if l = 0 then s else
      max s ((uint f + uint l + 31) div 32))"
 
 text {* Updating a balance of a single account:  *}
-abbreviation update_balance :: "address \<Rightarrow> (uint \<Rightarrow> uint) \<Rightarrow> (address \<Rightarrow> uint) \<Rightarrow> (address \<Rightarrow> uint)"
+abbreviation update_balance ::
+"  address (* the updated account*)
+\<Rightarrow> (uint \<Rightarrow> uint) (* the function that updates the balance *)
+\<Rightarrow> (address \<Rightarrow> uint) (* the original balance *)
+\<Rightarrow> (address \<Rightarrow> uint) (* the resulting balance *)"
 where
-"update_balance a newbal orig == orig(a := newbal (orig a))"
+"update_balance a f orig \<equiv> orig(a := f (orig a))"
 
 text {* Popping stack elements: *}
-fun venv_pop_stack :: "nat \<Rightarrow> variable_env \<Rightarrow> variable_env"
+fun venv_pop_stack ::
+"nat (* how many elements to pop *) \<Rightarrow> variable_env \<Rightarrow> variable_env"
 where
   "venv_pop_stack 0 v = v"
 | "venv_pop_stack (Suc n) v =
@@ -359,10 +382,10 @@ where
 
 declare venv_pop_stack.simps [simp]
 
-text {* Peeking the topmmost element of the stack: *}
+text {* Peeking the topmost element of the stack: *}
 abbreviation venv_stack_top :: "variable_env \<Rightarrow> uint option"
 where
-"venv_stack_top v ==
+"venv_stack_top v \<equiv>
   (case venv_stack v of h # _\<Rightarrow> Some h | [] \<Rightarrow> None)"
 
 text {* Updating the storage at an index: *}
