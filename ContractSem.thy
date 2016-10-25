@@ -390,17 +390,18 @@ where
 
 text {* Updating the storage at an index: *}
 
-abbreviation venv_update_storage :: "uint (* index *) \<Rightarrow> uint (* value *)
-                                    \<Rightarrow> variable_env (* the original variable environment *)
-                                    \<Rightarrow> variable_env (* the resulting variable environment *)"
+abbreviation venv_update_storage ::
+" uint (* index *) \<Rightarrow> uint (* value *)
+\<Rightarrow> variable_env (* the original variable environment *)
+\<Rightarrow> variable_env (* the resulting variable environment *)"
 where
-"venv_update_storage idx val v ==
+"venv_update_storage idx val v \<equiv>
   v\<lparr>venv_storage := (venv_storage v)(idx := val)\<rparr>"
   
 text {* Peeking the next instruction: *}
 abbreviation venv_next_instruction :: "variable_env \<Rightarrow> constant_env \<Rightarrow> inst option"
 where
-"venv_next_instruction v c ==
+"venv_next_instruction v c \<equiv>
    lookup (program_content (cenv_program c)) (venv_pc v)"
    
 text {* Advancing the program counter: *}
@@ -412,20 +413,20 @@ where
 text {* No-op, which just advances the program counter: *}
 abbreviation stack_0_0_op :: "variable_env \<Rightarrow> constant_env \<Rightarrow> instruction_result"
 where
-"stack_0_0_op v c == InstructionContinue (venv_advance_pc c v)"
+"stack_0_0_op v c \<equiv> InstructionContinue (venv_advance_pc c v)"
 
 text {* A general pattern of operations that pushes one element onto the stack.  *}
 abbreviation stack_0_1_op ::
   "variable_env \<Rightarrow> constant_env \<Rightarrow> uint (* the pushed word *) \<Rightarrow> instruction_result"
 where
-"stack_0_1_op v c w ==
+"stack_0_1_op v c w \<equiv>
    InstructionContinue
       (venv_advance_pc c v\<lparr>venv_stack := w # venv_stack v\<rparr>)"
 
 text {* A general pattern of operations that transforms the topmost element of the stack. *}
 abbreviation stack_1_1_op :: "variable_env \<Rightarrow> constant_env \<Rightarrow>
-                             (uint \<Rightarrow> uint) (* the function that transforms a word*)
-                             \<Rightarrow> instruction_result"
+   (uint \<Rightarrow> uint) (* the function that transforms a word*)
+   \<Rightarrow> instruction_result"
 where
 "stack_1_1_op v c f \<equiv>
    (case venv_stack v of
@@ -436,19 +437,22 @@ where
       )"
 
 text {* A general pattern of operations that consume one word and produce two rwords: *}
-abbreviation stack_1_2_op :: "variable_env \<Rightarrow> constant_env \<Rightarrow> (uint \<Rightarrow> uint * uint) \<Rightarrow> instruction_result"
+abbreviation stack_1_2_op ::
+"variable_env \<Rightarrow> constant_env \<Rightarrow> (uint \<Rightarrow> uint * uint) \<Rightarrow> instruction_result"
 where
-"stack_1_2_op v c f ==
+"stack_1_2_op v c f \<equiv>
   (case venv_stack v of
      [] \<Rightarrow> instruction_failure_result v
    | h # t \<Rightarrow>
      (case f h of
         (new0, new1) \<Rightarrow>
           InstructionContinue
-            (venv_advance_pc c v\<lparr>venv_stack := new0 # new1 # venv_stack v\<rparr>)))"
+            (venv_advance_pc c
+               v\<lparr>venv_stack := new0 # new1 # venv_stack v\<rparr>)))"
 
 text {* A general pattern of operations that take two words and produce one word: *}
-abbreviation stack_2_1_op :: "variable_env \<Rightarrow> constant_env \<Rightarrow> (uint \<Rightarrow> uint \<Rightarrow> uint) \<Rightarrow> instruction_result"
+abbreviation stack_2_1_op ::
+"variable_env \<Rightarrow> constant_env \<Rightarrow> (uint \<Rightarrow> uint \<Rightarrow> uint) \<Rightarrow> instruction_result"
 where
 "stack_2_1_op v c f \<equiv>
   (case venv_stack v of
@@ -456,28 +460,27 @@ where
        InstructionContinue
          (venv_advance_pc c
             v\<lparr>venv_stack := f operand0 operand1 # rest\<rparr>)
-  | _ \<Rightarrow> instruction_failure_result v
-  )"
+  | _ \<Rightarrow> instruction_failure_result v)"
 
 text {* A general pattern of operations that take three words and produce one word: *}
-abbreviation stack_3_1_op :: "variable_env \<Rightarrow> constant_env \<Rightarrow> (uint \<Rightarrow> uint \<Rightarrow> uint \<Rightarrow> uint) \<Rightarrow>
-  instruction_result"
+abbreviation stack_3_1_op ::
+"variable_env \<Rightarrow> constant_env \<Rightarrow>
+ (uint \<Rightarrow> uint \<Rightarrow> uint \<Rightarrow> uint) \<Rightarrow> instruction_result"
 where
-"stack_3_1_op v c f ==
+"stack_3_1_op v c f \<equiv>
   (case venv_stack v of
      operand0 # operand1 # operand2 # rest \<Rightarrow>
        InstructionContinue
          (venv_advance_pc c
             v\<lparr>venv_stack := f operand0 operand1 operand2 # rest\<rparr>)
-   | _ \<Rightarrow> instruction_failure_result v
-   )"
+   | _ \<Rightarrow> instruction_failure_result v)"
 
 subsection {* Definition of EVM Operations *}
 
 text "SSTORE changes the storage so it does not fit into any of the patterns defined above."
 abbreviation sstore :: "variable_env \<Rightarrow> constant_env \<Rightarrow> instruction_result"
 where
-"sstore v c ==
+"sstore v c \<equiv>
   (case venv_stack v of
     addr # val # stack_tail \<Rightarrow>
       InstructionContinue
@@ -485,13 +488,13 @@ where
         (venv_update_storage addr val v\<lparr>venv_stack := stack_tail\<rparr>))
     | _ \<Rightarrow> instruction_failure_result v)"
 
-    
+
 text "For interpreting the annotations, I first need to construct the annotation environment
 out of the current execution environments.  When I try to remove this step, I face some
 circular definitions of data types."
 abbreviation build_aenv :: "variable_env \<Rightarrow> constant_env \<Rightarrow> aenv"
 where
-"build_aenv v c ==
+"build_aenv v c \<equiv>
   \<lparr> aenv_stack = venv_stack v
   , aenv_memory = venv_memory v
   , aenv_storage = venv_storage v
@@ -559,7 +562,7 @@ text {* The JUMPI instruction is implemented using the JUMP instruction.
 *}
 abbreviation jumpi :: "variable_env \<Rightarrow> constant_env \<Rightarrow> instruction_result"
 where
-"jumpi v c ==
+"jumpi v c \<equiv>
   (case venv_stack v of
       pos # cond # rest \<Rightarrow>
         (strict_if (cond = 0)
@@ -603,26 +606,28 @@ where
     (if venv_balance v (cenv_this c) < e2 then
        instruction_failure_result v
      else
-       InstructionToWorld
-         (ContractCall
-           (\<lparr> callarg_gas = e0,
-              callarg_code = Word.ucast e1,
-              callarg_recipient = Word.ucast e1,
-              callarg_value = e2,
-              callarg_data = cut_memory e3 (Word.unat e4) (venv_memory v),
-              callarg_output_begin = e5,
-              callarg_output_size = e6 \<rparr>),
-          venv_storage v, update_balance (cenv_this c) (\<lambda> orig \<Rightarrow> orig - e2) (venv_balance v),
-          Some (* when returning to the current invocation, use the variable environment: *)
-            ((venv_advance_pc c v)\<lparr> venv_stack := rest,
-                venv_balance := update_balance (cenv_this c) (\<lambda> orig \<Rightarrow> orig - e2) (venv_balance v)
-              , venv_memory_usage := M (M (venv_memory_usage v) e3 e4) e5 e6 \<rparr>
-              )))
-  | _ \<Rightarrow> instruction_failure_result v
-  )"
+       InstructionToWorld (ContractCall
+         (\<lparr> callarg_gas = e0
+          , callarg_code = Word.ucast e1
+          , callarg_recipient = Word.ucast e1
+          , callarg_value = e2
+          , callarg_data = cut_memory e3 (Word.unat e4) (venv_memory v)
+          , callarg_output_begin = e5
+          , callarg_output_size = e6 \<rparr>),
+        venv_storage v,
+        update_balance (cenv_this c)
+          (\<lambda> orig \<Rightarrow> orig - e2) (venv_balance v),
+        Some (* saving the variable environment for timing *)
+          ((venv_advance_pc c v)
+           \<lparr> venv_stack := rest
+           , venv_balance :=
+                update_balance (cenv_this c)
+                  (\<lambda> orig \<Rightarrow> orig - e2) (venv_balance v)
+           , venv_memory_usage :=
+              M (M (venv_memory_usage v) e3 e4) e5 e6 \<rparr>)))
+  | _ \<Rightarrow> instruction_failure_result v)"
 
 declare call_def [simp]
-
 
 text {* DELEGATECALL is slightly different. *}
 definition delegatecall :: "variable_env \<Rightarrow> constant_env \<Rightarrow> instruction_result"
@@ -639,14 +644,16 @@ where
               callarg_code = Word.ucast e1,
               callarg_recipient = Word.ucast e1,
               callarg_value = venv_value_sent v,
-              callarg_data = cut_memory e3 (Word.unat e4) (venv_memory v),
+              callarg_data = 
+                cut_memory e3 (Word.unat e4) (venv_memory v),
               callarg_output_begin = e5,
               callarg_output_size = e6 \<rparr>),
           venv_storage v, venv_balance v,
-          Some (* when returning to the current invocation, use the variable environment: *)
-            ((venv_advance_pc c v)\<lparr> venv_stack := rest
-              , venv_memory_usage := M (M (venv_memory_usage v) e3 e4) e5 e6 \<rparr>
-              )))
+          Some (* save the variable environment for returns *)
+            ((venv_advance_pc c v)
+             \<lparr> venv_stack := rest
+             , venv_memory_usage :=
+                M (M (venv_memory_usage v) e3 e4) e5 e6 \<rparr> )))
   | _ \<Rightarrow> instruction_failure_result v
   )"
 
@@ -668,20 +675,27 @@ where
               callarg_code = ucast e1,
               callarg_recipient = cenv_this c,
               callarg_value = e2,
-              callarg_data = cut_memory e3 (unat e4) (venv_memory v),
+              callarg_data =
+                cut_memory e3 (unat e4) (venv_memory v),
               callarg_output_begin = e5,
               callarg_output_size = e6 \<rparr>),
-          venv_storage v, update_balance (cenv_this c) (\<lambda> orig \<Rightarrow> orig - e2) (venv_balance v),
-          Some (* when returning to this invocation, use the following variable environment *)
-            ((venv_advance_pc c v)\<lparr> venv_stack := rest
-              , venv_memory_usage := M (M (venv_memory_usage v) e3 e4) e5 e6
-              , venv_balance := update_balance (cenv_this c) (\<lambda> orig \<Rightarrow> orig - e2) (venv_balance v) \<rparr>
+          venv_storage v,
+          update_balance (cenv_this c)
+            (\<lambda> orig \<Rightarrow> orig - e2) (venv_balance v),
+          Some (* saving the variable environment *)
+            ((venv_advance_pc c v)
+              \<lparr> venv_stack := rest
+              , venv_memory_usage :=
+                  M (M (venv_memory_usage v) e3 e4) e5 e6
+              , venv_balance :=
+                  update_balance (cenv_this c)
+                    (\<lambda> orig \<Rightarrow> orig - e2) (venv_balance v) \<rparr>
              )))
-  | _ \<Rightarrow> instruction_failure_result v
-  )"
+  | _ \<Rightarrow> instruction_failure_result v)"
 
 text "CREATE is also similar because the instruction causes execution on another account."
-abbreviation create :: "variable_env \<Rightarrow> constant_env \<Rightarrow> instruction_result"
+abbreviation create ::
+  "variable_env \<Rightarrow> constant_env \<Rightarrow> instruction_result"
 where
 "create v c \<equiv>
   (case venv_stack v of
