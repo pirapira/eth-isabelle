@@ -20,18 +20,28 @@ begin
 
 subsection "Bit Operations"
 
+text {* The following clause defined a type called \texttt{bits\_inst}.
+The type has five elements.  It is automatically understood that nothing else
+belongs to this type.  It is also understood that every one of these five elements
+is different from any of the other four.
+*}
+
 text {* Some instructions have \texttt{inst\_} in front.  Because names like AND,
 OR and XOR are taken by the machine word library.
 *}
 
-datatype bits_inst
-= inst_AND
-| inst_OR
-| inst_XOR
-| inst_NOT
-| BYTE
+text {* The instructions have different arities.  They might consume some elements on the stack,
+and produce some elements on the stack.  However, the arity of the instructions are not specified
+in this section. *}
 
-text {* These opcodes are represented by the following bytes.
+datatype bits_inst
+= inst_AND -- {* bitwise AND *}
+| inst_OR  -- {* bitwise OR *}
+| inst_XOR -- {* bitwise exclusive or *}
+| inst_NOT -- {* bitwise negation *}
+| BYTE     -- {* taking one byte out of a word *}
+
+text {* These instructions are represented by the following bytes.
 Most opcodes are represented by a single byte.
 *}
 
@@ -47,12 +57,14 @@ declare bits_inst_code.simps [simp]
 
 subsection "Signed Arithmetics"
 
+text {* More similar definitions follow. *}
+
 datatype sarith_inst
-= SDIV
-| SMOD
-| SGT
-| SLT
-| SIGNEXTEND
+= SDIV -- {* signed division *}
+| SMOD -- {* signed modulo *}
+| SGT  -- {* signed greater-than *}
+| SLT  -- {* signed less-than *}
+| SIGNEXTEND -- {* extend the size of a signed number *}
 
 fun sarith_inst_code :: "sarith_inst => byte"
 where
@@ -67,19 +79,19 @@ declare sarith_inst_code.simps [simp]
 subsection "Unsigned Arithmetics"
 
 datatype arith_inst
-= ADD
-| MUL
-| SUB
-| DIV
-| MOD
-| ADDMOD
-| MULMOD
-| EXP
-| inst_GT
-| inst_EQ
-| inst_LT
-| ISZERO
-| SHA3
+= ADD -- {* addition *}
+| MUL -- {* multiplication *}
+| SUB -- {* subtraction *} 
+| DIV -- {* unsigned division *}
+| MOD -- {* unsigned modulo *}
+| ADDMOD -- {* addition under modulo *}
+| MULMOD -- {* multiplication under modulo *}
+| EXP -- {* exponentiation *}
+| inst_GT -- {* unsigned greater-than *}
+| inst_EQ -- {* equality *}
+| inst_LT -- {* unsigned less-than *}
+| ISZERO -- {* if zero, returns one *}
+| SHA3 -- {* Keccak 256, dispite the name *}
 
 fun arith_inst_code :: "arith_inst \<Rightarrow> byte"
 where
@@ -102,22 +114,23 @@ declare arith_inst_code.simps [simp]
 subsection "Informational Opcodes"
 
 datatype info_inst =
-    ADDRESS
-  | BALANCE
-  | ORIGIN
-  | CALLER
-  | CALLVALUE
-  | CALLDATASIZE
-  | CODESIZE
-  | GASPRICE
-  | EXTCODESIZE
-  | BLOCKHASH
-  | COINBASE
-  | TIMESTAMP
-  | NUMBER
-  | DIFFICULTY
-  | GASLIMIT
-  | GAS
+    ADDRESS -- {* The address of the account currently running *}
+  | BALANCE -- {* The Eth balance of the specified account *}
+  | ORIGIN -- {* The address of the external account that started the transaction *}
+  | CALLER -- {* The immediate caller of this invocation *}
+  | CALLVALUE -- {* The Eth amount sent along this invocation *}
+  | CALLDATASIZE -- {* The number of bytes sent along this invocation *}
+  | CODESIZE -- {* The number of bytes in the code of the account currently running *}
+  | GASPRICE -- {* The current gas price *}
+  | EXTCODESIZE -- {* The size of a code of the specified account *}
+  | BLOCKHASH -- {* The block hash of a specified block among the recent blocks. *}
+  | COINBASE -- {* The address of the miner that validates the current block. *}
+  | TIMESTAMP -- {* The date and time of the block. *}
+  | NUMBER -- {* The block number *}
+  | DIFFICULTY -- {* The current difficulty *}
+  | GASLIMIT -- {* The current block gas limit *}
+  | GAS -- {* The remaining gas for the current execution. This changes after every instruction
+  is executed.  *}
   
 fun info_inst_code :: "info_inst \<Rightarrow> byte"
 where
@@ -150,20 +163,20 @@ type_synonym dup_inst = nat
 abbreviation dup_inst_code :: "dup_inst \<Rightarrow> byte"
 where
 "dup_inst_code n ==
-   (if n < 1 then undefined
-    else (if n > 16 then undefined
-    else (word_of_int (int n)) + 0x7f))"
-    
+   (if n < 1 then undefined (*-- There is no DUP0 instruction. *)
+    else (if n > 16 then undefined (* -- There are no DUP16 instruction and on. *)
+    else (word_of_int (int n)) + 0x7f))" -- {* 0x80 stands for DUP1 until 0x9f for DUP16. *}
+
 subsection {* Memory Operations *}
 
 datatype memory_inst =
-    MLOAD
-  | MSTORE
-  | MSTORE8
-  | CALLDATACOPY
-  | CODECOPY
-  | EXTCODECOPY
-  | MSIZE
+    MLOAD -- {* reading one machine word from the memory, beginning from the specified offset *}
+  | MSTORE -- {* writing one machine word to the memory *}
+  | MSTORE8 -- {* writing one byte to the memory *}
+  | CALLDATACOPY -- {* copying the caller's data to the memory *}
+  | CODECOPY -- {* copying a part of the currently running code to the memory *}
+  | EXTCODECOPY -- {* copying a part of the code of the specified account *}
+  | MSIZE -- {* the size of the currently used region of the memory. *}
 
 fun memory_inst_code :: "memory_inst \<Rightarrow> byte"
 where
@@ -180,8 +193,8 @@ declare memory_inst_code.simps [simp]
 subsection {* Storage Operations *}
 
 datatype storage_inst =
-    SLOAD
-  | SSTORE
+    SLOAD -- {* reading one word from the storage *}
+  | SSTORE -- {* writing one word to the storage *}
 
 fun storage_inst_code :: "storage_inst \<Rightarrow> byte"
 where
@@ -193,10 +206,14 @@ declare storage_inst_code.simps [simp]
 subsection {* Program-Counter Opcodes *}
 
 datatype pc_inst =
-    JUMP
-  | JUMPI
-  | PC
-  | JUMPDEST
+    JUMP -- {* jumping to the specified location in the code *}
+  | JUMPI -- {* jumping to the specified location in the code if a condition is met *}
+  | PC -- {* the current location in the code *}
+  | JUMPDEST -- {* a no-op instruction located to indicate jump destinations. *}
+
+text {* If a jump occurs to a location where JUMPDEST is not found, the execution fails.
+*}
+
 
 fun pc_inst_code :: "pc_inst \<Rightarrow> byte"
 where
@@ -210,9 +227,9 @@ declare pc_inst_code.simps [simp]
 subsection {* Stack Opcodes *}
 
 datatype stack_inst =
-    POP
-  | PUSH_N "8 word list"
-  | CALLDATALOAD
+    POP -- {* throwing away the topmost element of the stack *}
+  | PUSH_N "8 word list" -- {* pushing an element to the stack *}
+  | CALLDATALOAD -- {* pushing a word to the stack, taken from the caller's data *}
 
 text {* The PUSH opcodes are longer because they contain immediate values.
 Here the immediate value is represented by a list of bytes.  Depending on the
@@ -241,6 +258,8 @@ where
    
 subsection {* Logging Opcodes *}
 
+text "There are instructions for logging events with different number of arguments."
+
 datatype log_inst
   = LOG0
   | LOG1
@@ -262,15 +281,16 @@ subsection {* Miscellaneous Opcodes *}
 
 text {* This section contains the opcodes that alter the account-wise control flow. *}
 
-
 datatype misc_inst
-  = STOP
-  | CREATE
-  | CALL
-  | CALLCODE
-  | DELEGATECALL
-  | RETURN
-  | SUICIDE
+  = STOP -- {* finishing the execution normally, with the empty return data *}
+  | CREATE -- {* deploying some code in an account *}
+  | CALL -- {* calling (i.e. sending a message to) an account *}
+  | CALLCODE -- {* calling into this account, but the executed code can be some other account's *}
+  | DELEGATECALL -- {* calling into this account, the executed code can be some other account's
+                       but the sent value and the sent data are unchanged. *}
+  | RETURN -- {* finishing the execution normally with data *}
+  | SUICIDE -- {* send all remaining Eth balance to the specified account,
+                  finishing the execution normally, and flagging the current account for deletion *}
 
 fun misc_inst_code :: "misc_inst \<Rightarrow> byte"
 where
@@ -312,7 +332,7 @@ datatype inst =
   | Misc misc_inst
   | Annotation annotation
 
-text {* And the byte representation of these opcodes are defined. *}
+text {* And the byte representation of these instructions are defined. *}
 
 fun inst_code :: "inst \<Rightarrow> byte list"
 where
@@ -358,6 +378,7 @@ text {* Also it is possible to compute the size of a program as the number of by
 fun program_size :: "inst list \<Rightarrow> nat"
 where
   "program_size (Stack (PUSH_N v) # rest) = length v + 1 + program_size rest"
+  -- {* I was using @{term inst_size} here, but that contributed to performance problems during proofs. *}
 | "program_size (Annotation _ # rest) = program_size rest"
 | "program_size (_ # rest) = 1 + program_size rest"
 | "program_size [] = 0"
