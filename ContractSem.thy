@@ -258,41 +258,46 @@ subsection {* Execution Environments *}
 
 text "I model an instruction as a function that takes environments and modify some parts of them."
 
+text "The execution of an EVM program happens in a block, and the following information about
+the block should be available."
 
 record block_info =
-  block_blockhash :: "uint \<Rightarrow> uint" (* This captures the whole BLOCKHASH operation *)
-  block_coinbase :: address
+  block_blockhash :: "uint \<Rightarrow> uint" -- {* this captures the whole BLOCKHASH operation *}
+  block_coinbase :: address -- {* the miner who validates the block *}
   block_timestamp :: uint
-  block_number :: uint
+  block_number :: uint -- {* the blocknumber of the block *}
   block_difficulty :: uint
-  block_gaslimit :: uint
+  block_gaslimit :: uint -- {* the block gas imit *}
   block_gasprice :: uint
+
+text {* The variable environment contains information that are relatively volatile. *}
 
 record variable_env =
   venv_stack :: "uint list"
   venv_memory :: memory
-  venv_memory_usage :: int
+  venv_memory_usage :: int -- {* the current memory usage, which is returned by MSIZE *}
   venv_storage :: storage
-  venv_pc :: int
-  venv_balance :: "address \<Rightarrow> uint"
-  venv_caller :: address
-  venv_value_sent :: uint
-  venv_data_sent :: "byte list"
-  venv_storage_at_call :: storage
-  venv_balance_at_call :: "address \<Rightarrow> uint"
-  venv_origin :: address
-  venv_ext_program :: "address \<Rightarrow> program"
-  venv_block :: block_info
+  venv_pc :: int -- {* the program counter *}
+  venv_balance :: "address \<Rightarrow> uint" -- {* balances of all accounts *}
+  venv_caller :: address -- {* the caller's address *}
+  venv_value_sent :: uint -- {* the amount of Eth sent along the current invocation *}
+  venv_data_sent :: "byte list" -- {* the data sent along the current invocation *}
+  venv_storage_at_call :: storage -- {* the storage content at the time of this invocation*}
+  venv_balance_at_call :: "address \<Rightarrow> uint" -- {* the balances of all accounts at the invocation *}
+  venv_origin :: address -- {* the external account that started the current transaction *}
+  venv_ext_program :: "address \<Rightarrow> program" -- {* the codes of all accounts *}
+  venv_block :: block_info -- {* the current block *}
+
+text {* The constant environment contains information that are rather stable. *}
 
 record constant_env =
-  cenv_program :: program
-  cenv_this :: address
+  cenv_program :: program -- {* The code in the account under verification. *}
+  cenv_this :: address -- {* The address of the account under verification. *}
 
 subsection {* The Result of an Instruction *}
 
 datatype instruction_result =
-  InstructionUnknown
-| InstructionContinue variable_env
+  InstructionContinue variable_env
 | InstructionAnnotationFailure
 | InstructionToWorld "contract_action * storage * (address \<Rightarrow> uint) * variable_env option"
 
@@ -324,21 +329,22 @@ we are analyzing a single invocation of a loopless contract.
 definition gas :: "variable_env \<Rightarrow> uint"
 where "gas _ = undefined"
 
-(* This M function is defined at the end of H.1. in the yellow paper.
- * The purpose of this is to update the memory usage.
- *)
-abbreviation M :: "int \<Rightarrow> uint \<Rightarrow> uint \<Rightarrow> int"
+text {* This M function is defined at the end of H.1. in the yellow paper.
+The purpose of this is to update the memory usage. *}
+
+abbreviation M :: "int (* original memory usage *) \<Rightarrow> uint (* beginning of the used memory *)
+                   \<Rightarrow> uint (* used size *) \<Rightarrow> int (* the updated memory usage *)"
 where
 "M s f l ==
-
   (if l = 0 then s else
-     max s ((uint f + uint l + 31) div 32))
-"
+     max s ((uint f + uint l + 31) div 32))"
 
+text {* Updating a balance of a single account:  *}
 abbreviation update_balance :: "address \<Rightarrow> (uint \<Rightarrow> uint) \<Rightarrow> (address \<Rightarrow> uint) \<Rightarrow> (address \<Rightarrow> uint)"
 where
 "update_balance a newbal orig == orig(a := newbal (orig a))"
 
+text {* Popping stack elements: *}
 fun venv_pop_stack :: "nat \<Rightarrow> variable_env \<Rightarrow> variable_env"
 where
   "venv_pop_stack 0 v = v"
@@ -347,29 +353,31 @@ where
 
 declare venv_pop_stack.simps [simp]
 
+text {* Peeking the topmmost element of the stack: *}
 abbreviation venv_stack_top :: "variable_env \<Rightarrow> uint option"
 where
 "venv_stack_top v ==
-  (case venv_stack v of
-     h # _\<Rightarrow> Some h
-   | [] \<Rightarrow> None)"
+  (case venv_stack v of h # _\<Rightarrow> Some h | [] \<Rightarrow> None)"
 
-(* function_update is already provided in Main library *)
+text {* Updating the storage at an index: *}
 
-abbreviation venv_update_storage :: "uint \<Rightarrow> uint \<Rightarrow> variable_env \<Rightarrow> variable_env"
+abbreviation venv_update_storage :: "uint (* index *) \<Rightarrow> uint (* value *)
+                                    \<Rightarrow> variable_env (* the original variable environment *)
+                                    \<Rightarrow> variable_env (* the resulting variable environment *)"
 where
 "venv_update_storage idx val v ==
   v\<lparr>venv_storage := (venv_storage v)(idx := val)\<rparr>"
-
-abbreviation venv_first_instruction :: "variable_env \<Rightarrow> constant_env \<Rightarrow> inst option"
+  
+text {* Peeking the next instruction: *}
+abbreviation venv_next_instruction :: "variable_env \<Rightarrow> constant_env \<Rightarrow> inst option"
 where
-"venv_first_instruction v c ==
+"venv_next_instruction v c ==
    lookup (program_content (cenv_program c)) (venv_pc v)"
 
 abbreviation venv_advance_pc :: "constant_env \<Rightarrow> variable_env \<Rightarrow> variable_env"
 where
 "venv_advance_pc c v \<equiv> 
-  v\<lparr> venv_pc := venv_pc v + inst_size (the (venv_first_instruction v c))  \<rparr>"
+  v\<lparr> venv_pc := venv_pc v + inst_size (the (venv_next_instruction v c))  \<rparr>"
 
 
 abbreviation stack_0_0_op :: "variable_env \<Rightarrow> constant_env \<Rightarrow> instruction_result"
@@ -470,7 +478,7 @@ where
      None \<Rightarrow> instruction_failure_result v
    | Some pos \<Rightarrow>
      (let v_new = (venv_pop_stack (Suc 0) v)\<lparr> venv_pc := uint pos \<rparr>  in
-     (case venv_first_instruction v_new c of
+     (case venv_next_instruction v_new c of
         Some (Pc JUMPDEST) \<Rightarrow>
           InstructionContinue v_new
       | Some _ \<Rightarrow> instruction_failure_result v
@@ -835,7 +843,7 @@ fun instruction_sem :: "variable_env \<Rightarrow> constant_env \<Rightarrow> in
 where
 "instruction_sem v c (Stack (PUSH_N lst)) =
      stack_0_1_op v c (Word.word_rcat lst)"
-| "instruction_sem v c (Unknown _) = InstructionUnknown"
+| "instruction_sem v c (Unknown _) = instruction_failure_result v"
 | "instruction_sem v c (Storage SLOAD) = stack_1_1_op v c (sload v)"
 | "instruction_sem v c (Storage SSTORE) = sstore v c"
 | "instruction_sem v c (Pc JUMPI) = jumpi v c"
@@ -960,7 +968,7 @@ where
    (if tiny_step \<le> 0 then
      ProgramToWorld(ContractFail, venv_storage_at_call v, venv_balance_at_call v, None) else
    ((*if \<not> check_annotations v c then ProgramAnnotationFailure else *)
-   (case venv_first_instruction v c of
+   (case venv_next_instruction v c of
       None \<Rightarrow> ProgramStepRunOut
     | Some i \<Rightarrow>
    (case instruction_sem v c i of
