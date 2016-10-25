@@ -9,5 +9,6 @@ session "eth-isabelle" = "HOL" +
     ContractEnv
     Instructions
     ContractSem
+    RelationalSem
   document_files
     "root.tex"
