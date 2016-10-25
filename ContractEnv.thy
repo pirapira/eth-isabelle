@@ -40,6 +40,14 @@ automatically. *}
 
 declare empty_storage_def [simp]
 
+text {* The empty memory is very similar. *}
+
+definition empty_memory :: memory
+where
+"empty_memory = (\<lambda> _. 0)"
+
+declare empty_memory_def [simp]
+
 text {* \indent
 The following record lists the information available for bytecode-inline assertions.
 These assertions will be proved in Isabelle/HOL. *}

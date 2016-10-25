@@ -99,25 +99,34 @@ datatype world_action =
 
 subsubsection "The Contract's Moves"
 
+text {* After being entered, the contract can respond by calling an account, creating (or deploying
+a smart contract, destroying itself, returning, or failing.  When the contract calls an account,
+the contract provides the following information.*}
+
 record call_arguments =
-  callarg_gas :: uint
-  callarg_code :: address
-  callarg_recipient :: address
-  callarg_value :: uint
-  callarg_data :: "byte list"
-  callarg_output_begin :: uint
-  callarg_output_size :: uint
+  callarg_gas :: uint -- {* The portion of the remaining gas that the callee is allowed to use *}
+  callarg_code :: address -- {* The code that executes during the call *}
+  callarg_recipient :: address -- {* The recipient of the call, whose balance and the storage are modified. *}
+  callarg_value :: uint -- {* The amount of Eth sent along *}
+  callarg_data :: "byte list" -- {* The data sent along *}
+  callarg_output_begin :: uint -- {* The beginning of the memory region where the output data should be written. *}
+  callarg_output_size :: uint -- {* The size of the memory regions where the output data should be written. *}
+  
+text {* When our contract deploys a smart contract, our contract should provide the following
+information. *}
 
 record create_arguments =
-  createarg_value :: uint
-  createarg_code :: "byte list"
+  createarg_value :: uint -- {* The value sent to the account *}
+  createarg_code :: "byte list" -- {* The code that deploys the runtime code. *}
 
+text {* The contract's moves are summarized as follows. *}
+  
 datatype contract_action =
-  ContractCall call_arguments
-| ContractCreate create_arguments
-| ContractFail
-| ContractSuicide
-| ContractReturn "byte list"
+  ContractCall call_arguments -- {* calling an account *}
+| ContractCreate create_arguments -- {* deploying a smart contract *}
+| ContractFail -- {* failing back to the caller *}
+| ContractSuicide -- {* destroying itself and returning back to the caller *}
+| ContractReturn "byte list" -- {* normally returning back to the caller *}
 
 subsection "Program Representation"
 
@@ -125,9 +134,11 @@ text "For performance reasons, the instructions are stored in an AVL tree that a
 looking up instructions from the program counters."
 
 record program = 
-  program_content :: "(int * inst) avl_tree"
-  program_length  :: int
-  program_annotation :: "int \<Rightarrow> annotation list"
+  program_content :: "(int * inst) avl_tree" -- {* a binary search tree from positions to instructions *}
+  program_length  :: int -- {* The length of the program in bytes *}
+  program_annotation :: "int \<Rightarrow> annotation list" -- {* a mapping from positions to annotations *}
+
+text {* The empty program is easy to define. *}
 
 abbreviation empty_program :: program
 where
@@ -138,7 +149,13 @@ where
 
 
 subsection "Translating an Instruction List into a Program"
-  
+
+subsubsection {* Integers can be compared *}
+
+text {* The AVL library requires the keys to be comparable.  We represent program positions 
+by integers.  So we have to prove that integers belong to the type class cmp with the
+usual comparison operators.  *}
+
 instantiation int :: cmp
 begin
 definition cmp_int :: "int \<Rightarrow> int \<Rightarrow> Cmp.cmp"
@@ -159,34 +176,48 @@ qed
 
 end
 
-text {* the data region of PUSH\_N instructions are encoded as
- InstructionUnknown byte *}
- 
-fun store_byte_list_in_program :: "int \<Rightarrow> byte list \<Rightarrow> (int * inst) avl_tree \<Rightarrow> (int * inst) avl_tree"
+subsubsection {* Storing the immediate values in the AVL tree *}
+
+text {* The data region of PUSH\_N instructions are encoded as
+ Unknown instructions. *}
+
+fun store_byte_list_in_program :: "int (* initial position *) \<Rightarrow> byte list (* the data *) \<Rightarrow>
+                                   (int * inst) avl_tree (* original AVL *)  \<Rightarrow>
+                                   (int * inst) avl_tree (* result *)"
 where
   "store_byte_list_in_program _ [] orig = orig"
 | "store_byte_list_in_program pos (h # t) orig =
      store_byte_list_in_program (pos + 1) t (update pos (Unknown h) orig)"
 declare store_byte_list_in_program.simps [simp]
 
-(* program_content_of_lst position suffix, returns a mapping int \<Rightarrow> inst option
- * that maps a program counter to an instruction *)
-fun program_content_of_lst :: "int \<Rightarrow> inst list \<Rightarrow> (int * inst) avl_tree"
+subsubsection {* Storing a program in the AVL tree *}
+
+fun program_content_of_lst :: "int (* initial position *) \<Rightarrow> inst list (* instructions *)
+                           \<Rightarrow> (int * inst) avl_tree (*result *)"
 where
   "program_content_of_lst _ [] = Leaf"
+  -- {* the empty program is translated into the empty tree. *}
 | "program_content_of_lst pos (Stack (PUSH_N bytes) # rest) =
    store_byte_list_in_program (pos + 1) bytes 
    (update pos (Stack (PUSH_N bytes)) (program_content_of_lst (pos + 1 + (int (length bytes))) rest))"
+  -- {* The PUSH instruction is translated together with the bytes in the immediate value. *}
 | "program_content_of_lst pos (Annotation _ # rest) =
     program_content_of_lst pos rest"
+  -- {* Annotations are skipped because they do not belong here. *}
 | "program_content_of_lst pos (i # rest) =
    update pos i (program_content_of_lst (pos + 1) rest)"
+  -- {* The other instructions are simply inserted into the AVL tree. *}
+
+subsubsection {* Storing annotations in a program in a mapping *}
 
 (* TODO: replace this with AVL Tree *)
 abbreviation prepend_annotation :: "int \<Rightarrow> annotation \<Rightarrow> (int \<Rightarrow> annotation list) \<Rightarrow> (int \<Rightarrow> annotation list)"
 where
 "prepend_annotation pos annot orig ==
  orig(pos := annot # orig pos)"
+text {* Currently annotations are inserted into a mapping with Isabelle/HOL's mapping updates.
+When this causes performance problems, I need to switch to AVL trees again.
+*}
 
 fun program_annotation_of_lst :: "int \<Rightarrow> inst list \<Rightarrow> int \<Rightarrow> annotation list"
 where
@@ -194,9 +225,13 @@ where
 | "program_annotation_of_lst pos (Annotation annot # rest) =
     prepend_annotation pos annot (program_annotation_of_lst pos rest)"
 | "program_annotation_of_lst pos (i # rest) =
-   (program_annotation_of_lst (pos + inst_size i) rest)"
+   (program_annotation_of_lst (pos + inst_size i) rest)" -- {* Ordinary instructions are skipped. *}
 
 declare program_annotation_of_lst.simps [simp]
+
+subsubsection {* Translating a list of instructions into a program *}
+
+text {* The results of the above translations are packed together in a record. *}
 
 abbreviation program_of_lst :: "inst list \<Rightarrow> program"
 where
@@ -208,6 +243,9 @@ where
 
 subsection {* Program as a Byte Sequence *}
 
+text {* For CODECOPY instruction, the program must be seen as a byte-indexed read-only memory. *}
+text {* Such a memory is here implemented by a lookup on an AVL tree.*}
+
 abbreviation program_as_memory :: "program \<Rightarrow> memory"
 where
 "program_as_memory p idx ==
@@ -215,10 +253,11 @@ where
      None \<Rightarrow> 0
    | Some inst \<Rightarrow> inst_code inst ! 0
    )"
+   
+subsection {* Execution Environments *}
 
-definition empty_memory :: memory
-where
-"empty_memory = (\<lambda> _. 0)"
+text "I model an instruction as a function that takes environments and modify some parts of them."
+
 
 record block_info =
   block_blockhash :: "uint \<Rightarrow> uint" (* This captures the whole BLOCKHASH operation *)
@@ -226,7 +265,8 @@ record block_info =
   block_timestamp :: uint
   block_number :: uint
   block_difficulty :: uint
-
+  block_gaslimit :: uint
+  block_gasprice :: uint
 
 record variable_env =
   venv_stack :: "uint list"
@@ -241,7 +281,6 @@ record variable_env =
   venv_storage_at_call :: storage
   venv_balance_at_call :: "address \<Rightarrow> uint"
   venv_origin :: address
-  venv_gasprice :: uint
   venv_ext_program :: "address \<Rightarrow> program"
   venv_block :: block_info
 
@@ -282,8 +321,8 @@ keep track of the remaining gas.  This is not a problem as long as
 we are analyzing a single invocation of a loopless contract.
 *}
 
-definition gas_limit :: "variable_env \<Rightarrow> uint"
-where "gas_limit _ = undefined"
+definition gas :: "variable_env \<Rightarrow> uint"
+where "gas _ = undefined"
 
 (* This M function is defined at the end of H.1. in the yellow paper.
  * The purpose of this is to update the memory usage.
@@ -813,7 +852,7 @@ where
 | "instruction_sem v c (Misc STOP) = stop v c"
 | "instruction_sem v c (Dup n) = general_dup n v c"
 | "instruction_sem v c (Stack POP) = pop v c"
-| "instruction_sem v c (Info GASLIMIT) = stack_0_1_op v c (gas_limit v)"
+| "instruction_sem v c (Info GASLIMIT) = stack_0_1_op v c (block_gaslimit (venv_block v))"
 | "instruction_sem v c (Arith inst_GT) = stack_2_1_op v c (\<lambda> a b. if a > b then 1 else 0)"
 | "instruction_sem v c (Arith inst_EQ) = stack_2_1_op v c (\<lambda> a b. if a = b then 1 else 0)"
 | "instruction_sem v c (Annotation a) = eval_annotation a v c"
@@ -870,7 +909,7 @@ where
 | "instruction_sem v c (Info CODESIZE) = stack_0_1_op v c
      (word_of_int (program_length (cenv_program c)))"
 | "instruction_sem v c (Info GASPRICE) = stack_0_1_op v c
-     (venv_gasprice v)"
+     (block_gasprice (venv_block v))"
 | "instruction_sem v c (Info EXTCODESIZE) = stack_1_1_op v c
      (\<lambda> arg. (word_of_int (program_length (venv_ext_program v (ucast arg)))))"
 | "instruction_sem v c (Info BLOCKHASH) = stack_1_1_op v c (block_blockhash (venv_block v))"
@@ -895,7 +934,7 @@ where
 | "instruction_sem v c (Misc CALLCODE) = callcode v c"
 | "instruction_sem v c (Misc SUICIDE) = suicide v c"
 | "instruction_sem v c (Misc DELEGATECALL) = delegatecall v c"
-| "instruction_sem v c (Info GAS) = stack_0_1_op v c (gas_limit v)"
+| "instruction_sem v c (Info GAS) = stack_0_1_op v c (gas v)"
 | "instruction_sem v c (Memory MSIZE) = stack_0_1_op v c (word_of_int (venv_memory_usage v))"
 
 subsection {* Programs' Answer to the World *}
@@ -985,7 +1024,6 @@ venv_called:
    , venv_storage_at_call = account_storage a
    , venv_balance_at_call = bal
    , venv_origin = origin
-   , venv_gasprice = gp
    , venv_ext_program = ext
    , venv_block = block
    \<rparr>
