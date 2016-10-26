@@ -445,7 +445,7 @@ where
         (new0, new1) \<Rightarrow>
           InstructionContinue
             (venv_advance_pc c
-               v\<lparr>venv_stack := new0 # new1 # venv_stack v\<rparr>)))"
+               v\<lparr>venv_stack := new0 # new1 # t \<rparr>)))"
 
 text {* A general pattern of operations that take two words and produce one word: *}
 abbreviation stack_2_1_op ::
