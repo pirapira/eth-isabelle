@@ -237,6 +237,13 @@ The following template traverses the states and proves that the invariant is act
 after every possible round.  Also the template states that no annotation failures happen.
 *}
 
+definition no_assertion_failure_post :: "(account_state \<Rightarrow> bool) \<Rightarrow> (account_state \<times> program_result) \<Rightarrow> bool"
+where
+"no_assertion_failure_post I fin =
+ (I (fst fin) \<and>
+  snd fin \<noteq> ProgramAnnotationFailure)
+"
+
 definition no_assertion_failure :: "(account_state \<Rightarrow> bool) \<Rightarrow> bool"
 where
 "no_assertion_failure (I :: account_state \<Rightarrow> bool) ==
@@ -247,8 +254,8 @@ where
     \<lparr> account_address = addr, account_storage = str, account_code = code,
       account_balance = bal, account_ongoing_calls = ongoing, account_killed = killed \<rparr>
   , ProgramInit callenv) fin \<longrightarrow>
-  I (fst fin) \<and>
-  snd fin \<noteq> ProgramAnnotationFailure))"
+  no_assertion_failure_post I fin
+ ))"
 
 subsection {* How to State a Pre-Post Condition Pair *}
 

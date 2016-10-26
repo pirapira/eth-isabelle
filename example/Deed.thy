@@ -609,7 +609,7 @@ lemma strict_if_split :
 apply(case_tac b; auto)
 done
 
-declare deed_inv.simps [simp]
+declare (* deed_inv.simps [simp] this causesd many subgoals *)
         one_round.simps [simp]
         world_turn.simps [simp]
         contract_turn.simps [simp]
@@ -624,43 +624,158 @@ Deed contract's code, that is still the case after an invocation.  *}
 declare strict_if_split [split]
 *)
 
+lemma deed_inv_deed_program [simp]:
+"deed_inv
+  \<lparr> account_address = addr
+  , account_storage = str
+  , account_code = deed_program
+  , account_balance = bal
+  , account_ongoing_calls = ongoing
+  , account_killed = k
+\<rparr>"
+apply(simp add: deed_inv.simps)
+done
+
+lemma deed_inv_empty [simp]:
+"deed_inv
+  \<lparr> account_address = addr
+  , account_storage = str
+  , account_code = empty_program
+  , account_balance = bal
+  , account_ongoing_calls = ongoing
+  , account_killed = k
+\<rparr>"
+apply(simp add: deed_inv.simps)
+done
+
 lemma deed_keeps_invariant :
 "no_assertion_failure deed_inv"
 apply(simp only: no_assertion_failure_def)
 apply(rule allI)
 apply(rule allI)
-apply(rule impI)
+apply(rule allI)
+apply(rule allI)
+apply(rule allI)
+apply(rule allI)
+apply(rule allI)
 apply(rule impI)
 apply(rule allI)
 apply(rule impI)
 apply(drule star_case; auto)
+  apply(drule deed_inv.cases; auto)
+   apply(case_tac steps; auto)
+   apply(split strict_if_split; auto)
+    apply(split strict_if_split; auto)
+     apply(split strict_if_split; auto)
+      apply(split strict_if_split; auto)
+       apply(split strict_if_split; auto)
+        apply(split strict_if_split; auto)
+         apply(split strict_if_split; auto)
+          apply(split strict_if_split; auto)
+           apply(split strict_if_split; auto)
+           apply(split strict_if_split; auto)
+           apply(split strict_if_split; auto)
+          apply(split strict_if_split; auto)
+          apply(split if_splits; auto?)
+           apply(split if_splits; auto?)
+           apply(drule star_case; auto)
+            apply(case_tac steps; auto)
+            apply(case_tac nat; auto)
+            apply(case_tac nata; auto)
+           apply(case_tac steps; auto)
+           apply(split if_splits; auto?)
+           apply(drule star_case; auto)
+           apply(case_tac steps; auto)
+           apply(case_tac nat; auto)
+           apply(case_tac nata; auto)
+          apply(case_tac steps; auto)
+         apply(split strict_if_split; auto)
+         apply(split strict_if_split; auto)
+         apply(case_tac nat; auto)
+        apply(split strict_if_split; auto)
+        apply(split strict_if_split; auto)
+        apply(split strict_if_split; auto)
+        apply(split if_splits; auto)
+        apply(drule star_case; auto)
+         apply(case_tac steps; auto)
+         apply(case_tac nat; auto)
+         apply(split strict_if_split; auto)
+         apply(split if_splits; auto)
+         apply(drule star_case; auto)
+          apply(case_tac steps; auto)
+         apply(case_tac steps; auto)
+        apply(case_tac steps; auto)
+       apply(split strict_if_split; auto)
+      apply(split strict_if_split; auto)
+     apply(split strict_if_split; auto)
+     apply(split strict_if_split; auto)
+     apply(case_tac nat; auto)
+    apply(split strict_if_split; auto)
+    apply(split strict_if_split; auto)
+    apply(split if_splits; auto)
+    apply(drule star_case; auto)
      apply(case_tac steps; auto)
-     apply(split strict_if_split; simp)
-      apply(split strict_if_split; simp)
-       apply(split strict_if_split; simp)
-        apply(split strict_if_split; simp)
-         apply(split strict_if_split; simp)
-          apply(split strict_if_split; simp)
-           apply(split strict_if_split; simp)
-            apply(split strict_if_split; simp)
-             apply(split strict_if_split; simp)
-              apply(auto)
-            apply(split strict_if_split; simp)
-             apply(auto)
-            apply(split strict_if_split; simp)
-             apply(auto)
-            apply(split strict_if_split; auto)
-            apply(split if_splits)
-             apply(split if_splits)
-              apply(simp)
-              apply(auto)
-             apply(drule star_case; auto)
-                  apply(case_tac ac; auto)
-                 (* still need to see pc of something... *)
-             
-             
-done
-
+    apply(case_tac steps; auto)
+   apply(split strict_if_split; auto)
+  apply(case_tac steps; auto)
+ apply(drule deed_inv.cases; auto)
+  apply(case_tac steps; auto)
+  apply(split strict_if_split; auto)
+   apply(split strict_if_split; auto)
+    apply(split strict_if_split; auto)
+     apply(split strict_if_split; auto)
+      apply(split strict_if_split; auto)
+       apply(split strict_if_split; auto)
+        apply(split strict_if_split; auto)
+         apply(split strict_if_split; auto)
+          apply(split strict_if_split; auto)
+          apply(split strict_if_split; auto)
+          apply(split strict_if_split; auto)
+         apply(split strict_if_split; auto)
+         apply(split if_splits; auto?)
+          apply(split if_splits; auto?)
+          apply(drule star_case; auto)
+           apply(case_tac steps; auto)
+           apply(case_tac nat; auto)
+           apply(case_tac nata; auto)
+          apply(case_tac steps; auto)
+          apply(split if_splits; auto?)
+          apply(drule star_case; auto)
+          apply(case_tac steps; auto)
+          apply(case_tac nat; auto)
+          apply(case_tac nata; auto)
+         apply(case_tac steps; auto)
+        apply(split strict_if_split; auto)
+        apply(split strict_if_split; auto)
+        apply(case_tac nat; auto)
+       apply(split strict_if_split; auto)
+       apply(split strict_if_split; auto)
+       apply(split strict_if_split; auto)
+       apply(split if_splits; auto)
+       apply(drule star_case; auto)
+        apply(case_tac steps; auto)
+        apply(case_tac nat; auto)
+        apply(split strict_if_split; auto)
+        apply(split if_splits; auto)
+        apply(drule star_case; auto)
+         apply(case_tac steps; auto)
+        apply(case_tac steps; auto)
+       apply(case_tac steps; auto)
+      apply(split strict_if_split; auto)
+     apply(split strict_if_split; auto)
+    apply(split strict_if_split; auto)
+    apply(split strict_if_split; auto)
+    apply(case_tac nat; auto)
+   apply(split strict_if_split; auto)
+   apply(split strict_if_split; auto)
+   apply(split if_splits; auto)
+   apply(drule star_case; auto)
+    apply(case_tac steps; auto)
+   apply(case_tac steps; auto)
+  apply(split strict_if_split; auto)
+ apply(case_tac steps; auto)
+  
+oops
 
 subsection {* Proof about the Case when the Caller is Not the Registrar *}
 

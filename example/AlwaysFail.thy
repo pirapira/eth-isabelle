@@ -71,10 +71,9 @@ lemma no_assertion_failure:
 "no_assertion_failure (\<lambda> a. \<exists> initial_balance. a = (always_fail_account_state initial_balance))"
 apply(simp add: no_assertion_failure_def)
 apply(auto)
- apply(drule star_case; auto)
+ apply(drule star_case; auto simp add: no_assertion_failure_post_def)
  apply(case_tac steps; auto)
  apply(drule star_case; auto)
-apply(case_tac steps; auto)
 apply(case_tac steps; auto)
 done
 
