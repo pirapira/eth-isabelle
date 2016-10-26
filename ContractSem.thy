@@ -1259,15 +1259,48 @@ transferring value to our contract.*}
 inductive build_venv_returned :: "account_state \<Rightarrow> return_result \<Rightarrow> variable_env \<Rightarrow> bool"
 where
 venv_returned:
-"  account_ongoing_calls a = recovered # _ \<Longrightarrow> (* finding an ongoing call *)
-   is_call_like (lookup (program_content (account_code a)) (venv_pc recovered - 1)) \<Longrightarrow>
-   new_bal \<ge> account_balance a \<Longrightarrow> (* the balance might have increased from the account state *)
-   build_venv_returned a r
-     (recovered \<lparr>
-         venv_stack := 1 # venv_stack recovered (* 1 is pushed, indicating a return *)
-       , venv_storage := account_storage a
-       , venv_balance := (update_balance (account_address a)
+"  is_call_like (lookup (program_content a_code) (v_pc - 1)) \<Longrightarrow>
+   new_bal \<ge> a_bal \<Longrightarrow> (* the balance might have increased from the account state *)
+   build_venv_returned
+     \<lparr> account_address = a_addr
+     , account_storage = a_storage
+     , account_code = a_code
+     , account_balance = a_bal
+     , account_ongoing_calls =
+         \<lparr> venv_stack = v_stack
+         , venv_memory = v_memory
+         , venv_memory_usage = v_memory_usage
+         , venv_storage = v_storage
+         , venv_pc = v_pc
+         , venv_balance = v_balance
+         , venv_caller = v_caller
+         , venv_value_sent = v_value
+         , venv_data_sent = v_data
+         , venv_storage_at_call = v_init_storage
+         , venv_balance_at_call = v_init_balance
+         , venv_origin = v_origin
+         , venv_ext_program = v_ext_program
+         , venv_block = v_block
+         \<rparr> # _
+     , account_killed = _
+     \<rparr>
+     r
+     (\<lparr>  venv_stack = 1 # v_stack (* 1 is pushed, indicating a return *)
+       , venv_memory = v_memory
+       (* TODO: update the memory *)
+       , venv_memory_usage = v_memory_usage
+       , venv_storage = a_storage
+       , venv_pc = v_pc
+       , venv_balance = (update_balance a_addr
                             (\<lambda> _. new_bal) (return_balance r))
+       , venv_caller = v_caller
+       , venv_value_sent = v_value
+       , venv_data_sent = v_data
+       , venv_storage_at_call = v_init_storage
+       , venv_balance_at_call = v_init_balance
+       , venv_origin = v_origin
+       , venv_ext_program = v_ext_program
+       , venv_block = v_block
      \<rparr>)"
 
 declare build_venv_returned.simps [simp]

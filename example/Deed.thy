@@ -619,7 +619,11 @@ subsection {* Proof that the Invariant is Kept *}
 
 text {* The following lemma states that, if the account's code is either empty or the
 Deed contract's code, that is still the case after an invocation.  *}
-        
+
+(*
+declare strict_if_split [split]
+*)
+
 lemma deed_keeps_invariant :
 "no_assertion_failure deed_inv"
 apply(simp only: no_assertion_failure_def)
@@ -631,20 +635,30 @@ apply(rule allI)
 apply(rule impI)
 apply(drule star_case; auto)
      apply(case_tac steps; auto)
-     apply(split if_splits; auto)
-     apply(split strict_if_split; auto)
-     apply(split strict_if_split; auto)
-    apply(case_tac steps; auto)
-    apply(split strict_if_split; auto)
-    apply(split strict_if_split; auto)
-    apply(split strict_if_split; auto)
-   apply(case_tac steps; auto)
-   apply(split strict_if_split; auto)
-   apply(split strict_if_split; auto)
-   apply(split strict_if_split; auto)
-  apply(case_tac steps; auto)
- apply(case_tac steps; auto)
-apply(case_tac steps; auto)
+     apply(split strict_if_split; simp)
+      apply(split strict_if_split; simp)
+       apply(split strict_if_split; simp)
+        apply(split strict_if_split; simp)
+         apply(split strict_if_split; simp)
+          apply(split strict_if_split; simp)
+           apply(split strict_if_split; simp)
+            apply(split strict_if_split; simp)
+             apply(split strict_if_split; simp)
+              apply(auto)
+            apply(split strict_if_split; simp)
+             apply(auto)
+            apply(split strict_if_split; simp)
+             apply(auto)
+            apply(split strict_if_split; auto)
+            apply(split if_splits)
+             apply(split if_splits)
+              apply(simp)
+              apply(auto)
+             apply(drule star_case; auto)
+                  apply(case_tac ac; auto)
+                 (* still need to see pc of something... *)
+             
+             
 done
 
 
@@ -683,7 +697,7 @@ apply(simp add: pre_post_conditions_def; auto)
               apply(split strict_if_split; auto)
               apply(split strict_if_split; auto)
               apply(split strict_if_split; auto)
-             apply(case_tac steps; auto)
+(*             apply(case_tac steps; auto)
              apply(split strict_if_split; auto)
              apply(split strict_if_split; auto)
              apply(split strict_if_split; auto)
@@ -749,7 +763,7 @@ apply(simp add: pre_post_conditions_def; auto)
  apply(drule star_case; auto)
  apply(case_tac steps; case_tac initial_account; auto)
 apply(drule star_case; auto)
-apply(case_tac steps; case_tac initial_account; auto)
+apply(case_tac steps; case_tac initial_account; auto) *)
 done
 
 text {* It takes 15 minutes to compile this proof on my machine.  Most of the time is spent

@@ -240,8 +240,13 @@ after every possible round.  Also the template states that no annotation failure
 definition no_assertion_failure :: "(account_state \<Rightarrow> bool) \<Rightarrow> bool"
 where
 "no_assertion_failure (I :: account_state \<Rightarrow> bool) ==
-  (\<forall> init callenv. I (fst init) \<longrightarrow> snd init = ProgramInit callenv \<longrightarrow>
-  (\<forall> fin. star (one_round I) init fin \<longrightarrow>
+  (\<forall> addr str code bal ongoing killed callenv.
+    I \<lparr> account_address = addr, account_storage = str, account_code = code,
+        account_balance = bal, account_ongoing_calls = ongoing, account_killed = killed \<rparr> \<longrightarrow>
+  (\<forall> fin. star (one_round I) (
+    \<lparr> account_address = addr, account_storage = str, account_code = code,
+      account_balance = bal, account_ongoing_calls = ongoing, account_killed = killed \<rparr>
+  , ProgramInit callenv) fin \<longrightarrow>
   I (fst fin) \<and>
   snd fin \<noteq> ProgramAnnotationFailure))"
 
