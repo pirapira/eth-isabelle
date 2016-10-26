@@ -57,7 +57,7 @@ where
     "account_code st = program_of_lst fail_on_reentrance_program \<Longrightarrow>
      account_storage st 0 = 1 \<Longrightarrow>
      account_address st = fail_on_reentrance_address \<Longrightarrow>
-     account_ongoing_calls st = [ve] \<Longrightarrow>
+     account_ongoing_calls st = [(ve, 0, 0)] \<Longrightarrow>
      account_killed st = False \<Longrightarrow>
      venv_pc ve = 28 \<Longrightarrow>
      venv_storage ve 0 = 1 \<Longrightarrow>
@@ -117,7 +117,7 @@ where
     "account_code st = program_of_lst fail_on_reentrance_program \<Longrightarrow>
      account_storage st 0 = 1 \<Longrightarrow>
      account_address st = fail_on_reentrance_address \<Longrightarrow>
-     account_ongoing_calls st = [ve] \<Longrightarrow>
+     account_ongoing_calls st = [(ve, 0, 0)] \<Longrightarrow>
      account_killed st = False \<Longrightarrow>
      venv_pc ve = 28 \<Longrightarrow>
      venv_storage ve 0 = 1 \<Longrightarrow>

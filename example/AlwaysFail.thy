@@ -18,7 +18,7 @@ where
 
 value "(program_content (program_of_lst always_fail_code))"
 
-abbreviation always_fail_account_state :: "uint \<Rightarrow> account_state"
+abbreviation always_fail_account_state :: "w256 \<Rightarrow> account_state"
 where
 "always_fail_account_state balance ==
    \<lparr> account_address = this_address
@@ -29,7 +29,7 @@ where
    , account_killed = False
    \<rparr>"
 
-abbreviation always_fail_spec :: "uint \<Rightarrow> response_to_world"
+abbreviation always_fail_spec :: "w256 \<Rightarrow> response_to_world"
 where
 " always_fail_spec initial_balance ==
   \<lparr> when_called = \<lambda> _. (ContractFail,

@@ -15,7 +15,7 @@ text {* The frequently used machine words are named here.  For example, ``addres
 denotes the type of
 160-bit machine words.  The type ``uint'' denotes the type of EVM machine words. *}
 
-type_synonym uint = "256 word"    -- {* 256 bit words *}
+type_synonym w256 = "256 word"    -- {* 256 bit words *}
 type_synonym address = "160 word" -- {* 160 bit addresses *}
 type_synonym byte = "8 word"      -- {* 8 bit bytes *}
 
@@ -25,8 +25,8 @@ As we will see, the memory is cleared for every invocation of smart contracts.
 The storage is persistent for an account.
 *}
 
-type_synonym memory = "uint \<Rightarrow> byte"
-type_synonym storage = "uint \<Rightarrow> uint"
+type_synonym memory = "w256 \<Rightarrow> byte"
+type_synonym storage = "w256 \<Rightarrow> w256"
 
 text {* The storage is modelled as a function.  For example, the empty storage
 is a function that returns zero for every index.  Initially all accounts come with
@@ -55,15 +55,15 @@ These assertions will be proved in Isabelle/HOL. *}
 
 (* The environment visible for annotations *)
 record aenv =
-  aenv_stack :: "uint list" -- {* The current stack *}
+  aenv_stack :: "w256 list" -- {* The current stack *}
   aenv_memory :: memory -- {* The current memory *}
   aenv_storage :: storage -- {* The current storage *}
-  aenv_balance :: "address \<Rightarrow> uint" -- {* The current balance of all accounts *}
+  aenv_balance :: "address \<Rightarrow> w256" -- {* The current balance of all accounts *}
   aenv_caller :: address -- {* The caller of the current invocation. *}
-  aenv_value_sent :: uint -- {* The amount of Eth sent alont the current invocation. *}
+  aenv_value_sent :: w256 -- {* The amount of Eth sent alont the current invocation. *}
   aenv_data_sent :: "byte list" -- {* The data sent along the current invocation. *}
   aenv_storage_at_call :: storage -- {* The storage content at the time of the invocation. *}
-  aenv_balance_at_call :: "address \<Rightarrow> uint"
+  aenv_balance_at_call :: "address \<Rightarrow> w256"
   -- {* The balance of all accounts at the time of the invocation *}
   aenv_this :: address -- {* The address of this contract under verification. *}
   aenv_origin :: address -- {* The external account that started the transaction. *}

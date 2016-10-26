@@ -66,13 +66,13 @@ So when I get emotional I call the contract ``our'' contract.
 with the following information.*}
 
 record call_env =
-  callenv_gaslimit :: uint -- {* the current block's gas limit *}
-  callenv_value :: uint -- {* the amount of Eth sent along*}
+  callenv_gaslimit :: w256 -- {* the current block's gas limit *}
+  callenv_value :: w256 -- {* the amount of Eth sent along*}
   callenv_data :: "byte list" -- {* the data sent along *}
   callenv_caller :: address -- {* the caller's address *}
-  callenv_timestamp :: uint -- {* the timestamp of the current block *}
-  callenv_blocknum :: uint -- {* the block number of the current block *}
-  callenv_balance :: "address \<Rightarrow> uint" -- {* the balances of all accounts. *}
+  callenv_timestamp :: w256 -- {* the timestamp of the current block *}
+  callenv_blocknum :: w256 -- {* the block number of the current block *}
+  callenv_balance :: "address \<Rightarrow> w256" -- {* the balances of all accounts. *}
   
 text {* After our contract calls accounts, the world can make those accounts
 return into our contracts.  The return value is not under control of our current
@@ -81,7 +81,7 @@ following information.*}
 
 record return_result =
   return_data :: "byte list" -- {* the returned data *}
-  return_balance :: "address \<Rightarrow> uint"
+  return_balance :: "address \<Rightarrow> w256"
   -- {* the balance of all accounts at the moment of the return*}
 
 text {* Even our account's balance (and its storage) might have changed at this moment.
@@ -103,19 +103,19 @@ a smart contract, destroying itself, returning, or failing.  When the contract c
 the contract provides the following information.*}
 
 record call_arguments =
-  callarg_gas :: uint -- {* The portion of the remaining gas that the callee is allowed to use *}
+  callarg_gas :: w256 -- {* The portion of the remaining gas that the callee is allowed to use *}
   callarg_code :: address -- {* The code that executes during the call *}
   callarg_recipient :: address -- {* The recipient of the call, whose balance and the storage are modified. *}
-  callarg_value :: uint -- {* The amount of Eth sent along *}
+  callarg_value :: w256 -- {* The amount of Eth sent along *}
   callarg_data :: "byte list" -- {* The data sent along *}
-  callarg_output_begin :: uint -- {* The beginning of the memory region where the output data should be written. *}
-  callarg_output_size :: uint -- {* The size of the memory regions where the output data should be written. *}
+  callarg_output_begin :: w256 -- {* The beginning of the memory region where the output data should be written. *}
+  callarg_output_size :: w256 -- {* The size of the memory regions where the output data should be written. *}
   
 text {* When our contract deploys a smart contract, our contract should provide the following
 information. *}
 
 record create_arguments =
-  createarg_value :: uint -- {* The value sent to the account *}
+  createarg_value :: w256 -- {* The value sent to the account *}
   createarg_code :: "byte list" -- {* The code that deploys the runtime code. *}
 
 text {* The contract's moves are summarized as follows. *}
@@ -277,28 +277,28 @@ text "The execution of an EVM program happens in a block, and the following info
 the block should be available."
 
 record block_info =
-  block_blockhash :: "uint \<Rightarrow> uint" -- {* this captures the whole BLOCKHASH operation *}
+  block_blockhash :: "w256 \<Rightarrow> w256" -- {* this captures the whole BLOCKHASH operation *}
   block_coinbase :: address -- {* the miner who validates the block *}
-  block_timestamp :: uint
-  block_number :: uint -- {* the blocknumber of the block *}
-  block_difficulty :: uint
-  block_gaslimit :: uint -- {* the block gas imit *}
-  block_gasprice :: uint
+  block_timestamp :: w256
+  block_number :: w256 -- {* the blocknumber of the block *}
+  block_difficulty :: w256
+  block_gaslimit :: w256 -- {* the block gas imit *}
+  block_gasprice :: w256
 
 text {* The variable environment contains information that are relatively volatile. *}
 
 record variable_env =
-  venv_stack :: "uint list"
+  venv_stack :: "w256 list"
   venv_memory :: memory
   venv_memory_usage :: int -- {* the current memory usage *}
   venv_storage :: storage
   venv_pc :: int -- {* the program counter *}
-  venv_balance :: "address \<Rightarrow> uint" -- {* balances of all accounts *}
+  venv_balance :: "address \<Rightarrow> w256" -- {* balances of all accounts *}
   venv_caller :: address -- {* the caller's address *}
-  venv_value_sent :: uint -- {* the amount of Eth sent along the current invocation *}
+  venv_value_sent :: w256 -- {* the amount of Eth sent along the current invocation *}
   venv_data_sent :: "byte list" -- {* the data sent along the current invocation *}
   venv_storage_at_call :: storage -- {* the storage content at the invocation*}
-  venv_balance_at_call :: "address \<Rightarrow> uint" -- {* the balances at the invocation *}
+  venv_balance_at_call :: "address \<Rightarrow> w256" -- {* the balances at the invocation *}
   venv_origin :: address -- {* the external account that started the current transaction *}
   venv_ext_program :: "address \<Rightarrow> program" -- {* the codes of all accounts *}
   venv_block :: block_info -- {* the current block *}
@@ -323,8 +323,10 @@ finally finishing the current invocation.
 *}  
    " contract_action   (* the contract's move *)
    * storage           (* the new storage content *)
-   * (address \<Rightarrow> uint) (* the new balance of all accounts *)
-   * variable_env option (* the variable environment to return to *)"
+   * (address \<Rightarrow> w256) (* the new balance of all accounts *)
+   * (variable_env \<times> int \<times> int) option
+     (* the variable environment to return to, *)
+     (* and the memory reagion that expects the return value *)"
 
 text {* When the contract fails, the result of the instruction always looks like this: *}
 abbreviation instruction_failure_result :: "variable_env \<Rightarrow> instruction_result"
@@ -349,15 +351,15 @@ we are analyzing a single invocation of a loopless contract, but
 will be fixed.
 *}
 
-definition gas :: "variable_env \<Rightarrow> uint"
+definition gas :: "variable_env \<Rightarrow> w256"
 where "gas _ = undefined"
 
 text {* This M function is defined at the end of H.1. in the yellow paper.
 The purpose of this is to update the memory usage. *}
 
 abbreviation M ::
-"int (* original memory usage *) \<Rightarrow> uint (* beginning of the used memory *)
- \<Rightarrow> uint (* used size *) \<Rightarrow> int (* the updated memory usage *)"
+"int (* original memory usage *) \<Rightarrow> w256 (* beginning of the used memory *)
+ \<Rightarrow> w256 (* used size *) \<Rightarrow> int (* the updated memory usage *)"
 where
 "M s f l \<equiv>
   (if l = 0 then s else
@@ -366,9 +368,9 @@ where
 text {* Updating a balance of a single account:  *}
 abbreviation update_balance ::
 "  address (* the updated account*)
-\<Rightarrow> (uint \<Rightarrow> uint) (* the function that updates the balance *)
-\<Rightarrow> (address \<Rightarrow> uint) (* the original balance *)
-\<Rightarrow> (address \<Rightarrow> uint) (* the resulting balance *)"
+\<Rightarrow> (w256 \<Rightarrow> w256) (* the function that updates the balance *)
+\<Rightarrow> (address \<Rightarrow> w256) (* the original balance *)
+\<Rightarrow> (address \<Rightarrow> w256) (* the resulting balance *)"
 where
 "update_balance a f orig \<equiv> orig(a := f (orig a))"
 
@@ -380,7 +382,7 @@ where
    v\<lparr> venv_stack := drop n (venv_stack v) \<rparr>"
 
 text {* Peeking the topmost element of the stack: *}
-abbreviation venv_stack_top :: "variable_env \<Rightarrow> uint option"
+abbreviation venv_stack_top :: "variable_env \<Rightarrow> w256 option"
 where
 "venv_stack_top v \<equiv>
   (case venv_stack v of h # _\<Rightarrow> Some h | [] \<Rightarrow> None)"
@@ -388,7 +390,7 @@ where
 text {* Updating the storage at an index: *}
 
 abbreviation venv_update_storage ::
-" uint (* index *) \<Rightarrow> uint (* value *)
+" w256 (* index *) \<Rightarrow> w256 (* value *)
 \<Rightarrow> variable_env (* the original variable environment *)
 \<Rightarrow> variable_env (* the resulting variable environment *)"
 where
@@ -414,7 +416,7 @@ where
 
 text {* A general pattern of operations that pushes one element onto the stack.  *}
 abbreviation stack_0_1_op ::
-  "variable_env \<Rightarrow> constant_env \<Rightarrow> uint (* the pushed word *) \<Rightarrow> instruction_result"
+  "variable_env \<Rightarrow> constant_env \<Rightarrow> w256 (* the pushed word *) \<Rightarrow> instruction_result"
 where
 "stack_0_1_op v c w \<equiv>
    InstructionContinue
@@ -422,7 +424,7 @@ where
 
 text {* A general pattern of operations that transforms the topmost element of the stack. *}
 abbreviation stack_1_1_op :: "variable_env \<Rightarrow> constant_env \<Rightarrow>
-   (uint \<Rightarrow> uint) (* the function that transforms a word*)
+   (w256 \<Rightarrow> w256) (* the function that transforms a word*)
    \<Rightarrow> instruction_result"
 where
 "stack_1_1_op v c f \<equiv>
@@ -435,7 +437,7 @@ where
 
 text {* A general pattern of operations that consume one word and produce two rwords: *}
 abbreviation stack_1_2_op ::
-"variable_env \<Rightarrow> constant_env \<Rightarrow> (uint \<Rightarrow> uint * uint) \<Rightarrow> instruction_result"
+"variable_env \<Rightarrow> constant_env \<Rightarrow> (w256 \<Rightarrow> w256 * w256) \<Rightarrow> instruction_result"
 where
 "stack_1_2_op v c f \<equiv>
   (case venv_stack v of
@@ -449,7 +451,7 @@ where
 
 text {* A general pattern of operations that take two words and produce one word: *}
 abbreviation stack_2_1_op ::
-"variable_env \<Rightarrow> constant_env \<Rightarrow> (uint \<Rightarrow> uint \<Rightarrow> uint) \<Rightarrow> instruction_result"
+"variable_env \<Rightarrow> constant_env \<Rightarrow> (w256 \<Rightarrow> w256 \<Rightarrow> w256) \<Rightarrow> instruction_result"
 where
 "stack_2_1_op v c f \<equiv>
   (case venv_stack v of
@@ -462,7 +464,7 @@ where
 text {* A general pattern of operations that take three words and produce one word: *}
 abbreviation stack_3_1_op ::
 "variable_env \<Rightarrow> constant_env \<Rightarrow>
- (uint \<Rightarrow> uint \<Rightarrow> uint \<Rightarrow> uint) \<Rightarrow> instruction_result"
+ (w256 \<Rightarrow> w256 \<Rightarrow> w256 \<Rightarrow> w256) \<Rightarrow> instruction_result"
 where
 "stack_3_1_op v c f \<equiv>
   (case venv_stack v of
@@ -569,24 +571,24 @@ where
     | _ \<Rightarrow> instruction_failure_result v)"
 
 text {* Looking up the call data size takes this work: *}
-abbreviation datasize :: "variable_env \<Rightarrow> uint"
+abbreviation datasize :: "variable_env \<Rightarrow> w256"
 where
 "datasize v == Word.word_of_int (int (length (venv_data_sent v)))"
 
 text {* Looking up a word from a list of bytes: *}
-abbreviation read_word_from_bytes :: "nat \<Rightarrow> byte list \<Rightarrow> uint"
+abbreviation read_word_from_bytes :: "nat \<Rightarrow> byte list \<Rightarrow> w256"
 where
 "read_word_from_bytes idx lst ==
    Word.word_rcat (take 32 (drop idx lst))"
 
 text {* Looking up a word from the call data: *}
-abbreviation cut_data :: "variable_env \<Rightarrow> uint \<Rightarrow> uint"
+abbreviation cut_data :: "variable_env \<Rightarrow> w256 \<Rightarrow> w256"
 where
 "cut_data v idx ==
     read_word_from_bytes (Word.unat idx) (venv_data_sent v)"
 
 text {* Looking up a number of bytes from the memory: *}
-fun cut_memory :: "uint \<Rightarrow> nat \<Rightarrow> (uint \<Rightarrow> byte) \<Rightarrow> byte list"
+fun cut_memory :: "w256 \<Rightarrow> nat \<Rightarrow> (w256 \<Rightarrow> byte) \<Rightarrow> byte list"
 where
 "cut_memory idx 0 memory = []" |
 "cut_memory idx (Suc n) memory =
@@ -621,7 +623,7 @@ where
                 update_balance (cenv_this c)
                   (\<lambda> orig \<Rightarrow> orig - e2) (venv_balance v)
            , venv_memory_usage :=
-              M (M (venv_memory_usage v) e3 e4) e5 e6 \<rparr>)))
+              M (M (venv_memory_usage v) e3 e4) e5 e6 \<rparr>, uint e5, uint e6)))
   | _ \<Rightarrow> instruction_failure_result v)"
 
 declare call_def [simp]
@@ -650,7 +652,7 @@ where
             ((venv_advance_pc c v)
              \<lparr> venv_stack := rest
              , venv_memory_usage :=
-                M (M (venv_memory_usage v) e3 e4) e5 e6 \<rparr> )))
+                M (M (venv_memory_usage v) e3 e4) e5 e6 \<rparr>, uint e5, uint e6 )))
   | _ \<Rightarrow> instruction_failure_result v
   )"
 
@@ -686,7 +688,7 @@ where
                   M (M (venv_memory_usage v) e3 e4) e5 e6
               , venv_balance :=
                   update_balance (cenv_this c)
-                    (\<lambda> orig \<Rightarrow> orig - e2) (venv_balance v) \<rparr>
+                    (\<lambda> orig \<Rightarrow> orig - e2) (venv_balance v) \<rparr>, uint e5, uint e6
              )))
   | _ \<Rightarrow> instruction_failure_result v)"
 
@@ -720,7 +722,7 @@ where
                    update_balance (cenv_this c)
                      (\<lambda> orig. orig - val) (venv_balance v)
                , venv_memory_usage :=
-                   M (venv_memory_usage v) code_start code_len \<rparr>)))
+                   M (venv_memory_usage v) code_start code_len \<rparr>, 0, 0)))
   | _ \<Rightarrow> instruction_failure_result v)"
 
   
@@ -768,7 +770,7 @@ where
 "
 
 text "A utility function for storing a list of bytes in the memory:"
-fun store_byte_list_memory :: "uint \<Rightarrow> byte list \<Rightarrow> memory \<Rightarrow> memory"
+fun store_byte_list_memory :: "w256 \<Rightarrow> byte list \<Rightarrow> memory \<Rightarrow> memory"
 where
   "store_byte_list_memory _ [] orig = orig"
 | "store_byte_list_memory pos (h # t) orig =
@@ -777,7 +779,7 @@ where
 declare store_byte_list_memory.simps [simp]
 
 text "Using the function above, it is straightforward to store a byte in the memory."
-abbreviation store_word_memory :: "uint \<Rightarrow> uint \<Rightarrow> memory \<Rightarrow> memory"
+abbreviation store_word_memory :: "w256 \<Rightarrow> w256 \<Rightarrow> memory \<Rightarrow> memory"
 where
 "store_word_memory pos val mem ==
    store_byte_list_memory pos (word_rsplit val) mem"
@@ -838,7 +840,7 @@ abbreviation calldatacopy :: "variable_env \<Rightarrow> constant_env \<Rightarr
 where
 "calldatacopy v c ==
   (case venv_stack v of
-     (dst_start :: uint) # src_start # len # rest \<Rightarrow>
+     (dst_start :: w256) # src_start # len # rest \<Rightarrow>
        let data = cut_memory src_start (unat len) (input_as_memory (venv_data_sent v)) in
        let new_memory = store_byte_list_memory dst_start data (venv_memory v) in
        InstructionContinue (venv_advance_pc c
@@ -970,7 +972,7 @@ declare suicide_def [simp]
 text "Finally, using the above definitions, I can define a function that operates an instruction
 on the execution environments."
 
-lemma "Word.word_rcat [(0x01 :: byte), 0x02] = (0x0102 :: uint)"
+lemma "Word.word_rcat [(0x01 :: byte), 0x02] = (0x0102 :: w256)"
 apply(simp add: word_rcat_def)
 apply(simp add: bin_rcat_def)
 apply(simp add: bin_cat_def)
@@ -1093,7 +1095,7 @@ this and that never happen.''"
 
 datatype program_result =
   ProgramStepRunOut -- {* the artificial step counter has run out *}
-| ProgramToWorld "contract_action * storage * (address => uint) * variable_env option"
+| ProgramToWorld "contract_action * storage * (address => w256) * (variable_env \<times> int \<times> int) option"
   -- {* the program stopped execution because an instruction wants to talk to the world
   for example because the execution returned, failed, or called an account.
   *}
@@ -1179,8 +1181,8 @@ record account_state =
   account_address :: address
   account_storage :: storage
   account_code :: program
-  account_balance :: uint
-  account_ongoing_calls :: "variable_env list"
+  account_balance :: w256
+  account_ongoing_calls :: "(variable_env \<times> int \<times> int) list"
   -- {* The variable environments that are executing on this account, but waiting for calls to finish *}
   account_killed :: bool
   -- {* The boolean that indicates the account has executed SUICIDE in this transaction.
@@ -1256,6 +1258,17 @@ Moreover, the balance of
 our contract might increase because some other contracts might have destroyed themselves,
 transferring value to our contract.*}
 
+function put_return_values :: "memory \<Rightarrow> byte list \<Rightarrow> int \<Rightarrow> int \<Rightarrow> memory"
+where
+  "s \<le> 0 \<Longrightarrow> put_return_values orig _ _ s = orig"
+| "s > 0 \<Longrightarrow> put_return_values orig [] _ s = orig"
+| "s > 0 \<Longrightarrow> put_return_values orig (h # t) b s =
+             put_return_values (orig(word_of_int b := h)) t (b + 1) (s - 1)"
+apply(auto)
+apply(case_tac "b \<le> 0"; auto?)
+apply(case_tac aa; auto)
+done
+
 inductive build_venv_returned :: "account_state \<Rightarrow> return_result \<Rightarrow> variable_env \<Rightarrow> bool"
 where
 venv_returned:
@@ -1267,7 +1280,7 @@ venv_returned:
      , account_code = a_code
      , account_balance = a_bal
      , account_ongoing_calls =
-         \<lparr> venv_stack = v_stack
+         (\<lparr> venv_stack = v_stack
          , venv_memory = v_memory
          , venv_memory_usage = v_memory_usage
          , venv_storage = v_storage
@@ -1281,13 +1294,12 @@ venv_returned:
          , venv_origin = v_origin
          , venv_ext_program = v_ext_program
          , venv_block = v_block
-         \<rparr> # _
+         \<rparr>, mem_start, mem_size) # _
      , account_killed = _
      \<rparr>
      r
      (\<lparr>  venv_stack = 1 # v_stack (* 1 is pushed, indicating a return *)
-       , venv_memory = v_memory
-       (* TODO: update the memory *)
+       , venv_memory = put_return_values v_memory (return_data r) mem_start mem_size
        , venv_memory_usage = v_memory_usage
        , venv_storage = a_storage
        , venv_pc = v_pc
@@ -1313,7 +1325,7 @@ where
 "build_venv_failed a =
   (case account_ongoing_calls a of
      [] \<Rightarrow> None
-   | recovered # _ \<Rightarrow>
+   | (recovered, _, _) # _ \<Rightarrow>
       (if is_call_like (lookup (program_content (account_code a)) (venv_pc recovered - 1)) then
        Some (recovered \<lparr>venv_stack := 0 # venv_stack recovered\<rparr>) (* 0 is pushed, indicating failure*)
        else None)
@@ -1348,7 +1360,8 @@ where
 
 text {* And after our contract makes a move, the account state is updated as follows.
 *}
-definition update_account_state :: "account_state \<Rightarrow> contract_action \<Rightarrow> storage \<Rightarrow> (address \<Rightarrow> uint) \<Rightarrow> variable_env option \<Rightarrow> account_state"
+definition update_account_state ::
+"account_state \<Rightarrow> contract_action \<Rightarrow> storage \<Rightarrow> (address \<Rightarrow> w256) \<Rightarrow> (variable_env \<times> int \<times> int) option \<Rightarrow> account_state"
 where
 "update_account_state prev act st bal v_opt \<equiv>
    prev \<lparr>
