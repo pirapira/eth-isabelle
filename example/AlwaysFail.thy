@@ -77,6 +77,8 @@ apply(auto)
 apply(case_tac steps; auto)
 done
 
+declare postcondition_pack_def [simp]
+
 lemma balance_no_decrease:
 "
 pre_post_conditions (\<lambda> a. \<exists> initial_balance. a = (always_fail_account_state initial_balance))

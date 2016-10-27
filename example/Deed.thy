@@ -848,90 +848,122 @@ then, after the invocation,
 \end{itemize}
 *}
 
+value "(2^160 - 1 :: w256)"
+
+lemma ucast_and :
+"ucast (v :: address) AND ucast (w :: address) =
+ (ucast (v AND w) :: w256)"
+apply(simp only: ucast_slice)
+oops
+
+lemma address_max_word :
+"(2 ^ 160 - 1 :: address) = max_word"
+apply(simp add: max_word_def)
+done
+
+lemma max_and :
+"(2 ^ 160 - 1) AND a = (a :: address)"
+apply(simp only: address_max_word)
+apply(simp)
+done
+
+lemma address_cast_eq :
+"uint (ucast (a :: address) :: w256) = uint a"
+apply(rule uint_up_ucast)
+apply(simp add: is_up)
+done
+
+lemma address_size [simp]:
+"size (a :: address) = 160"
+apply(simp add: word_size)
+done
+
+lemma address_small' [simplified]:
+"uint (a :: address) < 2 ^ size a"
+apply(simp only: uint_range_size)
+done
+
+lemma address_small:
+"(ucast (a :: address) :: w256) < 2 ^ 160"
+apply(simp only: word_less_alt)
+apply(simp add: address_cast_eq)
+apply(rule address_small')
+done
+
+lemma address_cast_and [simplified] :
+"(mask 160 :: w256) AND ucast (a :: address) = (ucast (a :: address) :: w256)"
+apply(simp only: word_bool_alg.conj_commute)
+apply(rule less_mask_eq)
+apply(rule address_small)
+done
+
+declare address_cast_and [simp]
+
+lemma wb:
+  "word_of_int (bintrunc 160 (uint (w :: w256))) = (word_of_int (uint w) :: address)"
+apply(rule wi_bintr)
+apply(auto)
+done
+
+lemma finer:
+"(word_of_int p :: w256) = word_of_int q \<Longrightarrow>
+(word_of_int p :: address) = word_of_int q"
+apply(simp only: word.abs_eq_iff)
+apply(simp)
+apply(simp add: Bit_Representation.bintrunc_mod2p)
+apply(simp add: Divides.zmod_eq_dvd_iff)
+apply(rule Rings.comm_monoid_mult_class.dvd_trans; auto)
+done
+
+lemma addr_case_eq [simplified]:
+"(w :: w256) AND (mask 160 :: w256) = ucast(a :: address)
+\<Longrightarrow> ucast w = a"
+(* apply(simp add: and_mask_mod_2p) *)
+apply(simp only: and_mask_bintr)
+(* apply(rule word_uint_eqI) *)
+(* apply(drule uint_cong) *)
+(* apply(simp only: address_cast_eq) *)
+apply(simp only: ucast_def)
+apply(simp only: wb [symmetric])
+apply(drule finer)
+apply(simp)
+done
+
+
+declare addr_case_eq [dest]
+
+
 lemma deed_only_registrar_can_spend :
 "pre_post_conditions deed_inv
- (\<lambda> init_state init_call. account_storage init_state 0 \<noteq> ucast (callenv_caller init_call)
+ (\<lambda> init_state init_call. ucast (account_storage init_state 0) \<noteq> callenv_caller init_call
  \<and> account_balance init_state + callenv_value init_call \<ge> account_balance init_state
  \<and> \<not> (account_killed init_state)
  )
  (\<lambda> init_state _ (post_state, _). account_balance init_state \<le> account_balance post_state
  \<and> \<not> (account_killed post_state)
  \<and> account_storage init_state 0 = account_storage post_state 0)
-"(*
-apply(simp add: pre_post_conditions_def; auto)
-             apply(drule star_case; auto)
-              apply(case_tac steps; auto)
-              apply(split strict_if_split; auto)
-              apply(split strict_if_split; auto)
-              apply(split strict_if_split; auto)
-             apply(case_tac steps; auto)
-             apply(split strict_if_split; auto)
-             apply(split strict_if_split; auto)
-             apply(split strict_if_split; auto)
-            apply(drule star_case; auto)
-            apply(case_tac steps; auto)
-            apply(split strict_if_split; auto)
-             apply(split strict_if_split; auto)
-              apply(case_tac initial_account; simp)
-             apply(split strict_if_split; auto)
-              apply(case_tac initial_account; simp)
-             apply(case_tac initial_account; simp)
-            apply(case_tac initial_account;simp)
-           apply(drule star_case; auto)
-           apply(case_tac steps; auto)
-           apply(split strict_if_split; auto)
-            apply(split strict_if_split; auto)
-             apply(case_tac initial_account; simp)
-            apply(split strict_if_split; auto)
-             apply(case_tac initial_account; simp)
-            apply(case_tac initial_account;simp)
-           apply(case_tac initial_account;simp)
-          (* Initial state is not killed, but the final state might be killed? *)
-          (* but that's not the case because the caller is not the registrar *)
-          apply(drule star_case; auto)
-          apply(case_tac steps; auto)
+"
+apply(simp add: pre_post_conditions_def)
+apply(rule allI)
+apply(rule impI)
+apply(drule deed_inv.cases; auto)
+     apply(drule star_case; auto)
+      apply(case_tac steps; auto)
+      apply(split strict_if_split; auto)
+      apply(split strict_if_split; auto)
+       apply(split strict_if_split; auto)
+        apply(split strict_if_split; auto)
+         apply(split strict_if_split; auto)
           apply(split strict_if_split; auto)
            apply(split strict_if_split; auto)
-            apply(case_tac initial_account; simp)
-           apply(split strict_if_split; auto)
-          apply(case_tac initial_account; simp)
-           apply(case_tac initial_account; simp)
-          apply(case_tac initial_account; simp)
-         apply(case_tac initial_account)
-         apply(drule star_case; auto)
-         apply(case_tac steps; auto)
-         apply(split strict_if_split; auto)
-         apply(split strict_if_split; auto)
-         apply(split strict_if_split; auto)
-        apply(case_tac initial_account)
-        apply(drule star_case; auto)
-        apply(case_tac steps; auto)
-        apply(split strict_if_split; auto)
-        apply(split strict_if_split; auto)
-        apply(split strict_if_split; auto)
-       apply(drule star_case; auto)
-       apply(case_tac steps; auto)
-       apply(case_tac initial_account)
-       apply(split strict_if_split; auto)
-       apply(split strict_if_split; auto)
-       apply(split strict_if_split; auto)
-      apply(drule star_case; auto)
-      apply(case_tac steps; auto)
-      apply(case_tac steps; auto)
-     apply(drule star_case; auto)
-     apply(case_tac steps; auto)
-     apply(case_tac initial_account; auto)
-    apply(drule star_case; auto)
-    apply(case_tac steps; case_tac initial_account; auto)
-   apply(drule star_case; auto)
-   apply(case_tac steps; case_tac initial_account; auto)
-  apply(drule star_case; auto)
-  apply(case_tac steps; case_tac initial_account; auto)
- apply(drule star_case; auto)
- apply(case_tac steps; case_tac initial_account; auto)
-apply(drule star_case; auto)
-apply(case_tac steps; case_tac initial_account; auto) *)
-done
+            apply(split strict_if_split; auto)
+             apply(split strict_if_split; auto)
+             apply(split strict_if_split; auto)
+            
+              
+              
+              
+oops
 
 text {* It takes 15 minutes to compile this proof on my machine.  Most of the time is spent
 translating the list of instructions into an AVL tree. *}

@@ -265,6 +265,13 @@ For that purpose, here is another template statement.  This contains everything 
 an assumption about the initial call, and a conclusion about the state after the invocation.
 *}
 
+definition postcondition_pack
+where
+"postcondition_pack I postcondition fin_observed initial_account initial_call fin
+=
+  (I fin_observed \<and>
+  postcondition initial_account initial_call (fin_observed, snd fin))"
+
 definition pre_post_conditions ::
 "(account_state \<Rightarrow> bool) \<Rightarrow> (account_state \<Rightarrow> call_env \<Rightarrow> bool) \<Rightarrow>
  (account_state \<Rightarrow> call_env \<Rightarrow> (account_state \<times> program_result) \<Rightarrow> bool) \<Rightarrow> bool"
@@ -276,8 +283,8 @@ where
   (\<forall> fin. star (one_round I) (initial_account, ProgramInit initial_call) fin \<longrightarrow>
   snd fin \<noteq> ProgramAnnotationFailure \<and>
   (\<forall> fin_observed. account_state_natural_change (fst fin) fin_observed \<longrightarrow>
-  I fin_observed \<and>
-  postcondition initial_account initial_call (fin_observed, snd fin))))
+  postcondition_pack
+  I postcondition fin_observed initial_account initial_call fin)))
 "
 
 end
