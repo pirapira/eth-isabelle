@@ -848,23 +848,10 @@ then, after the invocation,
 \end{itemize}
 *}
 
-value "(2^160 - 1 :: w256)"
-
-lemma ucast_and :
-"ucast (v :: address) AND ucast (w :: address) =
- (ucast (v AND w) :: w256)"
-apply(simp only: ucast_slice)
-oops
 
 lemma address_max_word :
 "(2 ^ 160 - 1 :: address) = max_word"
 apply(simp add: max_word_def)
-done
-
-lemma max_and :
-"(2 ^ 160 - 1) AND a = (a :: address)"
-apply(simp only: address_max_word)
-apply(simp)
 done
 
 lemma address_cast_eq :
