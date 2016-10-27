@@ -95,6 +95,7 @@ Assumptions at the invocations:
     account has no code;
   \item the caller does not have the address stored at index~0 of the
     account's storage (i.e. is not the registrar);
+  \item the 21st least byte in storage index~2 is not zero\footnote{I didn't know this condition until Isabelle/HOL complained.  This shows the possibillity of using theorem provers to find vulnerabilities.};
   \item the account's balance and the sent value added together do not
     overflow the range of 256-bit unsigned integers;
   \item the account is not marked as killed.
@@ -105,6 +106,7 @@ Conclusions when the invocation finishes:
   \item the account's balance after the call is not smaller than the
     account's balance before the call;
   \item the account is not marked as killed after the call; and
+  \item the 21st least byte in storage index~2 is still not zero;
   \item the account's registrar is not changed.
 \end{itemize}
 
