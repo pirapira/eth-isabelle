@@ -877,6 +877,7 @@ apply(simp add: address_cast_eq)
 apply(rule address_small')
 done
 
+declare mask_def [simp]
 lemma address_cast_and [simplified] :
 "(mask 160 :: w256) AND ucast (a :: address) = (ucast (a :: address) :: w256)"
 apply(simp only: word_bool_alg.conj_commute)
@@ -905,19 +906,16 @@ done
 lemma addr_case_eq [simplified]:
 "(w :: w256) AND (mask 160 :: w256) = ucast(a :: address)
 \<Longrightarrow> ucast w = a"
-(* apply(simp add: and_mask_mod_2p) *)
 apply(simp only: and_mask_bintr)
-(* apply(rule word_uint_eqI) *)
-(* apply(drule uint_cong) *)
-(* apply(simp only: address_cast_eq) *)
 apply(simp only: ucast_def)
 apply(simp only: wb [symmetric])
 apply(drule finer)
 apply(simp)
 done
 
-
 declare addr_case_eq [dest]
+
+declare mask_def [simp del]
 
 
 lemma deed_only_registrar_can_spend :
@@ -946,10 +944,8 @@ apply(drule deed_inv.cases; auto)
             apply(split strict_if_split; auto)
              apply(split strict_if_split; auto)
              apply(split strict_if_split; auto)
-            
-              
-              
-              
+             
+             
 oops
 
 text {* It takes 15 minutes to compile this proof on my machine.  Most of the time is spent
