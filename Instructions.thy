@@ -161,7 +161,7 @@ type_synonym dup_inst = nat
 
 abbreviation dup_inst_code :: "dup_inst \<Rightarrow> byte"
 where
-"dup_inst_code n ==
+"dup_inst_code n \<equiv>
    (if n < 1 then undefined (* There is no DUP0 instruction. *)
     else (if n > 16 then undefined (* There are no DUP16 instruction and on. *)
     else (word_of_int (int n)) + 0x7f))"
@@ -356,7 +356,7 @@ EVM code.  *}
 
 abbreviation inst_size :: "inst \<Rightarrow> int"
 where
-"inst_size i == int (length (inst_code i))"
+"inst_size i \<equiv> int (length (inst_code i))"
 
 text {* This can also be used to find jump destinations from a sequence of opcodes.
 *}

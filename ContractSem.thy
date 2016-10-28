@@ -143,7 +143,7 @@ text {* The empty program is easy to define. *}
 
 abbreviation empty_program :: program
 where
-"empty_program ==
+"empty_program \<equiv>
   \<lparr> program_content = \<langle>\<rangle>
   , program_length = 0
   , program_annotation = (\<lambda> _. []) \<rparr>"
@@ -263,11 +263,10 @@ text {* Such a memory is here implemented by a lookup on an AVL tree.*}
 
 abbreviation program_as_memory :: "program \<Rightarrow> memory"
 where
-"program_as_memory p idx ==
+"program_as_memory p idx \<equiv>
    (case lookup (program_content p) (uint idx) of
      None \<Rightarrow> 0
-   | Some inst \<Rightarrow> inst_code inst ! 0
-   )"
+   | Some inst \<Rightarrow> inst_code inst ! 0)"
    
 subsection {* Execution Environments *}
 
@@ -277,7 +276,7 @@ text "The execution of an EVM program happens in a block, and the following info
 the block should be available."
 
 record block_info =
-  block_blockhash :: "w256 \<Rightarrow> w256" -- {* this captures the whole BLOCKHASH operation *}
+  block_blockhash :: "w256 \<Rightarrow> w256" -- {* this captures the whole BLOCKHASH op *}
   block_coinbase :: address -- {* the miner who validates the block *}
   block_timestamp :: w256
   block_number :: w256 -- {* the blocknumber of the block *}
@@ -322,9 +321,9 @@ datatype instruction_result =
 finally finishing the current invocation.
 *}  
    " contract_action   (* the contract's move *)
-   * storage           (* the new storage content *)
-   * (address \<Rightarrow> w256) (* the new balance of all accounts *)
-   * (variable_env \<times> int \<times> int) option
+   \<times> storage           (* the new storage content *)
+   \<times> (address \<Rightarrow> w256) (* the new balance of all accounts *)
+   \<times> (variable_env \<times> int \<times> int) option
      (* the variable environment to return to, *)
      (* and the memory reagion that expects the return value *)"
 
@@ -378,7 +377,7 @@ text {* Popping stack elements: *}
 abbreviation venv_pop_stack ::
 "nat (* how many elements to pop *) \<Rightarrow> variable_env \<Rightarrow> variable_env"
 where
- "venv_pop_stack n v ==
+ "venv_pop_stack n v \<equiv>
    v\<lparr> venv_stack := drop n (venv_stack v) \<rparr>"
 
 text {* Peeking the topmost element of the stack: *}
@@ -432,8 +431,7 @@ where
       [] \<Rightarrow> instruction_failure_result v
       | h # t \<Rightarrow>
          InstructionContinue
-           (venv_advance_pc c v\<lparr>venv_stack := f h # t\<rparr>)
-      )"
+           (venv_advance_pc c v\<lparr>venv_stack := f h # t\<rparr>))"
 
 text {* A general pattern of operations that consume one word and produce two rwords: *}
 abbreviation stack_1_2_op ::
@@ -512,8 +510,11 @@ evaluates to False, the execution stops and results in @{term InstructionAnnotat
 definition eval_annotation :: "annotation \<Rightarrow> variable_env \<Rightarrow> constant_env \<Rightarrow> instruction_result"
 where
 "eval_annotation anno v c =
-   (if anno (build_aenv v c) then InstructionContinue (venv_advance_pc c v)
-    else InstructionAnnotationFailure)"
+   (if anno (build_aenv v c)
+    then
+      InstructionContinue (venv_advance_pc c v)
+    else
+      InstructionAnnotationFailure)"
     
 text "The JUMP instruction has the following meaning.  When it cannot find the JUMPDEST instruction
 at the destination, the execution fails."
@@ -573,7 +574,7 @@ where
 text {* Looking up the call data size takes this work: *}
 abbreviation datasize :: "variable_env \<Rightarrow> w256"
 where
-"datasize v == Word.word_of_int (int (length (venv_data_sent v)))"
+"datasize v \<equiv> Word.word_of_int (int (length (venv_data_sent v)))"
 
 text {* Looking up a word from a list of bytes: *}
 abbreviation read_word_from_bytes :: "nat \<Rightarrow> byte list \<Rightarrow> w256"
@@ -584,7 +585,7 @@ where
 text {* Looking up a word from the call data: *}
 abbreviation cut_data :: "variable_env \<Rightarrow> w256 \<Rightarrow> w256"
 where
-"cut_data v idx ==
+"cut_data v idx \<equiv>
     read_word_from_bytes (Word.unat idx) (venv_data_sent v)"
 
 text {* Looking up a number of bytes from the memory: *}
@@ -653,8 +654,7 @@ where
              \<lparr> venv_stack := rest
              , venv_memory_usage :=
                 M (M (venv_memory_usage v) e3 e4) e5 e6 \<rparr>, uint e5, uint e6 )))
-  | _ \<Rightarrow> instruction_failure_result v
-  )"
+  | _ \<Rightarrow> instruction_failure_result v)"
 
 declare delegatecall_def [simp]
 
@@ -662,7 +662,7 @@ text {* CALLCODE is another variant. *}
 
 abbreviation callcode :: "variable_env \<Rightarrow> constant_env \<Rightarrow> instruction_result"
 where
-"callcode v c ==
+"callcode v c \<equiv>
   (case venv_stack v of
     e0 # e1 # e2 # e3 # e4 # e5 # e6 # rest \<Rightarrow>
     (if venv_balance v (cenv_this c) < e2 then
@@ -750,7 +750,8 @@ text "STOP is a simpler than RETURN:"
 abbreviation stop ::
 "variable_env \<Rightarrow> constant_env \<Rightarrow> instruction_result"
 where
-"stop v c \<equiv> InstructionToWorld (ContractReturn [], venv_storage v, venv_balance v, None)"
+"stop v c \<equiv>
+  InstructionToWorld (ContractReturn [], venv_storage v, venv_balance v, None)"
 
 text "POP:"
 abbreviation pop ::
@@ -781,7 +782,7 @@ declare store_byte_list_memory.simps [simp]
 text "Using the function above, it is straightforward to store a byte in the memory."
 abbreviation store_word_memory :: "w256 \<Rightarrow> w256 \<Rightarrow> memory \<Rightarrow> memory"
 where
-"store_word_memory pos val mem ==
+"store_word_memory pos val mem \<equiv>
    store_byte_list_memory pos (word_rsplit val) mem"
 
 text "MSTRE:"
@@ -797,9 +798,7 @@ where
          v\<lparr> venv_stack := rest
           , venv_memory := new_memory
           , venv_memory_usage := M (venv_memory_usage v) pos 32
-          \<rparr>)
-   )
-"
+          \<rparr>))"
 
 text "MLOAD:"
 abbreviation mload :: "variable_env \<Rightarrow> constant_env \<Rightarrow> instruction_result"
@@ -832,26 +831,25 @@ text "For CALLDATACOPY, I need to look at the caller's data as memory."
 abbreviation input_as_memory :: "byte list \<Rightarrow> memory"
 where
 "input_as_memory lst idx ==
-   (if length lst \<le> unat idx then 0 else
-    lst ! unat idx)"
+   (if length lst \<le> unat idx then 0 else lst ! unat idx)"
 
 text "CALLDATACOPY:"
 abbreviation calldatacopy :: "variable_env \<Rightarrow> constant_env \<Rightarrow> instruction_result"
 where
-"calldatacopy v c ==
+"calldatacopy v c \<equiv>
   (case venv_stack v of
      (dst_start :: w256) # src_start # len # rest \<Rightarrow>
-       let data = cut_memory src_start (unat len) (input_as_memory (venv_data_sent v)) in
+       let data =
+         cut_memory src_start (unat len) (input_as_memory (venv_data_sent v)) in
        let new_memory = store_byte_list_memory dst_start data (venv_memory v) in
        InstructionContinue (venv_advance_pc c
          v\<lparr> venv_stack := rest, venv_memory := new_memory,
-            venv_memory_usage := M (venv_memory_usage v) dst_start len
-         \<rparr>))"
+            venv_memory_usage := M (venv_memory_usage v) dst_start len \<rparr>))"
 
 text "CODECOPY:"
 abbreviation codecopy :: "variable_env \<Rightarrow> constant_env \<Rightarrow> instruction_result"
 where
-"codecopy v c ==
+"codecopy v c \<equiv>
   (case venv_stack v of
      dst_start # src_start # len # rest \<Rightarrow>
      let data = cut_memory src_start (unat len)
@@ -866,7 +864,7 @@ where
 text "EXTCODECOPY:"
 abbreviation extcodecopy :: "variable_env \<Rightarrow> constant_env \<Rightarrow> instruction_result"
 where
-"extcodecopy v c ==
+"extcodecopy v c \<equiv>
   (case venv_stack v of
      addr # dst_start # src_start # len # rest \<Rightarrow>
      let data = cut_memory src_start (unat len)
@@ -882,7 +880,7 @@ where
 text "PC instruction could be implemented by @{term stack_0_1_op}:"
 abbreviation pc :: "variable_env \<Rightarrow> constant_env \<Rightarrow> instruction_result"
 where
-"pc v c ==
+"pc v c \<equiv>
    InstructionContinue (venv_advance_pc c
      v\<lparr> venv_stack := word_of_int (venv_pc v) # venv_stack v \<rparr>)"
 
@@ -942,7 +940,7 @@ In this development, Keccak256 computation is defined in KEC.thy.
 *}
 definition sha3 :: "variable_env \<Rightarrow> constant_env \<Rightarrow> instruction_result"
 where
-"sha3 v c ==
+"sha3 v c \<equiv>
   (case venv_stack v of
     start # len # rest \<Rightarrow>
       InstructionContinue (
@@ -951,8 +949,7 @@ where
                                         # rest
                         , venv_memory_usage := M (venv_memory_usage v) start len
                         \<rparr>)
-  | _ \<Rightarrow> instruction_failure_result v
-  )"
+  | _ \<Rightarrow> instruction_failure_result v)"
 
 declare sha3_def [simp]
 
@@ -990,18 +987,25 @@ where
 | "instruction_sem v c (Pc JUMPDEST) = stack_0_0_op v c"
 | "instruction_sem v c (Info CALLDATASIZE) = stack_0_1_op v c (datasize v)"
 | "instruction_sem v c (Stack CALLDATALOAD) = stack_1_1_op v c (cut_data v)"
-| "instruction_sem v c (Info CALLER) = stack_0_1_op v c (Word.ucast (venv_caller v))"
-| "instruction_sem v c (Arith ADD) = stack_2_1_op v c (\<lambda> a b. a + b)"
-| "instruction_sem v c (Arith SUB) = stack_2_1_op v c (\<lambda> a b. a - b)"
-| "instruction_sem v c (Arith ISZERO) = stack_1_1_op v c (\<lambda> a. if a = 0 then 1 else 0)"
+| "instruction_sem v c (Info CALLER) = stack_0_1_op v c
+     (Word.ucast (venv_caller v))"
+| "instruction_sem v c (Arith ADD) = stack_2_1_op v c
+     (\<lambda> a b. a + b)"
+| "instruction_sem v c (Arith SUB) = stack_2_1_op v c
+     (\<lambda> a b. a - b)"
+| "instruction_sem v c (Arith ISZERO) = stack_1_1_op v c
+     (\<lambda> a. if a = 0 then 1 else 0)"
 | "instruction_sem v c (Misc CALL) = call v c"
 | "instruction_sem v c (Misc RETURN) = ret v c"
 | "instruction_sem v c (Misc STOP) = stop v c"
 | "instruction_sem v c (Dup n) = general_dup n v c"
 | "instruction_sem v c (Stack POP) = pop v c"
-| "instruction_sem v c (Info GASLIMIT) = stack_0_1_op v c (block_gaslimit (venv_block v))"
-| "instruction_sem v c (Arith inst_GT) = stack_2_1_op v c (\<lambda> a b. if a > b then 1 else 0)"
-| "instruction_sem v c (Arith inst_EQ) = stack_2_1_op v c (\<lambda> a b. if a = b then 1 else 0)"
+| "instruction_sem v c (Info GASLIMIT) = stack_0_1_op v c
+     (block_gaslimit (venv_block v))"
+| "instruction_sem v c (Arith inst_GT) = stack_2_1_op v c
+     (\<lambda> a b. if a > b then 1 else 0)"
+| "instruction_sem v c (Arith inst_EQ) = stack_2_1_op v c
+     (\<lambda> a b. if a = b then 1 else 0)"
 | "instruction_sem v c (Annotation a) = eval_annotation a v c"
 | "instruction_sem v c (Bits inst_AND) = stack_2_1_op v c (\<lambda> a b. a AND b)"
 | "instruction_sem v c (Bits inst_OR) = stack_2_1_op v c (\<lambda> a b. a OR b)"
@@ -1009,7 +1013,9 @@ where
 | "instruction_sem v c (Bits inst_NOT) = stack_1_1_op v c (\<lambda> a. NOT a)"
 | "instruction_sem v c (Bits BYTE) =
     stack_2_1_op v c (\<lambda> position w.
-      if position < 32 then ucast ((word_rsplit w :: byte list) ! (unat position)) else 0)"
+      if position < 32 then
+        ucast ((word_rsplit w :: byte list) ! (unat position))
+      else 0)"
 | "instruction_sem v c (Sarith SDIV) = stack_2_1_op v c
      (\<lambda> n divisor. if divisor = 0 then 0 else
                         word_of_int ((sint n) div (sint divisor)))"
@@ -1026,8 +1032,7 @@ where
           if i \<le> 256 - 8 * ((uint len) + 1)
           then test_bit orig (nat (256 - 8 * ((uint len) + 1)))
           else test_bit orig (nat i)
-        ) (List.upto 0 256))
-     )"
+        ) (List.upto 0 256)))"
 | "instruction_sem v c (Arith MUL) = stack_2_1_op v c
      (\<lambda> a b. a * b)"
 | "instruction_sem v c (Arith DIV) = stack_2_1_op v c
@@ -1059,11 +1064,16 @@ where
      (block_gasprice (venv_block v))"
 | "instruction_sem v c (Info EXTCODESIZE) = stack_1_1_op v c
      (\<lambda> arg. (word_of_int (program_length (venv_ext_program v (ucast arg)))))"
-| "instruction_sem v c (Info BLOCKHASH) = stack_1_1_op v c (block_blockhash (venv_block v))"
-| "instruction_sem v c (Info COINBASE) = stack_0_1_op v c (ucast (block_coinbase (venv_block v)))"
-| "instruction_sem v c (Info TIMESTAMP) = stack_0_1_op v c (block_timestamp (venv_block v))"
-| "instruction_sem v c (Info NUMBER) = stack_0_1_op v c (block_number (venv_block v))"
-| "instruction_sem v c (Info DIFFICULTY) = stack_0_1_op v c (block_difficulty (venv_block v))"
+| "instruction_sem v c (Info BLOCKHASH) =
+     stack_1_1_op v c (block_blockhash (venv_block v))"
+| "instruction_sem v c (Info COINBASE) =
+     stack_0_1_op v c (ucast (block_coinbase (venv_block v)))"
+| "instruction_sem v c (Info TIMESTAMP) =
+     stack_0_1_op v c (block_timestamp (venv_block v))"
+| "instruction_sem v c (Info NUMBER) =
+     stack_0_1_op v c (block_number (venv_block v))"
+| "instruction_sem v c (Info DIFFICULTY) =
+     stack_0_1_op v c (block_difficulty (venv_block v))"
 | "instruction_sem v c (Memory MLOAD) = mload v c"
 | "instruction_sem v c (Memory MSTORE) = mstore v c"
 | "instruction_sem v c (Memory MSTORE8) = mstore8 v c"
@@ -1082,7 +1092,8 @@ where
 | "instruction_sem v c (Misc SUICIDE) = suicide v c"
 | "instruction_sem v c (Misc DELEGATECALL) = delegatecall v c"
 | "instruction_sem v c (Info GAS) = stack_0_1_op v c (gas v)"
-| "instruction_sem v c (Memory MSIZE) = stack_0_1_op v c (word_of_int (venv_memory_usage v))"
+| "instruction_sem v c (Memory MSIZE) =
+    stack_0_1_op v c (word_of_int (venv_memory_usage v))"
 
 subsection {* Programs' Answer to the World *}
 
@@ -1095,7 +1106,9 @@ this and that never happen.''"
 
 datatype program_result =
   ProgramStepRunOut -- {* the artificial step counter has run out *}
-| ProgramToWorld "contract_action * storage * (address => w256) * (variable_env \<times> int \<times> int) option"
+| ProgramToWorld
+   "contract_action \<times> storage \<times> (address => w256)
+    \<times> (variable_env \<times> int \<times> int) option"
   -- {* the program stopped execution because an instruction wants to talk to the world
   for example because the execution returned, failed, or called an account.
   *}
@@ -1114,7 +1127,7 @@ text "Since our program struct contains a list of annotations for each program p
 I have a function that checks all annotations at a particular program position:"  
 abbreviation check_annotations :: "variable_env \<Rightarrow> constant_env \<Rightarrow> bool"
 where
-"check_annotations v c ==
+"check_annotations v c \<equiv>
   (let annots = program_annotation (cenv_program c) (venv_pc v) in
    List.list_all (\<lambda> annot. annot (build_aenv v c)) annots)"
 

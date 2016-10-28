@@ -35,7 +35,7 @@
 
 \begin{document}
 
-\title{Formal Verification of Deed contract\\in Ethereum Name Service}
+\title{Formal Verification of Deed Contract\\in Ethereum Name Service}
 \author{Yoichi Hirai\footnote{\texttt{i@yoichihirai.com}}}
 \maketitle
 
@@ -58,16 +58,16 @@ produced by the Solidity compiler and aimed for production.}
 contract that I have analyzed.
 
 The verification is result far from perfect.
-I'm still finding more problems in the
+I am still finding more problems in the
 formalization than in the contracts.  The EVM implementation is not tested against
 others!
 
-I'm making this public already because this project makes a
+I am making this public already because this project makes a
 good example on the amount of work (and the level of detail) required to
 verify a smart contract using machine-assisted logical inference.  At this
 point already, if I were to
 implement a smart contract that holds more than 100k dollars, and if
-I'm in charge of controlling the schedule, I would consider this kind of
+I am in charge of controlling the schedule, I would consider this kind of
 development (the other option is to try the contract with smaller values first).
 
 \paragraph{Acknowledgment.}
@@ -116,6 +116,8 @@ Conclusions when the invocation finishes:
 
 
 \subsection{What can Go Wrong}
+
+First the contract might not work as expected.  The property above is only a safety property: something bad is not going to happen.  This does not mean anything good happens.  While it is feasible to prove that anything good happens, at least I need to model the gas mechanism in Isabelle/HOL before I claim anything works.  In any case, when you have a sequence of events in mind, you can check that with testing.  Theorem proving excels at uncovering unknown possibilities.
 
 The analysis cuts corners but it is reasonablly equipped for safety
 properties (i.e. ``certain changes never happen on the account
