@@ -18,17 +18,19 @@ subsection {* Some Possible Changes on Our Account State *}
 
 text {* The account state might change even when the account's code is not executing. *}
 
-text {* During blocks, the account might gain balances because somebody mines 
-Ether for the account.  The balance might increase also while other contracts execute
+text {* Between blocks, the account might gain balances because somebody mines 
+Ether for the account.  Even within a single block,
+the balance might increase also while other contracts execute
 because they might destroy themselves and send their balance to our account.
-The following relation captures this possibility.
+When a transaction finishes, if our contract is marked as killed, it is destroyed.
+The following relation captures these possibilities.
 *}
-
-text {* When a transaction finishes, if our contract is marked as killed, it is destroyed. *}
 
 inductive account_state_natural_change :: "account_state \<Rightarrow> account_state \<Rightarrow> bool"
 where
-natural:
+natural: -- {* The balance of this account might increase
+whenever the code in our contract is not executing.  Some other account might
+destroy itself and give its balance to our account.  *}
  "old_bal \<le> new_bal \<Longrightarrow>
   account_state_natural_change
    \<lparr> account_address = addr
@@ -61,10 +63,13 @@ natural:
 declare account_state_natural_change.simps [simp]
 
 text "When the execution comes back from an external call, the account state might have changed
-arbitrariliy.  Our strategy is to assume that an invariant is kept here; and later prove that
-the invariant actually holds."
+arbitrarily.  Our strategy is to assume that an invariant is kept here; and later prove that
+the invariant actually holds (that is, for fewer depth of reentrancy).
+The whole argument can be seen as a mathematical induction over depths of reentrancy, though
+this idea has not been formalized yet."
 
-inductive account_state_return_change :: "(account_state \<Rightarrow> bool) \<Rightarrow> account_state \<Rightarrow> account_state \<Rightarrow> bool"
+inductive account_state_return_change ::
+"(account_state \<Rightarrow> bool) \<Rightarrow> account_state \<Rightarrow> account_state \<Rightarrow> bool"
 where
 account_return:
 "invariant
@@ -104,8 +109,8 @@ where
 | "returnable_result (ProgramToWorld (ContractCreate _, _, _, _)) = True"
 | "returnable_result (ProgramToWorld (ContractSuicide, _, _, _)) = False"
 | "returnable_result (ProgramToWorld (ContractFail, _, _, _)) = False"
-  (* because we are not modeling nested calls here, the effect of the nested calls are modeled in
-   * account_state_return_change *)
+-- {* because we are not modeling nested calls here, the effect of the nested calls are modeled in
+     account_state_return_change *}
 | "returnable_result (ProgramToWorld (ContractReturn _, _, _, _)) = False"
 | "returnable_result (ProgramInit _) = False"
 | "returnable_result ProgramInvalid = False"
@@ -113,59 +118,95 @@ where
 
 subsection {* A Round of the Game *}
 
-text {* Now we are ready to specify the worlds turn. *}
+text {* Now we are ready to specify the world's turn. *}
 
-inductive world_turn :: "(account_state \<Rightarrow> bool) (* The invariant of our contract*)
-                      \<Rightarrow> (account_state * program_result)
-                         (* the account state before the world's move
-                            and the last thing our account did *)
-                      \<Rightarrow> (account_state * variable_env)
-                         (* the account state after the world's move
-                            and the variable environment from which our contract must start.
-                          *)
-                      \<Rightarrow> bool (* a boolean indicating if that is a possible world's move. *)"
+inductive world_turn ::
+"(account_state \<Rightarrow> bool) (* The invariant of our contract*)
+\<Rightarrow> (account_state * program_result)
+   (* the account state before the world's move
+      and the last thing our account did *)
+\<Rightarrow> (account_state * variable_env)
+   (* the account state after the world's move
+      and the variable environment from which our contract must start. *)
+\<Rightarrow> bool (* a boolean indicating if that is a possible world's move. *)"
 where
-  world_call: -- {* the world might call our contract. *}
-  "
+  world_call: -- {* the world might call our contract.  We only consider the initial invocation here
+  because the deeper reentrant invocations are considered as a part of the adversarial world. 
+  The deeper reentrant invocations are performed without the world replying to the contract. *}
+  "(* If a variable environment is built from the old account state *)
+   (* and the call arguments, *)
    build_venv_called old_state callargs next_venv \<Longrightarrow>
+   
+   (* the world makes a move, showing the variable environment. *)
    world_turn I (old_state, ProgramInit callargs) (old_state, next_venv)"
 | world_return: -- {* the world might return to our contract. *}
-  "account_state_return_change I account_state_going_out account_state_back \<Longrightarrow>
+  "(* If the account state can be changed during reentrancy,*)
+   account_state_return_change I account_state_going_out account_state_back \<Longrightarrow>
+
+   (* and a variable environment can be recovered from the changed account state,*)
    build_venv_returned account_state_back result new_v \<Longrightarrow>
+
+   (* and the previous move of the contract was a call-like action, *)
    returnable_result program_r \<Longrightarrow>
+
+   (* the world can make a move, telling the contract to continue with *)
+   (* the variable environment. *)
    world_turn I (account_state_going_out, program_r)
                 (account_state_pop_ongoing_call account_state_back, new_v)"
+
 | world_fail: -- {* the world might fail from an account into our contract. *}
-  "account_state_return_change I account_state_going_out account_state_back \<Longrightarrow>
-   build_venv_failed account_state_back = Some new_v \<Longrightarrow>
+  "(* If a variable environment can be recovered from the previous account state,*)
+   build_venv_failed account_state_going_out = Some new_v \<Longrightarrow>
+   
+   (* and if the previous action from the contract was a call, *)
    returnable_result result \<Longrightarrow>
+   
+   (* the world can make a move, telling the contract to continue with *) 
+   (* the variable environment. *)
    world_turn I (account_state_going_out, result)
-                (account_state_pop_ongoing_call account_state_back, new_v)"
+                (account_state_pop_ongoing_call account_state_going_out, new_v)"
 
 text {* As a reply, our contract might make a move, or report an annotation failure.*}
 
-inductive contract_turn :: "(account_state * variable_env) \<Rightarrow> (account_state * program_result) \<Rightarrow> bool"
+inductive contract_turn ::
+"(account_state * variable_env) \<Rightarrow> (account_state * program_result) \<Rightarrow> bool"
 where
   contract_to_world:
-  "build_cenv old_account = cenv \<Longrightarrow>
+  "(* Under a constant environment built from the old account state, *)
+   build_cenv old_account = cenv \<Longrightarrow>
+
+   (* if the program behaves like this, *)
    program_sem old_venv cenv 
       (program_length (cenv_program cenv)) steps
-      = ProgramToWorld (act, st, bal, opt_v) \<Longrightarrow> (* if the program behaves like this *)
-   account_state_going_out (* and if the account state is updated like this*)
+      = ProgramToWorld (act, st, bal, opt_v) \<Longrightarrow>
+
+   (* and if the account state is updated from the program's result, *)
+   account_state_going_out
      = update_account_state old_account act st bal opt_v \<Longrightarrow>
-   contract_turn (old_account, old_venv) (* the contract can change the account state like this. *)
+
+   (* the contract makes a move and udates the account state. *)
+   contract_turn (old_account, old_venv)
       (account_state_going_out, ProgramToWorld (act, st, bal, opt_v))"
+
 | contract_annotation_failure:
-  "build_cenv old_account = cenv \<Longrightarrow>
+  "(* If a constant environment is built from the old account state, *)  
+   build_cenv old_account = cenv \<Longrightarrow>
+   
+   (* and if the contract execution results in an annotation failure, *)
    program_sem old_venv cenv
       (program_length (cenv_program cenv)) steps = ProgramAnnotationFailure \<Longrightarrow>
+
+   (* the contract makes a move, indicating the annotation failure. *)
    contract_turn (old_account, old_venv) (old_account, ProgramAnnotationFailure)"
 
 text {* When we combine the world's turn and the contract's turn, we get one round.
 The round is a binary relation over a single set.
 *}
 
-inductive one_round :: "(account_state \<Rightarrow> bool) \<Rightarrow> (account_state * program_result) \<Rightarrow> (account_state * program_result) \<Rightarrow> bool"
+inductive one_round ::
+"(account_state \<Rightarrow> bool) \<Rightarrow> 
+(account_state * program_result) \<Rightarrow> 
+(account_state * program_result) \<Rightarrow> bool"
 where
 round:
 "world_turn I a b \<Longrightarrow> contract_turn b c \<Longrightarrow> one_round I a c"
@@ -179,7 +220,7 @@ where
 refl: "star r x x" |
 step: "r x y \<Longrightarrow> star r y z \<Longrightarrow> star r x z"
 
-text {* The repetition of rounds is either zero-times or once and the repetition. *}
+text {* The repetition of rounds is either zero-times or once and a repetition. *}
 lemma star_case :
 "star r a c \<Longrightarrow>
  (a = c \<or> (\<exists> b. r a b \<and> star r b c))"
@@ -229,7 +270,8 @@ done
 subsection {* How to State an Invariant *}
 
 text {* For any invariant @{term I} over account states, now @{term "star (one_round I)"}
-relation shows all possibilities during one invocation, assuming that the
+relation shows all possibilities during one invocation\footnote{More precisely,
+this transitive closure of rounds guides us through all the possible states when the contract loses the control flow.}, assuming that the
 invariant is kept during external calls\footnote{This assumption about deeper reentrancy should
 be considered as an induction hypothesis.  There has to be a lemma actually perform
 such induction.}.
@@ -237,12 +279,45 @@ The following template traverses the states and proves that the invariant is act
 after every possible round.  Also the template states that no annotation failures happen.
 *}
 
-definition no_assertion_failure_post :: "(account_state \<Rightarrow> bool) \<Rightarrow> (account_state \<times> program_result) \<Rightarrow> bool"
+text {* I define the conjunction of the properties requested at the final states.
+The whole thing is more readable when I inline-expand @{term no_assertion_failure_post},
+but if I do that, the @{text auto} tactic splits creates a goal for each conjunct.
+This doubles the already massive number of subgoals.
+*}
+
+definition no_assertion_failure_post ::
+  "(account_state \<Rightarrow> bool) \<Rightarrow> (account_state \<times> program_result) \<Rightarrow> bool"
 where
 "no_assertion_failure_post I fin =
- (I (fst fin) \<and>
-  snd fin \<noteq> ProgramAnnotationFailure)
+ (I (fst fin) \<and> (* The invariant holds. *)
+  snd fin \<noteq> ProgramAnnotationFailure)  (* No annotations have failed. *)
 "
+
+text {* @{term "no_assertion_failure"} is a template for statements.
+It takes a single argument @{term I} for the invariant.
+The invariant is assumed to hold at the initial state.
+The initial state is when the contract is called (this can be the first
+invocation of this contract in this transaction, or a reentrancy).
+The statement will request us to prove that the invariant also
+holds whenever the invocation loses the control flow.
+The invocation loses the control flow when the contract returns or fails
+from the invocation, and also when it calls an account.
+When the contract calls an account, the invocation does not finish so
+the invariant has to be proven once more after the invocation regains
+the control flow after the call finishes.
+The repetition is captured by the transitive closure
+@{term "star (one_round I)"}.
+
+We prove the invariant when our contract calls out,
+and we assume that reentrancy into this contract will
+keep the invariant.
+The whole argument can be seen as a mathematical induction
+over the depth of reentrancy.  So we can assume that
+reentrancy of a fewer depth keeps the invariant.
+This idea comes from Christian Reitwiessner's treatment of
+reentrancy in Why ML.
+I haven't justified the idea in Isabelle/HOL.
+*}
 
 definition no_assertion_failure :: "(account_state \<Rightarrow> bool) \<Rightarrow> bool"
 where
@@ -265,19 +340,59 @@ For that purpose, here is another template statement.  This contains everything 
 an assumption about the initial call, and a conclusion about the state after the invocation.
 *}
 
+text {* I pack everything that I want when the contract fails or returns.
+This definition reduces the number of goals that I need to prove.
+Without this definition, the @{text auto} tactic
+splits a goal @{prop "A \<Longrightarrow> B \<and> C"} into two subgoals @{prop "A \<Longrightarrow> B"} and @{prop "A \<Longrightarrow> C"}.
+When I do complicated case analysis on @{prop A}, the number of subgoals grow rapidly.
+So, I define @{term packed} to be @{prop "B \<and> C"} and prevent the @{text auto} tactic from splitting
+the goals for @{prop B} and @{prop C}.
+*}
+
+text {* The following snippet says the invariant still holds in the observed final state%
+\footnote{After the invocation finishes, some miner can credit Eth to the account under
+verification.  The ``observed'' final state is an arbitrary state 
+after such possible balance increases.}
+and the postconditions hold. *}
+
 definition postcondition_pack
 where
 "postcondition_pack I postcondition fin_observed initial_account initial_call fin
 =
   (I fin_observed \<and>
   postcondition initial_account initial_call (fin_observed, snd fin))"
+  
+text {* The whole template takes an invariant @{term I}, a @{term precondition}
+and a @{term postcondition}. The statement is about one invocation of the contract.
+This invocation can be a reentrancy.  The initial state is when the contract is invoked,
+and the final states\footnote{Since I am considering all possible executions, there are multiple
+final states.  Also, even when I concetrate on a single execution, every time the contract calls an
+account, I have to check the invariants.  Otherwise, I have no knowledge about what happens
+during the following reentrancy. } are
+when this invocation makes a call to an account, returns or fails.
+We further consider natural balance increases\footnote{The balnace of an Ethereum account increases
+naturally when a contract destroys itself and sends its balance to our account, for instance.}
+and use the ``observed final state'' to
+evaluate the post condition.
+Of course, in between, there might be nesting reentrant invocations, that might alter
+the storage and the balance of the contract.
+
+At the time of invocation, the invariant and the preconditions are assumed to hold.
+During reentrant calls (that are deeper than the current invocation),
+The statement will request us to prove that the invariant holds at any moment when
+the contract loses the control flow (when the contract returns, fails or calls a contract).
+Also we will be requested to prove that the postcondition holds on these occasions.
+The contract regains the control flow after a deeper call finishes, and the contract
+would lose the control flow again.
+All these moments are captured by the transitive closure of @{term one_round} relation.
+*}
 
 definition pre_post_conditions ::
 "(account_state \<Rightarrow> bool) \<Rightarrow> (account_state \<Rightarrow> call_env \<Rightarrow> bool) \<Rightarrow>
  (account_state \<Rightarrow> call_env \<Rightarrow> (account_state \<times> program_result) \<Rightarrow> bool) \<Rightarrow> bool"
 where
 "pre_post_conditions (I :: account_state \<Rightarrow> bool) (precondition :: account_state \<Rightarrow> call_env\<Rightarrow> bool)
-(postcondition :: (account_state \<Rightarrow> call_env \<Rightarrow> (account_state \<times> program_result) \<Rightarrow> bool)) ==
+(postcondition :: (account_state \<Rightarrow> call_env \<Rightarrow> (account_state \<times> program_result) \<Rightarrow> bool)) \<equiv>
   (\<forall> initial_account initial_call. I initial_account \<longrightarrow>
      precondition initial_account initial_call \<longrightarrow>
   (\<forall> fin. star (one_round I) (initial_account, ProgramInit initial_call) fin \<longrightarrow>

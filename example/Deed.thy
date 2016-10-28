@@ -1,5 +1,10 @@
 section {* Verification of the Deed Contract *}
 
+text {* This section focuses on one particular smart contract called the ``Deed'' contract.
+The Deed contract is designed as a simple contract trusted with values.
+So the first aim of the verification is to show that most accounts cannot control the value.
+*}
+
 theory Deed
 
 imports Main "../RelationalSem"
@@ -10,12 +15,12 @@ subsection {* The code under verification. *}
 
 text {*  The code under verification comes from these commits:
 \begin{verbatim}
-ens: f3334337083728728da56824a5d0a30a8712b60c
-solidity: 2d9109ba453d49547778c39a506b0ed492305c16
+github.com/Arachnid/ens: f3334337083728728da56824a5d0a30a8712b60c
+github.com/ethereum/solidity: 2d9109ba453d49547778c39a506b0ed492305c16
 \end{verbatim}
 and is produced with this command.
 \begin{verbatim}
-$ solc/solc --bin-runtime
+$ solc/solc --bin-runtime HashRegistrarSimplified.sol
 \end{verbatim}
 
 The hex code looks like this\\
@@ -650,6 +655,8 @@ done
 
 lemma deed_keeps_invariant :
 "no_assertion_failure deed_inv"
+-- "The proof is a brute-force case analysis.
+I believe this can be much shorter, but my aim here was to practice the brute-force case analysis."
 apply(simp only: no_assertion_failure_def)
 apply(rule allI)
 apply(rule allI)
@@ -831,7 +838,18 @@ done
 
 subsection {* Proof about the Case when the Caller is Not the Registrar *}
 
+text {* I prove another property about the Deed contract.  The intention is
+to prevent attacks.  It is not straightforward to define attacks.
+In any case I cannot prevent off-chain attacks (such as bribing).
+Here I prove a property that most of accounts cannot change certain
+things in the account.  They cannot decrease the balance of the account, and
+they cannot give themselves the authority to do so,  In the current case,
+the only authorized account is the ``registrar'', which is remembered
+at the storage index~0 of the Deed account.
+*}
+
 text {*
+In the concrete terms that Isabelle/HOL can understand, the claim can be written as follows:
 If 
 \begin{itemize}
 \item the caller is not equal to the address stored at index~0,
@@ -851,10 +869,13 @@ then, after the invocation,
 *}
 
 
-lemma address_max_word :
-"(2 ^ 160 - 1 :: address) = max_word"
-apply(simp add: max_word_def)
-done
+text {* I need some arithmetic preparations. 
+The Solidity compiler and the word library of Isabelle/HOL have
+different ways of casting @{typ address} into @{typ w256} and back. Some
+propositions are proved so that these differences disappear automatically. *}
+
+text {* When an address is converted into a 256-bit word,
+the represented integer does not change. *}
 
 lemma address_cast_eq :
 "uint (ucast (a :: address) :: w256) = uint a"
@@ -862,15 +883,21 @@ apply(rule uint_up_ucast)
 apply(simp add: is_up)
 done
 
+text {* The size of an address is 160 bits. *}
+
 lemma address_size [simp]:
 "size (a :: address) = 160"
 apply(simp add: word_size)
 done
 
+text {* All addresses are less than @{term "2 ^ 160"}. *}
+
 lemma address_small' [simplified]:
 "uint (a :: address) < 2 ^ size a"
 apply(simp only: uint_range_size)
 done
+
+text {* All addresses cast to words are still small. *}
 
 lemma address_small:
 "(ucast (a :: address) :: w256) < 2 ^ 160"
@@ -880,6 +907,11 @@ apply(rule address_small')
 done
 
 declare mask_def [simp]
+
+text {* When you cast an address to word, and take the least 160 bits,
+that's the same thing as just casting the address.
+*}
+
 lemma address_cast_and [simplified] :
 "(mask 160 :: w256) AND ucast (a :: address) = (ucast (a :: address) :: w256)"
 apply(simp only: word_bool_alg.conj_commute)
@@ -889,11 +921,15 @@ done
 
 declare address_cast_and [simp]
 
-lemma wb:
+text {* Casting a word to an address can be done after truncating to 160 bits. *}
+
+lemma casting_and_truncation:
   "word_of_int (bintrunc 160 (uint (w :: w256))) = (word_of_int (uint w) :: address)"
 apply(rule wi_bintr)
 apply(auto)
 done
+
+text {* When two numbers are equal as words, they are also equal as addresses. *}
 
 lemma finer:
 "(word_of_int p :: w256) = word_of_int q \<Longrightarrow>
@@ -905,12 +941,16 @@ apply(simp add: Divides.zmod_eq_dvd_iff)
 apply(rule Rings.comm_monoid_mult_class.dvd_trans; auto)
 done
 
+text {* If a word is masked to 160-bits and compared with a casted address,
+the word is compared against the address.
+*}
+
 lemma addr_case_eq [simplified]:
 "(w :: w256) AND (mask 160 :: w256) = ucast(a :: address)
 \<Longrightarrow> ucast w = a"
 apply(simp only: and_mask_bintr)
 apply(simp only: ucast_def)
-apply(simp only: wb [symmetric])
+apply(simp only: casting_and_truncation [symmetric])
 apply(drule finer)
 apply(simp)
 done
@@ -919,19 +959,49 @@ declare addr_case_eq [dest]
 
 declare mask_def [simp del]
 
+text {* Now we are ready to state and prove the lemma. *}
 
 lemma deed_only_registrar_can_spend :
-"pre_post_conditions deed_inv
- (\<lambda> init_state init_call. ucast (account_storage init_state 0) \<noteq> callenv_caller init_call
+"pre_post_conditions
+
+ (* The invariant which is assumed at the beginning of this invocation,
+    assumed to be kept during reentrancy calls, and
+    proven at the time of return or failure from this invocation. *)
+ deed_inv
+
+ (* The additional conditions that are assumed at the beginning of this invocation: *)
+ (\<lambda> init_state init_call.
+
+   (* the caller is not the regsitrar; *)
+   ucast (account_storage init_state 0) \<noteq> callenv_caller init_call
+   
+   (* the Deed contract is still marked active; *)
  \<and> (255 AND account_storage init_state 2 div 2 ^ 160 \<noteq> 0)
+
+   (* the call does not overflow the balance; *)
  \<and> account_balance init_state + callenv_value init_call \<ge> account_balance init_state
- \<and> \<not> (account_killed init_state)
- )
- (\<lambda> init_state _ (post_state, _). account_balance init_state \<le> account_balance post_state
+
+   (* the account is not marked as destroyed. *)
+ \<and> \<not> (account_killed init_state))
+ 
+ (* The additional conditions that are proven to
+  * hold when this invocation returns or fails. *)
+(\<lambda> init_state _ (post_state, _).
+
+   (* The balance has not decreased. *)
+   account_balance init_state \<le> account_balance post_state
+
+   (* The account is still not marked for destruction
+      (i.e. the account has not executed self-destruction). *)
  \<and> \<not> (account_killed post_state)
+
+   (* The Deed contract is still marked as active. *)
  \<and> (255 AND account_storage post_state 2 div 2 ^ 160 \<noteq> 0)
+
+   (* The registrar of the contract remains the same. *)
  \<and> account_storage init_state 0 = account_storage post_state 0)
 "
+-- "The proof is again a brute-force case analysis."
 apply(simp add: pre_post_conditions_def)
 apply(rule allI)
 apply(rule impI)
@@ -991,13 +1061,13 @@ apply(drule deed_inv.cases; auto)
            apply(split strict_if_split; auto)
             apply(split strict_if_split; auto)
              apply(split strict_if_split; auto)
-              apply(case_tac a; simp add: postcondition_pack_def; simp add: deed_inv.simps)
+              apply(case_tac a; simp add: postcondition_pack_def add: deed_inv.simps)
              apply(split strict_if_split; auto)
-              apply(case_tac a; simp add: postcondition_pack_def; simp add: deed_inv.simps)
+              apply(case_tac a; simp add: postcondition_pack_def add: deed_inv.simps)
              apply(split strict_if_split; auto)
              apply(split strict_if_split; auto)
-              apply(case_tac a; simp add: postcondition_pack_def; simp add: deed_inv.simps)
-            apply(case_tac a; simp add: postcondition_pack_def; simp add: deed_inv.simps)
+              apply(case_tac a; simp add: postcondition_pack_def add: deed_inv.simps)
+            apply(case_tac a; simp add: postcondition_pack_def add: deed_inv.simps)
            apply(split strict_if_split; auto)
             apply(split strict_if_split; auto)
             apply(case_tac a; simp add: postcondition_pack_def add: deed_inv.simps)
@@ -1099,7 +1169,8 @@ apply(drule star_case; auto)
 apply(case_tac a; simp add: postcondition_pack_def add: deed_inv.simps)
 done
 
-text {* It takes 15 minutes to compile this proof on my machine.  Most of the time is spent
-translating the list of instructions into an AVL tree. *}
+text {* It takes 45 minutes to compile this proof on my machine.  Ten minutes
+are spent translating the list of instructions into an AVL tree.
+Most of the rest is spent on following the proofs of the last two lemmata. *}
 
 end

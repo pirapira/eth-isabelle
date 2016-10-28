@@ -1204,24 +1204,44 @@ The origin of the transaction is also considered arbitrary.
 inductive build_venv_called :: "account_state => call_env => variable_env => bool"
 where
 venv_called:
-  "bal (account_address a) = (* natural increase is taken care of in RelationalSem.thy *)
+  "bal (account_address a) =
+   (* natural increase is taken care of in RelationalSem.thy *)
        account_balance a \<Longrightarrow>
    build_venv_called a env
-   \<lparr> venv_stack = [] (* The stack is initialized for every invocation *)
-   , venv_memory = empty_memory (* The memory is also initialized for every invocation *)
-   , venv_memory_usage = 0 (* The memory usage is initialized. *)
-   , venv_storage = account_storage a (* The storage is taken from the account state *)
-   , venv_pc = 0 (* The program counter is initialized to zero *)
+   \<lparr> (* The stack is initialized for every invocation *)
+     venv_stack = []
+
+     (* The memory is also initialized for every invocation *)
+   , venv_memory = empty_memory
+   
+     (* The memory usage is initialized. *)
+   , venv_memory_usage = 0
+   
+     (* The storage is taken from the account state *)
+   , venv_storage = account_storage a
+
+     (* The program counter is initialized to zero *)
+   , venv_pc = 0 
+
+     (* The balance is arbitrary, except that the balance of this account *)
+     (* is as specified in the account state plus the sent amount. *)
    , venv_balance = bal(account_address a := bal (account_address a) + callenv_value env) 
-                        (* The balance is arbitrary, except that the balance of this account
-                           is as specified in the account state plus the sent amount. *)
-   , venv_caller = callenv_caller env (* the caller is specified by the world *)
+
+   (* the caller is specified by the world *)
+   , venv_caller = callenv_caller env
+
    , venv_value_sent = callenv_value env (* the sent value is specified by the world *)
+
    , venv_data_sent = callenv_data env (* the sent data is specified by the world *)
+
    , venv_storage_at_call = account_storage a (* the snapshot of the storage is remembered in case of failure *)
+
    , venv_balance_at_call = bal (* the snapshot of the balance is remembered in case of failure *)
+
    , venv_origin = origin (* the origin of the transaction is arbitrarily chosen *)
+
    , venv_ext_program = ext (* the codes of the external programs are arbitrary. *)
+
    , venv_block = block (* the block information is chosen arbitrarily. *)
    \<rparr>
    "
@@ -1247,7 +1267,7 @@ text "An instruction is ``call-like'' when it calls an account and waits for it 
 
 abbreviation is_call_like :: "inst option \<Rightarrow> bool"
 where
-"is_call_like i == (i = Some (Misc CALL) \<or> i = Some (Misc DELEGATECALL) 
+"is_call_like i \<equiv> (i = Some (Misc CALL) \<or> i = Some (Misc DELEGATECALL) 
                  \<or> i = Some (Misc CALLCODE) \<or> i = Some (Misc CREATE))"
 
 text {* When an account returns to our contract, the variable environment is
@@ -1269,13 +1289,21 @@ apply(case_tac "b \<le> 0"; auto?)
 apply(case_tac aa; auto)
 done
 
+text {* When the control flow comes back to an account state
+in the form of a return from an account,
+we build a variable environment as follows.
+The process is not deterministic because
+the balance of our contract might have
+arbitrarily increased.
+*}
+
 inductive build_venv_returned :: "account_state \<Rightarrow> return_result \<Rightarrow> variable_env \<Rightarrow> bool"
 where
 venv_returned:
 "  is_call_like (lookup (program_content a_code) (v_pc - 1)) \<Longrightarrow>
-   new_bal \<ge> a_bal \<Longrightarrow> (* the balance might have increased from the account state *)
+   new_bal \<ge> a_bal \<Longrightarrow> (* the balance might have increased *)
    build_venv_returned
-     \<lparr> account_address = a_addr
+     \<lparr> account_address = a_addr (* all elements are spelled out for performance *)
      , account_storage = a_storage
      , account_code = a_code
      , account_balance = a_bal
@@ -1299,7 +1327,8 @@ venv_returned:
      \<rparr>
      r
      (\<lparr>  venv_stack = 1 # v_stack (* 1 is pushed, indicating a return *)
-       , venv_memory = put_return_values v_memory (return_data r) mem_start mem_size
+       , venv_memory =
+         put_return_values v_memory (return_data r) mem_start mem_size
        , venv_memory_usage = v_memory_usage
        , venv_storage = a_storage
        , venv_pc = v_pc
@@ -1312,8 +1341,7 @@ venv_returned:
        , venv_balance_at_call = v_init_balance
        , venv_origin = v_origin
        , venv_ext_program = v_ext_program
-       , venv_block = v_block
-     \<rparr>)"
+       , venv_block = v_block \<rparr>)"
 
 declare build_venv_returned.simps [simp]
 
@@ -1326,10 +1354,12 @@ where
   (case account_ongoing_calls a of
      [] \<Rightarrow> None
    | (recovered, _, _) # _ \<Rightarrow>
-      (if is_call_like (lookup (program_content (account_code a)) (venv_pc recovered - 1)) then
-       Some (recovered \<lparr>venv_stack := 0 # venv_stack recovered\<rparr>) (* 0 is pushed, indicating failure*)
-       else None)
-  )"
+      (if is_call_like (* check the previous instruction *)
+        (lookup (program_content (account_code a))
+         (venv_pc recovered - 1)) then
+       Some (recovered
+         \<lparr>venv_stack := 0 (* indicating failure *) # venv_stack recovered\<rparr>)
+       else None))"
 
 declare build_venv_failed_def [simp]
 
@@ -1342,14 +1372,14 @@ text {* The first definition is about forgetting one ongoing call. *}
 
 abbreviation account_state_pop_ongoing_call :: "account_state \<Rightarrow> account_state"
 where
-"account_state_pop_ongoing_call orig ==
+"account_state_pop_ongoing_call orig \<equiv>
    orig\<lparr> account_ongoing_calls := tl (account_ongoing_calls orig)\<rparr>"
 
 text {* Second I define the empty account, which replaces an account that has
 destroyed itself. *}
 abbreviation empty_account :: "address \<Rightarrow> account_state"
 where
-"empty_account addr ==
+"empty_account addr \<equiv>
  \<lparr> account_address = addr
  , account_storage = empty_storage
  , account_code = empty_program
@@ -1366,15 +1396,15 @@ where
 "update_account_state prev act st bal v_opt \<equiv>
    prev \<lparr>
      account_storage := st,
-     account_balance := (case act of ContractFail \<Rightarrow> account_balance prev
-                                   |  _ \<Rightarrow> bal (account_address prev)),
+     account_balance :=
+       (case act of ContractFail \<Rightarrow> account_balance prev
+                 |  _ \<Rightarrow> bal (account_address prev)),
      account_ongoing_calls :=
-                        (case v_opt of None \<Rightarrow> account_ongoing_calls prev
-                                     | Some pushed \<Rightarrow> pushed # account_ongoing_calls prev),
+       (case v_opt of None \<Rightarrow> account_ongoing_calls prev
+                    | Some pushed \<Rightarrow> pushed # account_ongoing_calls prev),
      account_killed :=
        (case act of ContractSuicide \<Rightarrow> True
-                  | _ \<Rightarrow> account_killed prev)
-                                     \<rparr>"
+                  | _ \<Rightarrow> account_killed prev)\<rparr>"
                                      
 text {* The above definition should be expanded automatically only when
 the last argument is known to be None or Some \_.
@@ -1384,13 +1414,13 @@ lemma update_account_state_None [simp] :
 "update_account_state prev act st bal None =
    (prev \<lparr>
      account_storage := st,
-     account_balance := (case act of ContractFail \<Rightarrow> account_balance prev
-                                   |  _ \<Rightarrow> bal (account_address prev)),
+     account_balance :=
+       (case act of ContractFail \<Rightarrow> account_balance prev
+                 |  _ \<Rightarrow> bal (account_address prev)),
      account_ongoing_calls := account_ongoing_calls prev,
      account_killed :=
        (case act of ContractSuicide \<Rightarrow> True
-                  | _ \<Rightarrow> account_killed prev)
-   \<rparr>)"
+                  | _ \<Rightarrow> account_killed prev) \<rparr>)"
 apply(case_tac act; simp add: update_account_state_def)
 done
 
@@ -1398,12 +1428,13 @@ lemma update_account_state_Some [simp] :
 "update_account_state prev act st bal (Some pushed) =
    (prev \<lparr>
      account_storage := st,
-     account_balance := (case act of ContractFail \<Rightarrow> account_balance prev
-                                   |  _ \<Rightarrow> bal (account_address prev)),
+     account_balance :=
+       (case act of ContractFail \<Rightarrow> account_balance prev
+                  |  _ \<Rightarrow> bal (account_address prev)),
      account_ongoing_calls := pushed # account_ongoing_calls prev,
-     account_killed := (case act of ContractSuicide \<Rightarrow> True
-                  | _ \<Rightarrow> account_killed prev)
-  \<rparr>)"
+     account_killed :=
+       (case act of ContractSuicide \<Rightarrow> True
+                  | _ \<Rightarrow> account_killed prev)\<rparr>)"
 apply(case_tac act; simp add: update_account_state_def)
 done
 
@@ -1413,7 +1444,18 @@ text {* The definitions in this subsection are not used in the analysis of Deed 
 currently.  They are useful when we write down the expected behavior of a contract as
 a function in Isabelle/HOL, and compare the function against the actual implementation. *}
 
+text {* To specify a contract's behavior,
+we specify its action and a condition on the account state. *}
+
 type_synonym contract_behavior = "contract_action * (account_state \<Rightarrow> bool)"
+
+text {* A contract can be called into, returned back to, or failed back to.
+The following record specifies a behavior for all these cases.
+When the contract is called into or returned back to,
+some data is available to the contract.  Otherwise, when
+the contract is failed back to, there is no input apart from the 
+fact that the inner call has failed.
+*}
 
 record response_to_world =
   when_called :: "call_env \<Rightarrow> contract_behavior"
@@ -1468,13 +1510,22 @@ where
    (\<forall> initial_venv final_state_pred resulting_action.
       Some initial_venv = build_venv_failed a \<longrightarrow>
       f = (resulting_action, final_state_pred) \<longrightarrow>
-      ( \<forall> steps.
-        ( let r = program_sem initial_venv (build_cenv a) (program_length (account_code a)) steps in
-          r = ProgramStepRunOut \<or>
-          (\<exists> pushed_venv st bal.
-             r = ProgramToWorld (resulting_action, st, bal, pushed_venv) \<and>
-             final_state_pred (update_account_state (account_state_pop_ongoing_call a) resulting_action st bal pushed_venv)))))"
+      (\<forall> steps.
+        (let r = program_sem initial_venv (build_cenv a)
+                   (program_length (account_code a)) steps in
+         r = ProgramStepRunOut \<or>
+         (\<exists> pushed_venv st bal.
+            r = ProgramToWorld (resulting_action, st, bal, pushed_venv) \<and>
+            final_state_pred
+              (update_account_state (account_state_pop_ongoing_call a)
+                 resulting_action st bal pushed_venv)))))"
 
+text {* The following statement summarizes everything above.
+Essentially, the functional correctness holds when
+the code responds to calls correctly, responds to returns correctly,
+and responds to failures correctly.
+The statement is parametrized with a precondition.
+*}
 
 inductive account_state_responds_to_world ::
   "(account_state \<Rightarrow> bool) \<Rightarrow> response_to_world \<Rightarrow> bool"
@@ -1496,13 +1547,14 @@ left insertion and the right insertion when actually only one of these happens.
 declare word_rcat_def [simp]
         unat_def [simp]
         bin_rcat_def [simp]
-(* declare update.simps [simp] casues exponentially expensive computation *)
-(* declare lookup.simps [simp] might cause exponentially expensive computation *)
+        
+text {* I do not allow the AVL library to perform updates at arbitrary moments,
+because that causes exponentially expensive computation (as measured with
+the number of elements *) *}
 declare update.simps [simp del]
 declare lookup.simps [simp del]
 
-(* declare balL_def [simp] *)
-(* declare balR_def [simp] *)
+text {* Instead, I only allow the following operations to happen (from left to right). *}
 
 lemma updateL [simp] : "update x y Leaf = Node 1 Leaf (x,y) Leaf"
 apply(simp add: update.simps)
@@ -1623,6 +1675,8 @@ lemma balR_eq_heavy_r [simp]:
 apply(simp add: balR_def)
 done
 
+
+text {* There is a common pattern for checking a predicate. *}
 
 lemma iszero_iszero [simp] :
 "((if b then (1 :: 256 word) else 0) = 0) = (\<not> b) "

@@ -72,8 +72,10 @@ lemma no_assertion_failure:
 apply(simp add: no_assertion_failure_def)
 apply(auto)
  apply(drule star_case; auto simp add: no_assertion_failure_post_def)
+  apply(case_tac steps; auto)
+  apply(drule star_case; auto)
+  apply(case_tac steps; auto)
  apply(case_tac steps; auto)
- apply(drule star_case; auto)
 apply(case_tac steps; auto)
 done
 
