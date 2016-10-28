@@ -1,6 +1,6 @@
 theory AlwaysFail
 
-imports Main "../ContractSem" "../RelationalSem"
+imports Main "../ContractSem" "../RelationalSem" "../FunctionalCorrectness"
 
 begin
 

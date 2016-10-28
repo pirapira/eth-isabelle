@@ -62,11 +62,11 @@ destroy itself and give its balance to our account.  *}
 
 declare account_state_natural_change.simps [simp]
 
-text "When the execution comes back from an external call, the account state might have changed
+text {* When the execution comes back from an external call, the account state might have changed
 arbitrarily.  Our strategy is to assume that an invariant is kept here; and later prove that
 the invariant actually holds (that is, for fewer depth of reentrancy).
 The whole argument can be seen as a mathematical induction over depths of reentrancy, though
-this idea has not been formalized yet."
+this idea has not been formalized yet. *}
 
 inductive account_state_return_change ::
 "(account_state \<Rightarrow> bool) \<Rightarrow> account_state \<Rightarrow> account_state \<Rightarrow> bool"
@@ -81,7 +81,8 @@ account_return:
  , account_killed = killed
  \<rparr>
  \<Longrightarrow>
- account_state_return_change invariant
+ account_state_return_change
+ invariant
  \<lparr> account_address = addr
  , account_storage = old_str
  , account_code = code
@@ -159,7 +160,7 @@ where
    build_venv_failed account_state_going_out = Some new_v \<Longrightarrow>
    
    (* and if the previous action from the contract was a call, *)
-   returnable_result result \<Longrightarrow>
+   returnable_result result = True \<Longrightarrow>
    
    (* the world can make a move, telling the contract to continue with *) 
    (* the variable environment. *)

@@ -11,16 +11,16 @@ imports Main "~~/src/HOL/Word/Word"
 
 begin
 
-text {* The frequently used machine words are named here.  For example, ``address''
-denotes the type of
-160-bit machine words.  The type ``uint'' denotes the type of EVM machine words. *}
+text {* The frequently used machine word types are named here.  For example, \textit{address}
+is the type of
+160-bit machine words.  The type \textit{w256} is the type of EVM machine words. *}
 
 type_synonym w256 = "256 word"    -- {* 256 bit words *}
 type_synonym address = "160 word" -- {* 160 bit addresses *}
 type_synonym byte = "8 word"      -- {* 8 bit bytes *}
 
-text {* In EVM, the memory contains one byte for each machine word.
-The storage contains one machine word for each machine word.
+text {* In EVM, the memory contains one byte for each machine word (offset).
+The storage contains one machine word for each machine word (index).
 As we will see, the memory is cleared for every invocation of smart contracts.
 The storage is persistent for an account.
 *}
@@ -55,24 +55,24 @@ These assertions will be proved in Isabelle/HOL. *}
 
 (* The environment visible for annotations *)
 record aenv =
-  aenv_stack :: "w256 list" -- {* The current stack *}
-  aenv_memory :: memory -- {* The current memory *}
-  aenv_storage :: storage -- {* The current storage *}
-  aenv_balance :: "address \<Rightarrow> w256" -- {* The current balance of all accounts *}
-  aenv_caller :: address -- {* The caller of the current invocation. *}
-  aenv_value_sent :: w256 -- {* The amount of Eth sent alont the current invocation. *}
-  aenv_data_sent :: "byte list" -- {* The data sent along the current invocation. *}
-  aenv_storage_at_call :: storage -- {* The storage content at the time of the invocation. *}
+  aenv_stack :: "w256 list" -- {* the current stack *}
+  aenv_memory :: memory -- {* the current memory *}
+  aenv_storage :: storage -- {* the current storage *}
+  aenv_balance :: "address \<Rightarrow> w256" -- {* the current balance of all accounts *}
+  aenv_caller :: address -- {* the caller of the current invocation *}
+  aenv_value_sent :: w256 -- {* the amount of Eth sent alont the current invocation *}
+  aenv_data_sent :: "byte list" -- {* the data sent along the current invocation *}
+  aenv_storage_at_call :: storage -- {* the storage content at the time of the invocation *}
   aenv_balance_at_call :: "address \<Rightarrow> w256"
-  -- {* The balance of all accounts at the time of the invocation *}
-  aenv_this :: address -- {* The address of this contract under verification. *}
-  aenv_origin :: address -- {* The external account that started the transaction. *}
+  -- {* the balance of all accounts at the time of the invocation *}
+  aenv_this :: address -- {* the address of this contract under verification *}
+  aenv_origin :: address -- {* the external account that started the transaction. *}
 
 text {* @{term aenv_balance} field keeps track of the balance of all accounts because the contract
 under verification can send some Eth to other accounts.  To capture the effect of this, I chose to
 keep track of the balances of the other contracts.  *}
 
-text {* @{term aenv_storage_at_call} and @{term aenv_balance_at_call} fields keep the states at the
+text {* @{term aenv_storage_at_call} and @{term aenv_balance_at_call} fields remember the states at the
 time of the contract invocation.  These are used for rolling back the state after a failure.
 Failures happen for example when the contract under verification jumps to a wrong destination,
 or it runs out of gas. *}
@@ -82,7 +82,7 @@ An Ethereum transaction is started by an external account (that is, an account w
 have codes but owned by somebody with a secret key).  @{term aenv_origin} denotes this external
 account.  During a transaction, the origin first sends a message to an account, the receiver can
 in turn call other accounts as well.  When the calls nest, @{term aenv_caller} points to the
-immediate caller.
+immediate caller of the current invocation.
 *}
 
 text {* I'm going to add more fields in the @{typ aenv} record in the near future because

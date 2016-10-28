@@ -1,6 +1,6 @@
 theory FailOnReentrance
 
-imports Main "../ContractSem" "../RelationalSem"
+imports Main "../ContractSem" "../RelationalSem" "../FunctionalCorrectness"
 
 begin
 

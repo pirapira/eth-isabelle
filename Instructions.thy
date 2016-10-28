@@ -1,16 +1,16 @@
 section {* EVM Instructions *}
 
 text {* This section lists the EVM instructions and their byte representations.
-I also introduce an assertion opcode, whose byte representation is empty.
-The assertion opcode requires a property about the state of the EVM at
+I also introduce an assertion instruction, whose byte representation is empty.
+The assertion instruction is a statement about the state of the EVM at
 that position of the program.
 *}
 
-text {* In Isabelle/HOL, it is very expensive to define a single inductive type
-that contains all opcodes.  When I do it, Isabelle/HOL automatically proves every
-opcode is different from any other opcode, but this process has the computational
-complexity of the square of the number of opcodes.  Instead, I define multiple
-smaller indcutive types and at the end define the whole opcode set.  *}
+text {* In Isabelle/HOL, it is expensive to define a single inductive type
+that contains all instructions.  When I do it, Isabelle/HOL automatically proves every
+instruction is different from any other instruction, but this process has the computational
+complexity of the square of the number of instructions.  Instead, I define multiple
+smaller inductive types and unify them at the end.  *}
 
 theory Instructions
 
@@ -20,13 +20,13 @@ begin
 
 subsection "Bit Operations"
 
-text {* The following clause defined a type called \texttt{bits\_inst}.
+text {* The following clause defines a type called \textit{bits\_inst}.
 The type has five elements.  It is automatically understood that nothing else
 belongs to this type.  It is also understood that every one of these five elements
 is different from any of the other four.
 *}
 
-text {* Some instructions have \texttt{inst\_} in front because names like AND,
+text {* Some instructions have \textit{inst\_} in front because names like AND,
 OR and XOR are taken by the machine word library.
 *}
 
@@ -42,7 +42,7 @@ datatype bits_inst
 | BYTE     -- {* taking one byte out of a word *}
 
 text {* These instructions are represented by the following bytes.
-Most opcodes are represented by a single byte.
+Most opcodes are a single byte.
 *}
 
 fun bits_inst_code :: "bits_inst \<Rightarrow> byte"
@@ -57,7 +57,9 @@ declare bits_inst_code.simps [simp]
 
 subsection "Signed Arithmetics"
 
-text {* More similar definitions follow. *}
+text {* More similar definitions follow.  Below are instructions for signed arithmetics.
+The operations common to signed and unsigned are listed further below in the 
+Unsigned Arithmetics section. *}
 
 datatype sarith_inst
 = SDIV -- {* signed division *}
@@ -77,6 +79,9 @@ where
 declare sarith_inst_code.simps [simp]
 
 subsection "Unsigned Arithmetics"
+
+text {* The names GT, EQ and LT are taken in the Cmp library
+(which will be used for AVL trees). *} 
 
 datatype arith_inst
 = ADD -- {* addition *}
@@ -111,7 +116,7 @@ where
 
 declare arith_inst_code.simps [simp]
 
-subsection "Informational Opcodes"
+subsection "Informational Instructions"
 
 datatype info_inst =
     ADDRESS -- {* the address of the account currently running *}
@@ -122,14 +127,14 @@ datatype info_inst =
   | CALLDATASIZE -- {* The number of bytes sent along this invocation *}
   | CODESIZE -- {* the number of bytes in the currently running code *}
   | GASPRICE -- {* the current gas price *}
-  | EXTCODESIZE -- {* the size of a code of the specified account *}
-  | BLOCKHASH -- {* the block hash of a specified block among the recent blocks. *}
-  | COINBASE -- {* the address of the miner that validates the current block. *}
-  | TIMESTAMP -- {* the date and time of the block. *}
+  | EXTCODESIZE -- {* the size of the code on the specified account *}
+  | BLOCKHASH -- {* the block hash of a specified block among the recent blocks *}
+  | COINBASE -- {* the address of the miner that validates the current block *}
+  | TIMESTAMP -- {* the date and time of the block *}
   | NUMBER -- {* the block number *}
   | DIFFICULTY -- {* the current difficulty *}
   | GASLIMIT -- {* the current block gas limit *}
-  | GAS -- {* the remaining gas for the current execution  *}
+  | GAS -- {* the remaining gas for the current execution.  *}
   
 fun info_inst_code :: "info_inst \<Rightarrow> byte"
 where
@@ -154,7 +159,7 @@ declare info_inst_code.simps [simp]
 
 subsection "Duplicating Stack Elements"
 
-text {* There are 16 opcodes for duplicating a stack element.  These opcodes takes
+text {* There are sixteen instructions for duplicating a stack element.  These instructions take
 a stack element and duplicate it on top of the stack. *}
 
 type_synonym dup_inst = nat
@@ -203,7 +208,7 @@ where
 
 declare storage_inst_code.simps [simp]
 
-subsection {* Program-Counter Opcodes *}
+subsection {* Program-Counter Instructions *}
 
 datatype pc_inst =
     JUMP -- {* jumping to the specified location in the code *}
@@ -224,7 +229,7 @@ where
 
 declare pc_inst_code.simps [simp]
 
-subsection {* Stack Opcodes *}
+subsection {* Stack Instructions *}
 
 datatype stack_inst =
     POP -- {* throwing away the topmost element of the stack *}
@@ -252,12 +257,12 @@ type_synonym swap_inst = nat
 
 abbreviation swap_inst_code :: "swap_inst \<Rightarrow> byte"
 where
-"swap_inst_code n ==
+"swap_inst_code n \<equiv>
   (if n < 1 then undefined else   (* there is no SWAP0 *)
   (if n > 16 then undefined else  (* there are no SWAP17 and on *)
    word_of_int (int n) + 0x8f))"  (* 0x90 is SWAP1, ..., 0x9f is SWAP16 *)
    
-subsection {* Logging Opcodes *}
+subsection {* Logging Instructions *}
 
 text "There are instructions for logging events with different number of arguments."
 
@@ -273,9 +278,12 @@ where
 
 declare log_inst_code.simps [simp]
 
-subsection {* Miscellaneous Opcodes *}
+subsection {* Miscellaneous Instructions *}
 
-text {* This section contains the opcodes that alter the account-wise control flow. *}
+text {* This section contains the instructions that alter the account-wise control flow.
+In other words, they cause communication between accounts (or at least interaction with
+other accounts' code).
+*}
 
 datatype misc_inst
   = STOP -- {* finishing the execution normally, with the empty return data *}
@@ -288,7 +296,7 @@ datatype misc_inst
   | RETURN -- {* finishing the execution normally with data *}
   | SUICIDE
   -- {* send all remaining Eth balance to the specified account,
-                  finishing the execution normally, and flagging the current account for deletion *}
+        finishing the execution normally, and flagging the current account for deletion. *}
 
 fun misc_inst_code :: "misc_inst \<Rightarrow> byte"
 where
@@ -302,15 +310,15 @@ where
 
 declare misc_inst_code.simps [simp]
 
-subsection {* Annotation Opcode *}
+subsection {* Annotation Instruction *}
 
-text {* The annotation opcode is just a predicate over @{typ aenv}.
-A predicate modelled as a function returning a boolean.
+text {* The annotation instruction is just a predicate over @{typ aenv}.
+A predicate is modelled as a function returning a boolean.
 *}
 
 type_synonym annotation = "aenv \<Rightarrow> bool"
 
-subsection {* The Whole Opcode Set *}
+subsection {* The Whole Instruction Set *}
 
 text {* The small inductive sets above are here combined into a single type. *}
 
@@ -364,7 +372,8 @@ text {* This can also be used to find jump destinations from a sequence of opcod
 fun drop_bytes :: "inst list \<Rightarrow> nat \<Rightarrow> inst list"
 where
   "drop_bytes prg 0 = prg"
-| "drop_bytes (Stack (PUSH_N v) # rest) bytes = drop_bytes rest (bytes - 1 - length v)"
+| "drop_bytes (Stack (PUSH_N v) # rest) bytes =
+    drop_bytes rest (bytes - 1 - length v)"
 | "drop_bytes (Annotation _ # rest) bytes = drop_bytes rest bytes"
 | "drop_bytes (_ # rest) bytes = drop_bytes rest (bytes - 1)"
 | "drop_bytes [] (Suc v) = []"
@@ -376,7 +385,7 @@ text {* Also it is possible to compute the size of a program as the number of by
 fun program_size :: "inst list \<Rightarrow> nat"
 where
   "program_size (Stack (PUSH_N v) # rest) = length v + 1 + program_size rest"
-  -- {* I was using @{term inst_size} here, but that contributed to performance problems during proofs. *}
+  -- {* I was using @{term inst_size} here, but that contributed to performance problems. *}
 | "program_size (Annotation _ # rest) = program_size rest"
 | "program_size (_ # rest) = 1 + program_size rest"
 | "program_size [] = 0"
@@ -388,8 +397,7 @@ text {* as well as computing the byte representation of the program. *}
 fun program_code :: "inst list \<Rightarrow> byte list"
 where
   "program_code [] = []"
-| "program_code (inst # rest) =
-   inst_code inst @ program_code rest"
+| "program_code (inst # rest) = inst_code inst @ program_code rest"
 
 declare program_code.simps [simp]
 

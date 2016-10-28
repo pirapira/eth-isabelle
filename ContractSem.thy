@@ -22,7 +22,8 @@ where
 "strict_if b x y = (if b then x True else y True)"
 
 text {* When the if-condition is known to be True, the simplifier can
-proceed into the then-clause.  *}
+proceed into the then-clause.  The \textit{simp} attribute encourages the simplifier
+to use this equation from left to right whenever applicable.  *}
 
 lemma strict_if_True [simp] :
 "strict_if True a b = a True"
@@ -38,7 +39,10 @@ apply(simp add: strict_if_def)
 done
 
 text {* When the if-condition is not known to be either True or False,
-the simplifier is allowed to perform computation on the if-condition. *}
+the simplifier is allowed to perform computation on the if-condition.
+The \textit{cong} attribute tells the simplifier to try to rewrite the
+left hand side of the conclusion, using the assumption.
+*}
 
 lemma strict_if_cong [cong] :
 "b0 = b1 \<Longrightarrow> strict_if b0 x y = strict_if b1 x y"
@@ -47,14 +51,17 @@ done
 
 subsection "The Interaction between the Contract and the World"
 
-text "In this development, the EVM execution is seen as an interaction between the contract
+text {*In this development, the EVM execution is seen as an interaction between a single contract
+invocation
 and the rest of the world.  The world can call into the contract.  The contract can reply by just
-finishing or failing, but it can also call an account.  When the contract calls an account,
+finishing or failing, but it can also call an account\footnote{This might be the same account as our
+invocation, but still the deeper calls is part of the world.}.  When our contract execution calls an account,
 this is seen as an action towards the world, because the world then has to decide the
-result of this call.  The world can say that the call finished successfully or in an exceptional
-state.  The world can also say that the call resulted in a reentrancy.  In other words,
-the world can call the contract again.  The whole process is captured as a game between
-the world and the contract."
+result of this call.  The world can say that the call finished successfully or exceptionally.
+The world can also say that the call resulted in a reentrancy.  In other words,
+the world can call the contract again and change the storage and the balance of our contract.
+The whole process is captured as a game between
+the world and the contract. *}
 
 subsubsection "The World's Moves"
 
@@ -98,7 +105,7 @@ datatype world_action =
 
 subsubsection "The Contract's Moves"
 
-text {* After being invoked, the contract can respond by calling an account, creating (or deploying
+text {* After being invoked, the contract can respond by calling an account, creating (or deploying)
 a smart contract, destroying itself, returning, or failing.  When the contract calls an account,
 the contract provides the following information.*}
 
@@ -642,7 +649,7 @@ where
          (ContractCall
            (\<lparr> callarg_gas = e0,
               callarg_code = Word.ucast e1,
-              callarg_recipient = Word.ucast e1,
+              callarg_recipient = cenv_this c,
               callarg_value = venv_value_sent v,
               callarg_data = 
                 cut_memory e3 (Word.unat e4) (venv_memory v),
@@ -1088,9 +1095,13 @@ where
 | "instruction_sem v c (Log LOG4) = log 4 v c"
 | "instruction_sem v c (Swap n) = swap n v c"
 | "instruction_sem v c (Misc CREATE) = create v c"
-| "instruction_sem v c (Misc CALLCODE) = callcode v c"
+| "instruction_sem v c (Misc CALLCODE) = (* callcode v c *)
+    InstructionAnnotationFailure"
+    -- {* Since I cannot guarantee anything about CALLCODE, I choose immediate failure. *}
 | "instruction_sem v c (Misc SUICIDE) = suicide v c"
-| "instruction_sem v c (Misc DELEGATECALL) = delegatecall v c"
+| "instruction_sem v c (Misc DELEGATECALL) = (* delegatecall v c *)
+    InstructionAnnotationFailure"
+    -- {* Since I cannot guarantee anything about DELEGATECALL, I choose immediate failure. *}
 | "instruction_sem v c (Info GAS) = stack_0_1_op v c (gas v)"
 | "instruction_sem v c (Memory MSIZE) =
     stack_0_1_op v c (word_of_int (venv_memory_usage v))"
@@ -1162,7 +1173,7 @@ where
                 (program_length (cenv_program c)) remaining_steps))
         | InstructionToWorld (a, st, bal, opt_pushed_v) \<Rightarrow>
           ProgramToWorld (a, st, bal, opt_pushed_v)
-        | InstructionUnknown \<Rightarrow> ProgramInvalid))))"
+        | InstructionAnnotationFailure \<Rightarrow> ProgramAnnotationFailure))))"
 | "blocked_program_sem v c l p _ = program_sem v c l p"
 by pat_completeness auto
 termination by lexicographic_order
@@ -1217,7 +1228,7 @@ The block state is arbitrary.  This means we verify properties that hold
 on whatever block numbers and whatever difficulties and so on.
 The origin of the transaction is also considered arbitrary.
 *}
-inductive build_venv_called :: "account_state => call_env => variable_env => bool"
+inductive build_venv_called :: "account_state \<Rightarrow> call_env \<Rightarrow> variable_env \<Rightarrow> bool"
 where
 venv_called:
   "bal (account_address a) =
@@ -1462,103 +1473,6 @@ lemma update_account_state_Some [simp] :
 apply(case_tac act; simp add: update_account_state_def)
 done
 
-subsection "Functional Correctness"
-
-text {* The definitions in this subsection are not used in the analysis of Deed contract
-currently.  They are useful when we write down the expected behavior of a contract as
-a function in Isabelle/HOL, and compare the function against the actual implementation. *}
-
-text {* To specify a contract's behavior,
-we specify its action and a condition on the account state. *}
-
-type_synonym contract_behavior = "contract_action * (account_state \<Rightarrow> bool)"
-
-text {* A contract can be called into, returned back to, or failed back to.
-The following record specifies a behavior for all these cases.
-When the contract is called into or returned back to,
-some data is available to the contract.  Otherwise, when
-the contract is failed back to, there is no input apart from the 
-fact that the inner call has failed.
-*}
-
-record response_to_world =
-  when_called :: "call_env \<Rightarrow> contract_behavior"
-  when_returned :: "return_result \<Rightarrow> contract_behavior"
-  when_failed :: "contract_behavior"
-
-abbreviation respond_to_call_correctly ::
-  " (call_env \<Rightarrow> contract_behavior) \<Rightarrow>
-       account_state \<Rightarrow> bool"
-where "respond_to_call_correctly c a \<equiv>
-  (\<forall> call_env initial_venv resulting_action final_state_pred.
-     build_venv_called a call_env initial_venv \<longrightarrow>
-         (* The specification says the execution should result in these *)
-         c call_env = (resulting_action, final_state_pred) \<longrightarrow>
-         ( \<forall> steps. (* and for any number of steps *)
-           ( let r = program_sem initial_venv (build_cenv a)
-                      (program_length (account_code a)) steps in
-             (* either more steps are necessary, or *)
-             r = ProgramStepRunOut \<or>
-             (* the result matches the specification *)
-             (\<exists> pushed_venv st bal.
-              r = ProgramToWorld (resulting_action, st, bal, pushed_venv) \<and>
-              final_state_pred
-                (update_account_state a resulting_action st bal pushed_venv)))))"
-
-abbreviation respond_to_return_correctly ::
-  "(return_result \<Rightarrow> contract_behavior) \<Rightarrow>
-   account_state \<Rightarrow>
-   bool"
-where
-"respond_to_return_correctly r a \<equiv>
-   (\<forall> rr initial_venv final_state_pred resulting_action.
-       build_venv_returned a rr initial_venv \<longrightarrow>
-       r rr = (resulting_action, final_state_pred) \<longrightarrow>
-       ( \<forall> steps.
-          (let r = program_sem initial_venv (build_cenv a)
-                     (program_length (account_code a)) steps in
-           r = ProgramStepRunOut \<or>
-           (\<exists> pushed_venv st bal.
-            r = ProgramToWorld (resulting_action, st, bal, pushed_venv) \<and>
-            final_state_pred
-              (update_account_state (account_state_pop_ongoing_call a)
-               resulting_action st bal pushed_venv)))))"
-
-abbreviation respond_to_fail_correctly ::
-  "contract_behavior \<Rightarrow>
-   account_state \<Rightarrow>
-   bool"
-where
-"respond_to_fail_correctly f a \<equiv>
-   (\<forall> initial_venv final_state_pred resulting_action.
-      Some initial_venv = build_venv_failed a \<longrightarrow>
-      f = (resulting_action, final_state_pred) \<longrightarrow>
-      (\<forall> steps.
-        (let r = program_sem initial_venv (build_cenv a)
-                   (program_length (account_code a)) steps in
-         r = ProgramStepRunOut \<or>
-         (\<exists> pushed_venv st bal.
-            r = ProgramToWorld (resulting_action, st, bal, pushed_venv) \<and>
-            final_state_pred
-              (update_account_state (account_state_pop_ongoing_call a)
-                 resulting_action st bal pushed_venv)))))"
-
-text {* The following statement summarizes everything above.
-Essentially, the functional correctness holds when
-the code responds to calls correctly, responds to returns correctly,
-and responds to failures correctly.
-The statement is parametrized with a precondition.
-*}
-
-inductive account_state_responds_to_world ::
-  "(account_state \<Rightarrow> bool) \<Rightarrow> response_to_world \<Rightarrow> bool"
-where
-AccountStep:
-  "(\<forall> a. precond a \<longrightarrow> respond_to_call_correctly c a) \<Longrightarrow>
-   (\<forall> a. precond a \<longrightarrow> respond_to_return_correctly r a) \<Longrightarrow>
-   (\<forall> a. precond a \<longrightarrow> respond_to_fail_correctly f a) \<Longrightarrow>
-   account_state_responds_to_world precond
-   \<lparr> when_called = c, when_returned = r, when_failed = f \<rparr>"
 
 subsection {* Controlling the Isabelle Simplifier *}
 
