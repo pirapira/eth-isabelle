@@ -277,7 +277,7 @@ where
    
 subsection {* Execution Environments *}
 
-text "I model an instruction as a function that takes environments and modify some parts of them."
+text "I model an instruction as a function that takes environments and modifies some parts of them."
 
 text "The execution of an EVM program happens in a block, and the following information about
 the block should be available."
@@ -291,7 +291,7 @@ record block_info =
   block_gaslimit :: w256 -- {* the block gas imit *}
   block_gasprice :: w256
 
-text {* The variable environment contains information that are relatively volatile. *}
+text {* The variable environment contains information that is relatively volatile. *}
 
 record variable_env =
   venv_stack :: "w256 list"
@@ -307,12 +307,12 @@ record variable_env =
   venv_balance_at_call :: "address \<Rightarrow> w256" -- {* the balances at the invocation *}
   venv_origin :: address -- {* the external account that started the current transaction *}
   venv_ext_program :: "address \<Rightarrow> program" -- {* the codes of all accounts *}
-  venv_block :: block_info -- {* the current block *}
+  venv_block :: block_info -- {* the current block. *}
 
-text {* The constant environment contains information that are rather stable. *}
+text {* The constant environment contains information that is rather stable. *}
 
 record constant_env =
-  cenv_program :: program -- {* the code in the account under verification. *}
+  cenv_program :: program -- {* the code in the account under verification *}
   cenv_this :: address -- {* the address of the account under verification. *}
 
 subsection {* The Result of an Instruction *}
@@ -321,24 +321,25 @@ text {* The result of program execution is microscopically defined by results of
 executions.  The execution of a single instruction can result in the following cases: *}
 
 datatype instruction_result =
-  InstructionContinue variable_env -- {* the execution should continue. *}
-| InstructionAnnotationFailure -- {* the annotation turned out to be false. *}
+  InstructionContinue variable_env -- {* the execution should continue *}
+| InstructionAnnotationFailure -- {* the annotation turned out to be false *}
 | InstructionToWorld
 -- {* the execution has stopped; either for the moment just calling out another account, or
-finally finishing the current invocation.
+finally finishing the current invocation
 *}  
    " contract_action   (* the contract's move *)
    \<times> storage           (* the new storage content *)
    \<times> (address \<Rightarrow> w256) (* the new balance of all accounts *)
    \<times> (variable_env \<times> int \<times> int) option
      (* the variable environment to return to, *)
-     (* and the memory reagion that expects the return value *)"
+     (* and the memory reagion that expects the return value. *)"
 
 text {* When the contract fails, the result of the instruction always looks like this: *}
 abbreviation instruction_failure_result :: "variable_env \<Rightarrow> instruction_result"
 where
 "instruction_failure_result v \<equiv>
-  InstructionToWorld (ContractFail, venv_storage_at_call v, venv_balance_at_call v, None)"
+  InstructionToWorld
+    (ContractFail, venv_storage_at_call v, venv_balance_at_call v, None)"
 
 text {* When the contract returns, the result of the instruction always looks like this: *}
 abbreviation instruction_return_result :: "byte list \<Rightarrow> variable_env \<Rightarrow> instruction_result"
@@ -354,14 +355,14 @@ However, the value is not unknown enough in this formalization because
 the value is only dependent on the variable environment (which does not
 keep track of the remaining gas).  This is not a problem as long as
 we are analyzing a single invocation of a loopless contract, but
-will be fixed.
+gas accounting is a planned feature.
 *}
 
 definition gas :: "variable_env \<Rightarrow> w256"
 where "gas _ = undefined"
 
-text {* This M function is defined at the end of H.1. in the yellow paper.
-The purpose of this is to update the memory usage. *}
+text {* This $M$ function is defined at the end of H.1.\,in the yellow paper.
+This function is useful for updating the memory usage counter. *}
 
 abbreviation M ::
 "int (* original memory usage *) \<Rightarrow> w256 (* beginning of the used memory *)
@@ -420,7 +421,7 @@ abbreviation stack_0_0_op :: "variable_env \<Rightarrow> constant_env \<Rightarr
 where
 "stack_0_0_op v c \<equiv> InstructionContinue (venv_advance_pc c v)"
 
-text {* A general pattern of operations that pushes one element onto the stack.  *}
+text {* A general pattern of operations that pushes one element onto the stack:  *}
 abbreviation stack_0_1_op ::
   "variable_env \<Rightarrow> constant_env \<Rightarrow> w256 (* the pushed word *) \<Rightarrow> instruction_result"
 where
@@ -428,7 +429,7 @@ where
    InstructionContinue
       (venv_advance_pc c v\<lparr>venv_stack := w # venv_stack v\<rparr>)"
 
-text {* A general pattern of operations that transforms the topmost element of the stack. *}
+text {* A general pattern of operations that transforms the topmost element of the stack: *}
 abbreviation stack_1_1_op :: "variable_env \<Rightarrow> constant_env \<Rightarrow>
    (w256 \<Rightarrow> w256) (* the function that transforms a word*)
    \<Rightarrow> instruction_result"
@@ -538,7 +539,7 @@ where
       | Some _ \<Rightarrow> instruction_failure_result v
       | None \<Rightarrow> instruction_failure_result v )))"
 
-text {* This function is a reminiscent of my struggle with the Isabelle/HOl simplifier.
+text {* This function is a reminiscent of my struggle with the Isabelle/HOL simplifier.
 The second argument has no meaning but to control the Isabelle/HOL simplifier.
 *}
 definition blockedInstructionContinue :: "variable_env \<Rightarrow> bool \<Rightarrow> instruction_result"
@@ -604,7 +605,7 @@ where
   
 declare cut_memory.simps [simp]
 
-text {* CALL instruction results in @{term ContractCall} action when successful. *}
+text {* CALL instruction results in @{term ContractCall} action when there are enough stack elements (and gas, when we introduce the gas accounting). *}
 definition call :: "variable_env \<Rightarrow> constant_env \<Rightarrow> instruction_result"
 where
 "call v c =
@@ -753,14 +754,14 @@ where
                            None (* No possibility of ever returning to this invocation. *))
    | _ \<Rightarrow> instruction_failure_result v)"
 
-text "STOP is a simpler than RETURN:"
+text "STOP is simpler than RETURN:"
 abbreviation stop ::
 "variable_env \<Rightarrow> constant_env \<Rightarrow> instruction_result"
 where
 "stop v c \<equiv>
   InstructionToWorld (ContractReturn [], venv_storage v, venv_balance v, None)"
 
-text "POP:"
+text "POP removes the topmost element of the stack:"
 abbreviation pop ::
 "variable_env \<Rightarrow> constant_env \<Rightarrow> instruction_result"
 where
@@ -792,7 +793,7 @@ where
 "store_word_memory pos val mem \<equiv>
    store_byte_list_memory pos (word_rsplit val) mem"
 
-text "MSTRE:"
+text "MSTORE writes one word to the memory:"
 abbreviation mstore :: "variable_env \<Rightarrow> constant_env \<Rightarrow> instruction_result"
 where
 "mstore v c ==
@@ -807,7 +808,7 @@ where
           , venv_memory_usage := M (venv_memory_usage v) pos 32
           \<rparr>))"
 
-text "MLOAD:"
+text "MLOAD reads one word from the memory:"
 abbreviation mload :: "variable_env \<Rightarrow> constant_env \<Rightarrow> instruction_result"
 where
 "mload v c ==
@@ -820,10 +821,10 @@ where
           \<rparr>)
   | _ \<Rightarrow> instruction_failure_result v)"
 
-text "MSTORE8:"
+text "MSTORE8 writes one byte to the memory:"
 abbreviation mstore8 :: "variable_env \<Rightarrow> constant_env \<Rightarrow> instruction_result"
 where
-"mstore8 v c ==
+"mstore8 v c \<equiv>
   (case venv_stack v of
      pos # val # rest \<Rightarrow>
         let new_memory = (venv_memory v)(pos := ucast val) in
@@ -837,7 +838,7 @@ where
 text "For CALLDATACOPY, I need to look at the caller's data as memory."
 abbreviation input_as_memory :: "byte list \<Rightarrow> memory"
 where
-"input_as_memory lst idx ==
+"input_as_memory lst idx \<equiv>
    (if length lst \<le> unat idx then 0 else lst ! unat idx)"
 
 text "CALLDATACOPY:"
@@ -853,7 +854,7 @@ where
          v\<lparr> venv_stack := rest, venv_memory := new_memory,
             venv_memory_usage := M (venv_memory_usage v) dst_start len \<rparr>))"
 
-text "CODECOPY:"
+text "CODECOPY copies a region of the currently running code to the memory:"
 abbreviation codecopy :: "variable_env \<Rightarrow> constant_env \<Rightarrow> instruction_result"
 where
 "codecopy v c \<equiv>
@@ -868,7 +869,7 @@ where
        \<rparr>)
    | _ \<Rightarrow> instruction_failure_result v)"
 
-text "EXTCODECOPY:"
+text "EXTCODECOPY copies a region of the code of an arbitrary account.:"
 abbreviation extcodecopy :: "variable_env \<Rightarrow> constant_env \<Rightarrow> instruction_result"
 where
 "extcodecopy v c \<equiv>
@@ -942,7 +943,7 @@ where
 
 declare swap_def [simp]
 
-text {* SHA3 instruciton in the EVM is actually Keccak 256.
+text {* SHA3 instruciton in the EVM is actually reaak 256.
 In this development, Keccak256 computation is defined in KEC.thy.
 *}
 definition sha3 :: "variable_env \<Rightarrow> constant_env \<Rightarrow> instruction_result"
@@ -1123,9 +1124,9 @@ datatype program_result =
   -- {* the program stopped execution because an instruction wants to talk to the world
   for example because the execution returned, failed, or called an account.
   *}
-| ProgramInvalid -- {* An unknown instruction is found.  Maybe this should just count as
-  a failing execution. *}
-| ProgramAnnotationFailure -- {* An annotation turned out to be false.  This does not happen
+| ProgramInvalid -- {* an unknown instruction is found.  Maybe this should just count as
+  a failing execution *}
+| ProgramAnnotationFailure -- {* an annotation turned out to be false.  This does not happen
   in reality, but this case exists for the sake of the verification. *}
 | ProgramInit call_env -- {*
     This clause does not denote results of program execution.
@@ -1198,7 +1199,7 @@ done
 subsection {* Account's State *}
 
 text {* In the bigger picture, a contract invocation changes accounts' states.
-The Yellow Paper states that an account has a storage, a piece of code and a balance.
+An account has a storage, a piece of code and a balance.
 Since I am interested in account states in the middle of a transaction, I also need to
 keep track of the ongoing executions of a single account.  Also I need to keep track of
 a flag indicating if the account has already marked for erasure.
@@ -1210,9 +1211,9 @@ record account_state =
   account_code :: program
   account_balance :: w256
   account_ongoing_calls :: "(variable_env \<times> int \<times> int) list"
-  -- {* The variable environments that are executing on this account, but waiting for calls to finish *}
+  -- {* the variable environments that are executing on this account, but waiting for calls to finish *}
   account_killed :: bool
-  -- {* The boolean that indicates the account has executed SUICIDE in this transaction.
+  -- {* the boolean that indicates the account has executed SUICIDE in this transaction.
   The flag causes a destruction of the contract at the end of a transaction.
   *}
 
@@ -1331,12 +1332,15 @@ the balance of our contract might have
 arbitrarily increased.
 *}
 
-inductive build_venv_returned :: "account_state \<Rightarrow> return_result \<Rightarrow> variable_env \<Rightarrow> bool"
+inductive build_venv_returned ::
+"account_state \<Rightarrow> return_result \<Rightarrow> variable_env \<Rightarrow> bool"
 where
 venv_returned:
 "  is_call_like (lookup (program_content a_code) (v_pc - 1)) \<Longrightarrow>
    new_bal \<ge> a_bal \<Longrightarrow> (* the balance might have increased *)
    build_venv_returned
+
+     (* here is the first argument *)
      \<lparr> account_address = a_addr (* all elements are spelled out for performance *)
      , account_storage = a_storage
      , account_code = a_code
@@ -1359,7 +1363,11 @@ venv_returned:
          \<rparr>, mem_start, mem_size) # _
      , account_killed = _
      \<rparr>
+     
+     (* here is the second argument *)
      r
+     
+     (* here is the third argument *)
      (\<lparr>  venv_stack = 1 # v_stack (* 1 is pushed, indicating a return *)
        , venv_memory =
          put_return_values v_memory (return_data r) mem_start mem_size

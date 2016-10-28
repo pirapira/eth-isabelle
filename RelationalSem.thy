@@ -6,7 +6,8 @@ invocation.  This means we do not look into details of further reentrancy, but j
 that the inner reentrancy keeps the invariant of the contract.  Of course we need to prove
 that the invariant holds for the code, but when we do that we can assume that the inner
 nested calls keep the invariants (we can say we are doing mathematical induction on the depth
-of reentrancy).  *}
+of reentrancy)\footnote{This poses troubles dealing with DELEGATECALL and CALLCODE instructions.
+Currently execution of these instructions causes an immediate annotation failure.}.  *}
 
 theory RelationalSem
 
@@ -19,7 +20,7 @@ subsection {* Some Possible Changes on Our Account State *}
 text {* The account state might change even when the account's code is not executing. *}
 
 text {* Between blocks, the account might gain balances because somebody mines 
-Ether for the account.  Even within a single block,
+Eth for the account.  Even within a single block,
 the balance might increase also while other contracts execute
 because they might destroy themselves and send their balance to our account.
 When a transaction finishes, if our contract is marked as killed, it is destroyed.
@@ -276,13 +277,14 @@ this transitive closure of rounds guides us through all the possible states when
 invariant is kept during external calls\footnote{This assumption about deeper reentrancy should
 be considered as an induction hypothesis.  There has to be a lemma actually perform
 such induction.}.
-The following template traverses the states and proves that the invariant is actually kept
+The following template traverses the states and states that the invariant is actually kept
 after every possible round.  Also the template states that no annotation failures happen.
+When I state something, I will be then obliged to prove the statement.  This happens in the next section.
 *}
 
 text {* I define the conjunction of the properties requested at the final states.
 The whole thing is more readable when I inline-expand @{term no_assertion_failure_post},
-but if I do that, the @{text auto} tactic splits creates a goal for each conjunct.
+but if I do that, the @{text auto} tactic splits out a subgoal for each conjunct.
 This doubles the already massive number of subgoals.
 *}
 
@@ -304,8 +306,8 @@ holds whenever the invocation loses the control flow.
 The invocation loses the control flow when the contract returns or fails
 from the invocation, and also when it calls an account.
 When the contract calls an account, the invocation does not finish so
-the invariant has to be proven once more after the invocation regains
-the control flow after the call finishes.
+I need to verify further final states against the postconditions, after
+the call finishes.
 The repetition is captured by the transitive closure
 @{term "star (one_round I)"}.
 
@@ -317,26 +319,27 @@ over the depth of reentrancy.  So we can assume that
 reentrancy of a fewer depth keeps the invariant.
 This idea comes from Christian Reitwiessner's treatment of
 reentrancy in Why ML.
-I haven't justified the idea in Isabelle/HOL.
+I have not justified the idea in Isabelle/HOL.
 *}
 
 definition no_assertion_failure :: "(account_state \<Rightarrow> bool) \<Rightarrow> bool"
 where
-"no_assertion_failure (I :: account_state \<Rightarrow> bool) ==
+"no_assertion_failure (I :: account_state \<Rightarrow> bool) \<equiv>
   (\<forall> addr str code bal ongoing killed callenv.
     I \<lparr> account_address = addr, account_storage = str, account_code = code,
-        account_balance = bal, account_ongoing_calls = ongoing, account_killed = killed \<rparr> \<longrightarrow>
+       account_balance = bal, account_ongoing_calls = ongoing,
+       account_killed = killed \<rparr> \<longrightarrow>
   (\<forall> fin. star (one_round I) (
     \<lparr> account_address = addr, account_storage = str, account_code = code,
-      account_balance = bal, account_ongoing_calls = ongoing, account_killed = killed \<rparr>
+      account_balance = bal, account_ongoing_calls = ongoing,
+      account_killed = killed \<rparr>
   , ProgramInit callenv) fin \<longrightarrow>
-  no_assertion_failure_post I fin
- ))"
+  no_assertion_failure_post I fin))"
 
 subsection {* How to State a Pre-Post Condition Pair *}
 
 text {* After proving a theorem of the above form, I might be interested in 
-a more specific case (if the caller is not this particular account, nothing should change).
+a more specific case (e.g.\,if the caller is not this particular account, nothing should change).
 For that purpose, here is another template statement.  This contains everything above plus
 an assumption about the initial call, and a conclusion about the state after the invocation.
 *}
@@ -346,15 +349,14 @@ This definition reduces the number of goals that I need to prove.
 Without this definition, the @{text auto} tactic
 splits a goal @{prop "A \<Longrightarrow> B \<and> C"} into two subgoals @{prop "A \<Longrightarrow> B"} and @{prop "A \<Longrightarrow> C"}.
 When I do complicated case analysis on @{prop A}, the number of subgoals grow rapidly.
-So, I define @{term packed} to be @{prop "B \<and> C"} and prevent the @{text auto} tactic from splitting
-the goals for @{prop B} and @{prop C}.
+So, I define @{term packed} to be @{prop "B \<and> C"} and prevent the @{text auto} tactic from noticing that it is a conjunction.
 *}
 
 text {* The following snippet says the invariant still holds in the observed final state%
 \footnote{After the invocation finishes, some miner can credit Eth to the account under
 verification.  The ``observed'' final state is an arbitrary state 
 after such possible balance increases.}
-and the postconditions hold. *}
+and the postconditions hold there. *}
 
 definition postcondition_pack
 where
@@ -378,27 +380,41 @@ evaluate the post condition.
 Of course, in between, there might be nesting reentrant invocations, that might alter
 the storage and the balance of the contract.
 
-At the time of invocation, the invariant and the preconditions are assumed to hold.
+At the time of invocation, the invariant and the preconditions are assumed.
 During reentrant calls (that are deeper than the current invocation),
-The statement will request us to prove that the invariant holds at any moment when
-the contract loses the control flow (when the contract returns, fails or calls a contract).
+the statement will request us to prove that the invariant holds at any moment when
+the contract loses the control flow (when the contract returns, fails or calls an account).
 Also we will be requested to prove that the postcondition holds on these occasions.
 The contract regains the control flow after a deeper call finishes, and the contract
 would lose the control flow again.
-All these moments are captured by the transitive closure of @{term one_round} relation.
+All these requirements are captured by the transitive closure of @{term one_round} relation.
 *}
 
 definition pre_post_conditions ::
 "(account_state \<Rightarrow> bool) \<Rightarrow> (account_state \<Rightarrow> call_env \<Rightarrow> bool) \<Rightarrow>
  (account_state \<Rightarrow> call_env \<Rightarrow> (account_state \<times> program_result) \<Rightarrow> bool) \<Rightarrow> bool"
 where
-"pre_post_conditions (I :: account_state \<Rightarrow> bool) (precondition :: account_state \<Rightarrow> call_env\<Rightarrow> bool)
-(postcondition :: (account_state \<Rightarrow> call_env \<Rightarrow> (account_state \<times> program_result) \<Rightarrow> bool)) \<equiv>
+"pre_post_conditions
+  (I :: account_state \<Rightarrow> bool)
+  (precondition :: account_state \<Rightarrow> call_env\<Rightarrow> bool)
+  (postcondition :: account_state \<Rightarrow> call_env \<Rightarrow>
+                    (account_state \<times> program_result) \<Rightarrow> bool) \<equiv>
+                    
+  (* for any initial call and initial account state that satisfy *)
+  (* the invariant and the precondition, *)
   (\<forall> initial_account initial_call. I initial_account \<longrightarrow>
      precondition initial_account initial_call \<longrightarrow>
+     
+  (* for any final state that are reachable from these initial conditions, *)
   (\<forall> fin. star (one_round I) (initial_account, ProgramInit initial_call) fin \<longrightarrow>
+  
+  (* the annotations have not failed *)
   snd fin \<noteq> ProgramAnnotationFailure \<and>
+  
+  (* and for any observed final state after this final state, *)
   (\<forall> fin_observed. account_state_natural_change (fst fin) fin_observed \<longrightarrow>
+  
+  (* the postcondition and the invariant holds. *)
   postcondition_pack
   I postcondition fin_observed initial_account initial_call fin)))
 "

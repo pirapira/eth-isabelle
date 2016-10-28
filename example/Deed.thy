@@ -11,7 +11,7 @@ imports Main "../RelationalSem"
 
 begin
 
-subsection {* The code under verification. *}
+subsection {* The Code under Verification *}
 
 text {*  The code under verification comes from these commits:
 \begin{verbatim}
@@ -538,7 +538,7 @@ Pc JUMP #
 declare deed_insts_def [simp]
 
 text {* The next definition translates the list of instructions into an AVL tree.
-This single step takes around 10 minutes.  So I need a program that takes a hex code
+This single step takes around 10 minutes.  So I will soon need a program that takes a hex code
 and produces a binary tree literal in Isabelle/HOL.*} 
 
 definition content_compiled :: "(int * inst, nat) tree"
@@ -563,9 +563,7 @@ We have to allow the empty case because this contract might destroy itself. *}
 
 inductive deed_inv :: "account_state \<Rightarrow> bool"
 where
-alive: " account_code a = deed_program \<Longrightarrow>
-  deed_inv a
-"
+  alive: " account_code a = deed_program \<Longrightarrow>  deed_inv a"
 | dead: "account_code a = empty_program \<Longrightarrow> deed_inv a"
 
 text {* The program length lookup is optimized. *}
@@ -589,7 +587,7 @@ and its definition can be expanded automatically during the proofs.
 declare content_compiled_def [simp]
 
 definition x :: "(int * inst, nat) tree"
-where x_def [simplified] :"x == content_compiled"
+where x_def [simplified] :"x \<equiv> content_compiled"
 
 declare content_compiled_def [simp del]
 
@@ -652,6 +650,10 @@ lemma deed_inv_empty [simp]:
 \<rparr>"
 apply(simp add: deed_inv.simps)
 done
+
+text {* The following lemma proves that the code of the Deed contract
+stays the same or becomes empty.  It also proves that no annotations fail, but
+there are no annotations anyway. *}
 
 lemma deed_keeps_invariant :
 "no_assertion_failure deed_inv"
@@ -839,17 +841,18 @@ done
 subsection {* Proof about the Case when the Caller is Not the Registrar *}
 
 text {* I prove another property about the Deed contract.  The intention is
-to prevent attacks.  It is not straightforward to define attacks.
+to prevent attacks.  It is not straightforward to define what are attacks.
 In any case I cannot prevent off-chain attacks (such as bribing).
 Here I prove a property that most of accounts cannot change certain
 things in the account.  They cannot decrease the balance of the account, and
-they cannot give themselves the authority to do so,  In the current case,
-the only authorized account is the ``registrar'', which is remembered
+they cannot give themselves the authority to do so.  In the current case,
+the only authorized account is the ``registrar,'' which is remembered
 at the storage index~0 of the Deed account.
 *}
 
 text {*
-In the concrete terms that Isabelle/HOL can understand, the claim can be written as follows:
+In concrete terms that Isabelle/HOL can understand, the claim can be written as follows:
+
 If 
 \begin{itemize}
 \item the caller is not equal to the address stored at index~0,

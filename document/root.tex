@@ -116,7 +116,7 @@ Conclusions when the invocation finishes (i.e. when the contract returns or fail
 
 \subsection{What can Go Wrong}
 
-The contract might not work as expected.  The property above is only a safety property; it states something bad is not going to happen.  This does not mean anything good happens.  While it is feasible to prove that anything good happens, at least I need to model the gas mechanism in Isabelle/HOL before I claim anything works.  In any case, when you have a sequence of events in mind, you can test that.  Theorem proving excels at uncovering unknown possibilities.
+The property above is only a safety property; it states something bad is not going to happen.  This does not mean anything good happens.  While it is feasible to prove that something good happens, at least I need to model the gas mechanism in Isabelle/HOL before I claim anything works.  In any case, when you have a sequence of events in mind, you can test that.  Theorem proving excels at uncovering unknown possibilities.
 
 The analysis cuts corners but it is reasonablly equipped for safety
 properties.  The analysis considers reentrancy, the account erasure after execution
