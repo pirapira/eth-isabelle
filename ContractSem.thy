@@ -1133,20 +1133,23 @@ where
   "program_sem _ _ _ 0 = ProgramStepRunOut"
 | "program_sem v c tiny_step (Suc remaining_steps) =
    (if tiny_step \<le> 0 then
-     ProgramToWorld(ContractFail, venv_storage_at_call v, venv_balance_at_call v, None) else
+     ProgramToWorld(ContractFail,
+       venv_storage_at_call v,
+       venv_balance_at_call v, None) else
    (if \<not> check_annotations v c then ProgramAnnotationFailure else
    (case venv_next_instruction v c of
       None \<Rightarrow> ProgramStepRunOut
     | Some i \<Rightarrow>
-   (case instruction_sem v c i of
-        InstructionContinue new_v \<Rightarrow>
+        (case instruction_sem v c i of
+          InstructionContinue new_v \<Rightarrow>
           (strict_if (venv_pc new_v > venv_pc v)
-             (blocked_program_sem new_v c (tiny_step - 1) (Suc remaining_steps))
-             (blocked_program_sem new_v c (program_length (cenv_program c)) remaining_steps))
-      | InstructionToWorld (a, st, bal, opt_pushed_v) \<Rightarrow> ProgramToWorld (a, st, bal, opt_pushed_v)
-      | InstructionUnknown \<Rightarrow> ProgramInvalid
-      ))))
-    "
+             (blocked_program_sem new_v c
+                (tiny_step - 1) (Suc remaining_steps))
+             (blocked_program_sem new_v c
+                (program_length (cenv_program c)) remaining_steps))
+        | InstructionToWorld (a, st, bal, opt_pushed_v) \<Rightarrow>
+          ProgramToWorld (a, st, bal, opt_pushed_v)
+        | InstructionUnknown \<Rightarrow> ProgramInvalid))))"
 | "blocked_program_sem v c l p _ = program_sem v c l p"
 by pat_completeness auto
 termination by lexicographic_order
@@ -1230,19 +1233,26 @@ venv_called:
    (* the caller is specified by the world *)
    , venv_caller = callenv_caller env
 
-   , venv_value_sent = callenv_value env (* the sent value is specified by the world *)
+   (* the sent value is specified by the world *)
+   , venv_value_sent = callenv_value env 
 
-   , venv_data_sent = callenv_data env (* the sent data is specified by the world *)
+   (* the sent data is specified by the world *)
+   , venv_data_sent = callenv_data env 
 
-   , venv_storage_at_call = account_storage a (* the snapshot of the storage is remembered in case of failure *)
+   (* the snapshot of the storage is remembered in case of failure *)
+   , venv_storage_at_call = account_storage a 
 
-   , venv_balance_at_call = bal (* the snapshot of the balance is remembered in case of failure *)
+   (* the snapshot of the balance is remembered in case of failure *)
+   , venv_balance_at_call = bal 
 
-   , venv_origin = origin (* the origin of the transaction is arbitrarily chosen *)
+   (* the origin of the transaction is arbitrarily chosen *)
+   , venv_origin = origin 
 
-   , venv_ext_program = ext (* the codes of the external programs are arbitrary. *)
+   (* the codes of the external programs are arbitrary. *)
+   , venv_ext_program = ext 
 
-   , venv_block = block (* the block information is chosen arbitrarily. *)
+   (* the block information is chosen arbitrarily. *)
+   , venv_block = block 
    \<rparr>
    "
 
@@ -1352,7 +1362,7 @@ definition build_venv_failed :: "account_state \<Rightarrow> variable_env option
 where
 "build_venv_failed a =
   (case account_ongoing_calls a of
-     [] \<Rightarrow> None
+      [] \<Rightarrow> None
    | (recovered, _, _) # _ \<Rightarrow>
       (if is_call_like (* check the previous instruction *)
         (lookup (program_content (account_code a))
@@ -1391,7 +1401,8 @@ where
 text {* And after our contract makes a move, the account state is updated as follows.
 *}
 definition update_account_state ::
-"account_state \<Rightarrow> contract_action \<Rightarrow> storage \<Rightarrow> (address \<Rightarrow> w256) \<Rightarrow> (variable_env \<times> int \<times> int) option \<Rightarrow> account_state"
+"account_state \<Rightarrow> contract_action \<Rightarrow> storage \<Rightarrow> (address \<Rightarrow> w256)
+\<Rightarrow> (variable_env \<times> int \<times> int) option \<Rightarrow> account_state"
 where
 "update_account_state prev act st bal v_opt \<equiv>
    prev \<lparr>
@@ -1471,16 +1482,15 @@ where "respond_to_call_correctly c a \<equiv>
          (* The specification says the execution should result in these *)
          c call_env = (resulting_action, final_state_pred) \<longrightarrow>
          ( \<forall> steps. (* and for any number of steps *)
-           ( let r = program_sem initial_venv (build_cenv a) (program_length (account_code a)) steps in
+           ( let r = program_sem initial_venv (build_cenv a)
+                      (program_length (account_code a)) steps in
              (* either more steps are necessary, or *)
              r = ProgramStepRunOut \<or>
              (* the result matches the specification *)
              (\<exists> pushed_venv st bal.
               r = ProgramToWorld (resulting_action, st, bal, pushed_venv) \<and>
               final_state_pred
-                (update_account_state a resulting_action st bal pushed_venv))
-           )))
-"
+                (update_account_state a resulting_action st bal pushed_venv)))))"
 
 abbreviation respond_to_return_correctly ::
   "(return_result \<Rightarrow> contract_behavior) \<Rightarrow>
@@ -1492,14 +1502,14 @@ where
        build_venv_returned a rr initial_venv \<longrightarrow>
        r rr = (resulting_action, final_state_pred) \<longrightarrow>
        ( \<forall> steps.
-          (let r = program_sem initial_venv (build_cenv a) (program_length (account_code a)) steps in
+          (let r = program_sem initial_venv (build_cenv a)
+                     (program_length (account_code a)) steps in
            r = ProgramStepRunOut \<or>
            (\<exists> pushed_venv st bal.
             r = ProgramToWorld (resulting_action, st, bal, pushed_venv) \<and>
             final_state_pred
-              (update_account_state (account_state_pop_ongoing_call a) resulting_action st bal pushed_venv))
-          )))
-"
+              (update_account_state (account_state_pop_ongoing_call a)
+               resulting_action st bal pushed_venv)))))"
 
 abbreviation respond_to_fail_correctly ::
   "contract_behavior \<Rightarrow>
