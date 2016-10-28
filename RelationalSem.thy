@@ -111,7 +111,7 @@ where
 | "returnable_result (ProgramToWorld (ContractSuicide, _, _, _)) = False"
 | "returnable_result (ProgramToWorld (ContractFail, _, _, _)) = False"
 -- {* because we are not modeling nested calls here, the effect of the nested calls are modeled in
-     account_state_return_change *}
+      account\_state\_return\_change *}
 | "returnable_result (ProgramToWorld (ContractReturn _, _, _, _)) = False"
 | "returnable_result (ProgramInit _) = False"
 | "returnable_result ProgramInvalid = False"

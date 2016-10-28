@@ -890,7 +890,7 @@ lemma address_size [simp]:
 apply(simp add: word_size)
 done
 
-text {* All addresses are less than @{term "2 ^ 160"}. *}
+text {* All addresses are less than $2^{160}$. *}
 
 lemma address_small' [simplified]:
 "uint (a :: address) < 2 ^ size a"

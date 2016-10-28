@@ -11,8 +11,8 @@ begin
 
 subsection "Utility Functions"
 
-text {* The following function is an if sentence, but with some strict control
-over the evaluation order.  By default, neither the then-clause nor the else-clause
+text {* The following function is an if-sentence, but with some strict control
+over the evaluation order.  Neither the then-clause nor the else-clause
 is simplified during proofs.  This prevents the automatic simplifier from
 computing the results of both the then-clause and the else-clause.
 *}
@@ -110,20 +110,20 @@ a smart contract, destroying itself, returning, or failing.  When the contract c
 the contract provides the following information.*}
 
 record call_arguments =
-  callarg_gas :: w256 -- {* The portion of the remaining gas that the callee is allowed to use *}
-  callarg_code :: address -- {* The code that executes during the call *}
-  callarg_recipient :: address -- {* The recipient of the call, whose balance and the storage are modified. *}
-  callarg_value :: w256 -- {* The amount of Eth sent along *}
-  callarg_data :: "byte list" -- {* The data sent along *}
-  callarg_output_begin :: w256 -- {* The beginning of the memory region where the output data should be written. *}
-  callarg_output_size :: w256 -- {* The size of the memory regions where the output data should be written. *}
+  callarg_gas :: w256 -- {* the portion of the remaining gas that the callee is allowed to use *}
+  callarg_code :: address -- {* the code that executes during the call *}
+  callarg_recipient :: address -- {* the recipient of the call, whose balance and the storage are modified. *}
+  callarg_value :: w256 -- {* the amount of Eth sent along *}
+  callarg_data :: "byte list" -- {* the data sent along *}
+  callarg_output_begin :: w256 -- {* the beginning of the memory region where the output data should be written. *}
+  callarg_output_size :: w256 -- {* the size of the memory regions where the output data should be written. *}
   
 text {* When our contract deploys a smart contract, our contract should provide the following
 information. *}
 
 record create_arguments =
-  createarg_value :: w256 -- {* The value sent to the account *}
-  createarg_code :: "byte list" -- {* The code that deploys the runtime code. *}
+  createarg_value :: w256 -- {* the value sent to the account *}
+  createarg_code :: "byte list" -- {* the code that deploys the runtime code. *}
 
 text {* The contract's moves are summarized as follows. *}
   
@@ -140,7 +140,7 @@ text "For performance reasons, the instructions are stored in an AVL tree that a
 looking up instructions from the program counters."
 
 record program = 
-  program_content :: "(int * inst) avl_tree"
+  program_content :: "(int \<times> inst) avl_tree"
   -- {* a binary search tree that allows looking up instructions from positions *}
   program_length  :: int -- {* the length of the program in bytes *}
   program_annotation :: "int \<Rightarrow> annotation list"
@@ -161,7 +161,7 @@ subsection "Translating an Instruction List into a Program"
 subsubsection {* Integers can be compared *}
 
 text {* The AVL library requires the keys to be comparable.  We represent program positions 
-by integers.  So we have to prove that integers belong to the type class cmp with the
+by integers.  So we have to prove that integers belong to the type class \textit{cmp} with the
 usual comparison operators.  *}
 
 instantiation int :: cmp
