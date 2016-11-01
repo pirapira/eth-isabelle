@@ -98,7 +98,7 @@ Assumptions at the invocation:
     account has no code;
   \item the caller's address it not the one stored at index~0 of the
     account's storage (i.e. the caller is not the \texttt{registrar})\footnote{I'm guessing that the storage index~0 contains the registrar's address.  To do this properly I need the help of the Solidity compiler.};
-  \item the 21st least byte in storage index~2 is not zero (i.e. the contract is still \texttt{active})\footnote{I didn't know this condition until Isabelle/HOL complained.  This shows the possibillity of using theorem provers to find vulnerabilities.};
+  \item the 21st least byte in storage index~2 is not zero (i.e. the contract is still \texttt{active})\footnote{I didn't know this condition until Isabelle/HOL complained.  This shows the possibility of using theorem provers to find vulnerabilities.};
   \item the account's balance and the sent value added together do not
     overflow the range of 256-bit unsigned integers;
   \item the account is not marked as killed.
@@ -118,20 +118,20 @@ Conclusions when the invocation finishes (i.e. when the contract returns or fail
 
 The property above is only a safety property; it states something bad is not going to happen.  This does not mean anything good happens.  While it is feasible to prove that something good happens, at least I need to model the gas mechanism in Isabelle/HOL before I claim anything works.  In any case, when you have a sequence of events in mind, you can test that.  Theorem proving excels at uncovering unknown possibilities.
 
-The analysis cuts corners but it is reasonablly equipped for safety
+The analysis cuts corners but it is reasonably equipped for safety
 properties.  The analysis considers reentrancy, the account erasure after execution
 of the \texttt{SUICIDE} opcode, the byte level organization of EVM
 memory and storage, and the fact that the balance of an account can
 increase even when the code of the account is not invoked.
 The analysis is not aware of out-of-gas failures and the stack depth
 failures, but the analysis does not miss any kind of account state
-changes because of that.  The veirification is given up at the momment
-a DELEGATE or CALLCODE instruction is used.
+changes because of that.  The verification is given up at the moment
+DELEGATE or CALLCODE instruction is used.
 
 The hex output from Solidity is parsed by a new parser, which might produce incorrect results.
 
 The biggest pitfall currently is the untested EVM implementation.
-Although this is a new EVM implmentation, it is not
+Although this is a new EVM implementation, it is not
 tested against the standard EVM tests!  This is already wrong.
 So, after getting this document in shape, the next thing I try is to
 test the new EVM implementation against the standard EVM tests (but before this I need to implement the gas).
@@ -142,10 +142,10 @@ There is one good thing about the new EVM implementation. It allows us to reason
 Most parts of the development can be reused for verifying other contracts.
 The amount of work is
 different for every smart contract.  It would be relatively
-straighforward to do something similar for
+straightforward to do something similar for
 contracts without loops.  For contracts with loops,
 either lots of manual work or some more
-sophisticated machinary is necessary.
+sophisticated machinery is necessary.
 
 This development so far does not use sophisticated techniques.
 An appropriate description would be ``a brute-force approach based on a bare machine model.''
