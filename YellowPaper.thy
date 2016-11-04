@@ -79,7 +79,7 @@ type_synonym "state" = "address \<Rightarrow> account_state"
 
 definition "codeHash" :: "account_state \<Rightarrow> uint256"
 where
-"codeHash as = sha3 (Code as)"
+"codeHash as = keccack (Code as)"
 
 definition "storageRoot" :: "account_state \<Rightarrow> uint256"
 where
