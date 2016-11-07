@@ -1,0 +1,271 @@
+(*
+  Copyright 2016 Sami Mäkelä
+
+   Licensed under the Apache License, Version 2.0 (the "License");
+   you may not use this file except in compliance with the License.
+   You may obtain a copy of the License at
+
+       http://www.apache.org/licenses/LICENSE-2.0
+
+   Unless required by applicable law or agreed to in writing, software
+   distributed under the License is distributed on an "AS IS" BASIS,
+   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+   See the License for the specific language governing permissions and
+   limitations under the License.
+*)
+open import Pervasives
+open import Word
+
+type word160 = W160 of bool * list bool
+declare isabelle target_rep type word160 = `word` 160
+
+(* perhaps should truncate here? *)
+val bs_to_w160 : bitSequence -> word160
+let bs_to_w160 seq = match resizeBitSeq (Just 160) seq with
+ | BitSeq _ s b -> W160 s b
+end
+declare isabelle target_rep function bs_to_w160 = (fun w -> `word_of_int` (integerFromBitSeq w))
+
+val w160_to_bs : word160 -> bitSequence
+let w160_to_bs (W160 s b) = BitSeq (Just 160) s b
+
+val word160BinTest : forall 'a. (bitSequence -> bitSequence -> 'a) -> word160 -> word160 -> 'a
+let word160BinTest binop w1 w2 = binop (w160_to_bs w1) (w160_to_bs w2)
+
+val word160BinOp : (bitSequence -> bitSequence -> bitSequence) -> word160 -> word160 -> word160
+let word160BinOp binop w1 w2 = bs_to_w160 (binop (w160_to_bs w1) (w160_to_bs w2))
+
+val word160NatOp : (bitSequence -> nat -> bitSequence) -> word160 -> nat -> word160
+let word160NatOp binop w1 n = bs_to_w160 (binop (w160_to_bs w1) n)
+
+val word160UnaryOp : (bitSequence -> bitSequence) -> word160 -> word160
+let word160UnaryOp op w = bs_to_w160 (op (w160_to_bs w))
+
+val word160ToNat : word160 -> nat
+let word160ToNat w = natFromInteger (integerFromBitSeq (w160_to_bs w))
+declare isabelle target_rep function word160ToNat = `unat`
+
+val word160ToInt : word160 -> int
+let word160ToInt w = intFromInteger (integerFromBitSeq (w160_to_bs w))
+declare isabelle target_rep function word160ToInt = `sint`
+
+declare isabelle target_rep function w160_to_bs = (fun w -> bitSeqFromInteger (Just 160) (integerFromInt (word160ToInt w)))
+
+val word160FromInteger : integer -> word160
+let word160FromInteger i = bs_to_w160 (bitSeqFromInteger (Just 160) i)
+declare isabelle target_rep function word160FromInteger = (fun i -> `word_of_int` (intFromInteger i))
+
+val word160FromInt : int -> word160
+let word160FromInt i = bs_to_w160 (bitSeqFromInteger (Just 160) (integerFromInt i))
+declare isabelle target_rep function word160FromInt = `word_of_int`
+
+val word160FromNat : nat -> word160
+let word160FromNat i = word160FromInteger (integerFromNat i)
+
+val word160FromBoollist : list bool -> word160
+let word160FromBoollist lst = match bitSeqFromBoolList lst with
+ | Nothing -> bs_to_w160 0
+ | Just a -> bs_to_w160 a
+end
+declare isabelle target_rep function word160FromBoollist = `of_bl`
+
+val boolListFromWord160 : word160 -> list bool
+let boolListFromWord160 w = boolListFrombitSeq 160 (w160_to_bs w)
+declare isabelle target_rep function boolListFromWord160 = `to_bl`
+
+val word160FromNumeral : numeral -> word160
+let word160FromNumeral w = bs_to_w160 (fromNumeral w)
+
+instance (Numeral word160)
+  let fromNumeral = word160FromNumeral
+end
+
+val w160Eq : word160 -> word160 -> bool
+let w160Eq = unsafe_structural_equality
+
+val w160Less : word160 -> word160 -> bool
+let w160Less bs1 bs2 = word160BinTest (<) bs1 bs2
+
+val w160LessEqual : word160 -> word160 -> bool
+let w160LessEqual bs1 bs2 = word160BinTest (<=) bs1 bs2
+
+val w160Greater : word160 -> word160 -> bool
+let w160Greater bs1 bs2 = word160BinTest (>) bs1 bs2
+
+val w160GreaterEqual : word160 -> word160 -> bool
+let w160GreaterEqual bs1 bs2 = word160BinTest (>=) bs1 bs2
+
+val w160Compare : word160 -> word160 -> ordering
+let w160Compare bs1 bs2 = word160BinTest compare bs1 bs2
+
+instance (Ord word160)
+  let compare = w160Compare
+  let (<) = w160Less
+  let (<=) = w160LessEqual
+  let (>) = w160Greater
+  let (>=) = w160GreaterEqual
+end
+
+instance (SetType word160)
+  let setElemCompare = w160Compare
+end
+
+val word160Negate : word160 -> word160
+let word160Negate = word160UnaryOp ~
+
+val word160Succ : word160 -> word160
+let word160Succ = word160UnaryOp succ
+
+val word160Pred : word160 -> word160
+let word160Pred = word160UnaryOp pred
+
+val word160Lnot : word160 -> word160
+let word160Lnot = word160UnaryOp lnot
+
+val word160Add : word160 -> word160 -> word160
+let word160Add = word160BinOp (+)
+
+val word160Minus : word160 -> word160 -> word160
+let word160Minus = word160BinOp (-)
+
+val word160Mult : word160 -> word160 -> word160
+let word160Mult = word160BinOp ( * )
+
+val word160IntegerDivision : word160 -> word160 -> word160
+let word160IntegerDivision = word160BinOp (/)
+
+val word160Division : word160 -> word160 -> word160
+let word160Division = word160BinOp (div)
+
+val word160Remainder : word160 -> word160 -> word160
+let word160Remainder = word160BinOp (mod)
+
+val word160Land : word160 -> word160 -> word160
+let word160Land = word160BinOp (land)
+
+val word160Lor : word160 -> word160 -> word160
+let word160Lor = word160BinOp (lor)
+
+val word160Lxor : word160 -> word160 -> word160
+let word160Lxor = word160BinOp (lxor)
+
+val word160Min : word160 -> word160 -> word160
+let word160Min = word160BinOp (min)
+
+val word160Max : word160 -> word160 -> word160
+let word160Max = word160BinOp (max)
+
+val word160Power : word160 -> nat -> word160
+let word160Power = word160NatOp ( ** )
+
+val word160Asr : word160 -> nat -> word160
+let word160Asr = word160NatOp (asr)
+
+val word160Lsr : word160 -> nat -> word160
+let word160Lsr = word160NatOp (lsr)
+
+val word160Lsl : word160 -> nat -> word160
+let word160Lsl = word160NatOp (lsl)
+
+declare isabelle target_rep function word160Lnot w = (`NOT` w)
+declare isabelle target_rep function word160Lor = infix `OR`
+declare isabelle target_rep function word160Lxor = infix `XOR`
+declare isabelle target_rep function word160Land = infix `AND`
+declare isabelle target_rep function word160Lsl = infix `<<`
+declare isabelle target_rep function word160Lsr = infix `>>`
+declare isabelle target_rep function word160Asr = infix `>>>`
+
+
+instance (NumNegate word160)
+  let ~ = word160Negate
+end
+
+instance (NumAdd word160)
+  let (+) = word160Add
+end
+
+instance (NumMinus word160)
+  let (-) = word160Minus
+end
+
+instance (NumSucc word160)
+  let succ = word160Succ
+end
+
+instance (NumPred word160)
+  let pred = word160Pred
+end
+
+instance (NumMult word160)
+  let ( * ) = word160Mult
+end
+
+instance (NumPow word160)
+  let ( ** ) = word160Power
+end
+
+instance ( NumIntegerDivision word160) 
+  let (div) = word160IntegerDivision
+end
+
+instance ( NumDivision word160 ) 
+  let (/) = word160Division
+end
+
+instance (NumRemainder word160) 
+  let (mod) = word160Remainder
+end
+
+instance (OrdMaxMin word160) 
+  let max = word160Max
+  let min = word160Min
+end
+
+instance (WordNot word160) 
+  let lnot = word160Lnot
+end
+
+instance (WordAnd word160) 
+  let (land) = word160Land
+end
+
+instance (WordOr word160) 
+  let (lor) = word160Lor
+end
+
+instance (WordXor word160) 
+  let (lxor) = word160Lxor
+end
+
+instance (WordLsl word160) 
+  let (lsl) = word160Lsl
+end
+
+instance (WordLsr word160)
+  let (lsr) = word160Lsr
+end
+
+instance (WordAsr word160)
+  let (asr) = word160Asr
+end
+
+declare isabelle target_rep function word160FromNumeral n = ((`word_of_int` n) : word160)
+declare isabelle target_rep function w160Less = `word_sless`
+declare isabelle target_rep function w160LessEqual = `word_sle`
+declare isabelle target_rep function w160Greater x y = w160Less y x
+declare isabelle target_rep function w160GreaterEqual x y = w160LessEqual y x
+declare isabelle target_rep function w160Compare = genericCompare w160Less w160Eq
+
+declare isabelle target_rep function word160Negate i = `-` i
+declare isabelle target_rep function word160Add = infix `+`
+declare isabelle target_rep function word160Minus = infix `-`
+declare isabelle target_rep function word160Succ n = n + 1
+declare isabelle target_rep function word160Pred n = n - 1
+declare isabelle target_rep function word160Mult = infix `*`
+declare isabelle target_rep function word160Power = infix `^`
+declare isabelle target_rep function word160Division = infix `div`
+declare isabelle target_rep function word160IntegerDivision = infix `div`
+declare isabelle target_rep function word160Remainder = infix `mod`
+declare isabelle target_rep function word160Min = `min`
+declare isabelle target_rep function word160Max = `max`
+

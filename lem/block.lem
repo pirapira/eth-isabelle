@@ -1,0 +1,63 @@
+(*
+  Copyright 2016 Sami Mäkelä
+
+   Licensed under the Apache License, Version 2.0 (the "License");
+   you may not use this file except in compliance with the License.
+   You may obtain a copy of the License at
+
+       http://www.apache.org/licenses/LICENSE-2.0
+
+   Unless required by applicable law or agreed to in writing, software
+   distributed under the License is distributed on an "AS IS" BASIS,
+   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+   See the License for the specific language governing permissions and
+   limitations under the License.
+*)
+open import Pervasives
+(*
+open import Word
+open import Word256
+open import Word160
+open import Word8
+*)
+open import Evm
+
+type transaction = <|
+  tr_from : address;
+  tr_to : maybe address;
+  tr_gas_limit : uint;
+  tr_gas_price : uint;
+  tr_nonce : uint;
+  tr_data : list byte;
+|>
+
+type world_state = address -> account_state
+
+type log_item = <|
+  log_address : address;
+  log_topics : list uint;
+  log_data : list byte;
+|>
+
+type receipt = <|
+  receipt_state : world_state;
+  receipt_cumulative_gas : uint;
+  receipt_bloom : uint;
+  receipt_logs : list log_item;
+|>
+
+type block = <|
+  block_parent_hash : uint;
+  block_uncles_hash : list uint;
+  block_coinbase : address;
+  block_state : world_state;
+  block_transactions : list (transaction * receipt);
+  block_logs_bloom : uint;
+  block_difficulty : uint;
+  block_number : uint;
+  block_gas_limit : uint;
+  block_timestampt : uint;
+  block_nonce : uint;
+|>
+
+

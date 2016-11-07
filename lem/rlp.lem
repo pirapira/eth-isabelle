@@ -1,0 +1,91 @@
+(*
+  Copyright 2016 Sami Mäkelä
+
+   Licensed under the Apache License, Version 2.0 (the "License");
+   you may not use this file except in compliance with the License.
+   You may obtain a copy of the License at
+
+       http://www.apache.org/licenses/LICENSE-2.0
+
+   Unless required by applicable law or agreed to in writing, software
+   distributed under the License is distributed on an "AS IS" BASIS,
+   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+   See the License for the specific language governing permissions and
+   limitations under the License.
+*)
+
+open import Pervasives
+open import Word
+open import Word256
+open import Word160
+open import Word8
+
+type tree =
+ | Leaf of list byte
+ | Node of list tree
+
+val BE_rev : nat -> list byte
+let rec BE_rev n = match n with
+ | 0 -> []
+ | n -> if n < 256 then [word8FromNat n] else
+         (word8FromNat (n mod 256) :: BE_rev (n div 256))
+end
+
+val BE : nat -> list byte
+let BE n = List.reverse (BE_rev n)
+
+val BD_rev : list byte -> nat
+let rec BD_rev lst = match lst with
+ | [] -> 0
+ | h :: t -> 256 * BD_rev t + word8ToNat h
+end
+
+val BD : list byte -> nat
+let BD lst = BD_rev (List.reverse lst)
+
+val r_b : list byte -> list byte
+let r_b lst = match lst with
+ | [] -> [128]
+ | [k] -> if k < 128 then [k] else [129; k]
+ | lst ->
+   if length lst < 56 then word8FromNat (128 + length lst) :: lst
+    else word8FromNat (183 + length (BE (length lst))) :: BE (length lst) ++ lst
+end
+
+val read_n_bytes : nat -> list byte -> maybe (list byte  * list byte)
+let read_n_bytes n lst =
+  if length lst >= n then Just (take n lst, drop n lst)
+  else Nothing
+
+val de_r_b : list byte -> maybe (list byte * list byte)
+let de_r_b lst = match lst with
+ | [] -> Nothing
+ | k :: lst ->
+   if k = 128 then Just ([], lst)
+   else if k < 128 then Just ([k], lst)
+   else if k < 184 then
+       (let len = word8ToNat k - 128 in
+       (if length lst >= len then Just (take len lst, drop len lst)
+                                         else Nothing))
+   else if k <= 192 then
+      match read_n_bytes (word8ToNat k - 183) lst with
+       | Nothing -> Nothing
+       | Just (be_bytes, x_and_rest) ->
+         read_n_bytes (BD be_bytes) x_and_rest
+      end
+   else Nothing
+end
+
+val RLP : tree -> list byte
+let rec RLP tree = match tree with
+ | Leaf l -> r_b l
+ | Node lst ->
+   let s = List.concat (map RLP lst) in
+   let len_s = length s in
+   if len_s < 56 then word8FromNat (192 + len_s) :: s
+   else word8FromNat (247 + length (BE len_s)) :: (BE len_s ++ s)
+end   
+
+val RLP_nat : nat -> list byte
+let RLP_nat i = RLP (Leaf (BE i))
+

@@ -1,0 +1,276 @@
+(*
+  Copyright 2016 Sami Mäkelä
+
+   Licensed under the Apache License, Version 2.0 (the "License");
+   you may not use this file except in compliance with the License.
+   You may obtain a copy of the License at
+
+       http://www.apache.org/licenses/LICENSE-2.0
+
+   Unless required by applicable law or agreed to in writing, software
+   distributed under the License is distributed on an "AS IS" BASIS,
+   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+   See the License for the specific language governing permissions and
+   limitations under the License.
+*)
+
+open import Pervasives
+open import Word
+
+type word256 = W256 of bool * list bool
+declare isabelle target_rep type word256 = `word` 256
+
+(* perhaps should truncate here? *)
+val bs_to_w256 : bitSequence -> word256
+let bs_to_w256 seq = match resizeBitSeq (Just 256) seq with
+ | BitSeq _ s b -> W256 s b
+end
+declare isabelle target_rep function bs_to_w256 = (fun w -> `word_of_int` (integerFromBitSeq w))
+
+val w256_to_bs : word256 -> bitSequence
+let w256_to_bs (W256 s b) = BitSeq (Just 256) s b
+
+val word256BinTest : forall 'a. (bitSequence -> bitSequence -> 'a) -> word256 -> word256 -> 'a
+let word256BinTest binop w1 w2 = binop (w256_to_bs w1) (w256_to_bs w2)
+
+val word256BinOp : (bitSequence -> bitSequence -> bitSequence) -> word256 -> word256 -> word256
+let word256BinOp binop w1 w2 = bs_to_w256 (binop (w256_to_bs w1) (w256_to_bs w2))
+
+val word256NatOp : (bitSequence -> nat -> bitSequence) -> word256 -> nat -> word256
+let word256NatOp binop w1 n = bs_to_w256 (binop (w256_to_bs w1) n)
+
+val word256UnaryOp : (bitSequence -> bitSequence) -> word256 -> word256
+let word256UnaryOp op w = bs_to_w256 (op (w256_to_bs w))
+
+val word256ToNat : word256 -> nat
+let word256ToNat w = natFromInteger (integerFromBitSeq (w256_to_bs w))
+declare isabelle target_rep function word256ToNat = `unat`
+
+val word256ToInt : word256 -> int
+let word256ToInt w = intFromInteger (integerFromBitSeq (w256_to_bs w))
+declare isabelle target_rep function word256ToInt = `sint`
+
+declare isabelle target_rep function w256_to_bs = (fun w -> bitSeqFromInteger (Just 256) (integerFromInt (word256ToInt w)))
+
+val word256FromInteger : integer -> word256
+let word256FromInteger i = bs_to_w256 (bitSeqFromInteger (Just 256) i)
+declare isabelle target_rep function word256FromInteger = (fun i -> `word_of_int` (intFromInteger i))
+
+val word256FromInt : int -> word256
+let word256FromInt i = bs_to_w256 (bitSeqFromInteger (Just 256) (integerFromInt i))
+declare isabelle target_rep function word256FromInt = `word_of_int`
+
+val word256FromNat : nat -> word256
+let word256FromNat i = word256FromInteger (integerFromNat i)
+
+val word256FromBoollist : list bool -> word256
+let word256FromBoollist lst = match bitSeqFromBoolList lst with
+ | Nothing -> bs_to_w256 0
+ | Just a -> bs_to_w256 a
+end
+declare isabelle target_rep function word256FromBoollist = `of_bl`
+
+val boolListFromWord256 : word256 -> list bool
+let boolListFromWord256 w = boolListFrombitSeq 256 (w256_to_bs w)
+declare isabelle target_rep function boolListFromWord256 = `to_bl`
+
+val word256FromNumeral : numeral -> word256
+let word256FromNumeral w = bs_to_w256 (fromNumeral w)
+
+instance (Numeral word256)
+  let fromNumeral = word256FromNumeral
+end
+
+val w256Eq : word256 -> word256 -> bool
+let w256Eq = unsafe_structural_equality
+
+val w256Less : word256 -> word256 -> bool
+let w256Less bs1 bs2 = word256BinTest (<) bs1 bs2
+
+val w256LessEqual : word256 -> word256 -> bool
+let w256LessEqual bs1 bs2 = word256BinTest (<=) bs1 bs2
+
+val w256Greater : word256 -> word256 -> bool
+let w256Greater bs1 bs2 = word256BinTest (>) bs1 bs2
+
+val w256GreaterEqual : word256 -> word256 -> bool
+let w256GreaterEqual bs1 bs2 = word256BinTest (>=) bs1 bs2
+
+val w256Compare : word256 -> word256 -> ordering
+let w256Compare bs1 bs2 = word256BinTest compare bs1 bs2
+
+instance (Ord word256)
+  let compare = w256Compare
+  let (<) = w256Less
+  let (<=) = w256LessEqual
+  let (>) = w256Greater
+  let (>=) = w256GreaterEqual
+end
+
+instance (SetType word256)
+  let setElemCompare = w256Compare
+end
+
+val word256Negate : word256 -> word256
+let word256Negate = word256UnaryOp ~
+
+val word256Succ : word256 -> word256
+let word256Succ = word256UnaryOp succ
+
+val word256Pred : word256 -> word256
+let word256Pred = word256UnaryOp pred
+
+val word256Lnot : word256 -> word256
+let word256Lnot = word256UnaryOp lnot
+
+val word256Add : word256 -> word256 -> word256
+let word256Add = word256BinOp (+)
+
+val word256Minus : word256 -> word256 -> word256
+let word256Minus = word256BinOp (-)
+
+val word256Mult : word256 -> word256 -> word256
+let word256Mult = word256BinOp ( * )
+
+val word256IntegerDivision : word256 -> word256 -> word256
+let word256IntegerDivision = word256BinOp (/)
+
+val word256Division : word256 -> word256 -> word256
+let word256Division = word256BinOp (div)
+
+val word256Remainder : word256 -> word256 -> word256
+let word256Remainder = word256BinOp (mod)
+
+val word256Land : word256 -> word256 -> word256
+let word256Land = word256BinOp (land)
+
+val word256Lor : word256 -> word256 -> word256
+let word256Lor = word256BinOp (lor)
+
+val word256Lxor : word256 -> word256 -> word256
+let word256Lxor = word256BinOp (lxor)
+
+val word256Min : word256 -> word256 -> word256
+let word256Min = word256BinOp (min)
+
+val word256Max : word256 -> word256 -> word256
+let word256Max = word256BinOp (max)
+
+val word256Power : word256 -> nat -> word256
+let word256Power = word256NatOp ( ** )
+
+val word256Asr : word256 -> nat -> word256
+let word256Asr = word256NatOp (asr)
+
+val word256Lsr : word256 -> nat -> word256
+let word256Lsr = word256NatOp (lsr)
+
+val word256Lsl : word256 -> nat -> word256
+let word256Lsl = word256NatOp (lsl)
+
+declare isabelle target_rep function word256Lnot w = (`NOT` w)
+declare isabelle target_rep function word256Lor = infix `OR`
+declare isabelle target_rep function word256Lxor = infix `XOR`
+declare isabelle target_rep function word256Land = infix `AND`
+declare isabelle target_rep function word256Lsl = infix `<<`
+declare isabelle target_rep function word256Lsr = infix `>>`
+declare isabelle target_rep function word256Asr = infix `>>>`
+
+
+instance (NumNegate word256)
+  let ~ = word256Negate
+end
+
+instance (NumAdd word256)
+  let (+) = word256Add
+end
+
+instance (NumMinus word256)
+  let (-) = word256Minus
+end
+
+instance (NumSucc word256)
+  let succ = word256Succ
+end
+
+instance (NumPred word256)
+  let pred = word256Pred
+end
+
+instance (NumMult word256)
+  let ( * ) = word256Mult
+end
+
+instance (NumPow word256)
+  let ( ** ) = word256Power
+end
+
+instance ( NumIntegerDivision word256) 
+  let (div) = word256IntegerDivision
+end
+
+instance ( NumDivision word256 ) 
+  let (/) = word256Division
+end
+
+instance (NumRemainder word256) 
+  let (mod) = word256Remainder
+end
+
+instance (OrdMaxMin word256) 
+  let max = word256Max
+  let min = word256Min
+end
+
+instance (WordNot word256) 
+  let lnot = word256Lnot
+end
+
+instance (WordAnd word256) 
+  let (land) = word256Land
+end
+
+instance (WordOr word256) 
+  let (lor) = word256Lor
+end
+
+instance (WordXor word256) 
+  let (lxor) = word256Lxor
+end
+
+instance (WordLsl word256) 
+  let (lsl) = word256Lsl
+end
+
+instance (WordLsr word256)
+  let (lsr) = word256Lsr
+end
+
+instance (WordAsr word256)
+  let (asr) = word256Asr
+end
+
+val word256UGT : word256 -> word256 -> bool
+let word256UGT a b = word256ToNat a > word256ToNat b
+declare isabelle target_rep function word256UGT = infix `>`
+
+declare isabelle target_rep function word256FromNumeral n = ((`word_of_int` n) : word256)
+declare isabelle target_rep function w256Less = `word_sless`
+declare isabelle target_rep function w256LessEqual = `word_sle`
+declare isabelle target_rep function w256Greater x y = w256Less y x
+declare isabelle target_rep function w256GreaterEqual x y = w256LessEqual y x
+declare isabelle target_rep function w256Compare = genericCompare w256Less w256Eq
+
+declare isabelle target_rep function word256Negate i = `-` i
+declare isabelle target_rep function word256Add = infix `+`
+declare isabelle target_rep function word256Minus = infix `-`
+declare isabelle target_rep function word256Succ n = n + 1
+declare isabelle target_rep function word256Pred n = n - 1
+declare isabelle target_rep function word256Mult = infix `*`
+declare isabelle target_rep function word256Power = infix `^`
+declare isabelle target_rep function word256Division = infix `div`
+declare isabelle target_rep function word256IntegerDivision = infix `div`
+declare isabelle target_rep function word256Remainder = infix `mod`
+declare isabelle target_rep function word256Min = `min`
+declare isabelle target_rep function word256Max = `max`
+

@@ -1,0 +1,106 @@
+open import Pervasives
+open import Word
+open import Word256
+open import Word160
+open import Word8
+open import Evm
+
+indreln [build_venv_returned : account_state -> return_result -> variable_env -> bool]
+venv_returned:
+  forall new_bal a_bal a_code v_pc a_addr a_storage v_stack v_memory v_memory_usage v_storage v_balance v_caller v_value v_data v_init_storage v_init_balance
+         v_origin v_ext_program v_block mem_start mem_size  a_ongoing_rest a_killed r.
+  is_call_like (Map.lookup (v_pc - 1) a_code.program_content) &&
+  new_bal >= a_bal ==> (* the balance might have increased from the account state *)
+  build_venv_returned
+     <| account_address = a_addr;
+       account_storage = a_storage;
+       account_code = a_code;
+       account_balance = a_bal;
+       account_ongoing_calls =
+         (<| venv_stack = v_stack;
+          venv_memory = v_memory;
+          venv_memory_usage = v_memory_usage;
+          venv_storage = v_storage;
+          venv_pc = v_pc;
+          venv_balance = v_balance;
+          venv_caller = v_caller;
+          venv_value_sent = v_value;
+          venv_data_sent = v_data;
+          venv_storage_at_call = v_init_storage;
+          venv_balance_at_call = v_init_balance;
+          venv_origin = v_origin;
+          venv_ext_program = v_ext_program;
+          venv_block = v_block;
+         |>, mem_start, mem_size) :: a_ongoing_rest;
+       account_killed = a_killed
+     |>
+     r
+     <|  venv_stack = 1 :: v_stack; (* 1 is pushed, indicating a return *)
+        venv_memory = put_return_values v_memory r.return_data mem_start mem_size;
+        venv_memory_usage = v_memory_usage;
+        venv_storage = a_storage;
+        venv_pc = v_pc;
+        venv_balance = (update_balance a_addr
+                            (fun _ -> new_bal) r.return_balance);
+        venv_caller = v_caller;
+        venv_value_sent = v_value;
+        venv_data_sent = v_data;
+        venv_storage_at_call = v_init_storage;
+        venv_balance_at_call = v_init_balance;
+        venv_origin = v_origin;
+        venv_ext_program = v_ext_program;
+        venv_block = v_block;
+     |>
+
+val respond_to_call_correctly : (call_env -> contract_behavior) -> account_state -> bool
+let respond_to_call_correctly c a =
+  (forall call_env initial_venv resulting_action final_state_pred.
+     build_venv_called a call_env initial_venv -->
+         (* The specification says the execution should result in these *)
+         c call_env = (resulting_action, final_state_pred) -->
+         (forall steps. (* and for any number of steps *)
+           ( let r = program_sem initial_venv (build_cenv a) a.account_code.program_length steps in
+             (* either more steps are necessary, or *)
+             r = ProgramStepRunOut ||
+             (* the result matches the specification *)
+             (exists pushed_venv st bal.
+              r = ProgramToWorld resulting_action st bal pushed_venv &&
+              final_state_pred
+                (update_account_state a resulting_action st bal pushed_venv))
+           )))
+
+val respond_to_return_correctly : (return_result -> contract_behavior) -> account_state -> bool
+let respond_to_return_correctly r a =
+   (forall rr initial_venv final_state_pred resulting_action.
+       build_venv_returned a rr initial_venv -->
+       r rr = (resulting_action, final_state_pred) -->
+       (forall steps.
+          (let r = program_sem initial_venv (build_cenv a) a.account_code.program_length steps in
+           r = ProgramStepRunOut ||
+           (exists pushed_venv st bal.
+            r = ProgramToWorld resulting_action st bal pushed_venv &&
+            final_state_pred
+              (update_account_state (account_state_pop_ongoing_call a) resulting_action st bal pushed_venv))
+          )))
+
+val respond_to_fail_correctly : contract_behavior -> account_state -> bool
+let respond_to_fail_correctly f a =
+   (forall initial_venv final_state_pred resulting_action.
+      Just initial_venv = build_venv_failed a -->
+      f = (resulting_action, final_state_pred) -->
+      (forall steps.
+        ( let r = program_sem initial_venv (build_cenv a) a.account_code.program_length steps in
+          r = ProgramStepRunOut ||
+          (exists pushed_venv st bal.
+             r = ProgramToWorld resulting_action st bal pushed_venv &&
+             final_state_pred (update_account_state (account_state_pop_ongoing_call a) resulting_action st bal pushed_venv)))))
+
+indreln [account_state_responds_to_world : (account_state -> bool) -> response_to_world -> bool]
+AccountStep: forall precond c r f.
+  (forall a. precond a --> respond_to_call_correctly c a) &&
+   (forall a. precond a --> respond_to_return_correctly r a) &&
+   (forall a. precond a --> respond_to_fail_correctly f a) ==>
+   account_state_responds_to_world precond <| when_called = c; when_returned = r; when_failed = f |>
+
+
+
