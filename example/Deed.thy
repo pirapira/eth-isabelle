@@ -7,7 +7,7 @@ So the first aim of the verification is to show that most accounts cannot contro
 
 theory Deed
 
-imports Main "../RelationalSem"
+imports Main "../RelationalSem" "../ProgramInAvl"
 
 begin
 
@@ -541,9 +541,9 @@ text {* The next definition translates the list of instructions into an AVL tree
 This single step takes around 10 minutes.  So I will soon need a program that takes a hex code
 and produces a binary tree literal in Isabelle/HOL.*} 
 
-definition content_compiled :: "(int * inst, nat) tree"
+definition content_compiled :: "int \<Rightarrow> inst option"
 where
-content_compiled_def [simplified] : "content_compiled == program_content_of_lst 0 deed_insts"
+content_compiled_def [simplified] : "content_compiled == program_content_of_lst deed_insts"
 
 text {* The program that appears in the statements of the following lemmata is defined here.
 *}
@@ -586,7 +586,7 @@ and its definition can be expanded automatically during the proofs.
 
 declare content_compiled_def [simp]
 
-definition x :: "(int * inst, nat) tree"
+definition x :: "int \<Rightarrow> inst option"
 where x_def [simplified] :"x \<equiv> content_compiled"
 
 declare content_compiled_def [simp del]
@@ -599,7 +599,7 @@ the term @{term x} appears, allowing further expansion.  Otherwise,
 This makes sure that the intermediate goals do not contain the
 big binary tree as a literal.
 *}
-lemma pro_content [simp]: "lookup (program_content deed_program) n == lookup x n"
+lemma pro_content [simp]: "(program_content deed_program) n == x n"
 apply(simp add: deed_program_def add: x_def add: content_compiled_def)
 done
 

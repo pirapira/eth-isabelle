@@ -1,6 +1,6 @@
 theory AlwaysFail
 
-imports Main "../ContractSem" "../RelationalSem" "../FunctionalCorrectness"
+imports Main "../ContractSem" "../RelationalSem" "../FunctionalCorrectness" "../ProgramInAvl"
 
 begin
 
@@ -16,14 +16,14 @@ where
  []"
 
 
-value "(program_content (program_of_lst always_fail_code))"
+value "(program_content (program_of_lst always_fail_code program_content_of_lst))"
 
 abbreviation always_fail_account_state :: "w256 \<Rightarrow> account_state"
 where
-"always_fail_account_state balance ==
+"always_fail_account_state balance \<equiv>
    \<lparr> account_address = this_address
    , account_storage = \<lambda> _. 0
-   , account_code = program_of_lst (always_fail_code)
+   , account_code = program_of_lst always_fail_code program_content_of_lst
    , account_balance = balance
    , account_ongoing_calls = []
    , account_killed = False

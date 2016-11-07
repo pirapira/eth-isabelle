@@ -1,6 +1,6 @@
 theory FailOnReentrance
 
-imports Main "../ContractSem" "../RelationalSem" "../FunctionalCorrectness"
+imports Main "../ContractSem" "../RelationalSem" "../FunctionalCorrectness" "../ProgramInAvl"
 
 begin
 
@@ -49,12 +49,12 @@ where
   depth_zero:
     "account_address st = fail_on_reentrance_address \<Longrightarrow>
      account_storage st 0 = 0 \<Longrightarrow>
-     account_code st = program_of_lst fail_on_reentrance_program \<Longrightarrow>
+     account_code st = program_of_lst fail_on_reentrance_program program_content_of_lst \<Longrightarrow>
      account_ongoing_calls st = [] \<Longrightarrow>
      account_killed st = False \<Longrightarrow>
      fail_on_reentrance_state 0 st"
 | depth_one:
-    "account_code st = program_of_lst fail_on_reentrance_program \<Longrightarrow>
+    "account_code st = program_of_lst fail_on_reentrance_program program_content_of_lst \<Longrightarrow>
      account_storage st 0 = 1 \<Longrightarrow>
      account_address st = fail_on_reentrance_address \<Longrightarrow>
      account_ongoing_calls st = [(ve, 0, 0)] \<Longrightarrow>
@@ -109,12 +109,12 @@ where
   depth_zero:
     "account_address st = fail_on_reentrance_address \<Longrightarrow>
      account_storage st 0 = 0 \<Longrightarrow>
-     account_code st = program_of_lst fail_on_reentrance_program \<Longrightarrow>
+     account_code st = program_of_lst fail_on_reentrance_program program_content_of_lst \<Longrightarrow>
      account_ongoing_calls st = [] \<Longrightarrow>
      account_killed st = False \<Longrightarrow>
      fail_on_reentrance_invariant st"
 | depth_one:
-    "account_code st = program_of_lst fail_on_reentrance_program \<Longrightarrow>
+    "account_code st = program_of_lst fail_on_reentrance_program program_content_of_lst \<Longrightarrow>
      account_storage st 0 = 1 \<Longrightarrow>
      account_address st = fail_on_reentrance_address \<Longrightarrow>
      account_ongoing_calls st = [(ve, 0, 0)] \<Longrightarrow>
