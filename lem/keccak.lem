@@ -174,7 +174,7 @@ val update_byte : byte -> nat -> list word64 -> list word64
 let update_byte i p st = set st (p div 8) ((get st (p div 8)) lxor ((word8_to_word64 i) lsl (8 * (p mod 8))))
 
 val sha3_update : list byte -> nat -> list word64 -> nat * list word64
-let sha3_update lst pos st = match lst with
+let rec sha3_update lst pos st = match lst with
  | [] -> (pos, st)
  | c :: rest ->
     if (pos <= rsiz) then sha3_update rest (pos + 1) (update_byte c pos st)
@@ -193,10 +193,9 @@ let initial_st : list word64 = genlist (fun _ -> 0) 25
 let initial_pos : nat = 0
 
 val keccak' : list byte -> list byte
-let keccack' input =
+let keccak' input =
    let mid = sha3_update input initial_pos initial_st in
    keccak_final (fst mid) (snd mid)
 
 val keccak : list byte -> Evm.uint
 let keccak input = Evm.word_of_bytes (keccak' input)
-

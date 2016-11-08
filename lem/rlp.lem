@@ -20,6 +20,8 @@ open import Word256
 open import Word160
 open import Word8
 
+type byte = word8
+
 type tree =
  | Leaf of list byte
  | Node of list tree
