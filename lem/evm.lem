@@ -20,6 +20,9 @@ open import Word256
 open import Word160
 open import Word8
 
+(* The frequently used machine word types are named here.  For example, address
+   is the type of 160-bit machine words.  The type w256 is the type of EVM machine words. *)
+
 type w256 = word256
 type address = word160
 type byte = word8
@@ -91,8 +94,18 @@ let get_byte position w =
   | Just (a:byte) -> byte_to_w256 a
   end
 
+(* In EVM, the memory contains one byte for each machine word (offset).
+The storage contains one machine word for each machine word (index).
+As we will see, the memory is cleared for every invocation of smart contracts.
+The storage is persistent for an account.
+*)
+
 type memory = w256 -> byte
 type storage = w256 -> w256
+
+(* The storage is modelled as a function.  For example, the empty storage
+is a function that returns zero for every index.  Initially all accounts come with
+the empty storage. *)
 
 val empty_storage : storage
 let empty_storage _ = 0
@@ -111,12 +124,67 @@ type aenv = <|
   aenv_origin : address;
 |>
 
+(* @{term aenv_balance} field keeps track of the balance of all accounts because the contract
+under verification can send some Eth to other accounts.  To capture the effect of this, I chose to
+keep track of the balances of the other contracts.  *)
+
+(* @{term aenv_storage_at_call} and @{term aenv_balance_at_call} fields remember the states at the
+time of the contract invocation.  These are used for rolling back the state after a failure.
+Failures happen for example when the contract under verification jumps to a wrong destination,
+or it runs out of gas. *)
+
+(* @{term aenv_origin} might be the same as but might be different from @{term aenv_caller}.
+An Ethereum transaction is started by an external account (that is, an account which does not
+have codes but owned by somebody with a secret key).  @{term aenv_origin} denotes this external
+account.  During a transaction, the origin first sends a message to an account, the receiver can
+in turn call other accounts as well.  When the calls nest, @{term aenv_caller} points to the
+immediate caller of the current invocation.
+*)
+
+
+(* This section lists the EVM instructions and their byte representations.
+I also introduce an assertion instruction, whose byte representation is empty.
+The assertion instruction is a statement about the state of the EVM at
+that position of the program.
+*)
+
+
+
+(****** What used to be Instructions.thy ******)
+
+(* In Isabelle/HOL, it is expensive to define a single inductive type
+that contains all instructions.  When I do it, Isabelle/HOL automatically proves every
+instruction is different from any other instruction, but this process has the computational
+complexity of the square of the number of instructions.  Instead, I define multiple
+smaller inductive types and unify them at the end.  *)
+
+(* subsection "Bit Operations" *)
+
+
+(* The following clause defines a type called \textit{bits\_inst}.
+The type has five elements.  It is automatically understood that nothing else
+belongs to this type.  It is also understood that every one of these five elements
+is different from any of the other four.
+*)
+
+(* Some instructions have \textit{inst\_} in front because names like AND,
+OR and XOR are taken by the machine word library.
+*)
+
+(* The instructions have different arities.  They might consume some elements on the stack,
+and produce some elements on the stack.  However, the arity of the instructions are not specified
+in this section. *)
+
 type bits_inst =
 | inst_AND (* bitwise AND *)
 | inst_OR  (* bitwise OR *)
 | inst_XOR (* bitwise exclusive or *)
 | inst_NOT (* bitwise negation *)
 | BYTE     (* taking one byte out of a word *)
+
+(* These instructions are represented by the following bytes.
+Most opcodes are a single byte.
+*)
 
 val bits_inst_code : bits_inst -> byte
 let bits_inst_code inst = match inst with
@@ -127,6 +195,11 @@ let bits_inst_code inst = match inst with
 | BYTE -> 0X1a
 end
 
+(* subsection "Signed Arithmetics" *)
+
+(* More similar definitions follow.  Below are instructions for signed arithmetics.
+The operations common to signed and unsigned are listed further below in the
+Unsigned Arithmetics section. *)
 
 type sarith_inst =
 | SDIV (* signed division *)
@@ -144,10 +217,15 @@ let sarith_inst_code inst = match inst with
 | SIGNEXTEND -> 0X0b
 end
 
+(* subsection "Unsigned Arithmetics" *)
+
+(* The names GT, EQ and LT are taken in the Cmp library
+(which will be used for AVL trees). *)
+
 type arith_inst =
 | ADD (* addition *)
 | MUL (* multiplication *)
-| SUB (* subtraction *) 
+| SUB (* subtraction *)
 | DIV (* unsigned division *)
 | MOD (* unsigned modulo *)
 | ADDMOD (* addition under modulo *)
@@ -176,6 +254,8 @@ let arith_inst_code inst = match inst with
 | SHA3 -> 0X20
 end
 
+(* subsection "Informational Instructions" *)
+
 type info_inst =
     ADDRESS (* The address of the account currently running *)
   | BALANCE (* The Eth balance of the specified account *)
@@ -194,7 +274,7 @@ type info_inst =
   | GASLIMIT (* The current block gas limit *)
   | GAS (* The remaining gas for the current execution. This changes after every instruction
   is executed.  *)
-  
+
 val info_inst_code : info_inst -> byte
 let info_inst_code inst = match inst with
 | ADDRESS -> 0X30
@@ -215,6 +295,11 @@ let info_inst_code inst = match inst with
 | GAS -> 0X5a
 end
 
+(* subsection "Duplicating Stack Elements" *)
+
+(* There are sixteen instructions for duplicating a stack element.  These instructions take
+a stack element and duplicate it on top of the stack. *)
+
 type dup_inst = byte
 
 val dup_inst_code : dup_inst -> maybe byte
@@ -222,6 +307,8 @@ let dup_inst_code m =
    if m < 1 then Nothing (*-- There is no DUP0 instruction. *)
    else if m > 16 then Nothing (* -- There are no DUP16 instruction and on. *)
    else Just (m + 0X7f)
+
+(* subsection {* Memory Operations *} *)
 
 type memory_inst =
 | MLOAD (* reading one machine word from the memory, beginning from the specified offset *)
@@ -243,6 +330,8 @@ let memory_inst_code inst = match inst with
 | MSIZE -> 0X59
 end
 
+(* subsection {* Storage Operations *} *)
+
 type storage_inst =
 | SLOAD (* reading one word from the storage *)
 | SSTORE (* writing one word to the storage *)
@@ -253,11 +342,15 @@ let storage_inst_code inst = match inst with
 | SSTORE -> 0X55
 end
 
+(* subsection {* Program-Counter Instructions *} *)
+
 type pc_inst =
  | JUMP (* jumping to the specified location in the code *)
  | JUMPI (* jumping to the specified location in the code if a condition is met *)
  | PC (* the current location in the code *)
  | JUMPDEST (* a no-op instruction located to indicate jump destinations. *)
+
+(* If a jump occurs to a location where @{term JUMPDEST} is not found, the execution fails. *)
 
 val pc_inst_code : pc_inst -> byte
 let pc_inst_code inst = match inst with
@@ -266,6 +359,14 @@ let pc_inst_code inst = match inst with
 | PC -> 0X58
 | JUMPDEST -> 0X5b
 end
+
+(* subsection {* Stack Instructions *} *)
+
+(* The PUSH instructions have longer byte representations than the other instructions
+because they contain immediate values.
+Here the immediate value is represented by a list of bytes.  Depending on the
+length of the list, the PUSH operation takes different opcodes.
+*)
 
 type stack_inst =
   | POP (* throwing away the topmost element of the stack *)
@@ -290,6 +391,10 @@ let swap_inst_code m =
   if m > 16 then Nothing else
   Just (m + 0X8f)
 
+(* subsection {* Logging Instructions *} *)
+
+(* There are instructions for logging events with different number of arguments. *)
+
 type log_inst =
 | LOG0
 | LOG1
@@ -305,6 +410,13 @@ let log_inst_code inst = match inst with
 | LOG3 -> 0Xa3
 | LOG4 -> 0Xa4
 end
+
+(* subsection {* Miscellaneous Instructions *} *)
+
+(* This section contains the instructions that alter the account-wise control flow.
+In other words, they cause communication between accounts (or at least interaction with
+other accounts' code).
+*)
 
 type misc_inst =
   | STOP (* finishing the execution normally, with the empty return data *)
@@ -328,6 +440,12 @@ let misc_inst_code inst = match inst with
 | SUICIDE -> 0Xff
 end
 
+(* subsection {* Annotation Instruction *} *)
+
+(* The annotation instruction is just a predicate over @{typ aenv}.
+A predicate is modelled as a function returning a boolean.
+*)
+
 type annotation = aenv -> bool
 
 type inst =
@@ -345,6 +463,10 @@ type inst =
   | Log of log_inst
   | Misc of misc_inst
   | Annotation of annotation
+
+(* subsection {* The Whole Instruction Set *} *)
+
+(* The small inductive sets above are here combined into a single type. *)
 
 let maybe_to_list m = match m with
  | Nothing -> []
@@ -369,8 +491,13 @@ let inst_code inst = match inst with
 | Annotation _ -> []
 end
 
+(* The size of an opcode is useful for parsing a hex representation of an
+EVM code.  *)
+
 val inst_size : inst -> int
 let inst_size i = intFromNat (length (inst_code i))
+
+(* This can also be used to find jump destinations from a sequence of opcodes. *)
 
 val drop_bytes : list inst -> nat -> list inst
 let rec drop_bytes prg n = match (prg, n) with
@@ -382,12 +509,16 @@ let rec drop_bytes prg n = match (prg, n) with
 end
 declare termination_argument drop_bytes = automatic
 
+(* Also it is possible to compute the size of a program as the number of bytes, *)
+
 val program_size : list inst -> int
 let rec program_size lst = match lst with
 | i :: rest -> inst_size i + program_size rest
 | [] -> 0
 end
 declare termination_argument program_size = automatic
+
+(* as well as computing the byte representation of the program. *)
 
 val program_code : list inst -> list byte
 let rec program_code lst = match lst with
