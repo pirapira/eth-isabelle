@@ -20,55 +20,55 @@ open import Word256
 open import Word160
 open import Word8
 
-type uint = word256
+type w256 = word256
 type address = word160
 type byte = word8
 
-val sintFromW256 : uint -> int
+val sintFromW256 : w256 -> int
 let sintFromW256 = word256ToInt
 
-val uint : uint -> int
+val uint : w256 -> int
 let uint w = intFromNat (word256ToNat w)
 
 (*
-val word256ToNat : uint -> nat
+val word256ToNat : w256 -> nat
 let word256ToNat = word256ToNat
 *)
 
-val absnat : uint -> nat
+val absnat : w256 -> nat
 let absnat w = natFromInt (word256ToInt w)
 
 val byteFromNat : nat -> byte
 let byteFromNat = word8FromNat
 
 (*
-val word_of_int : int -> uint
+val word_of_int : int -> w256
 let word_of_int = word256FromInt
 *)
 
-val uint_of_bl : list bool -> uint
-let uint_of_bl = word256FromBoollist
+val w256_of_bl : list bool -> w256
+let w256_of_bl = word256FromBoollist
 
-val uint_to_address : uint -> address
-let uint_to_address w = word160FromNat (word256ToNat w)
-declare isabelle target_rep function uint_to_address = `Word.ucast`
+val w256_to_address : w256 -> address
+let w256_to_address w = word160FromNat (word256ToNat w)
+declare isabelle target_rep function w256_to_address = `Word.ucast`
 
-val address_to_uint : address -> uint
-let address_to_uint w = word256FromNat (word160ToNat w)
-declare isabelle target_rep function address_to_uint = `Word.ucast`
+val address_to_w256 : address -> w256
+let address_to_w256 w = word256FromNat (word160ToNat w)
+declare isabelle target_rep function address_to_w256 = `Word.ucast`
 
-val uint_to_byte : uint -> byte
-let uint_to_byte w = word8FromNat (word256ToNat w)
-declare isabelle target_rep function uint_to_byte = `Word.ucast`
+val w256_to_byte : w256 -> byte
+let w256_to_byte w = word8FromNat (word256ToNat w)
+declare isabelle target_rep function w256_to_byte = `Word.ucast`
 
-val byte_to_uint : byte -> uint
-let byte_to_uint w = word256FromNat (word8ToNat w)
-declare isabelle target_rep function byte_to_uint = `Word.ucast`
+val byte_to_w256 : byte -> w256
+let byte_to_w256 w = word256FromInt (word8ToInt w)
+declare isabelle target_rep function byte_to_w256 = `Word.ucast`
 
-val keccac : list byte -> uint
+val keccac : list byte -> w256
 let keccac _ = 0
 
-val test_bit : uint -> nat -> bool
+val test_bit : w256 -> nat -> bool
 let test_bit w n =
   if w land (1 lsr n) = 0 then false
   else true
@@ -80,33 +80,33 @@ let rec word_rsplit_aux lst n = match n with
 end
 declare termination_argument  word_rsplit_aux = automatic
 
-val word_rsplit : uint -> list byte
+val word_rsplit : w256 -> list byte
 let word_rsplit w = word_rsplit_aux (boolListFromWord256 w) 32 
 declare isabelle target_rep function word_rsplit = `word_rsplit`
 
-val get_byte : uint -> uint -> uint
+val get_byte : w256 -> w256 -> w256
 let get_byte position w =
   match List.index (word_rsplit w) (absnat position) with
   | Nothing -> 0
-  | Just (a:byte) -> byte_to_uint a
+  | Just (a:byte) -> byte_to_w256 a
   end
 
-type memory = uint -> byte
-type storage = uint -> uint
+type memory = w256 -> byte
+type storage = w256 -> w256
 
 val empty_storage : storage
 let empty_storage _ = 0
 
 type aenv = <|
-  aenv_stack : list uint;
+  aenv_stack : list w256;
   aenv_memory : memory;
   aenv_storage : storage;
-  aenv_balance : address -> uint;
+  aenv_balance : address -> w256;
   aenv_caller : address;
-  aenv_value_sent : uint;
+  aenv_value_sent : w256;
   aenv_data_sent : list byte;
   aenv_storage_at_call : storage;
-  aenv_balance_at_call : address -> uint;
+  aenv_balance_at_call : address -> w256;
   aenv_this : address;
   aenv_origin : address;
 |>
@@ -397,18 +397,18 @@ end
 declare termination_argument program_code = automatic
 
 type call_env = <|
-  callenv_gaslimit : uint; (* the current block's gas limit *)
-  callenv_value : uint; (* the amount of Eth sent along*)
+  callenv_gaslimit : w256; (* the current block's gas limit *)
+  callenv_value : w256; (* the amount of Eth sent along*)
   callenv_data : list byte; (* the data sent along *)
   callenv_caller : address; (* the caller's address *)
-  callenv_timestamp : uint; (* the timestamp of the current block *)
-  callenv_blocknum : uint; (* the block number of the current block *)
-  callenv_balance : address -> uint; (* the balances of all accounts. *)
+  callenv_timestamp : w256; (* the timestamp of the current block *)
+  callenv_blocknum : w256; (* the block number of the current block *)
+  callenv_balance : address -> w256; (* the balances of all accounts. *)
 |>
 
 type return_result = <|
   return_data : list byte; (* the returned data *)
-  return_balance : address -> uint (* the balance of all accounts at the moment of the return*)
+  return_balance : address -> w256 (* the balance of all accounts at the moment of the return*)
 |>
 
 type world_action =
@@ -417,17 +417,17 @@ type world_action =
 | WorldFail (* the world fails back to the account. *)
 
 type call_arguments = <|
-  callarg_gas : uint; (* The portion of the remaining gas that the callee is allowed to use *)
+  callarg_gas : w256; (* The portion of the remaining gas that the callee is allowed to use *)
   callarg_code : address; (* The code that executes during the call *)
   callarg_recipient : address; (* The recipient of the call, whose balance and the storage are modified. *)
-  callarg_value : uint; (* The amount of Eth sent along *)
+  callarg_value : w256; (* The amount of Eth sent along *)
   callarg_data : list byte; (* The data sent along *)
-  callarg_output_begin : uint; (* The beginning of the memory region where the output data should be written. *)
-  callarg_output_size : uint; (* The size of the memory regions where the output data should be written. *)
+  callarg_output_begin : w256; (* The beginning of the memory region where the output data should be written. *)
+  callarg_output_size : w256; (* The size of the memory regions where the output data should be written. *)
 |>
 
 type create_arguments = <|
-  createarg_value : uint; (* The value sent to the account *)
+  createarg_value : w256; (* The value sent to the account *)
   createarg_code : list byte; (* The code that deploys the runtime code. *)
 |>
 
@@ -474,28 +474,28 @@ let program_as_memory p idx =
    end
 
 type block_info = <|
-  block_blockhash : uint -> uint; (* this captures the whole BLOCKHASH operation *)
+  block_blockhash : w256 -> w256; (* this captures the whole BLOCKHASH operation *)
   block_coinbase : address; (* the miner who validates the block *)
-  block_timestamp : uint;
-  block_number : uint; (* the blocknumber of the block *)
-  block_difficulty : uint;
-  block_gaslimit : uint; (* the block gas imit *)
-  block_gasprice : uint;
+  block_timestamp : w256;
+  block_number : w256; (* the blocknumber of the block *)
+  block_difficulty : w256;
+  block_gaslimit : w256; (* the block gas imit *)
+  block_gasprice : w256;
 |>
 
 
 type variable_env = <|
-  venv_stack : list uint;
+  venv_stack : list w256;
   venv_memory : memory;
-  venv_memory_usage : nat; (* the current memory usage *)
+  venv_memory_usage : int; (* the current memory usage *)
   venv_storage : storage;
   venv_pc : int; (* the program counter *)
-  venv_balance : address -> uint; (* balances of all accounts *)
+  venv_balance : address -> w256; (* balances of all accounts *)
   venv_caller : address; (* the caller's address *)
-  venv_value_sent : uint; (* the amount of Eth sent along the current invocation *)
+  venv_value_sent : w256; (* the amount of Eth sent along the current invocation *)
   venv_data_sent : list byte; (* the data sent along the current invocation *)
   venv_storage_at_call : storage; (* the storage content at the invocation*)
-  venv_balance_at_call : address -> uint; (* the balances at the invocation *)
+  venv_balance_at_call : address -> w256; (* the balances at the invocation *)
   venv_origin : address; (* the external account that started the current transaction *)
   venv_ext_program : address -> program; (* the codes of all accounts *)
   venv_block : block_info; (* the current block *)
@@ -509,7 +509,7 @@ type constant_env = <|
 type instruction_result =
 | InstructionContinue of variable_env (* the execution should continue. *)
 | InstructionAnnotationFailure (* the annotation turned out to be false. *)
-| InstructionToWorld of contract_action * storage * (address -> uint) * maybe (variable_env * nat * nat) (* the variable environment to return to *)
+| InstructionToWorld of contract_action * storage * (address -> w256) * maybe (variable_env * nat * nat) (* the variable environment to return to *)
 
 val instruction_failure_result : variable_env -> instruction_result
 let instruction_failure_result v =
@@ -519,14 +519,14 @@ val instruction_return_result : list byte -> variable_env -> instruction_result
 let instruction_return_result x v =
   InstructionToWorld (ContractReturn x) v.venv_storage v.venv_balance Nothing
 
-val gas : variable_env -> uint
+val gas : variable_env -> w256
 let gas _ = 30000
 
-val M : nat -> uint -> uint -> nat
+val M : int -> w256 -> w256 -> int
 let M s f l =
-  if l = 0 then s else max s ((word256ToNat f + word256ToNat l + 31) div 32)
+  if l = 0 then s else max s ((word256ToInt f + word256ToInt l + 31) div 32)
 
-val update_balance : address -> (uint -> uint) -> (address -> uint) -> (address -> uint)
+val update_balance : address -> (w256 -> w256) -> (address -> w256) -> (address -> w256)
 let update_balance a f orig x = if x = a then f (orig a) else orig a
 
 val venv_pop_stack : nat -> variable_env -> variable_env
@@ -536,13 +536,13 @@ let rec venv_pop_stack n v = match (n, v.venv_stack) with
 end
 declare termination_argument venv_pop_stack = automatic
 
-val venv_stack_top : variable_env -> maybe uint
+val venv_stack_top : variable_env -> maybe w256
 let venv_stack_top v = match v.venv_stack with
  | h :: _ -> Just h
  | [] -> Nothing
 end
 
-val venv_update_storage : uint -> uint-> variable_env -> variable_env
+val venv_update_storage : w256 -> w256-> variable_env -> variable_env
 let venv_update_storage idx vall v =
   <| v with venv_storage = (fun x -> if x = idx then vall else v.venv_storage x) |>
 
@@ -559,18 +559,18 @@ end
 val stack_0_0_op : variable_env -> constant_env -> instruction_result
 let stack_0_0_op v c = InstructionContinue (venv_advance_pc c v)
 
-val stack_0_1_op : variable_env -> constant_env -> uint -> instruction_result
+val stack_0_1_op : variable_env -> constant_env -> w256 -> instruction_result
 let stack_0_1_op v c w =
    InstructionContinue (venv_advance_pc c <| v with venv_stack = w :: v.venv_stack |>)
 
 
-val stack_1_1_op : variable_env -> constant_env -> (uint -> uint) -> instruction_result
+val stack_1_1_op : variable_env -> constant_env -> (w256 -> w256) -> instruction_result
 let stack_1_1_op v c f = match v.venv_stack with
   | [] -> instruction_failure_result v
   | h :: t -> InstructionContinue (venv_advance_pc c <| v with venv_stack = f h :: t |>)
 end
 
-val stack_1_2_op : variable_env -> constant_env -> (uint -> uint * uint) -> instruction_result
+val stack_1_2_op : variable_env -> constant_env -> (w256 -> w256 * w256) -> instruction_result
 let stack_1_2_op v c f = match v.venv_stack with
  | [] -> instruction_failure_result v
  | h :: t ->
@@ -578,7 +578,7 @@ let stack_1_2_op v c f = match v.venv_stack with
      InstructionContinue (venv_advance_pc c <| v with venv_stack = new0 :: new1 :: t |>)
 end
 
-val stack_2_1_op : variable_env -> constant_env -> (uint -> uint -> uint) -> instruction_result
+val stack_2_1_op : variable_env -> constant_env -> (w256 -> w256 -> w256) -> instruction_result
 let stack_2_1_op v c f = match v.venv_stack with
  | operand0 :: operand1 :: rest ->
        InstructionContinue
@@ -586,7 +586,7 @@ let stack_2_1_op v c f = match v.venv_stack with
   | _ -> instruction_failure_result v
 end
 
-val stack_3_1_op : variable_env -> constant_env -> (uint -> uint -> uint -> uint) -> instruction_result
+val stack_3_1_op : variable_env -> constant_env -> (w256 -> w256 -> w256 -> w256) -> instruction_result
 let stack_3_1_op v c f = match v.venv_stack with
  | operand0 :: operand1 :: operand2 :: rest ->
        InstructionContinue
@@ -652,19 +652,19 @@ let jumpi v c = match v.venv_stack with
  | _ -> instruction_failure_result v
 end
 
-val datasize : variable_env -> uint
+val datasize : variable_env -> w256
 let datasize v = word256FromNat (length v.venv_data_sent)
 
-val word_of_bytes : list byte -> uint
+val word_of_bytes : list byte -> w256
 let word_of_bytes lst = word256FromBoollist (List.concat (map boolListFromWord8 lst))
 
-val read_word_from_bytes : nat -> list byte -> uint
+val read_word_from_bytes : nat -> list byte -> w256
 let read_word_from_bytes idx lst = word_of_bytes (take 32 (drop idx lst))
 
-val cut_data : variable_env -> uint -> uint
+val cut_data : variable_env -> w256 -> w256
 let cut_data v idx = read_word_from_bytes (word256ToNat idx) v.venv_data_sent
 
-val cut_memory : uint -> nat -> (uint -> byte) -> list byte
+val cut_memory : w256 -> nat -> (w256 -> byte) -> list byte
 let rec cut_memory idx n memory = match n with
  | 0 -> []
  | n + 1 -> memory idx :: cut_memory (idx + 1) n memory
@@ -678,8 +678,8 @@ let call v c = match v.venv_stack with
      else
        InstructionToWorld (ContractCall
          <| callarg_gas = e0;
-            callarg_code = uint_to_address e1;
-            callarg_recipient = uint_to_address e1;
+            callarg_code = w256_to_address e1;
+            callarg_recipient = w256_to_address e1;
             callarg_value = e2;
             callarg_data = cut_memory e3 (word256ToNat e4) v.venv_memory;
             callarg_output_begin = e5;
@@ -702,8 +702,8 @@ let delegatecall v c = match v.venv_stack with
        InstructionToWorld
          (ContractCall
            <| callarg_gas = e0;
-              callarg_code = uint_to_address e1;
-              callarg_recipient = uint_to_address e1;
+              callarg_code = w256_to_address e1;
+              callarg_recipient = w256_to_address e1;
               callarg_value = v.venv_value_sent;
               callarg_data = cut_memory e3 (word256ToNat e4) v.venv_memory;
               callarg_output_begin = e5;
@@ -723,7 +723,7 @@ let callcode v c = match v.venv_stack with
        InstructionToWorld
          (ContractCall
            <| callarg_gas = e0;
-              callarg_code = uint_to_address e1;
+              callarg_code = w256_to_address e1;
               callarg_recipient = c.cenv_this;
               callarg_value = e2;
               callarg_data = cut_memory e3 (word256ToNat e4) v.venv_memory;
@@ -786,14 +786,14 @@ let general_dup n v c = match List.index v.venv_stack (n - 1) with
   | Just duplicated -> InstructionContinue (venv_advance_pc c <| v with venv_stack = duplicated :: v.venv_stack |>)
 end
 
-val store_byte_list_memory : uint -> list byte -> memory -> memory
+val store_byte_list_memory : w256 -> list byte -> memory -> memory
 let rec store_byte_list_memory pos lst orig = match lst with
  | [] -> orig
  | h :: t ->
      store_byte_list_memory (pos + 1) t (fun p -> if pos = p then h else orig p)
 end
 
-val store_word_memory : uint -> uint -> memory -> memory
+val store_word_memory : w256 -> w256 -> memory -> memory
 let store_word_memory pos vl mem =
    store_byte_list_memory pos (word_rsplit vl) mem
 
@@ -819,7 +819,7 @@ end
 val mstore8 : variable_env -> constant_env -> instruction_result
 let mstore8 v c = match v.venv_stack with
  | pos :: vl :: rest ->
-   let new_memory = (fun p -> if p = pos then uint_to_byte vl else v.venv_memory p) in
+   let new_memory = (fun p -> if p = pos then w256_to_byte vl else v.venv_memory p) in
    InstructionContinue (venv_advance_pc c
           <| v with venv_stack = rest; venv_memory_usage = M v.venv_memory_usage pos 8;
                     venv_memory = new_memory |>)
@@ -860,7 +860,7 @@ let extcodecopy v c = match v.venv_stack with
  | addr :: dst_start :: src_start :: len :: rest ->
      let data = cut_memory src_start (absnat len)
                   (program_as_memory
-                    (v.venv_ext_program (uint_to_address addr))) in
+                    (v.venv_ext_program (w256_to_address addr))) in
      let new_memory = store_byte_list_memory dst_start data v.venv_memory in
      InstructionContinue (venv_advance_pc c
        <| v with venv_stack = rest; venv_memory = new_memory;
@@ -903,7 +903,7 @@ let suicide v c = match v.venv_stack with
  | dst :: _ ->
      let new_balance addr =
         if addr = c.cenv_this then 0 else
-        if addr = uint_to_address dst then v.venv_balance c.cenv_this + v.venv_balance addr else 
+        if addr = w256_to_address dst then v.venv_balance c.cenv_this + v.venv_balance addr else
         v.venv_balance addr in
      InstructionToWorld ContractSuicide v.venv_storage new_balance Nothing
  | _ -> instruction_failure_result v
@@ -920,7 +920,7 @@ let instruction_sem v c inst = match inst with
 | Pc JUMPDEST -> stack_0_0_op v c
 | Info CALLDATASIZE -> stack_0_1_op v c (datasize v)
 | Stack CALLDATALOAD -> stack_1_1_op v c (cut_data v)
-| Info CALLER -> stack_0_1_op v c (address_to_uint v.venv_caller)
+| Info CALLER -> stack_0_1_op v c (address_to_w256 v.venv_caller)
 | Arith ADD -> stack_2_1_op v c (fun a b -> a + b)
 | Arith SUB -> stack_2_1_op v c (fun a b -> a - b)
 | Arith ISZERO -> stack_1_1_op v c (fun a -> if a = 0 then 1 else 0)
@@ -951,7 +951,7 @@ let instruction_sem v c inst = match inst with
      (fun elm0 elm1 -> if elm0 < elm1 then 1 else 0)
 | Sarith SIGNEXTEND -> stack_2_1_op v c
      (fun len orig ->
-        uint_of_bl (List.map (fun i ->
+        w256_of_bl (List.map (fun i ->
           if i <= 256 - 8 * (uint len + 1)
           then test_bit orig (natFromInt (256 - 8 * (uint len + 1)))
           else test_bit orig (natFromInt i)
@@ -972,16 +972,16 @@ let instruction_sem v c inst = match inst with
 | Arith EXP -> stack_2_1_op v c (fun a exponent -> word256FromInt (uint a ** word256ToNat exponent))
 | Arith inst_LT -> stack_2_1_op v c (fun arg0 arg1 -> if arg0 < arg1 then 1 else 0)
 | Arith SHA3 -> sha3 v c
-| Info ADDRESS -> stack_0_1_op v c (address_to_uint c.cenv_this)
-| Info BALANCE -> stack_1_1_op v c (fun addr -> v.venv_balance (uint_to_address addr))
-| Info ORIGIN -> stack_0_1_op v c (address_to_uint v.venv_origin)
+| Info ADDRESS -> stack_0_1_op v c (address_to_w256 c.cenv_this)
+| Info BALANCE -> stack_1_1_op v c (fun addr -> v.venv_balance (w256_to_address addr))
+| Info ORIGIN -> stack_0_1_op v c (address_to_w256 v.venv_origin)
 | Info CALLVALUE -> stack_0_1_op v c v.venv_value_sent
 | Info CODESIZE -> stack_0_1_op v c (word256FromNat c.cenv_program.program_length)
 | Info GASPRICE -> stack_0_1_op v c v.venv_block.block_gasprice
 | Info EXTCODESIZE -> stack_1_1_op v c
-     (fun arg -> word256FromNat (v.venv_ext_program (uint_to_address arg)).program_length)
+     (fun arg -> word256FromNat (v.venv_ext_program (w256_to_address arg)).program_length)
 | Info BLOCKHASH -> stack_1_1_op v c v.venv_block.block_blockhash
-| Info COINBASE -> stack_0_1_op v c (address_to_uint v.venv_block.block_coinbase)
+| Info COINBASE -> stack_0_1_op v c (address_to_w256 v.venv_block.block_coinbase)
 | Info TIMESTAMP -> stack_0_1_op v c v.venv_block.block_timestamp
 | Info NUMBER -> stack_0_1_op v c v.venv_block.block_number
 | Info DIFFICULTY -> stack_0_1_op v c v.venv_block.block_difficulty
@@ -1003,12 +1003,12 @@ let instruction_sem v c inst = match inst with
 | Misc SUICIDE -> suicide v c
 | Misc DELEGATECALL -> delegatecall v c
 | Info GAS -> stack_0_1_op v c (gas v)
-| Memory MSIZE -> stack_0_1_op v c (word256FromNat v.venv_memory_usage)
+| Memory MSIZE -> stack_0_1_op v c (word256FromInt v.venv_memory_usage)
 end
 
 type program_result =
 | ProgramStepRunOut
-| ProgramToWorld of contract_action * storage * (address -> uint) * maybe (variable_env * nat * nat)
+| ProgramToWorld of contract_action * storage * (address -> w256) * maybe (variable_env * nat * nat)
 | ProgramInvalid
 | ProgramAnnotationFailure
 | ProgramInit of call_env
@@ -1051,7 +1051,7 @@ type account_state = <|
   account_address : address;
   account_storage : storage;
   account_code : program;
-  account_balance : uint;
+  account_balance : w256;
   account_ongoing_calls : list (variable_env * nat * nat);
   account_killed : bool;
 |>
@@ -1096,9 +1096,9 @@ let empty_account addr =
    account_killed = false;
  |>
 
-val update_account_state : account_state -> contract_action -> storage -> (address -> uint) -> maybe (variable_env*nat*nat) -> account_state
+val update_account_state : account_state -> contract_action -> storage -> (address -> w256) -> maybe (variable_env * nat * nat) -> account_state
 let update_account_state prev act st bal v_opt =
-   <| prev with 
+   <| prev with
      account_storage = st;
      account_balance = (match act with ContractFail -> prev.account_balance
                                    |  _ -> bal prev.account_address end);

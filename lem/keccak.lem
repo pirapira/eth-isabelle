@@ -197,5 +197,5 @@ let keccak' input =
    let mid = sha3_update input initial_pos initial_st in
    keccak_final (fst mid) (snd mid)
 
-val keccak : list byte -> Evm.uint
+val keccak : list byte -> Evm.w256
 let keccak input = Evm.word_of_bytes (keccak' input)

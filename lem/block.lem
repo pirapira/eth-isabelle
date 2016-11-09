@@ -25,9 +25,9 @@ open import Evm
 type transaction = <|
   tr_from : address;
   tr_to : maybe address;
-  tr_gas_limit : uint;
-  tr_gas_price : uint;
-  tr_nonce : uint;
+  tr_gas_limit : w256;
+  tr_gas_price : w256;
+  tr_nonce : w256;
   tr_data : list byte;
 |>
 
@@ -35,29 +35,29 @@ type world_state = address -> account_state
 
 type log_item = <|
   log_address : address;
-  log_topics : list uint;
+  log_topics : list w256;
   log_data : list byte;
 |>
 
 type receipt = <|
   receipt_state : world_state;
-  receipt_cumulative_gas : uint;
-  receipt_bloom : uint;
+  receipt_cumulative_gas : w256;
+  receipt_bloom : w256;
   receipt_logs : list log_item;
 |>
 
 type block = <|
-  block_parent_hash : uint;
-  block_uncles_hash : list uint;
+  block_parent_hash : w256;
+  block_uncles_hash : list w256;
   block_coinbase : address;
   block_state : world_state;
   block_transactions : list (transaction * receipt);
-  block_logs_bloom : uint;
-  block_difficulty : uint;
-  block_number : uint;
-  block_gas_limit : uint;
-  block_timestampt : uint;
-  block_nonce : uint;
+  block_logs_bloom : w256;
+  block_difficulty : w256;
+  block_number : w256;
+  block_gas_limit : w256;
+  block_timestampt : w256;
+  block_nonce : w256;
 |>
 
 
