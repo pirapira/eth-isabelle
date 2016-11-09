@@ -444,25 +444,6 @@ type program = <|
   program_annotation : nat -> list annotation; (* a mapping from positions to annotations *)
 |>
 
-val store_byte_list_in_program : nat -> list byte -> map nat inst -> map nat inst
-let rec store_byte_list_in_program pos lst orig = match lst with
- | [] -> orig
- | h :: t -> store_byte_list_in_program (pos + 1) t (Map.insert pos (Unknown h) orig)
-end
-declare termination_argument store_byte_list_in_program = automatic
-
-val program_content_of_lst : nat -> list inst -> map nat inst
-let rec program_content_of_lst pos lst = match lst with
-| [] -> Map.empty
-| Stack (PUSH_N bytes) :: rest ->
-   store_byte_list_in_program (pos + 1) bytes 
-     (Map.insert pos (Stack (PUSH_N bytes))
-          (program_content_of_lst (pos + 1 + length bytes) rest))
-| Annotation _  :: rest -> program_content_of_lst pos rest
-| i :: rest -> Map.insert pos i (program_content_of_lst (pos + 1) rest)
-end
-declare termination_argument program_content_of_lst = automatic
-
 val prepend_annotation : nat -> annotation -> (nat -> list annotation) -> (nat -> list annotation)
 let prepend_annotation pos annot orig p = if pos = p then annot :: orig p else orig p
 

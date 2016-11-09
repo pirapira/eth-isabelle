@@ -9,7 +9,7 @@ indreln [build_venv_returned : account_state -> return_result -> variable_env ->
 venv_returned:
   forall new_bal a_bal a_code v_pc a_addr a_storage v_stack v_memory v_memory_usage v_storage v_balance v_caller v_value v_data v_init_storage v_init_balance
          v_origin v_ext_program v_block mem_start mem_size  a_ongoing_rest a_killed r.
-  is_call_like (Map.lookup (v_pc - 1) a_code.program_content) &&
+  is_call_like (a_code.program_content (v_pc - 1)) &&
   new_bal >= a_bal ==> (* the balance might have increased from the account state *)
   build_venv_returned
      <| account_address = a_addr;
