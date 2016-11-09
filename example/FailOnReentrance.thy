@@ -8,7 +8,7 @@ abbreviation after_call :: "inst list"
 where
 "after_call ==
   Arith ISZERO #
-  Stack (PUSH_N [0]) #
+  Stack (PUSH_N [2]) #
   Pc JUMPI #
   Stack (PUSH_N [0]) #
   Stack (PUSH_N [0]) #

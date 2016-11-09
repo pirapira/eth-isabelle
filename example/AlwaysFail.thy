@@ -10,8 +10,8 @@ where "this_address = undefined"
 abbreviation always_fail_code :: "inst list"
 where
 "always_fail_code ==
-   Stack (PUSH_N [0])
- # Annotation (\<lambda> aenv. aenv_stack aenv ! 0 = 0)
+   Stack (PUSH_N [2])
+ # Annotation (\<lambda> aenv. aenv_stack aenv ! 0 = 2)
  # Pc JUMP #
  []"
 
