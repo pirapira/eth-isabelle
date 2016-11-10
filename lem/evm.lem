@@ -756,7 +756,7 @@ finally finishing the current invocation
     contract_action   (* the contract's move *)
   * storage           (* the new storage content *)
   * (address -> w256) (* the new balance of all accounts *)
-  * maybe (variable_env * nat * nat) (* the variable environment to return to *)
+  * maybe (variable_env * int * int) (* the variable environment to return to *)
 
 (* When the contract fails, the result of the instruction always looks like this: *)
 val instruction_failure_result : variable_env -> instruction_result
@@ -955,7 +955,7 @@ let call v c = match v.venv_stack with
           (<| venv_advance_pc c v with
            venv_stack = rest;
            venv_balance = update_balance c.cenv_this (fun orig -> orig - e2) v.venv_balance;
-           venv_memory_usage = M (M v.venv_memory_usage e3 e4) e5 e6 |>, absnat e5, absnat e6))
+           venv_memory_usage = M (M v.venv_memory_usage e3 e4) e5 e6 |>, uint e5, uint e6))
   | _ -> instruction_failure_result v
 end
 
@@ -975,7 +975,7 @@ let delegatecall v c = match v.venv_stack with
               callarg_output_size = e6 |>)
           v.venv_storage v.venv_balance
           (Just (* save the variable environment for returns *)
-            (<| venv_advance_pc c v with venv_stack = rest; venv_memory_usage = M (M v.venv_memory_usage e3 e4) e5 e6 |>, absnat e5, absnat e6))
+            (<| venv_advance_pc c v with venv_stack = rest; venv_memory_usage = M (M v.venv_memory_usage e3 e4) e5 e6 |>, uint e5, uint e6))
   | _ -> instruction_failure_result v
 end
 
@@ -1000,7 +1000,7 @@ let callcode v c = match v.venv_stack with
             (<| venv_advance_pc c v with
                   venv_stack = rest;
                   venv_memory_usage = M (M v.venv_memory_usage e3 e4) e5 e6;
-                  venv_balance = update_balance c.cenv_this (fun orig -> orig - e2) v.venv_balance |>, absnat e5, absnat e6))
+                  venv_balance = update_balance c.cenv_this (fun orig -> orig - e2) v.venv_balance |>, uint e5, uint e6))
   | _ -> instruction_failure_result v
 end
 
@@ -1273,7 +1273,7 @@ end
 
 type program_result =
 | ProgramStepRunOut
-| ProgramToWorld of contract_action * storage * (address -> w256) * maybe (variable_env * nat * nat)
+| ProgramToWorld of contract_action * storage * (address -> w256) * maybe (variable_env * int * int)
 | ProgramInvalid
 | ProgramAnnotationFailure
 | ProgramInit of call_env
@@ -1317,7 +1317,7 @@ type account_state = <|
   account_storage : storage;
   account_code : program;
   account_balance : w256;
-  account_ongoing_calls : list (variable_env * nat * nat);
+  account_ongoing_calls : list (variable_env * int * int);
   account_killed : bool;
 |>
 
@@ -1354,7 +1354,7 @@ let empty_account addr =
    account_killed = false;
  |>
 
-val update_account_state : account_state -> contract_action -> storage -> (address -> w256) -> maybe (variable_env * nat * nat) -> account_state
+val update_account_state : account_state -> contract_action -> storage -> (address -> w256) -> maybe (variable_env * int * int) -> account_state
 let update_account_state prev act st bal v_opt =
    <| prev with
      account_storage = st;
@@ -1401,12 +1401,12 @@ indreln [build_venv_called : account_state -> call_env -> variable_env -> bool]
      venv_block = block; (* the block information is chosen arbitrarily. *)
    |>
 
-val put_return_values : memory -> list byte -> nat -> nat -> memory
+val put_return_values : memory -> list byte -> int -> int -> memory
 let rec put_return_values orig lst b s =
   if s <= 0 then orig else
   match lst with
   | [] -> orig
-  | h :: t -> put_return_values (fun addr -> if addr = word256FromNat b then h else orig addr) t (b + 1) (s - 1)
+  | h :: t -> put_return_values (fun addr -> if addr = word256FromInt b then h else orig addr) t (b + 1) (s - 1)
   end
 declare termination_argument put_return_values = automatic
 
