@@ -32,6 +32,7 @@ let sintFromW256 = word256ToInt
 
 val uint : w256 -> int
 let uint w = intFromNat (word256ToNat w)
+declare isabelle target_rep function uint = `Word.uint`
 
 (*
 val word256ToNat : w256 -> nat
@@ -621,8 +622,8 @@ looking up instructions from the program counters. *)
 
 type program = <|
   program_content : int -> maybe inst; (* a binary search tree that allows looking up instructions from positions *)
-  program_length  : nat; (* the length of the program in bytes *)
-  program_annotation : nat -> list annotation; (* a mapping from positions to annotations *)
+  program_length  : int; (* the length of the program in bytes *)
+  program_annotation : int -> list annotation; (* a mapping from positions to annotations *)
 |>
 
 (* The empty program is easy to define. *)
@@ -647,18 +648,18 @@ Here is a function that inserts an annotation
 at a specified position. *}
 *)
 
-val prepend_annotation : nat -> annotation -> (nat -> list annotation) -> (nat -> list annotation)
+val prepend_annotation : int -> annotation -> (int -> list annotation) -> (int -> list annotation)
 let prepend_annotation pos annot orig p = if pos = p then annot :: orig p else orig p
 
 (* Currently annotations are inserted into a mapping with Isabelle/HOL's mapping updates.
 When this causes performance problems, I need to switch to AVL trees again.
 *)
 
-val program_annotation_of_lst : nat -> list inst -> nat -> list annotation
+val program_annotation_of_lst : int -> list inst -> int -> list annotation
 let rec program_annotation_of_lst pos lst = match lst with
 | [] -> (fun _ -> [])
 | Annotation annot :: rest -> prepend_annotation pos annot (program_annotation_of_lst pos rest)
-| i :: rest -> program_annotation_of_lst (pos + (natFromInt (inst_size i))) rest
+| i :: rest -> program_annotation_of_lst (pos + inst_size i) rest
 end
 declare termination_argument program_annotation_of_lst = automatic
 
@@ -674,7 +675,7 @@ So such encoders are parametrised here.*}
 val program_of_lst : list inst -> (list inst -> (int -> maybe inst)) -> program
 let program_of_lst lst program_content_formatter = <|
   program_content = program_content_formatter lst;
-  program_length = length lst;
+  program_length = intFromNat (length lst);
   program_annotation = program_annotation_of_lst 0 lst;
 |>
 
@@ -1240,10 +1241,10 @@ let instruction_sem v c inst = match inst with
 | Info BALANCE -> stack_1_1_op v c (fun addr -> v.venv_balance (w256_to_address addr))
 | Info ORIGIN -> stack_0_1_op v c (address_to_w256 v.venv_origin)
 | Info CALLVALUE -> stack_0_1_op v c v.venv_value_sent
-| Info CODESIZE -> stack_0_1_op v c (word256FromNat c.cenv_program.program_length)
+| Info CODESIZE -> stack_0_1_op v c (word256FromInt c.cenv_program.program_length)
 | Info GASPRICE -> stack_0_1_op v c v.venv_block.block_gasprice
 | Info EXTCODESIZE -> stack_1_1_op v c
-     (fun arg -> word256FromNat (v.venv_ext_program (w256_to_address arg)).program_length)
+     (fun arg -> word256FromInt (v.venv_ext_program (w256_to_address arg)).program_length)
 | Info BLOCKHASH -> stack_1_1_op v c v.venv_block.block_blockhash
 | Info COINBASE -> stack_0_1_op v c (address_to_w256 v.venv_block.block_coinbase)
 | Info TIMESTAMP -> stack_0_1_op v c v.venv_block.block_timestamp
@@ -1279,11 +1280,11 @@ type program_result =
 
 val check_annotations : variable_env -> constant_env -> bool
 let check_annotations v c =
-  let annots = c.cenv_program.program_annotation (natFromInt v.venv_pc) in
+  let annots = c.cenv_program.program_annotation v.venv_pc in
   List.all (fun annot -> annot (build_aenv v c)) annots
 
-val program_sem : variable_env -> constant_env -> nat -> nat -> program_result
-val blocked_program_sem : variable_env -> constant_env -> nat -> nat -> bool -> program_result
+val program_sem : variable_env -> constant_env -> int -> nat -> program_result
+val blocked_program_sem : variable_env -> constant_env -> int -> nat -> bool -> program_result
 
 let rec program_sem v c tiny_step remaining_steps = match remaining_steps with
  | 0 -> ProgramStepRunOut
@@ -1308,7 +1309,7 @@ and blocked_program_sem v c l p _ = program_sem v c l p
 declare termination_argument program_sem = automatic
 declare termination_argument blocked_program_sem = automatic
 
-val program_sem_blocked : variable_env -> constant_env -> nat -> nat -> bool -> program_result
+val program_sem_blocked : variable_env -> constant_env -> int -> nat -> bool -> program_result
 let program_sem_blocked v c internal external _ = program_sem v c internal external
 
 type account_state = <|
