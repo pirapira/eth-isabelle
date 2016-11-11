@@ -33,6 +33,8 @@ lem/Evm.thy: lem/evm.lem
 
 lem/Evm-use_inc.tex lem/Evm-inc.tex: lem/evm.lem
 	lem -tex lem/evm.lem
+	sed 's/default/defWithComment/g' lem/Evm-inc.tex > lem/tmp.txt
+	mv lem/tmp.txt lem/Evm-inc.tex
 
 lem/Evm-use_inc.pdf: lem/Evm-use_inc.tex lem/Evm-inc.tex
 	cd lem; pdflatex Evm-use_inc.tex; pdflatex Evm-use_inc.tex
