@@ -1,6 +1,14 @@
-.PHONY: all all-isabelle deed
+.PHONY: all all-isabelle deed clean clean-pdf
 
 all: all-isabelle deed lem-thy lem-pdf
+
+clean: clean-pdf clean-thy
+
+clean-pdf:
+	rm -rf lem/*.tex lem/*.aux lem/*.log lem/*.toc lem/*.pdf lem/*~
+
+clean-thy:
+	rm -rf lem/*.thy
 
 all-isabelle: KEC.thy FunctionalCorrectness.thy Parse.thy ContractEnv.thy Instructions.thy ContractSem.thy RelationalSem.thy HP.thy YellowPaper.thy example/Optimization.thy example/AlwaysFail.thy example/FailOnReentrance.thy example/Deed.thy
 	isabelle build -d . all
