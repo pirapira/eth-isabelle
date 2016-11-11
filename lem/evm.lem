@@ -1,27 +1,27 @@
-(*
-  Copyright 2016 Sami Mäkelä
-  Copyright 2016 Yoichi Hirai
+(*                                                                          *)
+(* Copyright 2016 Sami Mäkelä                                               *)
+(* Copyright 2016 Yoichi Hirai                                              *)
+(*                                                                          *)
+(* Licensed under the Apache License, Version 2.0 (the "License");          *)
+(* you may not use this file except in compliance with the License.         *)
+(* You may obtain a copy of the License at                                  *)
+(*                                                                          *)
+(*     http://www.apache.org/licenses/LICENSE-2.0                           *)
+(*                                                                          *)
+(* Unless required by applicable law or agreed to in writing, software      *)
+(* distributed under the License is distributed on an "AS IS" BASIS,        *)
+(* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. *)
+(* See the License for the specific language governing permissions and      *)
+(* limitations under the License.                                           *)
 
-   Licensed under the Apache License, Version 2.0 (the "License");
-   you may not use this file except in compliance with the License.
-   You may obtain a copy of the License at
-
-       http://www.apache.org/licenses/LICENSE-2.0
-
-   Unless required by applicable law or agreed to in writing, software
-   distributed under the License is distributed on an "AS IS" BASIS,
-   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-   See the License for the specific language governing permissions and
-   limitations under the License.
-*)
 open import Pervasives
 open import Word
 open import Word256
 open import Word160
 open import Word8
 
-(* The frequently used machine word types are named here.  For example, address
-   is the type of 160-bit machine words.  The type w256 is the type of EVM machine words. *)
+(* The frequently used machine word types are named here.  For example, address *)
+(* is the type of 160-bit machine words.  The type w256 is the type of EVM machine words. *)
 
 type w256 = word256
 type address = word160
@@ -34,10 +34,8 @@ val uint : w256 -> int
 let uint w = intFromNat (word256ToNat w)
 declare isabelle target_rep function uint = `Word.uint`
 
-(*
-val word256ToNat : w256 -> nat
-let word256ToNat = word256ToNat
-*)
+(* val word256ToNat : w256 -> nat *)
+(* let word256ToNat = word256ToNat *)
 
 val absnat : w256 -> nat
 let absnat w = natFromInt (word256ToInt w)
@@ -45,10 +43,8 @@ let absnat w = natFromInt (word256ToInt w)
 val byteFromNat : nat -> byte
 let byteFromNat = word8FromNat
 
-(*
-val word_of_int : int -> w256
-let word_of_int = word256FromInt
-*)
+(* val word_of_int : int -> w256 *)
+(* let word_of_int = word256FromInt *)
 
 val w256_of_bl : list bool -> w256
 let w256_of_bl = word256FromBoollist
@@ -95,18 +91,17 @@ let get_byte position w =
   | Just (a:byte) -> byte_to_w256 a
   end
 
-(* In EVM, the memory contains one byte for each machine word (offset).
-The storage contains one machine word for each machine word (index).
-As we will see, the memory is cleared for every invocation of smart contracts.
-The storage is persistent for an account.
-*)
+(* In EVM, the memory contains one byte for each machine word (offset). *)
+(* The storage contains one machine word for each machine word (index). *)
+(* As we will see, the memory is cleared for every invocation of smart contracts. *)
+(* The storage is persistent for an account. *)
 
 type memory = w256 -> byte
 type storage = w256 -> w256
 
-(* The storage is modelled as a function.  For example, the empty storage
-is a function that returns zero for every index.  Initially all accounts come with
-the empty storage. *)
+(* The storage is modelled as a function.  For example, the empty storage *)
+(* is a function that returns zero for every index.  Initially all accounts come with *)
+(* the empty storage. *)
 
 val empty_storage : storage
 let empty_storage _ = 0
@@ -125,56 +120,51 @@ type aenv = <|
   aenv_origin : address;
 |>
 
-(* @{term aenv_balance} field keeps track of the balance of all accounts because the contract
-under verification can send some Eth to other accounts.  To capture the effect of this, I chose to
-keep track of the balances of the other contracts.  *)
+(* @{term aenv_balance} field keeps track of the balance of all accounts because the contract *)
+(* under verification can send some Eth to other accounts.  To capture the effect of this, I chose to *)
+(* keep track of the balances of the other contracts.  *)
 
-(* @{term aenv_storage_at_call} and @{term aenv_balance_at_call} fields remember the states at the
-time of the contract invocation.  These are used for rolling back the state after a failure.
-Failures happen for example when the contract under verification jumps to a wrong destination,
-or it runs out of gas. *)
+(* @{term aenv_storage_at_call} and @{term aenv_balance_at_call} fields remember the states at the *)
+(* time of the contract invocation.  These are used for rolling back the state after a failure. *)
+(* Failures happen for example when the contract under verification jumps to a wrong destination, *)
+(* or it runs out of gas. *)
 
-(* @{term aenv_origin} might be the same as but might be different from @{term aenv_caller}.
-An Ethereum transaction is started by an external account (that is, an account which does not
-have codes but owned by somebody with a secret key).  @{term aenv_origin} denotes this external
-account.  During a transaction, the origin first sends a message to an account, the receiver can
-in turn call other accounts as well.  When the calls nest, @{term aenv_caller} points to the
-immediate caller of the current invocation.
-*)
+(* @{term aenv_origin} might be the same as but might be different from @{term aenv_caller}. *)
+(* An Ethereum transaction is started by an external account (that is, an account which does not *)
+(* have codes but owned by somebody with a secret key).  @{term aenv_origin} denotes this external *)
+(* account.  During a transaction, the origin first sends a message to an account, the receiver can *)
+(* in turn call other accounts as well.  When the calls nest, @{term aenv_caller} points to the *)
+(* immediate caller of the current invocation. *)
 
 
-(* This section lists the EVM instructions and their byte representations.
-I also introduce an assertion instruction, whose byte representation is empty.
-The assertion instruction is a statement about the state of the EVM at
-that position of the program.
-*)
-
+(* This section lists the EVM instructions and their byte representations. *)
+(* I also introduce an assertion instruction, whose byte representation is empty. *)
+(* The assertion instruction is a statement about the state of the EVM at *)
+(* that position of the program. *)
 
 
 (****** What used to be Instructions.thy ******)
 
-(* In Isabelle/HOL, it is expensive to define a single inductive type
-that contains all instructions.  When I do it, Isabelle/HOL automatically proves every
-instruction is different from any other instruction, but this process has the computational
-complexity of the square of the number of instructions.  Instead, I define multiple
-smaller inductive types and unify them at the end.  *)
+(* In Isabelle/HOL, it is expensive to define a single inductive type *)
+(* that contains all instructions.  When I do it, Isabelle/HOL automatically proves every *)
+(* instruction is different from any other instruction, but this process has the computational *)
+(* complexity of the square of the number of instructions.  Instead, I define multiple *)
+(* smaller inductive types and unify them at the end.  *)
 
 (* subsection "Bit Operations" *)
 
 
-(* The following clause defines a type called \textit{bits\_inst}.
-The type has five elements.  It is automatically understood that nothing else
-belongs to this type.  It is also understood that every one of these five elements
-is different from any of the other four.
-*)
+(* The following clause defines a type called \textit{bits\_inst}. *)
+(* The type has five elements.  It is automatically understood that nothing else *)
+(* belongs to this type.  It is also understood that every one of these five elements *)
+(* is different from any of the other four. *)
 
-(* Some instructions have \textit{inst\_} in front because names like AND,
-OR and XOR are taken by the machine word library.
-*)
+(* Some instructions have \textit{inst\_} in front because names like AND, *)
+(* OR and XOR are taken by the machine word library. *)
 
-(* The instructions have different arities.  They might consume some elements on the stack,
-and produce some elements on the stack.  However, the arity of the instructions are not specified
-in this section. *)
+(* The instructions have different arities.  They might consume some elements on the stack, *)
+(* and produce some elements on the stack.  However, the arity of the instructions are not specified *)
+(* in this section. *)
 
 type bits_inst =
 | inst_AND (* bitwise AND *)
@@ -183,9 +173,8 @@ type bits_inst =
 | inst_NOT (* bitwise negation *)
 | BYTE     (* taking one byte out of a word *)
 
-(* These instructions are represented by the following bytes.
-Most opcodes are a single byte.
-*)
+(* These instructions are represented by the following bytes. *)
+(* Most opcodes are a single byte. *)
 
 val bits_inst_code : bits_inst -> byte
 let bits_inst_code inst = match inst with
@@ -220,8 +209,8 @@ end
 
 (* subsection "Unsigned Arithmetics" *)
 
-(* The names GT, EQ and LT are taken in the Cmp library
-(which will be used for AVL trees). *)
+(* The names GT, EQ and LT are taken in the Cmp library *)
+(* (which will be used for AVL trees). *)
 
 type arith_inst =
 | ADD (* addition *)
@@ -273,8 +262,8 @@ type info_inst =
   | NUMBER (* The block number *)
   | DIFFICULTY (* The current difficulty *)
   | GASLIMIT (* The current block gas limit *)
-  | GAS (* The remaining gas for the current execution. This changes after every instruction
-  is executed.  *)
+  | GAS (* The remaining gas for the current execution. This changes after every instruction *)
+  (* is executed.  *)
 
 val info_inst_code : info_inst -> byte
 let info_inst_code inst = match inst with
@@ -298,8 +287,8 @@ end
 
 (* subsection "Duplicating Stack Elements" *)
 
-(* There are sixteen instructions for duplicating a stack element.  These instructions take
-a stack element and duplicate it on top of the stack. *)
+(* There are sixteen instructions for duplicating a stack element.  These instructions take *)
+(* a stack element and duplicate it on top of the stack. *)
 
 type dup_inst = byte
 
@@ -363,11 +352,10 @@ end
 
 (* subsection {* Stack Instructions *} *)
 
-(* The PUSH instructions have longer byte representations than the other instructions
-because they contain immediate values.
-Here the immediate value is represented by a list of bytes.  Depending on the
-length of the list, the PUSH operation takes different opcodes.
-*)
+(* The PUSH instructions have longer byte representations than the other instructions *)
+(* because they contain immediate values. *)
+(* Here the immediate value is represented by a list of bytes.  Depending on the *)
+(* length of the list, the PUSH operation takes different opcodes. *)
 
 type stack_inst =
   | POP (* throwing away the topmost element of the stack *)
@@ -414,10 +402,9 @@ end
 
 (* subsection {* Miscellaneous Instructions *} *)
 
-(* This section contains the instructions that alter the account-wise control flow.
-In other words, they cause communication between accounts (or at least interaction with
-other accounts' code).
-*)
+(* This section contains the instructions that alter the account-wise control flow. *)
+(* In other words, they cause communication between accounts (or at least interaction with *)
+(* other accounts' code). *)
 
 type misc_inst =
   | STOP (* finishing the execution normally, with the empty return data *)
@@ -427,8 +414,8 @@ type misc_inst =
   | DELEGATECALL (* calling into this account, the executed code can be some other account's
                        but the sent value and the sent data are unchanged. *)
   | RETURN (* finishing the execution normally with data *)
-  | SUICIDE (* send all remaining Eth balance to the specified account,
-                  finishing the execution normally, and flagging the current account for deletion *)
+  | SUICIDE (* send all remaining Eth balance to the specified account, *)
+            (* finishing the execution normally, and flagging the current account for deletion *)
 
 val misc_inst_code : misc_inst -> byte
 let misc_inst_code inst = match inst with
@@ -443,9 +430,8 @@ end
 
 (* subsection {* Annotation Instruction *} *)
 
-(* The annotation instruction is just a predicate over @{typ aenv}.
-A predicate is modelled as a function returning a boolean.
-*)
+(* The annotation instruction is just a predicate over @{typ aenv}. *)
+(* A predicate is modelled as a function returning a boolean. *)
 
 type annotation = aenv -> bool
 
@@ -492,8 +478,8 @@ let inst_code inst = match inst with
 | Annotation _ -> []
 end
 
-(* The size of an opcode is useful for parsing a hex representation of an
-EVM code.  *)
+(* The size of an opcode is useful for parsing a hex representation of an *)
+(* EVM code.  *)
 
 val inst_size : inst -> int
 let inst_size i = intFromNat (length (inst_code i))
@@ -530,31 +516,28 @@ declare termination_argument program_code = automatic
 
 (* section "A Contract Centric View of the EVM" *)
 
-(*
-subsection "The Interaction between the Contract and the World"
+(* subsection "The Interaction between the Contract and the World" *)
 
-text {*In this development, the EVM execution is seen as an interaction between a single contract
-invocation
-and the rest of the world.  The world can call into the contract.  The contract can reply by just
-finishing or failing, but it can also call an account\footnote{This might be the same account as our
-invocation, but still the deeper calls is part of the world.}.  When our contract execution calls an account,
-this is seen as an action towards the world, because the world then has to decide the
-result of this call.  The world can say that the call finished successfully or exceptionally.
-The world can also say that the call resulted in a reentrancy.  In other words,
-the world can call the contract again and change the storage and the balance of our contract.
-The whole process is captured as a game between
-the world and the contract. *}
+(* In this development, the EVM execution is seen as an interaction between a single contract *)
+(* invocation *)
+(* and the rest of the world.  The world can call into the contract.  The contract can reply by just *)
+(* finishing or failing, but it can also call an account\footnote{This might be the same account as our *)
+(* invocation, but still the deeper calls is part of the world.}.  When our contract execution calls an account, *)
+(* this is seen as an action towards the world, because the world then has to decide the *)
+(* result of this call.  The world can say that the call finished successfully or exceptionally. *)
+(* The world can also say that the call resulted in a reentrancy.  In other words, *)
+(* the world can call the contract again and change the storage and the balance of our contract. *)
+(* The whole process is captured as a game between *)
+(* the world and the contract. *)
 
-subsubsection "The World's Moves"
+(* subsubsection "The World's Moves" *)
 
-text {* The world can call into our contract.
-Then the world provides our\footnote{
-The contract's behavior is controlled by a concrete code, but the world's behavior is unrestricted.
-So when I get emotional I call the contract ``our'' contract.
-} contract
-with the following information.*}
-*)
-
+(* The world can call into our contract. *)
+(* Then the world provides our\footnote{ *)
+(* The contract's behavior is controlled by a concrete code, but the world's behavior is unrestricted.*)
+(* So when I get emotional I call the contract ``our'' contract. *)
+(* } contract *)
+(* with the following information. *)
 
 type call_env = <|
   callenv_gaslimit : w256; (* the current block's gas limit *)
@@ -566,25 +549,25 @@ type call_env = <|
   callenv_balance : address -> w256; (* the balances of all accounts. *)
 |>
 
-(* After our contract calls accounts, the world can make those accounts
-return into our contracts.  The return value is not under control of our current
-contract, so it is the world's move.  In that case, the world provides the
-following information.*)
+(* After our contract calls accounts, the world can make those accounts *)
+(* return into our contracts.  The return value is not under control of our current *)
+(* contract, so it is the world's move.  In that case, the world provides the *)
+(* following information. *)
 
 type return_result = <|
   return_data : list byte; (* the returned data *)
   return_balance : address -> w256 (* the balance of all accounts at the moment of the return*)
 |>
 
-(* Even our account's balance (and its storage) might have changed at this moment.
-@{typ return_result} type is also used when our contract returns, as we will see. *)
+(* Even our account's balance (and its storage) might have changed at this moment. *)
+(* @{typ return_result} type is also used when our contract returns, as we will see. *)
 
-(* With these definitions now we can define the world's actions.  In addition to call and return,
-there is another clause for failing back to the account.  This happens when our contract calls
-an account but the called account fails. *)
+(* With these definitions now we can define the world's actions.  In addition to call and return, *)
+(* there is another clause for failing back to the account.  This happens when our contract calls *)
+(* an account but the called account fails. *)
 
-(* When our contract deploys a smart contract, our contract should provide the following
-information. *)
+(* When our contract deploys a smart contract, our contract should provide the following *)
+(* information. *)
 
 type world_action =
 | WorldCall of call_env (* the world calls into the account *)
@@ -617,8 +600,8 @@ type contract_action =
 
 (* subsection "Program Representation" *)
 
-(* For performance reasons, the instructions can be stored in a binary tree that allows
-looking up instructions from the program counters. *)
+(* For performance reasons, the instructions can be stored in a binary tree that allows *)
+(* looking up instructions from the program counters. *)
 
 type program = <|
   program_content : int -> maybe inst; (* a binary search tree that allows looking up instructions from positions *)
@@ -636,24 +619,21 @@ let empty_program = <|
 |>
 
 
-(*
-subsection "Translating an Instruction List into a Program"
+(* subsection "Translating an Instruction List into a Program" *)
 
 
-subsubsection {* Storing annotations in a program in a mapping *}
+(* subsubsection {* Storing annotations in a program in a mapping *} *)
 
-text {* Annotations are stored in a mapping that maps positions into lists of annotations.
-The rationale for this data structure is that a single position might contain multiple annotations.
-Here is a function that inserts an annotation
-at a specified position. *}
-*)
+(* Annotations are stored in a mapping that maps positions into lists of annotations. *)
+(* The rationale for this data structure is that a single position might contain multiple annotations. *)
+(* Here is a function that inserts an annotation *)
+(* at a specified position. *)
 
 val prepend_annotation : int -> annotation -> (int -> list annotation) -> (int -> list annotation)
 let prepend_annotation pos annot orig p = if pos = p then annot :: orig p else orig p
 
-(* Currently annotations are inserted into a mapping with Isabelle/HOL's mapping updates.
-When this causes performance problems, I need to switch to AVL trees again.
-*)
+(* Currently annotations are inserted into a mapping with Isabelle/HOL's mapping updates. *)
+(* When this causes performance problems, I need to switch to AVL trees again. *)
 
 val program_annotation_of_lst : int -> list inst -> int -> list annotation
 let rec program_annotation_of_lst pos lst = match lst with
@@ -663,14 +643,12 @@ let rec program_annotation_of_lst pos lst = match lst with
 end
 declare termination_argument program_annotation_of_lst = automatic
 
-(*
-subsubsection {* Translating a list of instructions into a program *}
+(* subsubsection {* Translating a list of instructions into a program *} *)
 
-text {* The results of the above translations are packed together in a record. *}
-text {* For efficiency reasons, the program content is going to be packed as
-an AVL tree, but this particular encoding is not part of the Lem definition.
-So such encoders are parametrised here.*}
-*)
+(* The results of the above translations are packed together in a record. *)
+(* For efficiency reasons, the program content is going to be packed as *)
+(* an AVL tree, but this particular encoding is not part of the Lem definition. *)
+(* So such encoders are parametrised here. *)
 
 val program_of_lst : list inst -> (list inst -> (int -> maybe inst)) -> program
 let program_of_lst lst program_content_formatter = <|
@@ -699,8 +677,8 @@ let program_as_memory p idx =
 
 (* I model an instruction as a function that takes environments and modifies some parts of them. *)
 
-(* The execution of an EVM program happens in a block, and the following information about
-the block should be available. *)
+(* The execution of an EVM program happens in a block, and the following information about *)
+(* the block should be available. *)
 
 type block_info = <|
   block_blockhash : w256 -> w256; (* this captures the whole BLOCKHASH operation *)
@@ -739,20 +717,17 @@ type constant_env = <|
   cenv_this : address; (* the address of the account under verification. *)
 |>
 
-(*
-subsection {* The Result of an Instruction *}
+(* subsection {* The Result of an Instruction *} *)
 
-text {* The result of program execution is microscopically defined by results of instruction
-executions.  The execution of a single instruction can result in the following cases: *}
-*)
+(* The result of program execution is microscopically defined by results of instruction *)
+(* executions.  The execution of a single instruction can result in the following cases: *)
 
 type instruction_result =
 | InstructionContinue of variable_env (* the execution should continue. *)
 | InstructionAnnotationFailure (* the annotation turned out to be false. *)
 | InstructionToWorld of
-  (* the execution has stopped; either for the moment just calling out another account, or
-finally finishing the current invocation
-*)
+  (* the execution has stopped; either for the moment just calling out another account, or *)
+  (* finally finishing the current invocation *)
     contract_action   (* the contract's move *)
   * storage           (* the new storage content *)
   * (address -> w256) (* the new balance of all accounts *)
@@ -768,24 +743,21 @@ val instruction_return_result : list byte -> variable_env -> instruction_result
 let instruction_return_result x v =
   InstructionToWorld (ContractReturn x) v.venv_storage v.venv_balance Nothing
 
-(*
-subsection {* Useful Functions for Defining EVM Operations *}
+(* subsection {* Useful Functions for Defining EVM Operations *} *)
 
-text {* Currently the GAS instruction is modelled to return random numbers.
-The random number is not known to be of any value.
-However, the value is not unknown enough in this formalization because
-the value is only dependent on the variable environment (which does not
-keep track of the remaining gas).  This is not a problem as long as
-we are analyzing a single invocation of a loopless contract, but
-gas accounting is a planned feature.
-*}
-*)
+(* Currently the GAS instruction is modelled to return random numbers. *)
+(* The random number is not known to be of any value. *)
+(* However, the value is not unknown enough in this formalization because *)
+(* the value is only dependent on the variable environment (which does not *)
+(* keep track of the remaining gas).  This is not a problem as long as *)
+(* we are analyzing a single invocation of a loopless contract, but *)
+(* gas accounting is a planned feature. *)
 
 val gas : variable_env -> w256
 let gas _ = 30000
 
-(* This $M$ function is defined at the end of H.1.\,in the yellow paper.
-This function is useful for updating the memory usage counter. *)
+(* This $M$ function is defined at the end of H.1.\,in the yellow paper. *)
+(* This function is useful for updating the memory usage counter. *)
 
 val M : int -> w256 -> w256 -> int
 let M s f l =
@@ -883,9 +855,9 @@ let sstore v c = match v.venv_stack with
  | _ -> instruction_failure_result v
 end
 
-(* For interpreting the annotations, I first need to construct the annotation environment
-out of the current execution environments.  When I try to remove this step, I face some
-circular definitions of data types. *)
+(* For interpreting the annotations, I first need to construct the annotation environment *)
+(* out of the current execution environments.  When I try to remove this step, I face some *)
+(* circular definitions of data types. *)
 
 val build_aenv : variable_env -> constant_env -> aenv
 let build_aenv v c = <|
@@ -902,17 +874,17 @@ let build_aenv v c = <|
   aenv_origin = v.venv_origin;
 |>
 
-(* In reality, EVM programs do not contain annotations so annotations never cause failures.
-However, during the verification, I want to catch annotation failures.  When the annotation
-evaluates to False, the execution stops and results in @{term InstructionAnnotationFailure}. *)
+(* In reality, EVM programs do not contain annotations so annotations never cause failures.*)
+(* However, during the verification, I want to catch annotation failures.  When the annotation *)
+(* evaluates to False, the execution stops and results in @{term InstructionAnnotationFailure}. *)
 
 val eval_annotation : annotation -> variable_env -> constant_env -> instruction_result
 let eval_annotation anno v c =
    if anno (build_aenv v c) then InstructionContinue (venv_advance_pc c v)
     else InstructionAnnotationFailure
 
-(* The JUMP instruction has the following meaning.  When it cannot find the JUMPDEST instruction
-at the destination, the execution fails. *)
+(* The JUMP instruction has the following meaning.  When it cannot find the JUMPDEST instruction *)
+(* at the destination, the execution fails. *)
 
 val jump : variable_env -> constant_env -> instruction_result
 let jump v c = match v.venv_stack with
@@ -925,16 +897,15 @@ let jump v c = match v.venv_stack with
      end
 end
 
-(* This function is a reminiscent of my struggle with the Isabelle/HOL simplifier.
-The second argument has no meaning but to control the Isabelle/HOL simplifier.
-*)
+(* This function is a reminiscent of my struggle with the Isabelle/HOL simplifier. *)
+(* The second argument has no meaning but to control the Isabelle/HOL simplifier. *)
 
 val blockedInstructionContinue : variable_env -> bool -> instruction_result
 let blockedInstructionContinue v _ = InstructionContinue v
 
-(* This is another reminiscent of my struggle against the Isabelle/HOL simplifier.
-Again, the simplifier is not allowed to expand the definition unless the second argument
-is known to be @{term True}.*)
+(* This is another reminiscent of my struggle against the Isabelle/HOL simplifier. *)
+(* Again, the simplifier is not allowed to expand the definition unless the second argument *)
+(* is known to be @{term True}.*)
 
 val blocked_jump : variable_env -> constant_env -> bool -> instruction_result
 let blocked_jump v c _ = jump v c
@@ -975,7 +946,8 @@ let rec cut_memory idx n memory = match n with
 end
 declare termination_argument cut_memory = automatic
 
-(* CALL instruction results in @{term ContractCall} action when there are enough stack elements (and gas, when we introduce the gas accounting). *)
+(* CALL instruction results in @{term ContractCall} action when there are enough stack elements *)
+(* (and gas, when we introduce the gas accounting). *)
 val call : variable_env -> constant_env -> instruction_result
 let call v c = match v.venv_stack with
  | e0 :: e1 :: e2 :: e3 :: e4 :: e5 :: e6 :: rest ->
