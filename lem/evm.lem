@@ -527,8 +527,7 @@ declare termination_argument program_code = automatic
 (* result of this call.  The world can say that the call finished successfully or exceptionally. *)
 (* The world can also say that the call resulted in a reentrancy.  In other words, *)
 (* the world can call the contract again and change the storage and the balance of our contract. *)
-(* The whole process is captured as a game between *)
-(* the world and the contract. *)
+(* The whole process is captured as a game between the world and the contract. *)
 
 (* subsubsection "The World's Moves" *)
 
@@ -604,7 +603,7 @@ type contract_action =
 (* looking up instructions from the program counters. *)
 
 type program = <|
-  program_content : int -> maybe inst; (* a binary search tree that allows looking up instructions from positions *)
+  program_content : int -> maybe inst; (* a way to look up instructions from positions *)
   program_length  : int; (* the length of the program in bytes *)
   program_annotation : int -> list annotation; (* a mapping from positions to annotations *)
 |>
@@ -1189,9 +1188,8 @@ let swap n v c = match list_swap n v.venv_stack with
  | Just new_stack -> InstructionContinue (venv_advance_pc c <| v with venv_stack = new_stack |>)
 end
 
-(* SHA3 instruciton in the EVM is actually Keccak 256.
-In this development, Keccak256 computation is defined in KEC.thy.
-*)
+(* SHA3 instruciton in the EVM is actually Keccak 256. *)
+(* In this development, Keccak256 computation is defined in KEC.thy. *)
 val sha3 : variable_env -> constant_env -> instruction_result
 let sha3 v c = match v.venv_stack with
  | start :: len :: rest ->
@@ -1213,8 +1211,8 @@ let suicide v c = match v.venv_stack with
  | _ -> instruction_failure_result v
 end
 
-(* Finally, using the above definitions, I can define a function that operates an instruction
-on the execution environments. *)
+(* Finally, using the above definitions, I can define a function that operates an instruction *)
+(* on the execution environments. *)
 val instruction_sem : variable_env -> constant_env -> inst -> instruction_result
 let instruction_sem v c inst = match inst with
 | Stack (PUSH_N lst) -> stack_0_1_op v c (word_of_bytes lst)
@@ -1318,12 +1316,12 @@ end
 
 (* subsection {* Programs' Answer to the World *} *)
 
-(* Execution of a program is harder than that of instructions.  The biggest difficulty is that
-the length of the execution is arbitrary.  In Isabelle/HOL all functions must terminate, so I need
-to prove the termination of program execution.  In priciple, I could have used gas, but I was
-lazy to model gas at that moment, so I introduced an artificial step counter.  When I prove theorems
-about smart contracts, the theorems are of the form ``for any value of the initial step counter,
-this and that never happen.'' *)
+(* Execution of a program is harder than that of instructions.  The biggest difficulty is that *)
+(* the length of the execution is arbitrary.  In Isabelle/HOL all functions must terminate, so I need *)
+(* to prove the termination of program execution.  In priciple, I could have used gas, but I was *)
+(* lazy to model gas at that moment, so I introduced an artificial step counter.  When I prove theorems *)
+(* about smart contracts, the theorems are of the form ``for any value of the initial step counter, *)
+(* this and that never happen.'' *)
 
 type program_result =
 | ProgramStepRunOut (* the artificial step counter has run out *)
@@ -1337,15 +1335,14 @@ type program_result =
 | ProgramAnnotationFailure (* an annotation turned out to be false.  This does not happen
   in reality, but this case exists for the sake of the verification. *)
 
-| ProgramInit of call_env (*
-    This clause does not denote results of program execution.
-    This denotes a state of the program that expects a particular call.
-    This artificial state is used to specify that the incoming call does not overflow the balance
-    of the account.  Probably there is a cleaner approach.
-  *)
+| ProgramInit of call_env
+  (* This clause does not denote results of program execution. *)
+  (* This denotes a state of the program that expects a particular call. *)
+  (* This artificial state is used to specify that the incoming call does not overflow the balance *)
+  (* of the account.  Probably there is a cleaner approach. *)
 
-(* Since our program struct contains a list of annotations for each program position,
-I have a function that checks all annotations at a particular program position: *)
+(* Since our program struct contains a list of annotations for each program position, *)
+(* I have a function that checks all annotations at a particular program position: *)
 val check_annotations : variable_env -> constant_env -> bool
 let check_annotations v c =
   let annots = c.cenv_program.program_annotation v.venv_pc in
@@ -1355,13 +1352,12 @@ val program_sem : variable_env -> constant_env -> int -> nat -> program_result
 val blocked_program_sem : variable_env -> constant_env -> int -> nat -> bool -> program_result
 
 
-(* The program execution takes two counters.
-One counter is decremented for each instruction.
-The other counter is decremented when a backward-jump happens.
-This setup allows an easy termination proof.
-Also, during the proofs, I can do case analysis on the number of backwad jumps
-rather than the number of instructions.
-*)
+(* The program execution takes two counters. *)
+(* One counter is decremented for each instruction. *)
+(* The other counter is decremented when a backward-jump happens. *)
+(* This setup allows an easy termination proof. *)
+(* Also, during the proofs, I can do case analysis on the number of backwad jumps *)
+(* rather than the number of instructions. *)
 
 let rec program_sem v c tiny_step remaining_steps = match remaining_steps with
  | 0 -> ProgramStepRunOut
@@ -1391,12 +1387,11 @@ let program_sem_blocked v c internal external _ = program_sem v c internal exter
 
 (* subsection {* Account's State *} *)
 
-(* In the bigger picture, a contract invocation changes accounts' states.
-An account has a storage, a piece of code and a balance.
-Since I am interested in account states in the middle of a transaction, I also need to
-keep track of the ongoing executions of a single account.  Also I need to keep track of
-a flag indicating if the account has already marked for erasure.
-*)
+(* In the bigger picture, a contract invocation changes accounts' states. *)
+(* An account has a storage, a piece of code and a balance. *)
+(* Since I am interested in account states in the middle of a transaction, I also need to *)
+(* keep track of the ongoing executions of a single account.  Also I need to keep track of *)
+(* a flag indicating if the account has already marked for erasure. *)
 
 type account_state = <|
   account_address : address;
@@ -1406,34 +1401,31 @@ type account_state = <|
   account_ongoing_calls : list (variable_env * int * int);
     (* the variable environments that are executing on this account, but waiting for calls to finish *)
   account_killed : bool;
-    (* the boolean that indicates the account has executed SUICIDE in this transaction.
-  The flag causes a destruction of the contract at the end of a transaction.
-  *)
+    (* the boolean that indicates the account has executed SUICIDE in this transaction. *)
+  (* The flag causes a destruction of the contract at the end of a transaction. *)
 |>
 
 (* subsection {* Environment Construction before EVM Execution *} *)
 
-(* I need to connect the account state and the program execution environments.
-First I construct program execution environments from an account state.
-*)
+(* I need to connect the account state and the program execution environments. *)
+(* First I construct program execution environments from an account state. *)
 
-(* Similarly we can construct the constant environment.
-Construction of the constant environment is much simpler than that of 
-a variable environment. 
-*)
+(* Similarly we can construct the constant environment. *)
+(* Construction of the constant environment is much simpler than that of *)
+(* a variable environment. *)
 
 val build_cenv : account_state -> constant_env
 let build_cenv a =
   <| cenv_program = a.account_code; cenv_this = a.account_address |>
 
-(* Next we turn to the case where the world returns back to the account after the account has
-called an account.  In this case, the account should contain one ongoing execution that is waiting
-for a call to return. *)
+(* Next we turn to the case where the world returns back to the account after the account has *)
+(* called an account.  In this case, the account should contain one ongoing execution that is waiting *)
+(* for a call to return. *)
 
 (* An instruction is ``call-like'' when it calls an account and waits for it to return. *)
 
 val is_call_like : maybe inst -> bool
-let is_call_like i = (i = Just (Misc CALL) || i = Just (Misc DELEGATECALL) 
+let is_call_like i = (i = Just (Misc CALL) || i = Just (Misc DELEGATECALL)
                  || i = Just (Misc CALLCODE) || i = Just (Misc CREATE))
 
 val build_venv_failed : account_state -> maybe variable_env
@@ -1451,8 +1443,8 @@ let account_state_pop_ongoing_call orig = match orig.account_ongoing_calls with
  | _ -> <| orig with account_ongoing_calls = [] |>
 end
 
-(* Second I define the empty account, which replaces an account that has
-destroyed itself. *)
+(* Second I define the empty account, which replaces an account that has *)
+(* destroyed itself. *)
 
 val empty_account : address -> account_state
 let empty_account addr =
@@ -1491,12 +1483,12 @@ type response_to_world = <|
 val empty_memory : memory
 let empty_memory = (fun _ -> 0)
 
-(* Given an account state and a call from the world
-we can judge if a variable environment is possible or not.
-The block state is arbitrary.  This means we verify properties that hold
-on whatever block numbers and whatever difficulties and so on.
-The origin of the transaction is also considered arbitrary.
-*)
+(* Given an account state and a call from the world *)
+(* we can judge if a variable environment is possible or not.*)
+(* The block state is arbitrary.  This means we verify properties that hold*)
+(* on whatever block numbers and whatever difficulties and so on.*)
+(* The origin of the transaction is also considered arbitrary.*)
+
 
 indreln [build_venv_called : account_state -> call_env -> variable_env -> bool]
   venv_called : forall bal a env origin ext block.
@@ -1507,7 +1499,9 @@ indreln [build_venv_called : account_state -> call_env -> variable_env -> bool]
      venv_memory_usage = 0; (* The memory usage is initialized. *)
      venv_storage = a.account_storage; (* The storage is taken from the account state *)
      venv_pc = 0; (* The program counter is initialized to zero *)
-     venv_balance = (fun (addr:address) -> if addr = a.account_address then bal a.account_address + env.callenv_value else bal addr); 
+     venv_balance = (fun (addr:address) ->
+                         if addr = a.account_address
+                           then bal a.account_address + env.callenv_value else bal addr);
                         (* The balance is arbitrary, except that the balance of this account
                            is as specified in the account state plus the sent amount. *)
      venv_caller = env.callenv_caller; (* the caller is specified by the world *)
@@ -1520,13 +1514,13 @@ indreln [build_venv_called : account_state -> call_env -> variable_env -> bool]
      venv_block = block; (* the block information is chosen arbitrarily. *)
    |>
 
-(* When an account returns to our contract, the variable environment is
-recovered from the stack of the ongoing calls.  However, due to reentrancy,
-the balance and the storage of our contract might have changed.  So the
-balance and the storage are taken from the account state provided.
-Moreover, the balance of
-our contract might increase because some other contracts might have destroyed themselves,
-transferring value to our contract.*)
+(* When an account returns to our contract, the variable environment is *)
+(* recovered from the stack of the ongoing calls.  However, due to reentrancy, *)
+(* the balance and the storage of our contract might have changed.  So the *)
+(* balance and the storage are taken from the account state provided. *)
+(* Moreover, the balance of *)
+(* our contract might increase because some other contracts might have destroyed themselves, *)
+(* transferring value to our contract.*)
 
 val put_return_values : memory -> list byte -> int -> int -> memory
 let rec put_return_values orig lst b s =
@@ -1538,7 +1532,10 @@ let rec put_return_values orig lst b s =
 declare termination_argument put_return_values = automatic
 
 indreln [build_venv_returned : account_state -> return_result -> variable_env -> bool]
-venv_returned: forall a_code v_pc new_bal a_bal a_addr a_storage v_stack v_memory v_memory_usage v_storage v_balance v_caller v_value v_data v_init_storage v_init_balance v_origin v_ext_program v_block mem_start mem_size r rest whichever.
+venv_returned:
+   forall a_code v_pc new_bal a_bal a_addr a_storage v_stack v_memory v_memory_usage
+          v_storage v_balance v_caller v_value v_data v_init_storage v_init_balance
+          v_origin v_ext_program v_block mem_start mem_size r rest whichever.
    (is_call_like (a_code.program_content (v_pc - 1))) &&
    (new_bal >= a_bal) ==> (* the balance might have increased *)
    build_venv_returned
