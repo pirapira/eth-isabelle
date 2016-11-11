@@ -1,6 +1,6 @@
 .PHONY: all all-isabelle deed
 
-all: all-isabelle deed lem-check
+all: all-isabelle deed lem-thy lem-pdf
 
 all-isabelle: KEC.thy FunctionalCorrectness.thy Parse.thy ContractEnv.thy Instructions.thy ContractSem.thy RelationalSem.thy HP.thy YellowPaper.thy example/Optimization.thy example/AlwaysFail.thy example/FailOnReentrance.thy example/Deed.thy
 	isabelle build -d . all
@@ -10,6 +10,8 @@ document/output.pdf: KEC.thy ContractEnv.thy Instructions.thy ContractSem.thy Re
 	sh document_generation.sh
 
 lem-thy: lem/Block.thy lem/Evm.thy lem/EvmNonExec.thy lem/Keccak.thy lem/Rlp.thy lem/Word160.thy lem/Word256.thy lem/Word8.thy
+
+lem-pdf: lem/Evm-use_inc.pdf
 
 lem/block.lem: lem/evm.lem
 	touch lem/block.lem
