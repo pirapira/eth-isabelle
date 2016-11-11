@@ -23,6 +23,12 @@ lem/evm.lem: lem/word256.lem lem/word160.lem lem/word8.lem
 lem/Evm.thy: lem/evm.lem
 	lem -isa lem/evm.lem
 
+lem/Evm-use_inc.tex lem/Evm-inc.tex: lem/evm.lem
+	lem -tex lem/evm.lem
+
+lem/Evm-use_inc.pdf: lem/Evm-use_inc.tex lem/Evm-inc.tex
+	cd lem; pdflatex Evm-use_inc.tex; pdflatex Evm-use_inc.tex
+
 lem/evmNonExec.lem: lem/evm.lem lem/word256.lem lem/word160.lem lem/word8.lem
 	touch lem/evmNonExec.lem
 
