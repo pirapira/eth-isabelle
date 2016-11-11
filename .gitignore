@@ -14,3 +14,4 @@ lem/Word256Auxiliary.thy
 lem/Word8.thy
 lem/Word8Auxiliary.thy
 lem/*.tex
+lem/*.log
