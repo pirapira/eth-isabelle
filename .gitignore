@@ -17,3 +17,4 @@ lem/*.tex
 lem/*.log
 lem/*.pdf
 lem/*.aux
+lem/evm.ml

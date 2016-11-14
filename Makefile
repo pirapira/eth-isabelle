@@ -1,14 +1,17 @@
-.PHONY: all all-isabelle deed clean clean-pdf
+.PHONY: all all-isabelle deed clean clean-pdf clean-thy clean-ocaml
 
-all: all-isabelle deed lem-thy lem-pdf
+all: all-isabelle deed lem-thy lem-pdf lem-ocaml
 
-clean: clean-pdf clean-thy
+clean: clean-pdf clean-thy clean-ocaml
 
 clean-pdf:
 	rm -rf lem/*.tex lem/*.aux lem/*.log lem/*.toc lem/*.pdf lem/*~
 
 clean-thy:
 	rm -rf lem/*.thy
+
+clean-ocaml:
+	rm -rf lem/*.ml
 
 all-isabelle: KEC.thy FunctionalCorrectness.thy Parse.thy ContractEnv.thy Instructions.thy ContractSem.thy RelationalSem.thy HP.thy YellowPaper.thy example/Optimization.thy example/AlwaysFail.thy example/FailOnReentrance.thy example/Deed.thy
 	isabelle build -d . all
@@ -20,6 +23,8 @@ document/output.pdf: KEC.thy ContractEnv.thy Instructions.thy ContractSem.thy Re
 lem-thy: lem/Block.thy lem/Evm.thy lem/EvmNonExec.thy lem/Keccak.thy lem/Rlp.thy lem/Word160.thy lem/Word256.thy lem/Word8.thy
 
 lem-pdf: lem/Evm-use_inc.pdf lem/Block-use_inc.pdf lem/EvmNonExec-use_inc.pdf lem/Keccak-use_inc.pdf lem/Rlp-use_inc.pdf
+
+lem-ocaml: lem/evm.ml
 
 lem/block.lem: lem/evm.lem
 	touch lem/block.lem
@@ -41,6 +46,9 @@ lem/evm.lem: lem/word256.lem lem/word160.lem lem/word8.lem
 
 lem/Evm.thy: lem/evm.lem
 	lem -isa lem/evm.lem
+
+lem/evm.ml: lem/evm.lem
+	lem -ocaml lem/evm.lem
 
 lem/Evm-use_inc.tex lem/Evm-inc.tex: lem/evm.lem
 	lem -tex lem/evm.lem
