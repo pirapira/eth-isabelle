@@ -1,15 +1,21 @@
 # Formalization of Ethereum Virtual Machine in Isabelle/HOL
 
-The status is immature.  Currently [a Coq project](https://github.com/pirapira/evmverif) about EVM bytecode verification is being ported here.  The directory also contains
+This repository contains
 
 * a Keccak-256 implementation in Isabelle/HOL `KEC.thy`
 * a RLP implementation (in progress) `RLP.thy`
 * an EVM implementation `ContractSem.thy`
 * a relational semantics that captures the callee's nondeterministic behavior `RelationalSem.thy`
+* some example verified contracts in `example`
 
 When you see `\<Rightarrow>` in the source, try using the [Isabelle2016](https://isabelle.in.tum.de/index.html) interface.  There you see `⇒` instead.
 
-## Make goals
+## Prerequisites
+
+* [Isabelle 2016](https://isabelle.in.tum.de/installation.html)
+* [lem](http://www.cl.cam.ac.uk/~pes20/lem/built-doc/lem-manual.html#installation)
+
+## Makefile goals
 
 * `make deed` produces a verified PDF document for the Deed contract
 * `make lem-check` compiles the Lem sources into Isabelle/HOL
