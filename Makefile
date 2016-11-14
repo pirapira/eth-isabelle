@@ -29,6 +29,9 @@ lem/Block.thy: lem/block.lem
 
 lem/Block-use_inc.tex lem/Block-inc.tex: lem/block.lem
 	lem -tex lem/block.lem
+	sed 's/default/defWithComment/g' lem/Block-inc.tex > lem/tmp.txt
+	mv lem/tmp.txt lem/Block-inc.tex
+
 
 lem/Block-use_inc.pdf: lem/Block-use_inc.tex lem/Block-inc.tex
 	cd lem; pdflatex Block-use_inc.tex; pdflatex Block-use_inc.tex
@@ -49,6 +52,8 @@ lem/Evm-use_inc.pdf: lem/Evm-use_inc.tex lem/Evm-inc.tex
 
 lem/evmNonExec.lem: lem/evm.lem lem/word256.lem lem/word160.lem lem/word8.lem
 	touch lem/evmNonExec.lem
+	sed 's/default/defWithComment/g' lem/EvmNonExec-inc.tex > lem/tmp.txt
+	mv lem/tmp.txt lem/EvmNonExec-inc.tex
 
 lem/EvmNonExec.thy: lem/evmNonExec.lem
 	lem -isa lem/evmNonExec.lem
@@ -67,6 +72,8 @@ lem/Keccak.thy: lem/keccak.lem
 
 lem/Keccak-use_inc.tex lem/Keccak-inc.tex: lem/keccak.lem
 	lem -tex lem/keccak.lem
+	sed 's/default/defWithComment/g' lem/Keccak-inc.tex > lem/tmp.txt
+	mv lem/tmp.txt lem/Keccak-inc.tex
 
 lem/Keccak-use_inc.pdf: lem/Keccak-use_inc.tex lem/Keccak-inc.tex
 	cd lem; pdflatex Keccak-use_inc.tex; pdflatex Keccak-use_inc.tex
@@ -79,6 +86,8 @@ lem/Rlp.thy: lem/rlp.lem
 
 lem/Rlp-use_inc.tex lem/Rlp-inc.tex: lem/rlp.lem
 	lem -tex lem/rlp.lem
+	sed 's/default/defWithComment/g' lem/Rlp-inc.tex > lem/tmp.txt
+	mv lem/tmp.txt lem/Rlp-inc.tex
 
 lem/Rlp-use_inc.pdf: lem/Rlp-use_inc.tex lem/Rlp-inc.tex
 	cd lem; pdflatex Rlp-use_inc.tex; pdflatex Rlp-use_inc.tex
