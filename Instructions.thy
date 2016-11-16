@@ -148,22 +148,9 @@ declare drop_bytes.simps [simp]
 
 text {* Also it is possible to compute the size of a program as the number of bytes, *}
 
-fun program_size :: "inst list \<Rightarrow> nat"
-where
-  "program_size (Stack (PUSH_N v) # rest) = length v + 1 + program_size rest"
-  -- {* I was using @{term inst_size} here, but that contributed to performance problems. *}
-| "program_size (Annotation _ # rest) = program_size rest"
-| "program_size (_ # rest) = 1 + program_size rest"
-| "program_size [] = 0"
-
 declare program_size.simps [simp]
 
 text {* as well as computing the byte representation of the program. *}
-
-fun program_code :: "inst list \<Rightarrow> byte list"
-where
-  "program_code [] = []"
-| "program_code (inst # rest) = inst_code inst @ program_code rest"
 
 declare program_code.simps [simp]
 
