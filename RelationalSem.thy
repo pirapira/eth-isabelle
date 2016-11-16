@@ -123,13 +123,13 @@ text "Next we specify which program results might see a return."
 fun returnable_result :: "program_result \<Rightarrow> bool"
 where
   "returnable_result ProgramStepRunOut = False"
-| "returnable_result (ProgramToWorld (ContractCall _, _, _, _)) = True"
-| "returnable_result (ProgramToWorld (ContractCreate _, _, _, _)) = True"
-| "returnable_result (ProgramToWorld (ContractSuicide, _, _, _)) = False"
-| "returnable_result (ProgramToWorld (ContractFail, _, _, _)) = False"
+| "returnable_result (ProgramToWorld (ContractCall _) _ _ _) = True"
+| "returnable_result (ProgramToWorld (ContractCreate _) _ _ _) = True"
+| "returnable_result (ProgramToWorld ContractSuicide _ _ _) = False"
+| "returnable_result (ProgramToWorld ContractFail _ _ _) = False"
 -- {* because we are not modeling nested calls here, the effect of the nested calls are modeled in
       account\_state\_return\_change *}
-| "returnable_result (ProgramToWorld (ContractReturn _, _, _, _)) = False"
+| "returnable_result (ProgramToWorld (ContractReturn _) _ _ _) = False"
 | "returnable_result (ProgramInit _) = False"
 | "returnable_result ProgramInvalid = False"
 | "returnable_result ProgramAnnotationFailure = False"
@@ -196,7 +196,7 @@ where
    (* if the program behaves like this, *)
    program_sem old_venv cenv 
       (program_length (cenv_program cenv)) steps
-      = ProgramToWorld (act, st, bal, opt_v) \<Longrightarrow>
+      = ProgramToWorld act st bal opt_v \<Longrightarrow>
 
    (* and if the account state is updated from the program's result, *)
    account_state_going_out
@@ -204,7 +204,7 @@ where
 
    (* the contract makes a move and udates the account state. *)
    contract_turn (old_account, old_venv)
-      (account_state_going_out, ProgramToWorld (act, st, bal, opt_v))"
+      (account_state_going_out, ProgramToWorld act st bal opt_v)"
 
 | contract_annotation_failure:
   "(* If a constant environment is built from the old account state, *)  
@@ -250,8 +250,8 @@ Actually the rounds can go nowhere after this invocation fails.
 *}
 lemma no_entry_fail [dest!]:
 "star (one_round I)
-      (a, ProgramToWorld (ContractFail, st, bal, v_opt))
-      (b, c) \<Longrightarrow> b = a \<and> c = ProgramToWorld (ContractFail, st, bal, v_opt)"
+      (a, ProgramToWorld ContractFail st bal v_opt)
+      (b, c) \<Longrightarrow> b = a \<and> c = ProgramToWorld ContractFail st bal v_opt"
 apply(drule star_case; simp)
 apply(simp add: one_round.simps add: world_turn.simps)
 done
@@ -259,8 +259,8 @@ done
 text {* Similarly, the rounds can go nowhere after this invocation returns. *}
 lemma no_entry_return [dest!]:
 "star (one_round I)
-      (a, ProgramToWorld (ContractReturn data, st, bal, v_opt))
-      (b, c) \<Longrightarrow> b = a \<and> c = ProgramToWorld (ContractReturn data, st, bal, v_opt)"
+      (a, ProgramToWorld (ContractReturn data) st bal v_opt)
+      (b, c) \<Longrightarrow> b = a \<and> c = ProgramToWorld (ContractReturn data) st bal v_opt"
 apply(drule star_case; simp)
 apply(simp add: one_round.simps add: world_turn.simps)
 done
@@ -270,8 +270,8 @@ causes our contract to destroy itself.
 *}
 lemma no_entry_suicide [dest!]:
 "star (one_round I)
-      (a, ProgramToWorld (ContractSuicide, st, bal, v_opt))
-      (b, c) \<Longrightarrow> b = a \<and> c = ProgramToWorld (ContractSuicide, st, bal, v_opt)"
+      (a, ProgramToWorld ContractSuicide st bal v_opt)
+      (b, c) \<Longrightarrow> b = a \<and> c = ProgramToWorld ContractSuicide st bal v_opt"
 apply(drule star_case; simp)
 apply(simp add: one_round.simps add: world_turn.simps)
 done

@@ -16,7 +16,7 @@ where
  []"
 
 
-value "(program_content (program_of_lst always_fail_code program_content_of_lst))"
+value "(program_content (program_of_lst always_fail_code program_content_of_lst)) 3"
 
 abbreviation always_fail_account_state :: "w256 \<Rightarrow> account_state"
 where
@@ -53,6 +53,8 @@ lemma problem2 :
 apply(simp add: node_def)
 done
 
+declare program_sem.psimps [simp]
+
 lemma always_fail_correct:
 "
   account_state_responds_to_world
@@ -88,8 +90,8 @@ pre_post_conditions (\<lambda> a. \<exists> initial_balance. a = (always_fail_ac
 (\<lambda> initial_state _ (post_state, _). account_balance initial_state \<le> account_balance post_state)
 "
 apply(simp add: pre_post_conditions_def; auto)
-         apply(drule star_case; auto)
-        apply(case_tac steps; auto)
+        apply(drule star_case; auto)
+         apply(case_tac steps; auto)
         apply(case_tac steps; auto)
        apply(drule star_case; auto)
        apply(case_tac steps; auto)

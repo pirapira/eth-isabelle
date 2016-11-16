@@ -1,4 +1,4 @@
-.PHONY: all all-isabelle deed clean clean-pdf clean-thy clean-ocaml
+.PHONY: all all-isabelle deed clean clean-pdf clean-thy clean-ocaml lem-thy lem-pdf lem-ocaml
 
 all: all-isabelle deed lem-thy lem-pdf lem-ocaml
 
@@ -13,11 +13,11 @@ clean-thy:
 clean-ocaml:
 	rm -rf lem/*.ml
 
-all-isabelle: KEC.thy FunctionalCorrectness.thy Parse.thy ContractEnv.thy Instructions.thy ContractSem.thy RelationalSem.thy HP.thy YellowPaper.thy example/Optimization.thy example/AlwaysFail.thy example/FailOnReentrance.thy example/Deed.thy
+all-isabelle: KEC.thy FunctionalCorrectness.thy Parse.thy ContractEnv.thy Instructions.thy ContractSem.thy RelationalSem.thy HP.thy YellowPaper.thy example/Optimization.thy example/AlwaysFail.thy example/FailOnReentrance.thy example/Deed.thy lem/Block.thy lem/Evm.thy lem/EvmNonExec.thy lem/Keccak.thy lem/Rlp.thy lem/Word160.thy lem/Word256.thy lem/Word8.thy
 	isabelle build -d . all
 
 deed: document/output.pdf
-document/output.pdf: KEC.thy ContractEnv.thy Instructions.thy ContractSem.thy RelationalSem.thy example/Deed.thy document/root.tex
+document/output.pdf: KEC.thy ContractEnv.thy Instructions.thy ContractSem.thy RelationalSem.thy example/Deed.thy document/root.tex lem/Evm.thy
 	sh document_generation.sh
 
 lem-thy: lem/Block.thy lem/Evm.thy lem/EvmNonExec.thy lem/Keccak.thy lem/Rlp.thy lem/Word160.thy lem/Word256.thy lem/Word8.thy
@@ -60,14 +60,14 @@ lem/Evm-use_inc.pdf: lem/Evm-use_inc.tex lem/Evm-inc.tex
 
 lem/evmNonExec.lem: lem/evm.lem lem/word256.lem lem/word160.lem lem/word8.lem
 	touch lem/evmNonExec.lem
-	sed 's/default/defWithComment/g' lem/EvmNonExec-inc.tex > lem/tmp.txt
-	mv lem/tmp.txt lem/EvmNonExec-inc.tex
 
 lem/EvmNonExec.thy: lem/evmNonExec.lem
 	lem -isa lem/evmNonExec.lem
 
 lem/EvmNonExec-use_inc.tex lem/EvmNonExec-inc.tex: lem/evmNonExec.lem
 	lem -tex lem/evmNonExec.lem
+	sed 's/default/defWithComment/g' lem/EvmNonExec-inc.tex > lem/tmp.txt
+	mv lem/tmp.txt lem/EvmNonExec-inc.tex
 
 lem/EvmNonExec-use_inc.pdf: lem/EvmNonExec-use_inc.tex lem/EvmNonExec-inc.tex
 	cd lem; pdflatex EvmNonExec-use_inc.tex; pdflatex EvmNonExec-use_inc.tex

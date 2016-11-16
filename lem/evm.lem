@@ -294,8 +294,8 @@ type dup_inst = byte
 
 val dup_inst_code : dup_inst -> maybe byte
 let dup_inst_code m =
-   if m < 1 then Nothing (*-- There is no DUP0 instruction. *)
-   else if m > 16 then Nothing (* -- There are no DUP16 instruction and on. *)
+   if word8UGT 1 m then Nothing (*-- There is no DUP0 instruction. *)
+   else if word8UGT m 16 then Nothing (* -- There are no DUP16 instruction and on. *)
    else Just (m + 0X7f)
 
 (* subsection {* Memory Operations *} *)
@@ -760,7 +760,7 @@ let gas _ = 30000
 
 val M : int -> w256 -> w256 -> int
 let M s f l =
-  if l = 0 then s else max s ((word256ToInt f + word256ToInt l + 31) div 32)
+  if l = 0 then s else max s ((uint f + uint l + 31) div 32)
 
 (* Updating a balance of a single account:  *)
 val update_balance : address -> (w256 -> w256) -> (address -> w256) -> (address -> w256)
@@ -950,7 +950,7 @@ declare termination_argument cut_memory = automatic
 val call : variable_env -> constant_env -> instruction_result
 let call v c = match v.venv_stack with
  | e0 :: e1 :: e2 :: e3 :: e4 :: e5 :: e6 :: rest ->
-     if v.venv_balance c.cenv_this < e2 then instruction_failure_result v
+     if word256ULT (v.venv_balance c.cenv_this) e2 then instruction_failure_result v
      else
        InstructionToWorld (ContractCall
          <| callarg_gas = e0;
@@ -974,7 +974,7 @@ end
 val delegatecall : variable_env -> constant_env -> instruction_result
 let delegatecall v c = match v.venv_stack with
  | e0 :: e1 :: e3 :: e4 :: e5 :: e6 :: rest ->
-    if v.venv_balance c.cenv_this < v.venv_value_sent then instruction_failure_result v
+    if word256ULT (v.venv_balance c.cenv_this) v.venv_value_sent then instruction_failure_result v
      else
        InstructionToWorld
          (ContractCall
@@ -995,7 +995,7 @@ end
 val callcode : variable_env -> constant_env -> instruction_result
 let callcode v c = match v.venv_stack with
  | e0 :: e1 :: e2 :: e3 :: e4 :: e5 :: e6 :: rest ->
-    if v.venv_balance c.cenv_this < e2 then
+    if word256ULT (v.venv_balance c.cenv_this) e2 then
        instruction_failure_result v
      else
        InstructionToWorld
@@ -1021,7 +1021,7 @@ end
 val create : variable_env -> constant_env -> instruction_result
 let create v c = match v.venv_stack with
   | vl :: code_start :: code_len :: rest ->
-      if v.venv_balance c.cenv_this < vl then instruction_failure_result v else
+      if word256ULT (v.venv_balance c.cenv_this) vl then instruction_failure_result v else
       let code = cut_memory code_start (word256ToNat code_len) v.venv_memory in
       let new_balance = update_balance c.cenv_this (fun orig -> orig - vl) v.venv_balance in
       InstructionToWorld
@@ -1274,7 +1274,7 @@ let instruction_sem v c inst = match inst with
      (fun a b divisor ->
          (if divisor = 0 then 0 else (a * b) mod divisor))
 | Arith EXP -> stack_2_1_op v c (fun a exponent -> word256FromInt (uint a ** word256ToNat exponent))
-| Arith inst_LT -> stack_2_1_op v c (fun arg0 arg1 -> if arg0 < arg1 then 1 else 0)
+| Arith inst_LT -> stack_2_1_op v c (fun arg0 arg1 -> if word256UGT arg1 arg0 then 1 else 0)
 | Arith SHA3 -> sha3 v c
 | Info ADDRESS -> stack_0_1_op v c (address_to_w256 c.cenv_this)
 | Info BALANCE -> stack_1_1_op v c (fun addr -> v.venv_balance (w256_to_address addr))
@@ -1381,9 +1381,6 @@ end
 and blocked_program_sem v c l p _ = program_sem v c l p
 declare termination_argument program_sem = automatic
 declare termination_argument blocked_program_sem = automatic
-
-val program_sem_blocked : variable_env -> constant_env -> int -> nat -> bool -> program_result
-let program_sem_blocked v c internal external _ = program_sem v c internal external
 
 (* subsection {* Account's State *} *)
 

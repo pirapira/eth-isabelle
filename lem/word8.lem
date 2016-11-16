@@ -249,6 +249,10 @@ instance (WordAsr word8)
   let (asr) = word8Asr
 end
 
+val word8UGT : word8 -> word8 -> bool
+let word8UGT a b = word8ToNat a > word8ToNat b
+declare isabelle target_rep function word8UGT = infix `>`
+
 declare isabelle target_rep function word8FromNumeral n = ((`word_of_int` n) : word8)
 declare isabelle target_rep function w8Less = `word_sless`
 declare isabelle target_rep function w8LessEqual = `word_sle`

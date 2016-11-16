@@ -30,7 +30,7 @@ smaller inductive types and unify them at the end.  *}
 
 theory Instructions
 
-imports Main "~~/src/HOL/Word/Word" "./ContractEnv"
+imports Main "~~/src/HOL/Word/Word" "./ContractEnv" "./lem/Evm"
 
 begin
 
@@ -49,18 +49,18 @@ OR and XOR are taken by the machine word library.
 text {* The instructions have different arities.  They might consume some elements on the stack,
 and produce some elements on the stack.  However, the arity of the instructions are not specified
 in this section. *}
-
+(*
 datatype bits_inst
 = inst_AND -- {* bitwise AND *}
 | inst_OR  -- {* bitwise OR *}
 | inst_XOR -- {* bitwise exclusive or *}
 | inst_NOT -- {* bitwise negation *}
 | BYTE     -- {* taking one byte out of a word *}
-
+*)
 text {* These instructions are represented by the following bytes.
 Most opcodes are a single byte.
 *}
-
+(*
 fun bits_inst_code :: "bits_inst \<Rightarrow> byte"
 where
   "bits_inst_code inst_AND = 0x16"
@@ -68,7 +68,7 @@ where
 | "bits_inst_code inst_XOR = 0x18"
 | "bits_inst_code inst_NOT = 0x19"
 | "bits_inst_code BYTE = 0x1a"
-
+*)
 declare bits_inst_code.simps [simp]
 
 subsection "Signed Arithmetics"
@@ -76,7 +76,7 @@ subsection "Signed Arithmetics"
 text {* More similar definitions follow.  Below are instructions for signed arithmetics.
 The operations common to signed and unsigned are listed further below in the 
 Unsigned Arithmetics section. *}
-
+(*
 datatype sarith_inst
 = SDIV -- {* signed division *}
 | SMOD -- {* signed modulo *}
@@ -90,7 +90,7 @@ where
 | "sarith_inst_code SMOD = 0x07"
 | "sarith_inst_code SGT = 0x13"
 | "sarith_inst_code SLT = 0x12"
-| "sarith_inst_code SIGNEXTEND = 0x0b"
+| "sarith_inst_code SIGNEXTEND = 0x0b"*)
 
 declare sarith_inst_code.simps [simp]
 
@@ -98,7 +98,7 @@ subsection "Unsigned Arithmetics"
 
 text {* The names GT, EQ and LT are taken in the Cmp library
 (which will be used for AVL trees). *} 
-
+(*
 datatype arith_inst
 = ADD -- {* addition *}
 | MUL -- {* multiplication *}
@@ -128,12 +128,12 @@ where
 | "arith_inst_code inst_LT = 0x10"
 | "arith_inst_code inst_EQ = 0x14"
 | "arith_inst_code ISZERO = 0x15"
-| "arith_inst_code SHA3 = 0x20"
+| "arith_inst_code SHA3 = 0x20"*)
 
 declare arith_inst_code.simps [simp]
 
 subsection "Informational Instructions"
-
+(*
 datatype info_inst =
     ADDRESS -- {* the address of the account currently running *}
   | BALANCE -- {* the Eth balance of the specified account *}
@@ -152,6 +152,8 @@ datatype info_inst =
   | GASLIMIT -- {* the current block gas limit *}
   | GAS -- {* the remaining gas for the current execution.  *}
   
+  *)
+(*
 fun info_inst_code :: "info_inst \<Rightarrow> byte"
 where
   "info_inst_code ADDRESS = 0x30"
@@ -169,7 +171,7 @@ where
 | "info_inst_code NUMBER = 0x43"
 | "info_inst_code DIFFICULTY = 0x44"
 | "info_inst_code GASLIMIT = 0x45"
-| "info_inst_code GAS = 0x5a"
+| "info_inst_code GAS = 0x5a"*)
 
 declare info_inst_code.simps [simp]
 
@@ -179,7 +181,7 @@ text {* There are sixteen instructions for duplicating a stack element.  These i
 a stack element and duplicate it on top of the stack. *}
 
 type_synonym dup_inst = nat
-
+(*
 abbreviation dup_inst_code :: "dup_inst \<Rightarrow> byte"
 where
 "dup_inst_code n \<equiv>
@@ -187,9 +189,12 @@ where
     else (if n > 16 then undefined (* There are no DUP16 instruction and on. *)
     else (word_of_int (int n)) + 0x7f))"
 -- {* 0x80 stands for DUP1 until 0x9f for DUP16. *}
+*)
+
+declare dup_inst_code_def [simp]
 
 subsection {* Memory Operations *}
-
+(*
 datatype memory_inst =
     MLOAD -- {* reading one word from the memory from the specified offset *}
   | MSTORE -- {* writing one machine word to the memory *}
@@ -208,56 +213,66 @@ where
 | "memory_inst_code CODECOPY = 0x39"
 | "memory_inst_code EXTCODECOPY = 0x3c"
 | "memory_inst_code MSIZE = 0x59"
+*)
 
 declare memory_inst_code.simps [simp]
 
 subsection {* Storage Operations *}
 
+(*
 datatype storage_inst =
     SLOAD -- {* reading one word from the storage *}
   | SSTORE -- {* writing one word to the storage. *}
+  *)
 
+  (*
 fun storage_inst_code :: "storage_inst \<Rightarrow> byte"
 where
   "storage_inst_code SLOAD = 0x54"
 | "storage_inst_code SSTORE = 0x55"
+*)
 
 declare storage_inst_code.simps [simp]
 
 subsection {* Program-Counter Instructions *}
 
+(*
 datatype pc_inst =
     JUMP -- {* jumping to the specified location in the code *}
   | JUMPI -- {* jumping to the specified location in the code if a condition is met *}
   | PC -- {* the current location in the code *}
   | JUMPDEST -- {* a no-op instruction located to indicate jump destinations. *}
+  
+  *)
 
 text {* If a jump occurs to a location where @{term JUMPDEST} is not found, the execution fails.
 *}
 
-
+(*
 fun pc_inst_code :: "pc_inst \<Rightarrow> byte"
 where
   "pc_inst_code JUMP = 0x56"
 | "pc_inst_code JUMPI = 0x57"
 | "pc_inst_code PC = 0x58"
 | "pc_inst_code JUMPDEST = 0x5b"
-
+*)
 declare pc_inst_code.simps [simp]
 
 subsection {* Stack Instructions *}
-
+(*
 datatype stack_inst =
     POP -- {* throwing away the topmost element of the stack *}
   | PUSH_N "8 word list" -- {* pushing an element to the stack *}
   | CALLDATALOAD -- {* pushing a word to the stack, taken from the caller's data. *}
+  *)
 
 text {* The PUSH instructions have longer byte representations than the other instructions
 because they contain immediate values.
 Here the immediate value is represented by a list of bytes.  Depending on the
 length of the list, the PUSH operation takes different opcodes.
 *}
-  
+
+(*  
 fun stack_inst_code :: "stack_inst \<Rightarrow> byte list"
 where
   "stack_inst_code POP = [0x50]"
@@ -266,22 +281,26 @@ where
     else (if (size lst) > 32 then undefined (* there are no PUSH33 and so on *)
     else word_of_int (int (size lst)) + 0x5f)) # lst" (* 0x60 is PUSH1, ..., 0x7f is PUSH32 *)
 | "stack_inst_code CALLDATALOAD = [0x35]"
+*)
 
 declare stack_inst_code.simps [simp]
 
 type_synonym swap_inst = nat
 
-abbreviation swap_inst_code :: "swap_inst \<Rightarrow> byte"
+(*abbreviation swap_inst_code :: "swap_inst \<Rightarrow> byte"
 where
 "swap_inst_code n \<equiv>
   (if n < 1 then undefined else   (* there is no SWAP0 *)
   (if n > 16 then undefined else  (* there are no SWAP17 and on *)
    word_of_int (int n) + 0x8f))"  (* 0x90 is SWAP1, ..., 0x9f is SWAP16 *)
+   *)
+
+declare swap_inst_code_def [simp]
    
 subsection {* Logging Instructions *}
 
 text "There are instructions for logging events with different number of arguments."
-
+(*
 datatype log_inst = LOG0 | LOG1 | LOG2 | LOG3 | LOG4
 
 fun log_inst_code :: "log_inst \<Rightarrow> byte"
@@ -291,6 +310,7 @@ where
 | "log_inst_code LOG2 = 0xa2"
 | "log_inst_code LOG3 = 0xa3"
 | "log_inst_code LOG4 = 0xa4"
+*)
 
 declare log_inst_code.simps [simp]
 
@@ -300,7 +320,7 @@ text {* This section contains the instructions that alter the account-wise contr
 In other words, they cause communication between accounts (or at least interaction with
 other accounts' code).
 *}
-
+(*
 datatype misc_inst
   = STOP -- {* finishing the execution normally, with the empty return data *}
   | CREATE -- {* deploying some code in an account *}
@@ -323,6 +343,7 @@ where
 | "misc_inst_code RETURN = 0xf3"
 | "misc_inst_code DELEGATECALL = 0xf4"
 | "misc_inst_code SUICIDE = 0xff"
+*)
 
 declare misc_inst_code.simps [simp]
 
@@ -338,6 +359,7 @@ subsection {* The Whole Instruction Set *}
 
 text {* The small inductive sets above are here combined into a single type. *}
 
+(*
 datatype inst =
     Unknown byte
   | Bits bits_inst
@@ -353,9 +375,11 @@ datatype inst =
   | Log log_inst
   | Misc misc_inst
   | Annotation annotation
+  *)
 
 text {* And the byte representation of these instructions are defined. *}
 
+(*
 fun inst_code :: "inst \<Rightarrow> byte list"
 where
   "inst_code (Unknown byte) = [byte]"
@@ -372,19 +396,24 @@ where
 | "inst_code (Log l) = [log_inst_code l]"
 | "inst_code (Misc m) = [misc_inst_code m]"
 | "inst_code (Annotation _) = []"
+*)
 
 declare inst_code.simps [simp]
 
 text {* The size of an opcode is useful for parsing a hex representation of an
 EVM code.  *}
 
+(*
 abbreviation inst_size :: "inst \<Rightarrow> int"
 where
 "inst_size i \<equiv> int (length (inst_code i))"
+*)
+
+declare inst_size_def [simp]
 
 text {* This can also be used to find jump destinations from a sequence of opcodes.
 *}
-
+(*
 fun drop_bytes :: "inst list \<Rightarrow> nat \<Rightarrow> inst list"
 where
   "drop_bytes prg 0 = prg"
@@ -393,6 +422,7 @@ where
 | "drop_bytes (Annotation _ # rest) bytes = drop_bytes rest bytes"
 | "drop_bytes (_ # rest) bytes = drop_bytes rest (bytes - 1)"
 | "drop_bytes [] (Suc v) = []"
+*)
 
 declare drop_bytes.simps [simp]
 

@@ -252,7 +252,9 @@ end
 
 val word256UGT : word256 -> word256 -> bool
 let word256UGT a b = word256ToNat a > word256ToNat b
-declare isabelle target_rep function word256UGT = infix `>`
+val word256ULT : word256 -> word256 -> bool
+let word256ULT a b = word256ToNat a < word256ToNat b
+declare isabelle target_rep function word256ULT = infix `<`
 
 declare isabelle target_rep function word256FromNumeral n = ((`word_of_int` n) : word256)
 declare isabelle target_rep function w256Less = `word_sless`

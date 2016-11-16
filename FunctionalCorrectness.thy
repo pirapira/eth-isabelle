@@ -59,7 +59,7 @@ where "respond_to_call_correctly c a \<equiv>
              r = ProgramStepRunOut \<or>
              (* the result matches the specification *)
              (\<exists> pushed_venv st bal.
-              r = ProgramToWorld (resulting_action, st, bal, pushed_venv) \<and>
+              r = ProgramToWorld resulting_action st bal pushed_venv \<and>
               final_state_pred
                 (update_account_state a resulting_action st bal pushed_venv)))))"
 
@@ -77,7 +77,7 @@ where
                      (program_length (account_code a)) steps in
            r = ProgramStepRunOut \<or>
            (\<exists> pushed_venv st bal.
-            r = ProgramToWorld (resulting_action, st, bal, pushed_venv) \<and>
+            r = ProgramToWorld resulting_action st bal pushed_venv \<and>
             final_state_pred
               (update_account_state (account_state_pop_ongoing_call a)
                resulting_action st bal pushed_venv)))))"
@@ -96,7 +96,7 @@ where
                    (program_length (account_code a)) steps in
          r = ProgramStepRunOut \<or>
          (\<exists> pushed_venv st bal.
-            r = ProgramToWorld (resulting_action, st, bal, pushed_venv) \<and>
+            r = ProgramToWorld resulting_action st bal pushed_venv \<and>
             final_state_pred
               (update_account_state (account_state_pop_ongoing_call a)
                  resulting_action st bal pushed_venv)))))"

@@ -25,6 +25,10 @@ imports Main "~~/src/HOL/Word/Word" "./ContractEnv" "./Instructions" "./KEC" "./
 
 begin
 
+declare venv_advance_pc_def [simp]
+declare venv_next_instruction_def [simp]
+declare call_def [simp]
+
 subsection "Utility Functions"
 
 text {* The following function is an if-sentence, but with some strict control
@@ -32,10 +36,6 @@ over the evaluation order.  Neither the then-clause nor the else-clause
 is simplified during proofs.  This prevents the automatic simplifier from
 computing the results of both the then-clause and the else-clause.
 *}
-
-definition strict_if :: "bool \<Rightarrow> (bool \<Rightarrow> 'a) \<Rightarrow> (bool \<Rightarrow> 'a) \<Rightarrow> 'a"
-where
-"strict_if b x y = (if b then x True else y True)"
 
 text {* When the if-condition is known to be True, the simplifier can
 proceed into the then-clause.  The \textit{simp} attribute encourages the simplifier
@@ -88,6 +88,7 @@ So when I get emotional I call the contract ``our'' contract.
 } contract
 with the following information.*}
 
+(*
 record call_env =
   callenv_gaslimit :: w256 -- {* the current block's gas limit *}
   callenv_value :: w256 -- {* the amount of Eth sent along*}
@@ -96,6 +97,7 @@ record call_env =
   callenv_timestamp :: w256 -- {* the timestamp of the current block *}
   callenv_blocknum :: w256 -- {* the block number of the current block *}
   callenv_balance :: "address \<Rightarrow> w256" -- {* the balances of all accounts. *}
+*)
   
 text {* After our contract calls accounts, the world can make those accounts
 return into our contracts.  The return value is not under control of our current
@@ -303,17 +305,22 @@ finally finishing the current invocation
 *)
 
 text {* When the contract fails, the result of the instruction always looks like this: *}
-abbreviation instruction_failure_result :: "variable_env \<Rightarrow> instruction_result"
+(* abbreviation instruction_failure_result :: "variable_env \<Rightarrow> instruction_result"
 where
 "instruction_failure_result v \<equiv>
   InstructionToWorld
     ContractFail (venv_storage_at_call v) (venv_balance_at_call v) None"
+    *)
+    
+declare instruction_failure_result_def [simp]
 
 text {* When the contract returns, the result of the instruction always looks like this: *}
-abbreviation instruction_return_result :: "byte list \<Rightarrow> variable_env \<Rightarrow> instruction_result"
+(*abbreviation instruction_return_result :: "byte list \<Rightarrow> variable_env \<Rightarrow> instruction_result"
 where
 "instruction_return_result x v \<equiv>
-  InstructionToWorld (ContractReturn x) (venv_storage v) (venv_balance v) None"
+  InstructionToWorld (ContractReturn x) (venv_storage v) (venv_balance v) None" *)
+  
+declare instruction_return_result_def [simp]
 
 subsection {* Useful Functions for Defining EVM Operations *}
 
@@ -332,158 +339,68 @@ where "gas _ = undefined"
 text {* This $M$ function is defined at the end of H.1.\,in the yellow paper.
 This function is useful for updating the memory usage counter. *}
 
-abbreviation M ::
+(* abbreviation M ::
 "int (* original memory usage *) \<Rightarrow> w256 (* beginning of the used memory *)
  \<Rightarrow> w256 (* used size *) \<Rightarrow> int (* the updated memory usage *)"
 where
 "M s f l \<equiv>
   (if l = 0 then s else
-     max s ((uint f + uint l + 31) div 32))"
+     max s ((uint f + uint l + 31) div 32))" *)
+     
+declare M_def [simp]
 
 text {* Updating a balance of a single account:  *}
-abbreviation update_balance ::
+(* abbreviation update_balance ::
 "  address (* the updated account*)
 \<Rightarrow> (w256 \<Rightarrow> w256) (* the function that updates the balance *)
 \<Rightarrow> (address \<Rightarrow> w256) (* the original balance *)
 \<Rightarrow> (address \<Rightarrow> w256) (* the resulting balance *)"
 where
-"update_balance a f orig \<equiv> orig(a := f (orig a))"
+"update_balance a f orig \<equiv> orig(a := f (orig a))" *)
+declare update_balance_def [simp]
 
 text {* Popping stack elements: *}
-abbreviation venv_pop_stack ::
-"nat (* how many elements to pop *) \<Rightarrow> variable_env \<Rightarrow> variable_env"
-where
- "venv_pop_stack n v \<equiv>
-   v\<lparr> venv_stack := drop n (venv_stack v) \<rparr>"
+declare venv_pop_stack.simps [simp]
 
 text {* Peeking the topmost element of the stack: *}
-abbreviation venv_stack_top :: "variable_env \<Rightarrow> w256 option"
-where
-"venv_stack_top v \<equiv>
-  (case venv_stack v of h # _\<Rightarrow> Some h | [] \<Rightarrow> None)"
+declare venv_stack_top_def [simp]
 
 text {* Updating the storage at an index: *}
 
-abbreviation venv_update_storage ::
-" w256 (* index *) \<Rightarrow> w256 (* value *)
-\<Rightarrow> variable_env (* the original variable environment *)
-\<Rightarrow> variable_env (* the resulting variable environment *)"
-where
-"venv_update_storage idx val v \<equiv>
-  v\<lparr>venv_storage := (venv_storage v)(idx := val)\<rparr>"
+declare venv_update_storage_def [simp]
   
-text {* Peeking the next instruction: *}
-abbreviation venv_next_instruction :: "variable_env \<Rightarrow> constant_env \<Rightarrow> inst option"
-where
-"venv_next_instruction v c \<equiv>
-   (program_content (cenv_program c)) (venv_pc v)"
-   
-text {* Advancing the program counter: *}
-abbreviation venv_advance_pc :: "constant_env \<Rightarrow> variable_env \<Rightarrow> variable_env"
-where
-"venv_advance_pc c v \<equiv> 
-  v\<lparr> venv_pc := venv_pc v + inst_size (the (venv_next_instruction v c))  \<rparr>"
-
 text {* No-op, which just advances the program counter: *}
-abbreviation stack_0_0_op :: "variable_env \<Rightarrow> constant_env \<Rightarrow> instruction_result"
-where
-"stack_0_0_op v c \<equiv> InstructionContinue (venv_advance_pc c v)"
+declare stack_0_0_op_def [simp]
 
 text {* A general pattern of operations that pushes one element onto the stack:  *}
-abbreviation stack_0_1_op ::
-  "variable_env \<Rightarrow> constant_env \<Rightarrow> w256 (* the pushed word *) \<Rightarrow> instruction_result"
-where
-"stack_0_1_op v c w \<equiv>
-   InstructionContinue
-      (venv_advance_pc c v\<lparr>venv_stack := w # venv_stack v\<rparr>)"
+declare stack_0_1_op_def [simp]
 
 text {* A general pattern of operations that transforms the topmost element of the stack: *}
-abbreviation stack_1_1_op :: "variable_env \<Rightarrow> constant_env \<Rightarrow>
-   (w256 \<Rightarrow> w256) (* the function that transforms a word*)
-   \<Rightarrow> instruction_result"
-where
-"stack_1_1_op v c f \<equiv>
-   (case venv_stack v of
-      [] \<Rightarrow> instruction_failure_result v
-      | h # t \<Rightarrow>
-         InstructionContinue
-           (venv_advance_pc c v\<lparr>venv_stack := f h # t\<rparr>))"
+declare stack_1_1_op_def [simp]
 
 text {* A general pattern of operations that consume one word and produce two rwords: *}
-abbreviation stack_1_2_op ::
-"variable_env \<Rightarrow> constant_env \<Rightarrow> (w256 \<Rightarrow> w256 * w256) \<Rightarrow> instruction_result"
-where
-"stack_1_2_op v c f \<equiv>
-  (case venv_stack v of
-     [] \<Rightarrow> instruction_failure_result v
-   | h # t \<Rightarrow>
-     (case f h of
-        (new0, new1) \<Rightarrow>
-          InstructionContinue
-            (venv_advance_pc c
-               v\<lparr>venv_stack := new0 # new1 # t \<rparr>)))"
+declare stack_1_2_op_def [simp]
 
 text {* A general pattern of operations that take two words and produce one word: *}
-abbreviation stack_2_1_op ::
-"variable_env \<Rightarrow> constant_env \<Rightarrow> (w256 \<Rightarrow> w256 \<Rightarrow> w256) \<Rightarrow> instruction_result"
-where
-"stack_2_1_op v c f \<equiv>
-  (case venv_stack v of
-     operand0 # operand1 # rest \<Rightarrow>
-       InstructionContinue
-         (venv_advance_pc c
-            v\<lparr>venv_stack := f operand0 operand1 # rest\<rparr>)
-  | _ \<Rightarrow> instruction_failure_result v)"
+declare stack_2_1_op_def [simp]
 
 text {* A general pattern of operations that take three words and produce one word: *}
-abbreviation stack_3_1_op ::
-"variable_env \<Rightarrow> constant_env \<Rightarrow>
- (w256 \<Rightarrow> w256 \<Rightarrow> w256 \<Rightarrow> w256) \<Rightarrow> instruction_result"
-where
-"stack_3_1_op v c f \<equiv>
-  (case venv_stack v of
-     operand0 # operand1 # operand2 # rest \<Rightarrow>
-       InstructionContinue
-         (venv_advance_pc c
-            v\<lparr>venv_stack := f operand0 operand1 operand2 # rest\<rparr>)
-   | _ \<Rightarrow> instruction_failure_result v)"
+declare stack_3_1_op_def [simp]
 
 subsection {* Definition of EVM Operations *}
 
 text "SSTORE changes the storage so it does not fit into any of the patterns defined above."
-abbreviation sstore :: "variable_env \<Rightarrow> constant_env \<Rightarrow> instruction_result"
-where
-"sstore v c \<equiv>
-  (case venv_stack v of
-    addr # val # stack_tail \<Rightarrow>
-      InstructionContinue
-      (venv_advance_pc c
-        (venv_update_storage addr val v\<lparr>venv_stack := stack_tail\<rparr>))
-    | _ \<Rightarrow> instruction_failure_result v)"
-
+declare sstore_def [simp]
 
 text "For interpreting the annotations, I first need to construct the annotation environment
 out of the current execution environments.  When I try to remove this step, I face some
 circular definitions of data types."
-abbreviation build_aenv :: "variable_env \<Rightarrow> constant_env \<Rightarrow> aenv"
-where
-"build_aenv v c \<equiv>
-  \<lparr> aenv_stack = venv_stack v
-  , aenv_memory = venv_memory v
-  , aenv_storage = venv_storage v
-  , aenv_balance = venv_balance v
-  , aenv_caller = venv_caller v
-  , aenv_value_sent = venv_value_sent v
-  , aenv_data_sent = venv_data_sent v
-  , aenv_storage_at_call = venv_storage_at_call v
-  , aenv_balance_at_call = venv_balance_at_call v
-  , aenv_this = cenv_this c
-  , aenv_origin = venv_origin v \<rparr>"
+declare build_aenv_def [simp]
 
 text "In reality, EVM programs do not contain annotations so annotations never cause failures.
 However, during the verification, I want to catch annotation failures.  When the annotation
 evaluates to False, the execution stops and results in @{term InstructionAnnotationFailure}."
-definition eval_annotation :: "annotation \<Rightarrow> variable_env \<Rightarrow> constant_env \<Rightarrow> instruction_result"
+(* definition eval_annotation :: "annotation \<Rightarrow> variable_env \<Rightarrow> constant_env \<Rightarrow> instruction_result"
 where
 "eval_annotation anno v c =
    (if anno (build_aenv v c)
@@ -491,10 +408,11 @@ where
       InstructionContinue (venv_advance_pc c v)
     else
       InstructionAnnotationFailure)"
+     *)
     
 text "The JUMP instruction has the following meaning.  When it cannot find the JUMPDEST instruction
 at the destination, the execution fails."
-abbreviation jump :: "variable_env \<Rightarrow> constant_env \<Rightarrow> instruction_result"
+(* abbreviation jump :: "variable_env \<Rightarrow> constant_env \<Rightarrow> instruction_result"
 where
 "jump v c \<equiv>
   (case venv_stack_top v of
@@ -505,14 +423,12 @@ where
         Some (Pc JUMPDEST) \<Rightarrow>
           InstructionContinue v_new
       | Some _ \<Rightarrow> instruction_failure_result v
-      | None \<Rightarrow> instruction_failure_result v )))"
+      | None \<Rightarrow> instruction_failure_result v )))" *)
+declare jump_def [simp]
 
 text {* This function is a reminiscent of my struggle with the Isabelle/HOL simplifier.
 The second argument has no meaning but to control the Isabelle/HOL simplifier.
 *}
-definition blockedInstructionContinue :: "variable_env \<Rightarrow> bool \<Rightarrow> instruction_result"
-where
-"blockedInstructionContinue v _ = InstructionContinue v"
 
 text {* When the second argument is already @{term True}, the simplification can continue.
 Otherwise, the Isabelle/HOL simplifier is not allowed to expand the definition of
@@ -525,44 +441,28 @@ done
 text {* This is another reminiscent of my struggle against the Isabelle/HOL simplifier.
 Again, the simplifier is not allowed to expand the definition unless the second argument
 is known to be @{term True}.*}
-definition blocked_jump :: "variable_env \<Rightarrow> constant_env \<Rightarrow> bool \<Rightarrow> instruction_result"
+(* definition blocked_jump :: "variable_env \<Rightarrow> constant_env \<Rightarrow> bool \<Rightarrow> instruction_result"
 where
 "blocked_jump v c _ = jump v c"
+*)
 
 lemma unblock_jump [simp]:
 "blocked_jump v c True = jump v c"
 apply(simp add: blocked_jump_def)
 done
 
-text {* The JUMPI instruction is implemented using the JUMP instruction.
-*}
-abbreviation jumpi :: "variable_env \<Rightarrow> constant_env \<Rightarrow> instruction_result"
-where
-"jumpi v c \<equiv>
-  (case venv_stack v of
-      pos # cond # rest \<Rightarrow>
-        (strict_if (cond = 0)
-           (blockedInstructionContinue
-             (venv_advance_pc c (venv_pop_stack (Suc (Suc 0)) v)))
-           (blocked_jump (v\<lparr> venv_stack := pos # rest \<rparr>) c))
-    | _ \<Rightarrow> instruction_failure_result v)"
+text {* The JUMPI instruction is implemented using the JUMP instruction. *}
+
+declare jumpi_def [simp]
 
 text {* Looking up the call data size takes this work: *}
-abbreviation datasize :: "variable_env \<Rightarrow> w256"
-where
-"datasize v \<equiv> Word.word_of_int (int (length (venv_data_sent v)))"
+declare datasize_def [simp]
 
 text {* Looking up a word from a list of bytes: *}
-abbreviation read_word_from_bytes :: "nat \<Rightarrow> byte list \<Rightarrow> w256"
-where
-"read_word_from_bytes idx lst ==
-   Word.word_rcat (take 32 (drop idx lst))"
+declare read_word_from_bytes_def [simp]
 
 text {* Looking up a word from the call data: *}
-abbreviation cut_data :: "variable_env \<Rightarrow> w256 \<Rightarrow> w256"
-where
-"cut_data v idx \<equiv>
-    read_word_from_bytes (Word.unat idx) (venv_data_sent v)"
+declare cut_data_def [simp]
 
 text {* Looking up a number of bytes from the memory: *}
 fun cut_memory :: "w256 \<Rightarrow> nat \<Rightarrow> (w256 \<Rightarrow> byte) \<Rightarrow> byte list"
@@ -575,7 +475,7 @@ declare cut_memory.simps [simp]
 
 text {* CALL instruction results in @{term ContractCall} action when there are enough stack elements
         (and gas, when we introduce the gas accounting). *}
-definition call :: "variable_env \<Rightarrow> constant_env \<Rightarrow> instruction_result"
+(*definition call :: "variable_env \<Rightarrow> constant_env \<Rightarrow> instruction_result"
 where
 "call v c =
   (case venv_stack v of
@@ -602,12 +502,10 @@ where
                   (\<lambda> orig \<Rightarrow> orig - e2) (venv_balance v)
            , venv_memory_usage :=
               M (M (venv_memory_usage v) e3 e4) e5 e6 \<rparr>, uint e5, uint e6)))
-  | _ \<Rightarrow> instruction_failure_result v)"
-
-declare call_def [simp]
+  | _ \<Rightarrow> instruction_failure_result v)" *)
 
 text {* DELEGATECALL is slightly different. *}
-definition delegatecall :: "variable_env \<Rightarrow> constant_env \<Rightarrow> instruction_result"
+(* definition delegatecall :: "variable_env \<Rightarrow> constant_env \<Rightarrow> instruction_result"
 where
 "delegatecall v c =
   (case venv_stack v of
@@ -631,112 +529,26 @@ where
              \<lparr> venv_stack := rest
              , venv_memory_usage :=
                 M (M (venv_memory_usage v) e3 e4) e5 e6 \<rparr>, uint e5, uint e6 )))
-  | _ \<Rightarrow> instruction_failure_result v)"
+  | _ \<Rightarrow> instruction_failure_result v)" *)
 
 declare delegatecall_def [simp]
 
 text {* CALLCODE is another variant. *}
 
-abbreviation callcode :: "variable_env \<Rightarrow> constant_env \<Rightarrow> instruction_result"
-where
-"callcode v c \<equiv>
-  (case venv_stack v of
-    e0 # e1 # e2 # e3 # e4 # e5 # e6 # rest \<Rightarrow>
-    (if venv_balance v (cenv_this c) < e2 then
-       instruction_failure_result v
-     else
-       InstructionToWorld
-         (ContractCall
-           (\<lparr> callarg_gas = e0,
-              callarg_code = ucast e1,
-              callarg_recipient = cenv_this c,
-              callarg_value = e2,
-              callarg_data =
-                cut_memory e3 (unat e4) (venv_memory v),
-              callarg_output_begin = e5,
-              callarg_output_size = e6 \<rparr>))
-          (venv_storage v)
-          (update_balance (cenv_this c)
-            (\<lambda> orig \<Rightarrow> orig - e2) (venv_balance v))
-          (Some (* saving the variable environment *)
-            ((venv_advance_pc c v)
-              \<lparr> venv_stack := rest
-              , venv_memory_usage :=
-                  M (M (venv_memory_usage v) e3 e4) e5 e6
-              , venv_balance :=
-                  update_balance (cenv_this c)
-                    (\<lambda> orig \<Rightarrow> orig - e2) (venv_balance v) \<rparr>, uint e5, uint e6
-             )))
-  | _ \<Rightarrow> instruction_failure_result v)"
+declare callcode_def [simp]
 
 text "CREATE is also similar because the instruction causes execution on another account."
-abbreviation create ::
-  "variable_env \<Rightarrow> constant_env \<Rightarrow> instruction_result"
-where
-"create v c \<equiv>
-  (case venv_stack v of
-    val # code_start # code_len # rest \<Rightarrow>
-      (if venv_balance v (cenv_this c) < val then
-         instruction_failure_result v
-       else
-         let code =
-            cut_memory code_start
-              (unat code_len) (venv_memory v) in
-         let new_balance =
-            update_balance (cenv_this c)
-              (\<lambda> orig. orig - val) (venv_balance v) in
-         InstructionToWorld
-           (ContractCreate
-             (\<lparr> createarg_value = val
-              , createarg_code = code \<rparr>))
-            (venv_storage v)
-            (update_balance (cenv_this c)
-              (\<lambda> orig. orig - val) (venv_balance v))
-            (Some (* save the variable environment for returns *)
-              ((venv_advance_pc c v)
-               \<lparr> venv_stack := rest
-               , venv_balance :=
-                   update_balance (cenv_this c)
-                     (\<lambda> orig. orig - val) (venv_balance v)
-               , venv_memory_usage :=
-                   M (venv_memory_usage v) code_start code_len \<rparr>, 0, 0)))
-  | _ \<Rightarrow> instruction_failure_result v)"
 
-(*  
-text "For implementing RETURN, I need to cut a region from the memory
-according to the stack elements:"
-definition
-"venv_returned_bytes v =
-  (case venv_stack v of
-    e0 # e1 # _ \<Rightarrow> cut_memory e0 (Word.unat e1) (venv_memory v)
-  | _ \<Rightarrow> [])"
-  *)
+declare create_def [simp]
 
 text "RETURN is modeled like this:"
-abbreviation ret :: "variable_env \<Rightarrow> constant_env \<Rightarrow> instruction_result"
-where
-"ret v c \<equiv>
-   (case venv_stack v of
-      e0 # e1 # rest \<Rightarrow>
-        let new_v = v\<lparr> venv_memory_usage := M (venv_memory_usage v) e0 e1 \<rparr> in
-        InstructionToWorld (ContractReturn (venv_returned_bytes new_v))
-                           (venv_storage v) (venv_balance v)
-                           None (* No possibility of ever returning to this invocation. *)
-   | _ \<Rightarrow> instruction_failure_result v)"
+declare ret_def [simp]
 
 text "STOP is simpler than RETURN:"
-abbreviation stop ::
-"variable_env \<Rightarrow> constant_env \<Rightarrow> instruction_result"
-where
-"stop v c \<equiv>
-  InstructionToWorld (ContractReturn []) (venv_storage v) (venv_balance v) None"
+declare stop_def [simp]
 
 text "POP removes the topmost element of the stack:"
-abbreviation pop ::
-"variable_env \<Rightarrow> constant_env \<Rightarrow> instruction_result"
-where
-"pop v c \<equiv> InstructionContinue (venv_advance_pc c
-             v\<lparr>venv_stack := tl (venv_stack v)\<rparr>)"
+declare pop_def [simp]
 
 text "A utility function for storing a list of bytes in the memory:"
 fun store_byte_list_memory :: "w256 \<Rightarrow> byte list \<Rightarrow> memory \<Rightarrow> memory"
@@ -748,109 +560,35 @@ where
 declare store_byte_list_memory.simps [simp]
 
 text "Using the function above, it is straightforward to store a byte in the memory."
-abbreviation store_word_memory :: "w256 \<Rightarrow> w256 \<Rightarrow> memory \<Rightarrow> memory"
-where
-"store_word_memory pos val mem \<equiv>
-   store_byte_list_memory pos (word_rsplit val) mem"
+declare store_word_memory_def [simp]
 
 text "MSTORE writes one word to the memory:"
-abbreviation mstore :: "variable_env \<Rightarrow> constant_env \<Rightarrow> instruction_result"
-where
-"mstore v c ==
-   (case venv_stack v of
-     [] \<Rightarrow> instruction_failure_result v
-   | [_] \<Rightarrow> instruction_failure_result v
-   | pos # val # rest \<Rightarrow>
-       let new_memory = store_word_memory pos val (venv_memory v) in
-       InstructionContinue (venv_advance_pc c
-         v\<lparr> venv_stack := rest
-          , venv_memory := new_memory
-          , venv_memory_usage := M (venv_memory_usage v) pos 32
-          \<rparr>))"
+
+declare mstore_def [simp]
 
 text "MLOAD reads one word from the memory:"
-abbreviation mload :: "variable_env \<Rightarrow> constant_env \<Rightarrow> instruction_result"
-where
-"mload v c ==
-  (case venv_stack v of
-    pos # rest \<Rightarrow>
-      let value = word_rcat (cut_memory pos 32 (venv_memory v)) in
-      InstructionContinue (venv_advance_pc c
-        v \<lparr> venv_stack := value # rest
-          , venv_memory_usage := M (venv_memory_usage v) pos 32
-          \<rparr>)
-  | _ \<Rightarrow> instruction_failure_result v)"
+
+declare mload_def [simp]
 
 text "MSTORE8 writes one byte to the memory:"
-abbreviation mstore8 :: "variable_env \<Rightarrow> constant_env \<Rightarrow> instruction_result"
-where
-"mstore8 v c \<equiv>
-  (case venv_stack v of
-     pos # val # rest \<Rightarrow>
-        let new_memory = (venv_memory v)(pos := ucast val) in
-        InstructionContinue (venv_advance_pc c
-          v\<lparr> venv_stack := rest
-           , venv_memory_usage := M (venv_memory_usage v) pos 8
-           , venv_memory := new_memory \<rparr>)
-   | _ \<Rightarrow> instruction_failure_result v)
-           "
+
+declare mstore8_def [simp]
 
 text "For CALLDATACOPY, I need to look at the caller's data as memory."
-abbreviation input_as_memory :: "byte list \<Rightarrow> memory"
-where
-"input_as_memory lst idx \<equiv>
-   (if length lst \<le> unat idx then 0 else lst ! unat idx)"
+
+declare input_as_memory_def [simp]
 
 text "CALLDATACOPY:"
-abbreviation calldatacopy :: "variable_env \<Rightarrow> constant_env \<Rightarrow> instruction_result"
-where
-"calldatacopy v c \<equiv>
-  (case venv_stack v of
-     (dst_start :: w256) # src_start # len # rest \<Rightarrow>
-       let data =
-         cut_memory src_start (unat len) (input_as_memory (venv_data_sent v)) in
-       let new_memory = store_byte_list_memory dst_start data (venv_memory v) in
-       InstructionContinue (venv_advance_pc c
-         v\<lparr> venv_stack := rest, venv_memory := new_memory,
-            venv_memory_usage := M (venv_memory_usage v) dst_start len \<rparr>))"
+declare calldatacopy_def [simp]
 
 text "CODECOPY copies a region of the currently running code to the memory:"
-abbreviation codecopy :: "variable_env \<Rightarrow> constant_env \<Rightarrow> instruction_result"
-where
-"codecopy v c \<equiv>
-  (case venv_stack v of
-     dst_start # src_start # len # rest \<Rightarrow>
-     let data = cut_memory src_start (unat len)
-                  (program_as_memory (cenv_program c)) in
-     let new_memory = store_byte_list_memory dst_start data (venv_memory v) in
-     InstructionContinue (venv_advance_pc c
-       v\<lparr> venv_stack := rest, venv_memory := new_memory
-       , venv_memory_usage := M (venv_memory_usage v) dst_start len
-       \<rparr>)
-   | _ \<Rightarrow> instruction_failure_result v)"
+declare codecopy_def [simp]
 
 text "EXTCODECOPY copies a region of the code of an arbitrary account.:"
-abbreviation extcodecopy :: "variable_env \<Rightarrow> constant_env \<Rightarrow> instruction_result"
-where
-"extcodecopy v c \<equiv>
-  (case venv_stack v of
-     addr # dst_start # src_start # len # rest \<Rightarrow>
-     let data = cut_memory src_start (unat len)
-                  (program_as_memory
-                    (venv_ext_program v (ucast addr))) in
-     let new_memory = store_byte_list_memory dst_start data (venv_memory v) in
-     InstructionContinue (venv_advance_pc c
-       v\<lparr> venv_stack := rest, venv_memory := new_memory,
-       venv_memory_usage := M (venv_memory_usage v) dst_start len
-       \<rparr>)
-   | _ \<Rightarrow> instruction_failure_result v)"
+declare extcodecopy_def [simp]
 
 text "PC instruction could be implemented by @{term stack_0_1_op}:"
-abbreviation pc :: "variable_env \<Rightarrow> constant_env \<Rightarrow> instruction_result"
-where
-"pc v c \<equiv>
-   InstructionContinue (venv_advance_pc c
-     v\<lparr> venv_stack := word_of_int (venv_pc v) # venv_stack v \<rparr>)"
+declare pc_def [simp]
 
 text "Logging is currently no-op, until some property about event logging is wanted."
 definition log :: "nat \<Rightarrow> variable_env \<Rightarrow> constant_env \<Rightarrow> instruction_result"
@@ -924,6 +662,8 @@ where
 
 declare sha3_def [simp]
 
+declare general_dup_def [simp]
+
 text "The SUICIDE instruction involves value transfer."
 definition suicide :: "variable_env \<Rightarrow> constant_env \<Rightarrow> instruction_result"
 where
@@ -945,7 +685,7 @@ apply(simp add: word_rcat_def)
 apply(simp add: bin_rcat_def)
 apply(simp add: bin_cat_def)
 done
-
+(*
 fun instruction_sem :: "variable_env \<Rightarrow> constant_env \<Rightarrow> inst \<Rightarrow> instruction_result"
 where
 "instruction_sem v c (Stack (PUSH_N lst)) =
@@ -1069,6 +809,9 @@ where
 | "instruction_sem v c (Info GAS) = stack_0_1_op v c (gas v)"
 | "instruction_sem v c (Memory MSIZE) =
     stack_0_1_op v c (word_of_int (venv_memory_usage v))"
+    *)
+    
+declare instruction_sem.simps [simp]
 
 subsection {* Programs' Answer to the World *}
 
@@ -1078,7 +821,7 @@ to prove the termination of program execution.  In priciple, I could have used g
 lazy to model gas at that moment, so I introduced an artificial step counter.  When I prove theorems
 about smart contracts, the theorems are of the form ``for any value of the initial step counter,
 this and that never happen.''"
-
+(*
 datatype program_result =
   ProgramStepRunOut -- {* the artificial step counter has run out *}
 | ProgramToWorld
@@ -1097,14 +840,12 @@ datatype program_result =
     This artificial state is used to specify that the incoming call does not overflow the balance
     of the account.  Probably there is a cleaner approach.
   *}
+  *)
 
 text "Since our program struct contains a list of annotations for each program position,
 I have a function that checks all annotations at a particular program position:"  
-abbreviation check_annotations :: "variable_env \<Rightarrow> constant_env \<Rightarrow> bool"
-where
-"check_annotations v c \<equiv>
-  (let annots = program_annotation (cenv_program c) (venv_pc v) in
-   List.list_all (\<lambda> annot. annot (build_aenv v c)) annots)"
+
+declare check_annotations_def [simp]
 
    
 text {* The program execution takes two counters.
@@ -1114,7 +855,7 @@ This setup allows an easy termination proof.
 Also, during the proofs, I can do case analysis on the number of backwad jumps
 rather than the number of instructions.
 *}
-
+(*
 function (sequential) program_sem :: "variable_env \<Rightarrow> constant_env \<Rightarrow> int \<Rightarrow> nat \<Rightarrow> program_result"
 and blocked_program_sem :: "variable_env \<Rightarrow> constant_env \<Rightarrow> int \<Rightarrow> nat \<Rightarrow> bool \<Rightarrow> program_result"
 where
@@ -1140,9 +881,9 @@ where
         | InstructionAnnotationFailure \<Rightarrow> ProgramAnnotationFailure))))"
 | "blocked_program_sem v c l p _ = program_sem v c l p"
 by pat_completeness auto
-termination by lexicographic_order
+termination by lexicographic_order *)
 
-declare program_sem.psimps [simp]
+declare program_sem.simps [simp]
 
 text {* The following lemma is just for controlling the Isabelle/HOL simplifier. *}
 
@@ -1167,7 +908,7 @@ Since I am interested in account states in the middle of a transaction, I also n
 keep track of the ongoing executions of a single account.  Also I need to keep track of
 a flag indicating if the account has already marked for erasure.
 *}
-
+(*
 record account_state =
   account_address :: address
   account_storage :: storage
@@ -1179,6 +920,7 @@ record account_state =
   -- {* the boolean that indicates the account has executed SUICIDE in this transaction.
   The flag causes a destruction of the contract at the end of a transaction.
   *}
+*)
 
 subsection {* Environment Construction before EVM Execution *}
 
@@ -1251,22 +993,16 @@ Construction of the constant environment is much simpler than that of
 a variable environment. 
 *}
 
-abbreviation build_cenv :: "account_state \<Rightarrow> constant_env"
-where
-"build_cenv a \<equiv>
-  \<lparr> cenv_program = account_code a,
-    cenv_this = account_address a \<rparr>"
-    
+declare build_cenv_def [simp]
+
 text "Next we turn to the case where the world returns back to the account after the account has
 called an account.  In this case, the account should contain one ongoing execution that is waiting
 for a call to return."
 
 text "An instruction is ``call-like'' when it calls an account and waits for it to return."
 
-abbreviation is_call_like :: "inst option \<Rightarrow> bool"
-where
-"is_call_like i \<equiv> (i = Some (Misc CALL) \<or> i = Some (Misc DELEGATECALL) 
-                 \<or> i = Some (Misc CALLCODE) \<or> i = Some (Misc CREATE))"
+declare is_call_like_def [simp]
+
 
 text {* When an account returns to our contract, the variable environment is
 recovered from the stack of the ongoing calls.  However, due to reentrancy,
@@ -1395,6 +1131,7 @@ where
 
 text {* And after our contract makes a move, the account state is updated as follows.
 *}
+(*
 definition update_account_state ::
 "account_state \<Rightarrow> contract_action \<Rightarrow> storage \<Rightarrow> (address \<Rightarrow> w256)
 \<Rightarrow> (variable_env \<times> int \<times> int) option \<Rightarrow> account_state"
@@ -1411,6 +1148,7 @@ where
      account_killed :=
        (case act of ContractSuicide \<Rightarrow> True
                   | _ \<Rightarrow> account_killed prev)\<rparr>"
+                  *)
                                      
 text {* The above definition should be expanded automatically only when
 the last argument is known to be None or Some \_.
@@ -1455,7 +1193,8 @@ left insertion and the right insertion when actually only one of these happens.
 declare word_rcat_def [simp]
         unat_def [simp]
         bin_rcat_def [simp]
-        
+        word_of_bytes_def [simp]
+        maybe_to_list.simps [simp]
 
 
 text {* There is a common pattern for checking a predicate. *}
