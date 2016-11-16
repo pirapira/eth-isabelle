@@ -252,12 +252,6 @@ text {* Looking up a word from the call data: *}
 declare cut_data_def [simp]
 
 text {* Looking up a number of bytes from the memory: *}
-fun cut_memory :: "w256 \<Rightarrow> nat \<Rightarrow> (w256 \<Rightarrow> byte) \<Rightarrow> byte list"
-where
-"cut_memory idx 0 memory = []" |
-"cut_memory idx (Suc n) memory =
-  memory idx # cut_memory (idx + 1) n memory"
-  
 declare cut_memory.simps [simp]
 
 text {* CALL instruction results in @{term ContractCall} action when there are enough stack elements
@@ -285,13 +279,8 @@ text "POP removes the topmost element of the stack:"
 declare pop_def [simp]
 
 text "A utility function for storing a list of bytes in the memory:"
-fun store_byte_list_memory :: "w256 \<Rightarrow> byte list \<Rightarrow> memory \<Rightarrow> memory"
-where
-  "store_byte_list_memory _ [] orig = orig"
-| "store_byte_list_memory pos (h # t) orig =
-     store_byte_list_memory (pos + 1) t (orig(pos := h))"
 
-declare store_byte_list_memory.simps [simp]
+declare store_byte_list_memory.psimps [simp]
 
 text "Using the function above, it is straightforward to store a byte in the memory."
 declare store_word_memory_def [simp]
@@ -325,11 +314,6 @@ text "PC instruction could be implemented by @{term stack_0_1_op}:"
 declare pc_def [simp]
 
 text "Logging is currently no-op, until some property about event logging is wanted."
-definition log :: "nat \<Rightarrow> variable_env \<Rightarrow> constant_env \<Rightarrow> instruction_result"
-where
-"log n v c =
-   InstructionContinue (venv_advance_pc c
-     (venv_pop_stack (Suc (Suc n)) v))"
      
 declare log_def [simp]
 
@@ -570,76 +554,10 @@ the balance of our contract might have
 arbitrarily increased.
 *}
 
-inductive build_venv_returned ::
-"account_state \<Rightarrow> return_result \<Rightarrow> variable_env \<Rightarrow> bool"
-where
-venv_returned:
-"  is_call_like ((program_content a_code) (v_pc - 1)) \<Longrightarrow>
-   new_bal \<ge> a_bal \<Longrightarrow> (* the balance might have increased *)
-   build_venv_returned
-
-     (* here is the first argument *)
-     \<lparr> account_address = a_addr (* all elements are spelled out for performance *)
-     , account_storage = a_storage
-     , account_code = a_code
-     , account_balance = a_bal
-     , account_ongoing_calls =
-         (\<lparr> venv_stack = v_stack
-         , venv_memory = v_memory
-         , venv_memory_usage = v_memory_usage
-         , venv_storage = v_storage
-         , venv_pc = v_pc
-         , venv_balance = v_balance
-         , venv_caller = v_caller
-         , venv_value_sent = v_value
-         , venv_data_sent = v_data
-         , venv_storage_at_call = v_init_storage
-         , venv_balance_at_call = v_init_balance
-         , venv_origin = v_origin
-         , venv_ext_program = v_ext_program
-         , venv_block = v_block
-         \<rparr>, mem_start, mem_size) # _
-     , account_killed = _
-     \<rparr>
-     
-     (* here is the second argument *)
-     r
-     
-     (* here is the third argument *)
-     (\<lparr>  venv_stack = 1 # v_stack (* 1 is pushed, indicating a return *)
-       , venv_memory =
-         put_return_values v_memory (return_data r) mem_start mem_size
-       , venv_memory_usage = v_memory_usage
-       , venv_storage = a_storage
-       , venv_pc = v_pc
-       , venv_balance = (update_balance a_addr
-                            (\<lambda> _. new_bal) (return_balance r))
-       , venv_caller = v_caller
-       , venv_value_sent = v_value
-       , venv_data_sent = v_data
-       , venv_storage_at_call = v_init_storage
-       , venv_balance_at_call = v_init_balance
-       , venv_origin = v_origin
-       , venv_ext_program = v_ext_program
-       , venv_block = v_block \<rparr>)"
-
 declare build_venv_returned.simps [simp]
 
 text {* The situation is much simpler when an ongoing call has failed because anything 
 meanwhile has no effects. *}
-
-definition build_venv_failed :: "account_state \<Rightarrow> variable_env option"
-where
-"build_venv_failed a =
-  (case account_ongoing_calls a of
-      [] \<Rightarrow> None
-   | (recovered, _, _) # _ \<Rightarrow>
-      (if is_call_like (* check the previous instruction *)
-        (program_content (account_code a)
-         (venv_pc recovered - 1)) then
-       Some (recovered
-         \<lparr>venv_stack := 0 (* indicating failure *) # venv_stack recovered\<rparr>)
-       else None))"
 
 declare build_venv_failed_def [simp]
 
