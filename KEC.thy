@@ -215,16 +215,16 @@ definition "initial_pos" :: "nat"
 where
 "initial_pos = 0"
 
-definition "keccack'" :: "byte list \<Rightarrow> byte list"
+definition "keccak'" :: "byte list \<Rightarrow> byte list"
 where
-"keccack' input =
+"keccak' input =
    (let mid = sha3_update input initial_pos initial_st in
     keccack_final (fst mid) (snd mid))"
 
-value "keccack' []"
+value "keccak' []"
 
-definition "keccack" :: "byte list \<Rightarrow> 256 word"
+definition "keccak" :: "byte list \<Rightarrow> 256 word"
 where
-"keccack input = word_rcat (keccack' input)"
+"keccak input = word_rcat (keccak' input)"
 
 end

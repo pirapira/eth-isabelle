@@ -65,8 +65,9 @@ val byte_to_w256 : byte -> w256
 let byte_to_w256 w = word256FromInt (word8ToInt w)
 declare isabelle target_rep function byte_to_w256 = `Word.ucast`
 
-val keccac : list byte -> w256
-let keccac _ = 0
+val keccak : list byte -> w256
+let keccak v = 0
+declare isabelle target_rep function keccak = `undefined`
 
 val test_bit : w256 -> nat -> bool
 let test_bit w n =
@@ -1204,7 +1205,7 @@ val sha3 : variable_env -> constant_env -> instruction_result
 let sha3 v c = match v.venv_stack with
  | start :: len :: rest ->
       InstructionContinue (
-        venv_advance_pc c <| v with venv_stack = keccac (cut_memory start (word256ToNat len) v.venv_memory) :: rest;
+        venv_advance_pc c <| v with venv_stack = keccak (cut_memory start (word256ToNat len) v.venv_memory) :: rest;
                                     venv_memory_usage = M v.venv_memory_usage start len |>)
  | _ -> instruction_failure_result v
 end
