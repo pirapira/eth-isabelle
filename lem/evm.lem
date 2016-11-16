@@ -573,6 +573,16 @@ type world_action =
 | WorldRet of return_result (* the world returns back to the account *)
 | WorldFail (* the world fails back to the account. *)
 
+
+(* subsubsection "The Contract's Moves" *)
+
+(* After being invoked, the contract can respond by calling an account, creating (or deploying)
+a smart contract, destroying itself, returning, or failing.  When the contract calls an account,
+the contract provides the following information.*)
+
+(* When our contract deploys a smart contract, our contract should provide the following
+information. *)
+
 (* The contract's moves are summarized as follows. *)
 
 type call_arguments = <|
@@ -619,7 +629,6 @@ let empty_program = <|
 
 
 (* subsection "Translating an Instruction List into a Program" *)
-
 
 (* subsubsection {* Storing annotations in a program in a mapping *} *)
 

@@ -101,6 +101,3 @@ AccountStep: forall precond c r f.
    (forall a. precond a --> respond_to_return_correctly r a) &&
    (forall a. precond a --> respond_to_fail_correctly f a) ==>
    account_state_responds_to_world precond <| when_called = c; when_returned = r; when_failed = f |>
-
-
-
