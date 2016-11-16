@@ -1066,8 +1066,8 @@ let pop v c = match v.venv_stack with
 end
 
 (* The DUP instructions: *)
-val general_dup : nat -> variable_env -> constant_env -> instruction_result
-let general_dup n v c = match List.index v.venv_stack (n - 1) with
+val general_dup : byte -> variable_env -> constant_env -> instruction_result
+let general_dup n v c = match List.index v.venv_stack ((word8ToNat n) - 1) with
   | Nothing -> instruction_failure_result v
   | Just duplicated -> InstructionContinue (venv_advance_pc c <| v with venv_stack = duplicated :: v.venv_stack |>)
 end
@@ -1231,7 +1231,7 @@ let instruction_sem v c inst = match inst with
 | Misc CALL -> call v c
 | Misc RETURN -> ret v c
 | Misc STOP -> stop v c
-| Dup n -> general_dup (word8ToNat n) v c
+| Dup n -> general_dup n v c
 | Stack POP -> pop v c
 | Info GASLIMIT -> stack_0_1_op v c v.venv_block.block_gaslimit
 | Arith inst_GT -> stack_2_1_op v c (fun a b -> if word256UGT a b then 1 else 0)

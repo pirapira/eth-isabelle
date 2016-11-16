@@ -21,7 +21,7 @@ suitable for formal verification of a single account.  *}
 
 theory ContractSem
 
-imports Main "~~/src/HOL/Word/Word" "./ContractEnv" "./Instructions" "./KEC" (* "./lem/Evm" *)
+imports Main "~~/src/HOL/Word/Word" "./ContractEnv" "./Instructions" "./KEC" "./lem/Evm"
 
 begin
 
@@ -125,6 +125,7 @@ text {* After being invoked, the contract can respond by calling an account, cre
 a smart contract, destroying itself, returning, or failing.  When the contract calls an account,
 the contract provides the following information.*}
 
+(*
 record call_arguments =
   callarg_gas :: w256 -- {* the portion of the remaining gas that the callee is allowed to use *}
   callarg_code :: address -- {* the code that executes during the call *}
@@ -133,34 +134,41 @@ record call_arguments =
   callarg_data :: "byte list" -- {* the data sent along *}
   callarg_output_begin :: w256 -- {* the beginning of the memory region where the output data should be written. *}
   callarg_output_size :: w256 -- {* the size of the memory regions where the output data should be written. *}
+*)
   
 text {* When our contract deploys a smart contract, our contract should provide the following
 information. *}
 
+(*
 record create_arguments =
   createarg_value :: w256 -- {* the value sent to the account *}
   createarg_code :: "byte list" -- {* the code that deploys the runtime code. *}
+  *)
 
 text {* The contract's moves are summarized as follows. *}
-  
+
+(*
 datatype contract_action =
   ContractCall call_arguments -- {* calling an account *}
 | ContractCreate create_arguments -- {* deploying a smart contract *}
 | ContractFail -- {* failing back to the caller *}
 | ContractSuicide -- {* destroying itself and returning back to the caller *}
 | ContractReturn "byte list" -- {* normally returning back to the caller *}
+*)
 
 subsection "Program Representation"
 
 text "For performance reasons, the instructions are stored in an AVL tree that allows
 looking up instructions from the program counters."
 
+(*
 record program = 
   program_content :: "int \<Rightarrow> inst option"
   -- {* a binary search tree that allows looking up instructions from positions *}
   program_length  :: int -- {* the length of the program in bytes *}
   program_annotation :: "int \<Rightarrow> annotation list"
   -- {* a mapping from positions to annotations *}
+  *)
 
 text {* The empty program is easy to define. *}
 
@@ -234,6 +242,7 @@ text "I model an instruction as a function that takes environments and modifies 
 text "The execution of an EVM program happens in a block, and the following information about
 the block should be available."
 
+(*
 record block_info =
   block_blockhash :: "w256 \<Rightarrow> w256" -- {* this captures the whole BLOCKHASH op *}
   block_coinbase :: address -- {* the miner who validates the block *}
@@ -242,9 +251,11 @@ record block_info =
   block_difficulty :: w256
   block_gaslimit :: w256 -- {* the block gas imit *}
   block_gasprice :: w256
+  *)
 
 text {* The variable environment contains information that is relatively volatile. *}
 
+(*
 record variable_env =
   venv_stack :: "w256 list"
   venv_memory :: memory
@@ -260,18 +271,22 @@ record variable_env =
   venv_origin :: address -- {* the external account that started the current transaction *}
   venv_ext_program :: "address \<Rightarrow> program" -- {* the codes of all accounts *}
   venv_block :: block_info -- {* the current block. *}
+  *)
 
 text {* The constant environment contains information that is rather stable. *}
 
+(*
 record constant_env =
   cenv_program :: program -- {* the code in the account under verification *}
   cenv_this :: address -- {* the address of the account under verification. *}
+  *)
 
 subsection {* The Result of an Instruction *}
 
 text {* The result of program execution is microscopically defined by results of instruction
 executions.  The execution of a single instruction can result in the following cases: *}
 
+(*
 datatype instruction_result =
   InstructionContinue variable_env -- {* the execution should continue *}
 | InstructionAnnotationFailure -- {* the annotation turned out to be false *}
@@ -285,19 +300,20 @@ finally finishing the current invocation
    \<times> (variable_env \<times> int \<times> int) option
      (* the variable environment to return to, *)
      (* and the memory reagion that expects the return value. *)"
+*)
 
 text {* When the contract fails, the result of the instruction always looks like this: *}
 abbreviation instruction_failure_result :: "variable_env \<Rightarrow> instruction_result"
 where
 "instruction_failure_result v \<equiv>
   InstructionToWorld
-    (ContractFail, venv_storage_at_call v, venv_balance_at_call v, None)"
+    ContractFail (venv_storage_at_call v) (venv_balance_at_call v) None"
 
 text {* When the contract returns, the result of the instruction always looks like this: *}
 abbreviation instruction_return_result :: "byte list \<Rightarrow> variable_env \<Rightarrow> instruction_result"
 where
 "instruction_return_result x v \<equiv>
-  InstructionToWorld (ContractReturn x, venv_storage v, venv_balance v, None)"
+  InstructionToWorld (ContractReturn x) (venv_storage v) (venv_balance v) None"
 
 subsection {* Useful Functions for Defining EVM Operations *}
 
@@ -557,7 +573,8 @@ where
   
 declare cut_memory.simps [simp]
 
-text {* CALL instruction results in @{term ContractCall} action when there are enough stack elements (and gas, when we introduce the gas accounting). *}
+text {* CALL instruction results in @{term ContractCall} action when there are enough stack elements
+        (and gas, when we introduce the gas accounting). *}
 definition call :: "variable_env \<Rightarrow> constant_env \<Rightarrow> instruction_result"
 where
 "call v c =
@@ -573,11 +590,11 @@ where
           , callarg_value = e2
           , callarg_data = cut_memory e3 (Word.unat e4) (venv_memory v)
           , callarg_output_begin = e5
-          , callarg_output_size = e6 \<rparr>),
-        venv_storage v,
-        update_balance (cenv_this c)
-          (\<lambda> orig \<Rightarrow> orig - e2) (venv_balance v),
-        Some (* saving the variable environment for timing *)
+          , callarg_output_size = e6 \<rparr>))
+        (venv_storage v)
+        (update_balance (cenv_this c)
+          (\<lambda> orig \<Rightarrow> orig - e2) (venv_balance v))
+        (Some (* saving the variable environment for timing *)
           ((venv_advance_pc c v)
            \<lparr> venv_stack := rest
            , venv_balance :=
@@ -607,9 +624,9 @@ where
               callarg_data = 
                 cut_memory e3 (Word.unat e4) (venv_memory v),
               callarg_output_begin = e5,
-              callarg_output_size = e6 \<rparr>),
-          venv_storage v, venv_balance v,
-          Some (* save the variable environment for returns *)
+              callarg_output_size = e6 \<rparr>))
+          (venv_storage v) (venv_balance v)
+          (Some (* save the variable environment for returns *)
             ((venv_advance_pc c v)
              \<lparr> venv_stack := rest
              , venv_memory_usage :=
@@ -637,11 +654,11 @@ where
               callarg_data =
                 cut_memory e3 (unat e4) (venv_memory v),
               callarg_output_begin = e5,
-              callarg_output_size = e6 \<rparr>),
-          venv_storage v,
-          update_balance (cenv_this c)
-            (\<lambda> orig \<Rightarrow> orig - e2) (venv_balance v),
-          Some (* saving the variable environment *)
+              callarg_output_size = e6 \<rparr>))
+          (venv_storage v)
+          (update_balance (cenv_this c)
+            (\<lambda> orig \<Rightarrow> orig - e2) (venv_balance v))
+          (Some (* saving the variable environment *)
             ((venv_advance_pc c v)
               \<lparr> venv_stack := rest
               , venv_memory_usage :=
@@ -671,11 +688,11 @@ where
          InstructionToWorld
            (ContractCreate
              (\<lparr> createarg_value = val
-              , createarg_code = code \<rparr>),
-            venv_storage v,
-            update_balance (cenv_this c)
-              (\<lambda> orig. orig - val) (venv_balance v),
-            Some (* save the variable environment for returns *)
+              , createarg_code = code \<rparr>))
+            (venv_storage v)
+            (update_balance (cenv_this c)
+              (\<lambda> orig. orig - val) (venv_balance v))
+            (Some (* save the variable environment for returns *)
               ((venv_advance_pc c v)
                \<lparr> venv_stack := rest
                , venv_balance :=
@@ -685,7 +702,7 @@ where
                    M (venv_memory_usage v) code_start code_len \<rparr>, 0, 0)))
   | _ \<Rightarrow> instruction_failure_result v)"
 
-  
+(*  
 text "For implementing RETURN, I need to cut a region from the memory
 according to the stack elements:"
 definition
@@ -693,6 +710,7 @@ definition
   (case venv_stack v of
     e0 # e1 # _ \<Rightarrow> cut_memory e0 (Word.unat e1) (venv_memory v)
   | _ \<Rightarrow> [])"
+  *)
 
 text "RETURN is modeled like this:"
 abbreviation ret :: "variable_env \<Rightarrow> constant_env \<Rightarrow> instruction_result"
@@ -701,9 +719,9 @@ where
    (case venv_stack v of
       e0 # e1 # rest \<Rightarrow>
         let new_v = v\<lparr> venv_memory_usage := M (venv_memory_usage v) e0 e1 \<rparr> in
-        InstructionToWorld ((ContractReturn (venv_returned_bytes new_v)),
-                           venv_storage v, venv_balance v,
-                           None (* No possibility of ever returning to this invocation. *))
+        InstructionToWorld (ContractReturn (venv_returned_bytes new_v))
+                           (venv_storage v) (venv_balance v)
+                           None (* No possibility of ever returning to this invocation. *)
    | _ \<Rightarrow> instruction_failure_result v)"
 
 text "STOP is simpler than RETURN:"
@@ -711,7 +729,7 @@ abbreviation stop ::
 "variable_env \<Rightarrow> constant_env \<Rightarrow> instruction_result"
 where
 "stop v c \<equiv>
-  InstructionToWorld (ContractReturn [], venv_storage v, venv_balance v, None)"
+  InstructionToWorld (ContractReturn []) (venv_storage v) (venv_balance v) None"
 
 text "POP removes the topmost element of the stack:"
 abbreviation pop ::
@@ -719,16 +737,6 @@ abbreviation pop ::
 where
 "pop v c \<equiv> InstructionContinue (venv_advance_pc c
              v\<lparr>venv_stack := tl (venv_stack v)\<rparr>)"
-
-text "The DUP instructions:"
-abbreviation general_dup ::
-"nat \<Rightarrow> variable_env \<Rightarrow> constant_env \<Rightarrow> instruction_result"
-where
-"general_dup n v c \<equiv>
-   (if n > length (venv_stack v) then instruction_failure_result v else
-   (let duplicated = venv_stack v ! (n - 1) in
-    InstructionContinue (venv_advance_pc c v\<lparr> venv_stack := duplicated # venv_stack v \<rparr>)))
-"
 
 text "A utility function for storing a list of bytes in the memory:"
 fun store_byte_list_memory :: "w256 \<Rightarrow> byte list \<Rightarrow> memory \<Rightarrow> memory"
@@ -858,7 +866,7 @@ definition list_swap :: "nat \<Rightarrow> 'a list \<Rightarrow> 'a list option"
 where
 "list_swap n lst =
   (if length lst < n + 1 then None else
-  Some (concat [[lst ! n], take (n - 1) (drop 1 lst) , [lst ! 0], drop (1 + n) lst]))"
+  Some (List.concat [[lst ! n], take (n - 1) (drop 1 lst) , [lst ! 0], drop (1 + n) lst]))"
   
 declare list_swap_def [simp]
 
@@ -885,6 +893,7 @@ apply(auto)
 done
 
 text "Using this, I can specify the SWAP operations:"
+(*
 definition swap :: "nat \<Rightarrow> variable_env \<Rightarrow> constant_env \<Rightarrow> instruction_result"
 where
 "swap n v c = (* SWAP3 is modeled by swap 3 *)
@@ -892,6 +901,8 @@ where
       None \<Rightarrow> instruction_failure_result v
     | Some new_stack \<Rightarrow>
       InstructionContinue (venv_advance_pc c v\<lparr> venv_stack := new_stack \<rparr>))"
+      
+*)
 
 declare swap_def [simp]
 
@@ -921,7 +932,7 @@ where
      dst # _ \<Rightarrow>
        let new_balance = (venv_balance v)(cenv_this c := 0,
          ucast dst := venv_balance v (cenv_this c) + (venv_balance v (ucast dst))) in
-       InstructionToWorld (ContractSuicide,venv_storage v, new_balance, None)
+       InstructionToWorld ContractSuicide (venv_storage v) new_balance None
     | _ \<Rightarrow> instruction_failure_result v)"
 
 declare suicide_def [simp]
@@ -1046,7 +1057,7 @@ where
 | "instruction_sem v c (Log LOG2) = log 2 v c"
 | "instruction_sem v c (Log LOG3) = log 3 v c"
 | "instruction_sem v c (Log LOG4) = log 4 v c"
-| "instruction_sem v c (Swap n) = swap n v c"
+| "instruction_sem v c (Swap n) = swap (unat n) v c"
 | "instruction_sem v c (Misc CREATE) = create v c"
 | "instruction_sem v c (Misc CALLCODE) = (* callcode v c *)
     InstructionAnnotationFailure"
@@ -1124,7 +1135,7 @@ where
                 (tiny_step - 1) (Suc remaining_steps))
              (blocked_program_sem new_v c
                 (program_length (cenv_program c)) remaining_steps))
-        | InstructionToWorld (a, st, bal, opt_pushed_v) \<Rightarrow>
+        | InstructionToWorld a st bal opt_pushed_v \<Rightarrow>
           ProgramToWorld (a, st, bal, opt_pushed_v)
         | InstructionAnnotationFailure \<Rightarrow> ProgramAnnotationFailure))))"
 | "blocked_program_sem v c l p _ = program_sem v c l p"
