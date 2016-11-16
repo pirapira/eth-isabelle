@@ -79,37 +79,6 @@ the world can call the contract again and change the storage and the balance of 
 The whole process is captured as a game between
 the world and the contract. *}
 
-subsubsection "The World's Moves"
-
-text {* The world can call into our contract.
-Then the world provides our\footnote{
-The contract's behavior is controlled by a concrete code, but the world's behavior is unrestricted.
-So when I get emotional I call the contract ``our'' contract.
-} contract
-with the following information.*}
-
-text {* After our contract calls accounts, the world can make those accounts
-return into our contracts.  The return value is not under control of our current
-contract, so it is the world's move.  In that case, the world provides the
-following information.*}
-
-record return_result =
-  return_data :: "byte list" -- {* the returned data *}
-  return_balance :: "address \<Rightarrow> w256"
-  -- {* the balance of all accounts at the moment of the return*}
-
-text {* Even our account's balance (and its storage) might have changed at this moment.
-@{typ return_result} type is also used when our contract returns, as we will see. *}
-
-text {* With these definitions now we can define the world's actions.  In addition to call and return,
-there is another clause for failing back to the account.  This happens when our contract calls
-an account but the called account fails. *}
-
-datatype world_action =
-  WorldCall call_env -- {* the world calls into the account *}
-| WorldRet return_result -- {* the world returns back to the account *}
-| WorldFail -- {* the world fails back to the account. *}
-
 subsubsection "The Contract's Moves"
 
 text {* After being invoked, the contract can respond by calling an account, creating (or deploying)
@@ -130,9 +99,7 @@ text {* The empty program is easy to define. *}
 
 declare empty_program_def [simp]
 
-
 subsection "Translating an Instruction List into a Program"
-
 
 subsubsection {* Storing annotations in a program in a mapping *}
 
@@ -143,15 +110,6 @@ at a specified position. *}
 
 declare prepend_annotation_def [simp]
 
-fun program_annotation_of_lst :: "int \<Rightarrow> inst list \<Rightarrow> int \<Rightarrow> annotation list"
-where
-  "program_annotation_of_lst _ [] = (\<lambda> _. [])"
-| "program_annotation_of_lst pos (Annotation annot # rest) =
-    prepend_annotation pos annot (program_annotation_of_lst pos rest)"
-| "program_annotation_of_lst pos (i # rest) =
-   (program_annotation_of_lst (pos + inst_size i) rest)"
-   -- {* Ordinary instructions are skipped. *}
-
 declare program_annotation_of_lst.simps [simp]
 
 subsubsection {* Translating a list of instructions into a program *}
@@ -161,13 +119,7 @@ text {* For efficiency reasons, the program content is going to be packed as
 an AVL tree, but this particular encoding is not part of the Lem definition.
 So such encoders are parametrised here.*}
 
-abbreviation program_of_lst :: "inst list \<Rightarrow> (inst list \<Rightarrow> (int \<Rightarrow> inst option)) \<Rightarrow> program"
-where
-"program_of_lst lst program_content_formatter \<equiv>
-  \<lparr> program_content = program_content_formatter lst
-  , program_length = int (length lst)
-  , program_annotation = program_annotation_of_lst 0 lst
-  \<rparr>"
+declare program_of_lst_def [simp]
 
 subsection {* Program as a Byte Sequence *}
 
@@ -210,10 +162,6 @@ keep track of the remaining gas).  This is not a problem as long as
 we are analyzing a single invocation of a loopless contract, but
 gas accounting is a planned feature.
 *}
-
-(* what are we doing in lem about this? *)
-definition gas :: "variable_env \<Rightarrow> w256"
-where "gas _ = undefined"
 
 text {* This $M$ function is defined at the end of H.1.\,in the yellow paper.
 This function is useful for updating the memory usage counter. *}

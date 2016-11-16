@@ -753,7 +753,8 @@ let instruction_return_result x v =
 (* gas accounting is a planned feature. *)
 
 val gas : variable_env -> w256
-let gas _ = 30000
+let gas v = 30000
+declare isabelle target_rep function gas = `undefined`
 
 (* This $M$ function is defined at the end of H.1.\,in the yellow paper. *)
 (* This function is useful for updating the memory usage counter. *)
