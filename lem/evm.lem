@@ -673,7 +673,7 @@ let program_of_lst lst program_content_formatter = <|
 
 val program_as_memory : program -> memory
 let program_as_memory p idx =
-   match p.program_content (word256ToInt idx) with
+   match p.program_content (uint idx) with
    | Nothing -> 0
    | Just inst ->
       match List.index (inst_code inst) 0 with
@@ -900,7 +900,7 @@ val jump : variable_env -> constant_env -> instruction_result
 let jump v c = match v.venv_stack with
  | [] -> instruction_failure_result v
  | pos :: tl ->
-     let v_new = <| v with venv_stack = tl; venv_pc = word256ToInt pos |> in
+     let v_new = <| v with venv_stack = tl; venv_pc = uint pos |> in
      match venv_next_instruction v_new c with
       | Just (Pc JUMPDEST) -> InstructionContinue v_new
       | _ -> instruction_failure_result v
@@ -940,6 +940,7 @@ let datasize v = word256FromNat (length v.venv_data_sent)
 
 val word_of_bytes : list byte -> w256
 let word_of_bytes lst = word256FromBoollist (List.concat (map boolListFromWord8 lst))
+declare isabelle target_rep function word_of_bytes = `Word.rcat`
 
 (* Looking up a word from a list of bytes: *)
 val read_word_from_bytes : nat -> list byte -> w256
