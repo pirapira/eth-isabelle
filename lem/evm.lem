@@ -779,11 +779,8 @@ let update_balance a f orig x = if x = a then f (orig a) else orig a
 
 (* Popping stack elements: *)
 val venv_pop_stack : nat -> variable_env -> variable_env
-let rec venv_pop_stack n v = match (n, v.venv_stack) with
-| (n + 1, _ :: tl) -> venv_pop_stack n <| v with venv_stack = tl |>
-| _ -> v
-end
-declare termination_argument venv_pop_stack = automatic
+let venv_pop_stack n v =
+ <| v with venv_stack = drop n v.venv_stack |>
 
 (* Peeking the topmost element of the stack: *)
 val venv_stack_top : variable_env -> maybe w256
