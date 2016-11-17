@@ -377,8 +377,8 @@ type swap_inst = byte
 
 val swap_inst_code : swap_inst -> maybe byte
 let swap_inst_code m =
-  if m < 1 then Nothing else
-  if m > 16 then Nothing else
+  if word8UGT 1 m then Nothing else
+  if word8UGT m 16 then Nothing else
   Just (m + 0X8f)
 
 (* subsection {* Logging Instructions *} *)
@@ -940,7 +940,7 @@ let datasize v = word256FromNat (length v.venv_data_sent)
 
 val word_of_bytes : list byte -> w256
 let word_of_bytes lst = word256FromBoollist (List.concat (map boolListFromWord8 lst))
-declare isabelle target_rep function word_of_bytes = `Word.rcat`
+declare isabelle target_rep function word_of_bytes = `Word.word_rcat`
 
 (* Looking up a word from a list of bytes: *)
 val read_word_from_bytes : nat -> list byte -> w256

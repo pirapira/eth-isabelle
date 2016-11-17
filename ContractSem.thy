@@ -222,7 +222,6 @@ done
 declare word_rcat_def [simp]
         unat_def [simp]
         bin_rcat_def [simp]
-        word_of_bytes_def [simp]
         maybe_to_list.simps [simp]
 
 lemma iszero_iszero [simp] :
