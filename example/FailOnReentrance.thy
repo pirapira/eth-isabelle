@@ -130,8 +130,6 @@ declare one_round.simps [simp]
 declare world_turn.simps [simp]
 declare contract_turn.simps [simp]
 
-declare to_bl_def [simp]
-
 lemma invariant_kept:
 "no_assertion_failure fail_on_reentrance_invariant"
 apply(simp add: no_assertion_failure_def)

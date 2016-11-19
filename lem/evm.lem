@@ -939,6 +939,9 @@ val word_of_bytes : list byte -> w256
 let word_of_bytes lst = word256FromBoollist (List.concat (map boolListFromWord8 lst))
 declare isabelle target_rep function word_of_bytes = `Word.word_rcat`
 
+val constant_mark : list byte -> list byte
+let constant_mark lst = lst
+
 (* Looking up a word from a list of bytes: *)
 val read_word_from_bytes : nat -> list byte -> w256
 let read_word_from_bytes idx lst = word_of_bytes (take 32 (drop idx lst))
@@ -1224,7 +1227,7 @@ end
 (* on the execution environments. *)
 val instruction_sem : variable_env -> constant_env -> inst -> instruction_result
 let instruction_sem v c inst = match inst with
-| Stack (PUSH_N lst) -> stack_0_1_op v c (word_of_bytes lst)
+| Stack (PUSH_N lst) -> stack_0_1_op v c (word_of_bytes (constant_mark lst))
 | Unknown _ -> instruction_failure_result v
 | Storage SLOAD -> stack_1_1_op v c v.venv_storage
 | Storage SSTORE -> sstore v c
@@ -1543,7 +1546,7 @@ venv_returned:
           v_storage v_balance v_caller v_value v_data v_init_storage v_init_balance
           v_origin v_ext_program v_block mem_start mem_size r rest whichever.
    (is_call_like (a_code.program_content (v_pc - 1))) &&
-   (new_bal >= a_bal) ==> (* the balance might have increased *)
+   (word256UGE new_bal a_bal) ==> (* the balance might have increased *)
    build_venv_returned
 
      (* here is the first argument *)

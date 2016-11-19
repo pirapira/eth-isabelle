@@ -653,6 +653,116 @@ done
 
 declare deed_inv_empty [simp]
 
+text {* I need some arithmetic preparations. 
+The Solidity compiler and the word library of Isabelle/HOL have
+different ways of casting @{typ address} into @{typ w256} and back. Some
+propositions are proved so that these differences disappear automatically. *}
+
+text {* When an address is converted into a 256-bit word,
+the represented integer does not change. *}
+
+lemma address_cast_eq :
+"uint (ucast (a :: address) :: w256) = uint a"
+apply(rule uint_up_ucast)
+apply(simp add: is_up)
+done
+
+lemma double_ucase [simp]:
+"ucast (ucast (a :: address) :: w256) = a"
+apply(rule ucast_up_ucast_id)
+apply(simp add: is_up)
+done
+
+text {* The size of an address is 160 bits. *}
+
+lemma address_size [simp]:
+"size (a :: address) = 160"
+apply(simp add: word_size)
+done
+
+text {* All addresses are less than $2^{160}$. *}
+
+lemma address_small' [simplified]:
+"uint (a :: address) < 2 ^ size a"
+apply(simp only: uint_range_size)
+done
+
+text {* All addresses cast to words are still small. *}
+
+lemma address_small:
+"(ucast (a :: address) :: w256) < 2 ^ 160"
+apply(simp only: word_less_alt)
+apply(simp add: address_cast_eq)
+apply(rule address_small')
+done
+
+declare mask_def [simp]
+
+text {* When you cast an address to word, and take the least 160 bits,
+that's the same thing as just casting the address.
+*}
+
+lemma address_cast_and [simplified] :
+"(mask 160 :: w256) AND ucast (a :: address) = (ucast (a :: address) :: w256)"
+apply(simp only: word_bool_alg.conj_commute)
+apply(rule less_mask_eq)
+apply(rule address_small)
+done
+
+declare address_cast_and [simp]
+
+text {* Casting a word to an address can be done after truncating to 160 bits. *}
+
+lemma casting_and_truncation:
+  "word_of_int (bintrunc 160 (uint (w :: w256))) = (word_of_int (uint w) :: address)"
+apply(rule wi_bintr)
+apply(auto)
+done
+
+text {* When two numbers are equal as words, they are also equal as addresses. *}
+
+lemma finer:
+"(word_of_int p :: w256) = word_of_int q \<Longrightarrow>
+(word_of_int p :: address) = word_of_int q"
+apply(simp only: word.abs_eq_iff)
+apply(simp)
+apply(simp add: Bit_Representation.bintrunc_mod2p)
+apply(simp add: Divides.zmod_eq_dvd_iff)
+apply(rule Rings.comm_monoid_mult_class.dvd_trans; auto)
+done
+
+text {* If a word is masked to 160-bits and compared with a casted address,
+the word is compared against the address.
+*}
+
+lemma addr_case_eq [simplified]:
+"(w :: w256) AND (mask 160 :: w256) = ucast(a :: address)
+\<Longrightarrow> ucast w = a"
+apply(simp only: and_mask_bintr)
+apply(simp only: ucast_def)
+apply(simp only: casting_and_truncation [symmetric])
+apply(drule finer)
+apply(simp)
+done
+
+declare addr_case_eq [dest]
+
+declare mask_def [simp del]
+
+lemma swap_and :
+  "(a :: w256) AND (b :: w256) = (c :: w256) \<Longrightarrow> b AND a = c"
+apply(auto)
+apply(rule word_bool_alg.conj_commute)
+done
+
+lemma address_mask_eq [simp] :
+"ucast (ucast (addr :: address) AND 1461501637330902918203684832716283019655932542975 :: w256) = addr"
+apply(rule addr_case_eq)
+apply(simp add: word_bool_alg.conj_assoc)
+apply(rule swap_and)
+apply(simp)
+done
+
 text {* The following lemma proves that the code of the Deed contract
 stays the same or becomes empty.  It also proves that no annotations fail, but
 there are no annotations anyway. *}
@@ -688,27 +798,134 @@ apply(drule star_case; auto)
          apply(split strict_if_split; auto)
           apply(split strict_if_split; auto)
            apply(simp add: no_assertion_failure_post_def)
+          apply(simp add: no_assertion_failure_post_def)
           apply(split strict_if_split; auto)
-           apply(simp add: no_assertion_failure_post_def)
-          apply(split strict_if_split; auto)
-           apply(simp add: no_assertion_failure_post_def)
-          apply(split strict_if_split; auto)
-           apply(simp add: no_assertion_failure_post_def)
-          apply(split if_splits; auto?)
+           apply(split strict_if_split; auto)
+           apply(split strict_if_split; auto)
            apply(split if_splits; auto?)
-            apply(simp add: no_assertion_failure_post_def)
            apply(drule star_case; auto simp add: no_assertion_failure_post_def)
-               apply(case_tac steps; auto)
-               apply(case_tac nat; auto)
-               apply(case_tac nata; auto) 
-              apply(case_tac steps; auto)
-              apply(case_tac nat; auto)
-              apply(case_tac nata; auto)
+            apply(case_tac steps; auto)
+            apply(case_tac nat; auto)
+            apply(case_tac nata; auto)
+           apply(case_tac steps; auto)
+          apply(split if_splits; auto?)
+          apply(split if_splits; auto)
+          apply(split if_splits; auto?)
+          apply(drule star_case; auto)
              apply(case_tac steps; auto)
              apply(case_tac nat; auto)
              apply(case_tac nata; auto)
             apply(case_tac steps; auto)
+            apply(case_tac nat; auto)
+            apply(case_tac nata; auto)
+           apply(case_tac steps; auto)
+          apply(case_tac steps; auto)
+         apply(split strict_if_split; auto)
+          apply(split strict_if_split; auto)
+           apply(simp add: no_assertion_failure_post_def)
+          apply(case_tac nat; auto)
+          apply(simp add: no_assertion_failure_post_def)
+         apply(simp add: no_assertion_failure_post_def)
+        apply(split strict_if_split; auto)
+         apply(split strict_if_split; auto)
+          apply(simp add: no_assertion_failure_post_def)
+         apply(split strict_if_split; auto)
+          apply(simp add: no_assertion_failure_post_def)
+         apply(split if_splits; auto)
+          apply(simp add: no_assertion_failure_post_def)
+         apply(drule star_case; auto)
+              apply(simp add: no_assertion_failure_post_def)
+             apply(simp add: no_assertion_failure_post_def)
             apply(case_tac steps; auto)
+            apply(case_tac nat; auto)
+            apply(split strict_if_split; auto)
+             apply(simp add: no_assertion_failure_post_def)
+            apply(drule star_case; auto)
+                 apply(simp add: no_assertion_failure_post_def)
+                apply(simp add: no_assertion_failure_post_def)
+               apply(case_tac steps; auto)
+               apply(simp add: no_assertion_failure_post_def)
+              apply(case_tac steps; auto)
+             apply(case_tac steps; auto)
+             apply(simp add: no_assertion_failure_post_def)
+            apply(case_tac steps; auto)
+           apply(case_tac steps; auto)
+           apply(case_tac nat; auto)
+           apply(split strict_if_split; auto)
+           apply(case_tac steps; auto)
+          apply(simp add: no_assertion_failure_post_def)
+         apply(case_tac steps; auto)
+         apply(simp add: no_assertion_failure_post_def)
+        apply(split strict_if_split; auto)
+        apply(simp add: no_assertion_failure_post_def)
+        apply(simp add: no_assertion_failure_post_def)
+       apply(simp add: no_assertion_failure_post_def)
+      apply(split strict_if_split; auto)
+       apply(simp add: no_assertion_failure_post_def)
+      apply(simp add: no_assertion_failure_post_def)
+     apply(simp add: no_assertion_failure_post_def)
+    apply(split strict_if_split; auto)
+      apply(split strict_if_split; auto)
+       apply(simp add: no_assertion_failure_post_def)
+      apply(case_tac nat; auto)
+      apply(simp add: no_assertion_failure_post_def)
+     apply(simp add: no_assertion_failure_post_def)
+    apply(split strict_if_split; auto)
+     apply(split strict_if_split; auto)
+      apply(simp add: no_assertion_failure_post_def)
+     apply(drule star_case; auto)
+          apply(simp add: no_assertion_failure_post_def)
+         apply(simp add: no_assertion_failure_post_def)
+        apply(case_tac steps; auto)
+        apply(simp add: no_assertion_failure_post_def)
+       apply(case_tac steps; auto)
+      apply(case_tac steps; auto)
+      apply(simp add: no_assertion_failure_post_def)
+     apply(case_tac steps; auto)
+    apply(simp add: no_assertion_failure_post_def)
+    apply(split strict_if_split; auto)
+     apply(simp add: no_assertion_failure_post_def)
+    apply(simp add: no_assertion_failure_post_def)
+   apply(simp add: no_assertion_failure_post_def)
+  apply(simp add: no_assertion_failure_post_def)
+ apply(case_tac steps; auto)
+ apply(simp add: no_assertion_failure_post_def)
+apply(drule deed_inv.cases; auto)
+ apply(case_tac steps; auto)
+  apply(split strict_if_split; auto)
+  apply(split strict_if_split; auto)
+   apply(split strict_if_split; auto)
+    apply(split strict_if_split; auto)
+     apply(split strict_if_split; auto)
+     apply(split strict_if_split; auto)
+      apply(split strict_if_split; auto)
+       apply(split strict_if_split; auto)
+        apply(split strict_if_split; auto)
+        apply(split strict_if_split; auto)
+        apply(split strict_if_split; auto)
+        apply(split strict_if_split; auto)
+        apply(split if_splits; auto?)
+       apply(split strict_if_split; auto)
+       apply(split strict_if_split; auto)
+       apply(case_tac nat; auto)
+      apply(split strict_if_split; auto)
+      apply(split strict_if_split; auto)
+      apply(split strict_if_split; auto)
+      apply(split if_splits; auto?)
+     apply(split strict_if_split; auto)
+    apply(split strict_if_split; auto)
+   apply(split strict_if_split; auto)
+   apply(split strict_if_split; auto)
+   apply(case_tac nat; auto)
+  apply(split strict_if_split; auto)
+  apply(split strict_if_split; auto)
+ apply(split strict_if_split; auto)
+apply(case_tac steps; auto)
+done
+     
+         
+
+             (*apply(case_tac steps; auto)
            apply(case_tac steps; auto)
            apply(split if_splits; auto?)
            apply(simp add: no_assertion_failure_post_def)
@@ -887,7 +1104,7 @@ apply(drule deed_inv.cases; auto)
   apply(split strict_if_split; auto)
   apply(split if_splits; auto)
  apply(split strict_if_split; auto)
-apply(case_tac steps; auto)
+apply(case_tac steps; auto) *)
 done
 
 subsection {* Proof about the Case when the Caller is Not the Registrar *}
@@ -923,96 +1140,6 @@ then, after the invocation,
 \end{itemize}
 *}
 
-
-text {* I need some arithmetic preparations. 
-The Solidity compiler and the word library of Isabelle/HOL have
-different ways of casting @{typ address} into @{typ w256} and back. Some
-propositions are proved so that these differences disappear automatically. *}
-
-text {* When an address is converted into a 256-bit word,
-the represented integer does not change. *}
-
-lemma address_cast_eq :
-"uint (ucast (a :: address) :: w256) = uint a"
-apply(rule uint_up_ucast)
-apply(simp add: is_up)
-done
-
-text {* The size of an address is 160 bits. *}
-
-lemma address_size [simp]:
-"size (a :: address) = 160"
-apply(simp add: word_size)
-done
-
-text {* All addresses are less than $2^{160}$. *}
-
-lemma address_small' [simplified]:
-"uint (a :: address) < 2 ^ size a"
-apply(simp only: uint_range_size)
-done
-
-text {* All addresses cast to words are still small. *}
-
-lemma address_small:
-"(ucast (a :: address) :: w256) < 2 ^ 160"
-apply(simp only: word_less_alt)
-apply(simp add: address_cast_eq)
-apply(rule address_small')
-done
-
-declare mask_def [simp]
-
-text {* When you cast an address to word, and take the least 160 bits,
-that's the same thing as just casting the address.
-*}
-
-lemma address_cast_and [simplified] :
-"(mask 160 :: w256) AND ucast (a :: address) = (ucast (a :: address) :: w256)"
-apply(simp only: word_bool_alg.conj_commute)
-apply(rule less_mask_eq)
-apply(rule address_small)
-done
-
-declare address_cast_and [simp]
-
-text {* Casting a word to an address can be done after truncating to 160 bits. *}
-
-lemma casting_and_truncation:
-  "word_of_int (bintrunc 160 (uint (w :: w256))) = (word_of_int (uint w) :: address)"
-apply(rule wi_bintr)
-apply(auto)
-done
-
-text {* When two numbers are equal as words, they are also equal as addresses. *}
-
-lemma finer:
-"(word_of_int p :: w256) = word_of_int q \<Longrightarrow>
-(word_of_int p :: address) = word_of_int q"
-apply(simp only: word.abs_eq_iff)
-apply(simp)
-apply(simp add: Bit_Representation.bintrunc_mod2p)
-apply(simp add: Divides.zmod_eq_dvd_iff)
-apply(rule Rings.comm_monoid_mult_class.dvd_trans; auto)
-done
-
-text {* If a word is masked to 160-bits and compared with a casted address,
-the word is compared against the address.
-*}
-
-lemma addr_case_eq [simplified]:
-"(w :: w256) AND (mask 160 :: w256) = ucast(a :: address)
-\<Longrightarrow> ucast w = a"
-apply(simp only: and_mask_bintr)
-apply(simp only: ucast_def)
-apply(simp only: casting_and_truncation [symmetric])
-apply(drule finer)
-apply(simp)
-done
-
-declare addr_case_eq [dest]
-
-declare mask_def [simp del]
 
 text {* Now we are ready to state and prove the lemma. *}
 

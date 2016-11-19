@@ -65,7 +65,6 @@ text {* When the contract returns, the result of the instruction always looks li
 declare instruction_return_result_def [simp]
 declare M_def [simp]
 declare update_balance_def [simp]
-declare venv_pop_stack.simps [simp]
 declare venv_stack_top_def [simp]
 declare venv_update_storage_def [simp]
 declare stack_0_0_op_def [simp]
@@ -219,14 +218,28 @@ lemma update_account_state_Some [simp] :
 apply(case_tac act; simp add: update_account_state_def)
 done
 
-declare word_rcat_def [simp]
-        unat_def [simp]
-        bin_rcat_def [simp]
+lemma word_rcat_constant [simp] :
+"word_rcat (constant_mark lst) = of_bl (List.concat (map to_bl lst))"
+apply(simp add: word_rcat_bl)
+apply(simp add: constant_mark_def)
+done
+
+declare unat_def [simp]
         maybe_to_list.simps [simp]
+        venv_pop_stack_def [simp]
+        of_bl_def [simp]
+        to_bl_def [simp]
+        bl_to_bin_def [simp]
 
 lemma iszero_iszero [simp] :
-"((if b then (1 :: 256 word) else 0) = 0) = (\<not> b) "
+"((if b then (word_of_int 1 :: 256 word) else word_of_int 0) = 0) = (\<not> b) "
 apply(auto)
 done
+
+lemma iszero_isone [simp] :
+"((if b then (word_of_int 1 :: 256 word) else word_of_int 0) = 1) = b "
+apply(auto)
+done
+
 
 end
