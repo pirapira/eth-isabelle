@@ -17,7 +17,8 @@ When you see `\<Rightarrow>` in the source, try using the [Isabelle2016](https:/
 
 ## Makefile goals
 
-* `make deed` produces a verified PDF document for the Deed contract
+* `make deed` produces a verified PDF document for the Deed contract in `output/document.pdf`.
+* `make doc` produces `output/document.pdf` as well as `lem/*.pdf`.
 * `make lem-thy` compiles the Lem sources into Isabelle/HOL
 * `make all-isabelle` checks all Isabelle/HOL sources (but not the ones compiled from Lem)
 * `make` does everything above
