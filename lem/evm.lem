@@ -152,6 +152,11 @@ type aenv = <|
 (* complexity of the square of the number of instructions.  Instead, I define multiple *)
 (* smaller inductive types and unify them at the end.  *)
 
+
+(* (delta, alpha) is the (consumption, production) on thae stack. *)
+type stack_numbers = (int * int)
+
+
 (* subsection "Bit Operations" *)
 
 
@@ -186,6 +191,15 @@ let bits_inst_code inst = match inst with
 | BYTE -> 0X1a
 end
 
+val bits_stack_nums : bits_inst -> stack_numbers
+let bits_stack_nums inst = match inst with
+| inst_AND -> (2, 1)
+| inst_OR -> (2, 1)
+| inst_XOR -> (2, 1)
+| inst_NOT -> (1, 1)
+| BYTE -> (2, 1)
+end
+
 (* subsection "Signed Arithmetics" *)
 
 (* More similar definitions follow.  Below are instructions for signed arithmetics.
@@ -206,6 +220,15 @@ let sarith_inst_code inst = match inst with
 | SGT -> 0X13
 | SLT -> 0X12
 | SIGNEXTEND -> 0X0b
+end
+
+val sarith_inst_nums : sarith_inst -> stack_numbers
+let sarith_inst_nums inst = match inst with
+| SDIV -> (2, 1)
+| SMOD -> (2, 1)
+| SGT -> (2, 1)
+| SLT -> (2, 1)
+| SIGNEXTEND -> (2, 1)
 end
 
 (* subsection "Unsigned Arithmetics" *)
@@ -244,6 +267,24 @@ let arith_inst_code inst = match inst with
 | ISZERO -> 0X15
 | SHA3 -> 0X20
 end
+
+val arith_inst_numbers : arith_inst -> stack_numbers
+let arith_inst_numbers inst = match inst with
+| ADD -> (2, 1)
+| MUL -> (2, 1)
+| SUB -> (2, 1)
+| DIV -> (2, 1)
+| MOD -> (2, 1)
+| ADDMOD -> (3, 1)
+| MULMOD -> (3, 1)
+| EXP -> (2, 1)
+| inst_GT -> (2, 1)
+| inst_LT -> (2, 1)
+| inst_EQ -> (2, 1)
+| ISZERO -> (1, 1)
+| SHA3 -> (2, 1)
+end
+
 
 (* subsection "Informational Instructions" *)
 
@@ -286,6 +327,28 @@ let info_inst_code inst = match inst with
 | GAS -> 0X5a
 end
 
+val info_inst_numbers : info_inst -> stack_numbers
+let info_inst_numbers inst = match inst with
+| ADDRESS -> (0, 1)
+| BALANCE -> (1, 1)
+| ORIGIN -> (0, 1)
+| CALLER -> (0, 1)
+| CALLVALUE -> (0, 1)
+| CALLDATALOAD -> (1, 1)
+| CALLDATASIZE -> (0, 1)
+| CALLER -> (0, 1)
+| CODESIZE -> (0, 1)
+| GASPRICE -> (0, 1)
+| EXTCODESIZE -> (1, 1)
+| BLOCKHASH -> (1, 1)
+| COINBASE -> (0, 1)
+| TIMESTAMP -> (0, 1)
+| NUMBER -> (0, 1)
+| DIFFICULTY -> (0, 1)
+| GASLIMIT -> (0, 1)
+| GAS -> (0, 1)
+end
+
 (* subsection "Duplicating Stack Elements" *)
 
 (* There are sixteen instructions for duplicating a stack element.  These instructions take *)
@@ -298,6 +361,9 @@ let dup_inst_code m =
    if word8UGT 1 m then Nothing (*-- There is no DUP0 instruction. *)
    else if word8UGT m 16 then Nothing (* -- There are no DUP16 instruction and on. *)
    else Just (m + 0X7f)
+
+val dup_inst_numbers : dup_inst -> stack_numbers
+let dup_inst_numbers m = (word8ToUInt m, word8ToUInt m + 1)
 
 (* subsection {* Memory Operations *} *)
 
@@ -321,6 +387,17 @@ let memory_inst_code inst = match inst with
 | MSIZE -> 0X59
 end
 
+val memory_inst_numbers : memory_inst -> stack_numbers
+let memory_inst_numbers inst = match inst with
+| MLOAD        -> (1, 1)
+| MSTORE       -> (2, 0)
+| MSTORE8      -> (2, 0)
+| CALLDATACOPY -> (3, 0)
+| CODECOPY     -> (3, 0)
+| EXTCODECOPY  -> (4, 0)
+| MSIZE        -> (0, 1)
+end
+
 (* subsection {* Storage Operations *} *)
 
 type storage_inst =
@@ -331,6 +408,12 @@ val storage_inst_code : storage_inst -> byte
 let storage_inst_code inst = match inst with
 | SLOAD -> 0X54
 | SSTORE -> 0X55
+end
+
+val storage_inst_numbers : storage_inst -> stack_numbers
+let storage_inst_numbers inst = match inst with
+| SLOAD -> (1, 1)
+| SSTORE -> (2, 0)
 end
 
 (* subsection {* Program-Counter Instructions *} *)
@@ -350,6 +433,15 @@ let pc_inst_code inst = match inst with
 | PC -> 0X58
 | JUMPDEST -> 0X5b
 end
+
+val pc_inst_numbers : pc_inst -> stack_numbers
+let pc_inst_numbers inst = match inst with
+| JUMP -> (1, 0)
+| JUMPI -> (2, 0)
+| PC -> (0, 1)
+| JUMPDEST -> (0, 0)
+end
+
 
 (* subsection {* Stack Instructions *} *)
 
@@ -373,6 +465,13 @@ let stack_inst_code inst = match inst with
 | CALLDATALOAD -> [0X35]
 end
 
+val stack_inst_numbers : stack_inst -> stack_numbers
+let stack_inst_numbers inst = match inst with
+| POP -> (1, 0)
+| PUSH_N lst -> (0, 1)
+| CALLDATALOAD -> (1, 1)
+end
+
 type swap_inst = byte
 
 val swap_inst_code : swap_inst -> maybe byte
@@ -380,6 +479,10 @@ let swap_inst_code m =
   if word8UGT 1 m then Nothing else
   if word8UGT m 16 then Nothing else
   Just (m + 0X8f)
+
+val swap_inst_numbers : swap_inst -> stack_numbers
+let swap_inst_numbers m =
+(word8ToUInt m + 1, word8ToUInt m + 1)
 
 (* subsection {* Logging Instructions *} *)
 
@@ -399,6 +502,15 @@ let log_inst_code inst = match inst with
 | LOG2 -> 0Xa2
 | LOG3 -> 0Xa3
 | LOG4 -> 0Xa4
+end
+
+val log_inst_numbers : log_inst -> stack_numbers
+let log_inst_numbers inst = match inst with
+| LOG0 -> (2, 0)
+| LOG1 -> (3, 0)
+| LOG2 -> (4, 0)
+| LOG3 -> (5, 0)
+| LOG4 -> (6, 0)
 end
 
 (* subsection {* Miscellaneous Instructions *} *)
@@ -427,6 +539,17 @@ let misc_inst_code inst = match inst with
 | RETURN -> 0Xf3
 | DELEGATECALL -> 0Xf4
 | SUICIDE -> 0Xff
+end
+
+val misc_inst_numbers : misc_inst -> stack_numbers
+let misc_inst_numbers inst = match inst with
+| STOP         -> (0, 0)
+| CREATE       -> (3, 1)
+| CALL         -> (7, 1)
+| CALLCODE     -> (7, 1)
+| RETURN       -> (2, 0)
+| DELEGATECALL -> (6, 1)
+| SUICIDE      -> (1, 0)
 end
 
 (* subsection {* Annotation Instruction *} *)
@@ -478,6 +601,25 @@ let inst_code inst = match inst with
 | Misc m -> [misc_inst_code m]
 | Annotation _ -> []
 end
+
+val inst_stack_numbers : inst -> stack_numbers
+let inst_stack_numbers inst = match inst with
+| Unknown byte -> (0, 0)
+| Bits b -> bits_stack_nums b
+| Sarith s -> sarith_inst_nums s
+| Arith a -> arith_inst_numbers a
+| Info i -> info_inst_numbers i
+| Dup d -> dup_inst_numbers d
+| Memory m -> memory_inst_numbers m
+| Storage s -> storage_inst_numbers s
+| Pc p -> pc_inst_numbers p
+| Stack s -> stack_inst_numbers s
+| Swap s -> swap_inst_numbers s
+| Log l -> log_inst_numbers l
+| Misc m -> misc_inst_numbers m
+| Annotation _ -> (0, 0)
+end
+
 
 (* The size of an opcode is useful for parsing a hex representation of an *)
 (* EVM code.  *)
@@ -1226,7 +1368,8 @@ end
 (* Finally, using the above definitions, I can define a function that operates an instruction *)
 (* on the execution environments. *)
 val instruction_sem : variable_env -> constant_env -> inst -> instruction_result
-let instruction_sem v c inst = match inst with
+let instruction_sem v c inst =
+match inst with
 | Stack (PUSH_N lst) -> stack_0_1_op v c (word_of_bytes (constant_mark lst))
 | Unknown _ -> instruction_failure_result v
 | Storage SLOAD -> stack_1_1_op v c v.venv_storage

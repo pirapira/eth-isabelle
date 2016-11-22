@@ -49,6 +49,10 @@ val word8ToInt : word8 -> int
 let word8ToInt w = intFromInteger (integerFromBitSeq (w8_to_bs w))
 declare isabelle target_rep function word8ToInt = `sint`
 
+val word8ToUInt : word8 -> int
+let word8ToUInt w = intFromNat (word8ToNat w)
+declare isabelle target_rep function word8ToUInt = `uint`
+
 declare isabelle target_rep function w8_to_bs = (fun w -> bitSeqFromInteger (Just 8) (integerFromInt (word8ToInt w)))
 
 val word8FromInteger : integer -> word8
