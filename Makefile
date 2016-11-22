@@ -1,6 +1,6 @@
-.PHONY: all all-isabelle deed clean clean-pdf clean-thy clean-ocaml lem-thy lem-pdf lem-ocaml
+.PHONY: all all-isabelle deed clean clean-pdf clean-thy clean-ocaml lem-thy lem-pdf lem-ocaml doc
 
-all: all-isabelle deed lem-thy lem-pdf lem-ocaml
+all: all-isabelle deed lem-thy lem-pdf lem-ocaml doc
 
 clean: clean-pdf clean-thy clean-ocaml
 
@@ -15,6 +15,8 @@ clean-ocaml:
 
 all-isabelle: KEC.thy FunctionalCorrectness.thy Parse.thy ContractEnv.thy Instructions.thy ContractSem.thy RelationalSem.thy HP.thy YellowPaper.thy example/Optimization.thy example/AlwaysFail.thy example/FailOnReentrance.thy example/Deed.thy lem/Block.thy lem/Evm.thy lem/EvmNonExec.thy lem/Keccak.thy lem/Rlp.thy lem/Word160.thy lem/Word256.thy lem/Word8.thy
 	isabelle build -d . all
+
+doc: deed lem-pdf
 
 deed: document/output.pdf
 document/output.pdf: KEC.thy ContractEnv.thy Instructions.thy ContractSem.thy RelationalSem.thy example/Deed.thy document/root.tex lem/Evm.thy

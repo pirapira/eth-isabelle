@@ -4,7 +4,25 @@ session "deed" = "HOL" +
     "~~/src/HOL/Word/Word"
     "~~/src/HOL/Data_Structures/AVL_Map"
     KEC
-    (* Bar *)
+    "lem/Lem_bool"
+    "lem/Lem_basic_classes"
+    "lem/Lem_tuple"
+    "lem/Lem_function"
+    "lem/Lem_maybe"
+    "lem/Lem_num"
+    "lem/LemExtraDefs"
+    "lem/Lem_set_helpers"
+    "lem/Lem_map"
+    "lem/Lem_string"
+    "lem/Lem_word"
+    "lem/Lem_show"
+    "lem/Lem_sorting"
+    "lem/Lem_relation"
+    "lem/Lem_pervasives"
+    "lem/Word256"
+    "lem/Word160"
+    "lem/Word8"
+    "lem/Evm"
   theories
     ContractEnv
     Instructions

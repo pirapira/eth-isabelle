@@ -190,6 +190,9 @@ declare account_state_pop_ongoing_call_def [simp]
 
 declare empty_account_def [simp]
 
+text {* The following lemmata regulates the Isabelle simplifier so that the definition of
+update\_account\_state is only sometimes expanded.  *}
+
 lemma update_account_state_None [simp] :
 "update_account_state prev act st bal None =
    (prev \<lparr>
