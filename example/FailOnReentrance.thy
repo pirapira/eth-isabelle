@@ -123,12 +123,25 @@ where
      venv_storage ve 0 = 1 \<Longrightarrow>
      venv_storage_at_call ve 0 = 0 \<Longrightarrow>
      fail_on_reentrance_invariant st"
-     
+
 value "program_content (program_of_lst fail_on_reentrance_program program_content_of_lst) 8"
 
 declare one_round.simps [simp]
 declare world_turn.simps [simp]
 declare contract_turn.simps [simp]
+
+lemma check_stack_depth_split [split] :
+"P (if check_stack_depth s i then X else ProgramToWorld a b c d) =
+ (\<not> (\<not> check_stack_depth s i \<and> \<not> P (ProgramToWorld a b c d) \<or> check_stack_depth s i \<and> \<not> P X ))"
+apply(simp only: if_splits(2))
+apply(auto)
+done
+
+lemma no_assertion_failure_in_fail [simp] :
+"I state \<Longrightarrow>
+ no_assertion_failure_post I (state, ProgramToWorld ContractFail st bal v_opt)"
+apply(simp add: no_assertion_failure_post_def)
+done
 
 lemma invariant_kept:
 "no_assertion_failure fail_on_reentrance_invariant"
@@ -143,25 +156,22 @@ apply(rule impI)
 apply(drule fail_on_reentrance_invariant.cases; auto)
  apply(drule star_case; auto)
    apply(simp add: no_assertion_failure_post_def; rule depth_zero; auto)
-  apply(case_tac steps; auto)
+  apply(case_tac steps; auto simp add: fail_on_reentrance_invariant.simps)
   apply(drule star_case; auto) (* called out and coming back *)
       apply(simp add: no_assertion_failure_post_def; rule depth_one; simp?)
         apply(simp)
        apply(simp)
       apply(simp)
      apply(drule fail_on_reentrance_invariant.cases; auto)
-     apply(case_tac steps; auto)
+     apply(case_tac steps; auto simp add: fail_on_reentrance_invariant.simps)
      apply(simp add: no_assertion_failure_post_def; rule depth_zero; simp?)
     apply(case_tac steps; auto)
-   apply(case_tac steps; auto)
-   apply(simp add: no_assertion_failure_post_def; rule depth_zero; auto)
+   apply(case_tac steps; auto simp add: fail_on_reentrance_invariant.simps)
   apply(case_tac steps; auto; rule depth_zero; auto)
  apply(case_tac steps; auto)
 apply(drule star_case; auto)
   apply(simp add: no_assertion_failure_post_def; rule depth_one; auto)
- apply(case_tac steps; simp add: no_assertion_failure_post_def)
- apply(drule star_case; auto)
- apply(rule depth_one; auto)
+ apply(case_tac steps; auto simp add: fail_on_reentrance_invariant.simps)
 apply(case_tac steps; auto)
 done
 

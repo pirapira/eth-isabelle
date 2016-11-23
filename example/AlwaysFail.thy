@@ -55,6 +55,12 @@ done
 
 declare program_sem.psimps [simp]
 
+lemma check_stack_depth_split [split] :
+"P (if check_stack_depth s i then X else ProgramToWorld a b c d) =
+ (\<not> (check_stack_depth s i \<and> \<not> P X \<or> \<not> check_stack_depth s i \<and> \<not> P (ProgramToWorld a b c d)))"
+apply(simp only: if_splits(2))
+done
+
 lemma always_fail_correct:
 "
   account_state_responds_to_world
