@@ -1473,109 +1473,116 @@ let suicide v c = match v.venv_stack with
  | _ -> instruction_failure_result v
 end
 
+
+val check_stack_depth : list w256 -> inst -> bool
+let check_stack_depth s i =
+  match inst_stack_numbers i with
+  | (consumed, produced) -> intFromNat (length s) + produced - consumed <= 1024
+  end
+
 (* Finally, using the above definitions, I can define a function that operates an instruction *)
 (* on the execution environments. *)
 val instruction_sem : variable_env -> constant_env -> inst -> instruction_result
 let instruction_sem v c inst =
-match inst with
-| Stack (PUSH_N lst) -> stack_0_1_op v c (word_of_bytes (constant_mark lst))
-| Unknown _ -> instruction_failure_result v
-| Storage SLOAD -> stack_1_1_op v c v.venv_storage
-| Storage SSTORE -> sstore v c
-| Pc JUMPI -> jumpi v c
-| Pc JUMP -> jump v c
-| Pc JUMPDEST -> stack_0_0_op v c
-| Info CALLDATASIZE -> stack_0_1_op v c (datasize v)
-| Stack CALLDATALOAD -> stack_1_1_op v c (cut_data v)
-| Info CALLER -> stack_0_1_op v c (address_to_w256 v.venv_caller)
-| Arith ADD -> stack_2_1_op v c (fun a b -> a + b)
-| Arith SUB -> stack_2_1_op v c (fun a b -> a - b)
-| Arith ISZERO -> stack_1_1_op v c (fun a -> if a = 0 then 1 else 0)
-| Misc CALL -> call v c
-| Misc RETURN -> ret v c
-| Misc STOP -> stop v c
-| Dup n -> general_dup n v c
-| Stack POP -> pop v c
-| Info GASLIMIT -> stack_0_1_op v c v.venv_block.block_gaslimit
-| Arith inst_GT -> stack_2_1_op v c (fun a b -> if word256UGT a b then 1 else 0)
-| Arith inst_EQ -> stack_2_1_op v c (fun a b -> if a = b then 1 else 0)
-| Annotation a -> eval_annotation a v c
-| Bits inst_AND -> stack_2_1_op v c (fun a b -> a land b)
-| Bits inst_OR -> stack_2_1_op v c (fun a b -> a lor b)
-| Bits inst_XOR -> stack_2_1_op v c (fun a b -> a lxor b)
-| Bits inst_NOT -> stack_1_1_op v c (fun a -> ~a)
-| Bits BYTE ->
-    stack_2_1_op v c get_byte
-| Sarith SDIV -> stack_2_1_op v c
-     (fun n divisor -> if divisor = 0 then 0 else
-                        word256FromInt ((sintFromW256 n) div (sintFromW256 divisor)))
-| Sarith SMOD -> stack_2_1_op v c
-     (fun n divisor -> if divisor = 0 then 0 else
-                       word256FromInt ((sintFromW256 n) mod (sintFromW256 divisor)))
-| Sarith SGT -> stack_2_1_op v c
-     (fun elm0 elm1 -> if elm0 > elm1 then 1 else 0)
-| Sarith SLT -> stack_2_1_op v c
-     (fun elm0 elm1 -> if elm0 < elm1 then 1 else 0)
-| Sarith SIGNEXTEND -> stack_2_1_op v c
-     (fun len orig ->
-        w256_of_bl (List.map (fun i ->
-          if i <= 256 - 8 * (uint len + 1)
-          then test_bit orig (natFromInt (256 - 8 * (uint len + 1)))
-          else test_bit orig (natFromInt i)
-        ) (List.genlist (fun x -> intFromNat x) 256))
-     )
-| Arith MUL -> stack_2_1_op v c
-     (fun a b -> a * b)
-| Arith DIV -> stack_2_1_op v c
-     (fun a divisor -> (if divisor = 0 then 0 else a div divisor))
-| Arith MOD -> stack_2_1_op v c
-     (fun a divisor -> (if divisor = 0 then 0 else a mod divisor))
-| Arith ADDMOD -> stack_3_1_op v c
-     (fun a b divisor ->
-         (if divisor = 0 then 0 else (a + b) mod divisor))
-| Arith MULMOD -> stack_3_1_op v c
-     (fun a b divisor ->
-         (if divisor = 0 then 0 else (a * b) mod divisor))
-| Arith EXP -> stack_2_1_op v c (fun a exponent -> word256FromInt (uint a ** word256ToNat exponent))
-| Arith inst_LT -> stack_2_1_op v c (fun arg0 arg1 -> if word256UGT arg1 arg0 then 1 else 0)
-| Arith SHA3 -> sha3 v c
-| Info ADDRESS -> stack_0_1_op v c (address_to_w256 c.cenv_this)
-| Info BALANCE -> stack_1_1_op v c (fun addr -> v.venv_balance (w256_to_address addr))
-| Info ORIGIN -> stack_0_1_op v c (address_to_w256 v.venv_origin)
-| Info CALLVALUE -> stack_0_1_op v c v.venv_value_sent
-| Info CODESIZE -> stack_0_1_op v c (word256FromInt c.cenv_program.program_length)
-| Info GASPRICE -> stack_0_1_op v c v.venv_block.block_gasprice
-| Info EXTCODESIZE -> stack_1_1_op v c
-     (fun arg -> word256FromInt (v.venv_ext_program (w256_to_address arg)).program_length)
-| Info BLOCKHASH -> stack_1_1_op v c v.venv_block.block_blockhash
-| Info COINBASE -> stack_0_1_op v c (address_to_w256 v.venv_block.block_coinbase)
-| Info TIMESTAMP -> stack_0_1_op v c v.venv_block.block_timestamp
-| Info NUMBER -> stack_0_1_op v c v.venv_block.block_number
-| Info DIFFICULTY -> stack_0_1_op v c v.venv_block.block_difficulty
-| Memory MLOAD -> mload v c
-| Memory MSTORE -> mstore v c
-| Memory MSTORE8 -> mstore8 v c
-| Memory CALLDATACOPY -> calldatacopy v c
-| Memory CODECOPY -> codecopy v c
-| Memory EXTCODECOPY -> extcodecopy v c
-| Pc PC -> pc v c
-| Log LOG0 -> log 0 v c
-| Log LOG1 -> log 1 v c
-| Log LOG2 -> log 2 v c
-| Log LOG3 -> log 3 v c
-| Log LOG4 -> log 4 v c
-| Swap n -> swap (word8ToNat n) v c
-| Misc CREATE -> create v c
-| Misc CALLCODE -> (* callcode v c *)
-    (* Since I cannot guarantee anything about CALLCODE, I choose immediate failure. *)
-    InstructionAnnotationFailure
-| Misc SUICIDE -> suicide v c
-| Misc DELEGATECALL -> (* delegatecall v c *)
-    (* Since I cannot guarantee anything about DELEGATECALL, I choose immediate failure. *)
-    InstructionAnnotationFailure
-| Info GAS -> stack_0_1_op v c (gas v)
-| Memory MSIZE -> stack_0_1_op v c (word256FromInt v.venv_memory_usage)
-end
+  match inst with
+  | Stack (PUSH_N lst) -> stack_0_1_op v c (word_of_bytes (constant_mark lst))
+  | Unknown _ -> instruction_failure_result v
+  | Storage SLOAD -> stack_1_1_op v c v.venv_storage
+  | Storage SSTORE -> sstore v c
+  | Pc JUMPI -> jumpi v c
+  | Pc JUMP -> jump v c
+  | Pc JUMPDEST -> stack_0_0_op v c
+  | Info CALLDATASIZE -> stack_0_1_op v c (datasize v)
+  | Stack CALLDATALOAD -> stack_1_1_op v c (cut_data v)
+  | Info CALLER -> stack_0_1_op v c (address_to_w256 v.venv_caller)
+  | Arith ADD -> stack_2_1_op v c (fun a b -> a + b)
+  | Arith SUB -> stack_2_1_op v c (fun a b -> a - b)
+  | Arith ISZERO -> stack_1_1_op v c (fun a -> if a = 0 then 1 else 0)
+  | Misc CALL -> call v c
+  | Misc RETURN -> ret v c
+  | Misc STOP -> stop v c
+  | Dup n -> general_dup n v c
+  | Stack POP -> pop v c
+  | Info GASLIMIT -> stack_0_1_op v c v.venv_block.block_gaslimit
+  | Arith inst_GT -> stack_2_1_op v c (fun a b -> if word256UGT a b then 1 else 0)
+  | Arith inst_EQ -> stack_2_1_op v c (fun a b -> if a = b then 1 else 0)
+  | Annotation a -> eval_annotation a v c
+  | Bits inst_AND -> stack_2_1_op v c (fun a b -> a land b)
+  | Bits inst_OR -> stack_2_1_op v c (fun a b -> a lor b)
+  | Bits inst_XOR -> stack_2_1_op v c (fun a b -> a lxor b)
+  | Bits inst_NOT -> stack_1_1_op v c (fun a -> ~a)
+  | Bits BYTE ->
+	  stack_2_1_op v c get_byte
+  | Sarith SDIV -> stack_2_1_op v c
+	   (fun n divisor -> if divisor = 0 then 0 else
+						  word256FromInt ((sintFromW256 n) div (sintFromW256 divisor)))
+  | Sarith SMOD -> stack_2_1_op v c
+	   (fun n divisor -> if divisor = 0 then 0 else
+						 word256FromInt ((sintFromW256 n) mod (sintFromW256 divisor)))
+  | Sarith SGT -> stack_2_1_op v c
+	   (fun elm0 elm1 -> if elm0 > elm1 then 1 else 0)
+  | Sarith SLT -> stack_2_1_op v c
+	   (fun elm0 elm1 -> if elm0 < elm1 then 1 else 0)
+  | Sarith SIGNEXTEND -> stack_2_1_op v c
+	   (fun len orig ->
+		  w256_of_bl (List.map (fun i ->
+			if i <= 256 - 8 * (uint len + 1)
+			then test_bit orig (natFromInt (256 - 8 * (uint len + 1)))
+			else test_bit orig (natFromInt i)
+		  ) (List.genlist (fun x -> intFromNat x) 256))
+	   )
+  | Arith MUL -> stack_2_1_op v c
+	   (fun a b -> a * b)
+  | Arith DIV -> stack_2_1_op v c
+	   (fun a divisor -> (if divisor = 0 then 0 else a div divisor))
+  | Arith MOD -> stack_2_1_op v c
+	   (fun a divisor -> (if divisor = 0 then 0 else a mod divisor))
+  | Arith ADDMOD -> stack_3_1_op v c
+	   (fun a b divisor ->
+		   (if divisor = 0 then 0 else (a + b) mod divisor))
+  | Arith MULMOD -> stack_3_1_op v c
+	   (fun a b divisor ->
+		   (if divisor = 0 then 0 else (a * b) mod divisor))
+  | Arith EXP -> stack_2_1_op v c (fun a exponent -> word256FromInt (uint a ** word256ToNat exponent))
+  | Arith inst_LT -> stack_2_1_op v c (fun arg0 arg1 -> if word256UGT arg1 arg0 then 1 else 0)
+  | Arith SHA3 -> sha3 v c
+  | Info ADDRESS -> stack_0_1_op v c (address_to_w256 c.cenv_this)
+  | Info BALANCE -> stack_1_1_op v c (fun addr -> v.venv_balance (w256_to_address addr))
+  | Info ORIGIN -> stack_0_1_op v c (address_to_w256 v.venv_origin)
+  | Info CALLVALUE -> stack_0_1_op v c v.venv_value_sent
+  | Info CODESIZE -> stack_0_1_op v c (word256FromInt c.cenv_program.program_length)
+  | Info GASPRICE -> stack_0_1_op v c v.venv_block.block_gasprice
+  | Info EXTCODESIZE -> stack_1_1_op v c
+	   (fun arg -> word256FromInt (v.venv_ext_program (w256_to_address arg)).program_length)
+  | Info BLOCKHASH -> stack_1_1_op v c v.venv_block.block_blockhash
+  | Info COINBASE -> stack_0_1_op v c (address_to_w256 v.venv_block.block_coinbase)
+  | Info TIMESTAMP -> stack_0_1_op v c v.venv_block.block_timestamp
+  | Info NUMBER -> stack_0_1_op v c v.venv_block.block_number
+  | Info DIFFICULTY -> stack_0_1_op v c v.venv_block.block_difficulty
+  | Memory MLOAD -> mload v c
+  | Memory MSTORE -> mstore v c
+  | Memory MSTORE8 -> mstore8 v c
+  | Memory CALLDATACOPY -> calldatacopy v c
+  | Memory CODECOPY -> codecopy v c
+  | Memory EXTCODECOPY -> extcodecopy v c
+  | Pc PC -> pc v c
+  | Log LOG0 -> log 0 v c
+  | Log LOG1 -> log 1 v c
+  | Log LOG2 -> log 2 v c
+  | Log LOG3 -> log 3 v c
+  | Log LOG4 -> log 4 v c
+  | Swap n -> swap (word8ToNat n) v c
+  | Misc CREATE -> create v c
+  | Misc CALLCODE -> (* callcode v c *)
+	  (* Since I cannot guarantee anything about CALLCODE, I choose immediate failure. *)
+	  InstructionAnnotationFailure
+  | Misc SUICIDE -> suicide v c
+  | Misc DELEGATECALL -> (* delegatecall v c *)
+	  (* Since I cannot guarantee anything about DELEGATECALL, I choose immediate failure. *)
+	  InstructionAnnotationFailure
+  | Info GAS -> stack_0_1_op v c (gas v)
+  | Memory MSIZE -> stack_0_1_op v c (word256FromInt v.venv_memory_usage)
+  end
 
 (* subsection {* Programs' Answer to the World *} *)
 
@@ -1631,6 +1638,7 @@ let rec program_sem v c tiny_step remaining_steps = match remaining_steps with
    match venv_next_instruction v c with
     | Nothing -> ProgramStepRunOut
     | Just i ->
+    if check_stack_depth (v.venv_stack) i then
       match instruction_sem v c i with
       | InstructionContinue new_v ->
          (strict_if (new_v.venv_pc > v.venv_pc)
@@ -1639,6 +1647,8 @@ let rec program_sem v c tiny_step remaining_steps = match remaining_steps with
       | InstructionToWorld a st bal opt_pushed_v -> ProgramToWorld a st bal opt_pushed_v
       | _ -> ProgramInvalid
       end
+    else
+      ProgramToWorld ContractFail v.venv_storage_at_call v.venv_balance_at_call Nothing
    end
 end
 and blocked_program_sem v c l p _ = program_sem v c l p
