@@ -657,6 +657,114 @@ let rec program_code lst = match lst with
 end
 declare termination_argument program_code = automatic
 
+(* section "Gas schedule" *)
+
+val Gzero : int
+let Gzero = 0
+
+val Gbase : int
+let Gbase = 2
+
+val Gverylow : int
+let Gverylow = 3
+
+val Glow : int
+let Glow = 5
+
+val Gmid : int
+let Gmid = 8
+
+val Ghigh : int
+let Ghigh = 10
+
+val Gextcode : int
+let Gextcode = 700
+
+val Gbalance : int
+let Gbalance = 400
+
+val Gsload : int
+let Gsload = 200
+
+val Gjumpsdest : int
+let Gjumpsdest = 1
+
+val Gsset : int
+let Gsset = 20000
+
+val Gsreset : int
+let Gsreset = 5000
+
+val Rsclear : int
+let Rsclear = 15000
+
+val Rsuicide : int
+let Rsuicide = 24000
+
+val Gsuicide : int
+let Gsuicide = 5000
+
+val Gcreate : int
+let Gcreate = 32000
+
+val Gcodedeposit : int
+let Gcodedeposit = 200
+
+val Gcall : int
+let Gcall = 700
+
+val Gcallvalue : int
+let Gcallvalue = 9000
+
+val Gcallstipend : int
+let Gcallstipend = 2300
+
+val Gnewaccount : int
+let Gnewaccount = 25000
+
+val Gexp : int
+let Gexp = 10
+
+val Gexpbyte : int
+let Gexpbyte = 50
+
+val Gmemory : int
+let Gmemory = 3
+
+val Gtxcreate : int
+let Gtxcreate = 32000
+
+val Gtxdatazero : int
+let Gtxdatazero = 4
+
+val Gtxdatanonzero : int
+let Gtxdatanonzero = 68
+
+val Gtransaction : int
+let Gtransaction = 21000
+
+val Glog : int
+let Glog = 375
+
+val Glogdata : int
+let Glogdata = 8
+
+val Glogtopic : int
+let Glogtopic = 375
+
+val Gsha3 : int
+let Gsha3 = 30
+
+val Gsha3word : int
+let Gsha3word = 6
+
+val Gcopy : int
+let Gcopy = 3
+
+val Gblockhash : int
+let Gblockhash = 20
+
+
 (* section "A Contract Centric View of the EVM" *)
 
 (* subsection "The Interaction between the Contract and the World" *)
