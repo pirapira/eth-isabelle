@@ -71,7 +71,7 @@ where
 | "MP_n (Some t) =
     (let content = MP_c t in
      if length content < 32 then content
-     else word_rsplit (keccack content))
+     else word_rsplit (keccak content))
   "
 | "MP_c (MPLeaf I0 I1) = RLP(Node [Leaf (HP I0 True), Leaf (I1)])"
 | "MP_c (MPExt I0part cont) =
