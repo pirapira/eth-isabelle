@@ -591,7 +591,9 @@ where x_def [simplified] :"x \<equiv> content_compiled"
 
 declare content_compiled_def [simp del]
 
+(*
 declare deed_program_def [simp del]
+*)
 
 text {* Whenever the content of the program is being looked up,
 the term @{term x} appears, allowing further expansion.  Otherwise,
@@ -767,6 +769,18 @@ text {* The following lemma proves that the code of the Deed contract
 stays the same or becomes empty.  It also proves that no annotations fail, but
 there are no annotations anyway. *}
 
+lemma check_stack_depth_split [split] :
+"P (if check_stack_depth s i then X else ProgramToWorld a b c d) =
+ (\<not> (\<not> check_stack_depth s i \<and> \<not> P (ProgramToWorld a b c d) \<or> check_stack_depth s i \<and> \<not> P X ))"
+apply(simp only: if_splits(2))
+apply(auto)
+done
+
+lemma discard_check_stack_depth [dest!] :
+"check_stack_depth s i \<Longrightarrow> True"
+apply(auto)
+done
+
 lemma deed_keeps_invariant :
 "no_assertion_failure deed_inv"
 -- "The proof is a brute-force case analysis.
@@ -821,75 +835,59 @@ apply(drule star_case; auto)
            apply(case_tac steps; auto)
           apply(case_tac steps; auto)
          apply(split strict_if_split; auto)
-          apply(split strict_if_split; auto)
-           apply(simp add: no_assertion_failure_post_def)
-          apply(case_tac nat; auto)
-          apply(simp add: no_assertion_failure_post_def)
+         apply(split strict_if_split; auto)
+         apply(case_tac nat; auto)
          apply(simp add: no_assertion_failure_post_def)
         apply(split strict_if_split; auto)
-         apply(split strict_if_split; auto)
-          apply(simp add: no_assertion_failure_post_def)
-         apply(split strict_if_split; auto)
-          apply(simp add: no_assertion_failure_post_def)
-         apply(split if_splits; auto)
-          apply(simp add: no_assertion_failure_post_def)
-         apply(drule star_case; auto)
-              apply(simp add: no_assertion_failure_post_def)
+        apply(split strict_if_split; auto)
+        apply(split strict_if_split; auto)
+        apply(split if_splits; auto)
+        apply(drule star_case; auto)
              apply(simp add: no_assertion_failure_post_def)
-            apply(case_tac steps; auto)
-            apply(case_tac nat; auto)
-            apply(split strict_if_split; auto)
-             apply(simp add: no_assertion_failure_post_def)
-            apply(drule star_case; auto)
-                 apply(simp add: no_assertion_failure_post_def)
-                apply(simp add: no_assertion_failure_post_def)
-               apply(case_tac steps; auto)
-               apply(simp add: no_assertion_failure_post_def)
-              apply(case_tac steps; auto)
-             apply(case_tac steps; auto)
-             apply(simp add: no_assertion_failure_post_def)
-            apply(case_tac steps; auto)
+            apply(simp add: no_assertion_failure_post_def)
            apply(case_tac steps; auto)
            apply(case_tac nat; auto)
            apply(split strict_if_split; auto)
+            apply(simp add: no_assertion_failure_post_def)
+           apply(drule star_case; auto)
+                apply(case_tac steps; auto)
+               apply(case_tac steps; auto)
+              apply(case_tac steps; auto)
+             apply(case_tac steps; auto)
+            apply(case_tac steps; auto)
            apply(case_tac steps; auto)
-          apply(simp add: no_assertion_failure_post_def)
-         apply(case_tac steps; auto)
-         apply(simp add: no_assertion_failure_post_def)
-        apply(split strict_if_split; auto)
-        apply(simp add: no_assertion_failure_post_def)
-        apply(simp add: no_assertion_failure_post_def)
-       apply(simp add: no_assertion_failure_post_def)
-      apply(split strict_if_split; auto)
-       apply(simp add: no_assertion_failure_post_def)
-      apply(simp add: no_assertion_failure_post_def)
-     apply(simp add: no_assertion_failure_post_def)
-    apply(split strict_if_split; auto)
-      apply(split strict_if_split; auto)
-       apply(simp add: no_assertion_failure_post_def)
-      apply(case_tac nat; auto)
-      apply(simp add: no_assertion_failure_post_def)
-     apply(simp add: no_assertion_failure_post_def)
-    apply(split strict_if_split; auto)
-     apply(split strict_if_split; auto)
-      apply(simp add: no_assertion_failure_post_def)
-     apply(drule star_case; auto)
-          apply(simp add: no_assertion_failure_post_def)
+          apply(case_tac steps; auto)
+          apply(case_tac nat; auto)
+          apply(split strict_if_split; auto)
+          apply(case_tac steps; auto)
          apply(simp add: no_assertion_failure_post_def)
         apply(case_tac steps; auto)
         apply(simp add: no_assertion_failure_post_def)
-       apply(case_tac steps; auto)
+       apply(split strict_if_split; auto)
+      apply(split strict_if_split; auto)
+       apply(simp add: no_assertion_failure_post_def)
+      apply(simp add: no_assertion_failure_post_def)
+     apply(split strict_if_split; auto)
+     apply(split strict_if_split; auto)
+     apply(case_tac nat; auto)
+     apply(simp add: no_assertion_failure_post_def)
+    apply(split strict_if_split; auto)
+    apply(split strict_if_split; auto)
+    apply(drule star_case; auto)
+         apply(simp add: no_assertion_failure_post_def)
+        apply(simp add: no_assertion_failure_post_def)
+       apply(case_tac steps; auto simp add: no_assertion_failure_post_def)
       apply(case_tac steps; auto)
       apply(simp add: no_assertion_failure_post_def)
      apply(case_tac steps; auto)
-    apply(simp add: no_assertion_failure_post_def)
-    apply(split strict_if_split; auto)
-     apply(simp add: no_assertion_failure_post_def)
+    apply(case_tac steps; auto)
+   apply(split strict_if_split; auto)
+    (* TODO: seeing cut_memory, store_byte_list_memory, take and word_rcat *)
     apply(simp add: no_assertion_failure_post_def)
    apply(simp add: no_assertion_failure_post_def)
   apply(simp add: no_assertion_failure_post_def)
- apply(case_tac steps; auto)
  apply(simp add: no_assertion_failure_post_def)
+ apply(case_tac steps; auto)
 apply(drule deed_inv.cases; auto)
  apply(case_tac steps; auto)
   apply(split strict_if_split; auto)
@@ -922,7 +920,6 @@ apply(drule deed_inv.cases; auto)
  apply(split strict_if_split; auto)
 apply(case_tac steps; auto)
 done
-
 
 subsection {* Proof about the Case when the Caller is Not the Registrar *}
 
@@ -960,6 +957,72 @@ then, after the invocation,
 
 text {* Now we are ready to state and prove the lemma. *}
 
+definition
+"deed_postcondition =
+ (* The additional conditions that are proven to
+  * hold when this invocation returns or fails. *)
+(\<lambda> init_state _ (post_state, _).
+
+   (* The balance has not decreased. *)
+   account_balance init_state \<le> account_balance post_state
+
+   (* The account is still not marked for destruction
+      (i.e. the account has not executed self-destruction). *)
+ \<and> \<not> (account_killed post_state)
+
+   (* The Deed contract is still marked as active. *)
+ \<and> (255 AND account_storage post_state 2 div 2 ^ 160 \<noteq> 0)
+
+   (* The registrar of the contract remains the same. *)
+ \<and> account_storage init_state 0 = account_storage post_state 0)
+"
+
+lemma maybe_useful_for_failure:
+"account_code a = deed_program \<Longrightarrow>
+ucast (account_storage a 0) \<noteq> callenv_caller initial_call \<Longrightarrow>
+255 AND account_storage a 2 div 1461501637330902918203684832716283019655932542976 \<noteq> 0 \<Longrightarrow>
+account_balance a \<le> account_balance a + callenv_value initial_call \<Longrightarrow>
+\<not> account_killed a \<Longrightarrow>
+account_balance a \<le> new_bal \<Longrightarrow>
+bala (account_address a) = account_balance a \<Longrightarrow>
+postcondition_pack deed_inv deed_postcondition
+\<lparr> account_address = account_address a, account_storage = account_storage a, account_code = deed_program,
+  account_balance = new_bal, account_ongoing_calls = account_ongoing_calls a, account_killed = False\<rparr>
+a initial_call
+(
+\<lparr>account_address = account_address a, account_storage = account_storage a, account_code = deed_program,
+ account_balance = account_balance a, account_ongoing_calls = account_ongoing_calls a, account_killed = False\<rparr>,
+ProgramToWorld ContractFail (account_storage a) bala None)"
+apply(auto simp add: postcondition_pack_def)
+apply(simp add: deed_postcondition_def)
+done
+declare maybe_useful_for_failure [intro!]
+
+lemma killed_subst_dest [dest!]:
+  "\<lparr> account_address = addr, account_storage = str, account_code = code,
+     account_balance = bal, account_ongoing_calls = going, account_killed = killed \<rparr>
+    = a \<lparr> account_killed := b \<rparr> \<Longrightarrow>
+    killed = b \<and> addr = account_address a \<and> str = account_storage a \<and> code = account_code a \<and>
+    bal = account_balance a \<and> going = account_ongoing_calls a"
+apply(case_tac a; auto)
+done
+
+lemma storage_kill_subst_dest [dest!]:
+"\<lparr> account_address = addr, account_storage = str, account_code = code,
+   account_balance = bal, account_ongoing_calls = ongoing, account_killed = killed \<rparr> =
+   a \<lparr> account_storage := str', account_killed := killed' \<rparr> \<Longrightarrow>
+   addr = account_address a \<and> str' = str \<and> code = account_code a \<and>
+   bal = account_balance a \<and> ongoing = account_ongoing_calls a \<and> killed' = killed
+   "
+apply(case_tac a; auto)
+done
+
+lemma deed_inv_sufficient_d [intro!]:
+"account_code a = empty_program \<or>  account_code a = deed_program \<Longrightarrow> deed_inv a"
+apply(auto simp add: deed_inv.simps)
+done
+
+
 lemma deed_only_registrar_can_spend :
 "pre_post_conditions
 
@@ -982,23 +1045,7 @@ lemma deed_only_registrar_can_spend :
 
    (* the account is not marked as destroyed. *)
  \<and> \<not> (account_killed init_state))
- 
- (* The additional conditions that are proven to
-  * hold when this invocation returns or fails. *)
-(\<lambda> init_state _ (post_state, _).
-
-   (* The balance has not decreased. *)
-   account_balance init_state \<le> account_balance post_state
-
-   (* The account is still not marked for destruction
-      (i.e. the account has not executed self-destruction). *)
- \<and> \<not> (account_killed post_state)
-
-   (* The Deed contract is still marked as active. *)
- \<and> (255 AND account_storage post_state 2 div 2 ^ 160 \<noteq> 0)
-
-   (* The registrar of the contract remains the same. *)
- \<and> account_storage init_state 0 = account_storage post_state 0)
+ deed_postcondition
 "
 -- "The proof is again a brute-force case analysis."
 apply(simp add: pre_post_conditions_def)
@@ -1049,7 +1096,7 @@ apply(drule deed_inv.cases; auto)
       apply(split strict_if_split; auto)
      apply(split strict_if_split; auto)
     apply(drule star_case; auto)
-      apply(simp add: postcondition_pack_def add: deed_inv.simps)
+      apply(simp add: postcondition_pack_def add: deed_inv.simps add: deed_postcondition_def)
      apply(case_tac steps; auto)
      apply(split strict_if_split; auto)
       apply(split strict_if_split; auto)
@@ -1060,37 +1107,26 @@ apply(drule deed_inv.cases; auto)
            apply(split strict_if_split; auto)
             apply(split strict_if_split; auto)
              apply(split strict_if_split; auto)
-              apply(case_tac a; simp add: postcondition_pack_def add: deed_inv.simps)
+              apply(case_tac a; simp add: postcondition_pack_def add: deed_inv.simps add:deed_postcondition_def)
              apply(split strict_if_split; auto)
-              apply(case_tac a; simp add: postcondition_pack_def add: deed_inv.simps)
-             apply(split strict_if_split; auto)
-             apply(split strict_if_split; auto)
-              apply(case_tac a; simp add: postcondition_pack_def add: deed_inv.simps)
-            apply(case_tac a; simp add: postcondition_pack_def add: deed_inv.simps)
-           apply(split strict_if_split; auto)
             apply(split strict_if_split; auto)
-            apply(case_tac a; simp add: postcondition_pack_def add: deed_inv.simps)
-           apply(case_tac a; simp add: postcondition_pack_def add: deed_inv.simps)
+            apply(split strict_if_split; auto)
+           apply(split strict_if_split; auto)
+           apply(split strict_if_split; auto)
           apply(split strict_if_split; auto)
-            apply(case_tac a; simp add: postcondition_pack_def add: deed_inv.simps)
-           apply(case_tac a; simp add: postcondition_pack_def add: deed_inv.simps)
-          apply(case_tac a; simp add: postcondition_pack_def add: deed_inv.simps)
+(* see what happens *)
+           apply(simp add: postcondition_pack_def add: deed_inv.simps add:deed_postcondition_def)
+          apply(simp add: postcondition_pack_def add: deed_inv.simps add: deed_postcondition_def)
          apply(split strict_if_split; auto)
-           apply(case_tac a; simp add: postcondition_pack_def add: deed_inv.simps)
-          apply(case_tac a; simp add: postcondition_pack_def add: deed_inv.simps)
-         apply(case_tac a; simp add: postcondition_pack_def add: deed_inv.simps)
+          apply(simp add: postcondition_pack_def add: deed_inv.simps add: deed_postcondition_def)
+         apply(simp add: postcondition_pack_def add: deed_inv.simps add: deed_postcondition_def)
         apply(split strict_if_split; auto)
-         apply(split strict_if_split; auto)
-         apply(case_tac a; simp add: postcondition_pack_def add: deed_inv.simps)
-        apply(case_tac a; simp add: postcondition_pack_def add: deed_inv.simps)
+        apply(split strict_if_split; auto)
        apply(split strict_if_split; auto)
-        apply(case_tac a; simp add: postcondition_pack_def add: deed_inv.simps)
-       apply(case_tac a; simp add: postcondition_pack_def add: deed_inv.simps)
-       apply(split strict_if_split; auto)
-        apply(case_tac a; simp add: postcondition_pack_def add: deed_inv.simps)
-       apply(case_tac a; simp add: postcondition_pack_def add: deed_inv.simps)
-      apply(case_tac a; simp add: postcondition_pack_def add: deed_inv.simps)
-     apply(case_tac a; simp add: postcondition_pack_def add: deed_inv.simps)
+      apply(split strict_if_split; auto)
+       apply(simp add: postcondition_pack_def add: deed_inv.simps add:deed_postcondition_def)
+      apply(simp add: postcondition_pack_def add: deed_inv.simps add:deed_postcondition_def)
+     apply(simp add: postcondition_pack_def add: deed_inv.simps add:deed_postcondition_def)
     apply(case_tac steps; auto)
     apply(split strict_if_split; auto)
     apply(split strict_if_split; auto)
@@ -1122,50 +1158,28 @@ apply(drule deed_inv.cases; auto)
         apply(split strict_if_split; auto)
          apply(split strict_if_split; auto)
           apply(split strict_if_split; auto)
-           apply(split strict_if_split; auto)
-            apply(case_tac a; simp add: postcondition_pack_def add: deed_inv.simps)
-           apply(split strict_if_split; auto)
-            apply(case_tac a; simp add: postcondition_pack_def add: deed_inv.simps)
           apply(split strict_if_split; auto)
-           apply(split strict_if_split; auto)
-           apply(case_tac a; simp add: postcondition_pack_def add: deed_inv.simps)
-          apply(case_tac a; simp add: postcondition_pack_def add: deed_inv.simps)
+          apply(split strict_if_split; auto)
          apply(split strict_if_split; auto)
-          apply(split strict_if_split; auto)
-          apply(case_tac a; simp add: postcondition_pack_def add: deed_inv.simps)
-         apply(case_tac a; simp add: postcondition_pack_def add: deed_inv.simps)
+         apply(split strict_if_split; auto)
         apply(split strict_if_split; auto)
-          apply(case_tac a; simp add: postcondition_pack_def add: deed_inv.simps)
-         apply(case_tac a; simp add: postcondition_pack_def add: deed_inv.simps)
-        apply(case_tac a; simp add: postcondition_pack_def add: deed_inv.simps)
-       apply(split strict_if_split; auto)
-      apply(case_tac a; simp add: postcondition_pack_def add: deed_inv.simps)
-        apply(case_tac a; simp add: postcondition_pack_def add: deed_inv.simps)
-       apply(case_tac a; simp add: postcondition_pack_def add: deed_inv.simps)
-      apply(case_tac a; simp add: postcondition_pack_def add: deed_inv.simps)
-     apply(split strict_if_split; auto)
         apply(split strict_if_split; auto)
        apply(split strict_if_split; auto)
       apply(split strict_if_split; auto)
      apply(split strict_if_split; auto)
-      apply(case_tac a; simp add: postcondition_pack_def add: deed_inv.simps)
-     apply(case_tac a; simp add: postcondition_pack_def add: deed_inv.simps)
+     apply(split strict_if_split; auto)
     apply(split strict_if_split; auto)
-     apply(case_tac a; simp add: postcondition_pack_def add: deed_inv.simps)
-    apply(case_tac a; simp add: postcondition_pack_def add: deed_inv.simps)
-    apply(case_tac a; simp add: postcondition_pack_def add: deed_inv.simps)
-   apply(case_tac a; simp add: postcondition_pack_def add: deed_inv.simps)
+   apply(split strict_if_split; auto)
   apply(drule star_case; auto)
    apply(case_tac steps; auto)
   apply(case_tac steps; auto)
  apply(drule star_case; auto)
-   apply(simp add: postcondition_pack_def add: deed_inv.simps)
+   apply(simp add: postcondition_pack_def add: deed_inv.simps add: deed_postcondition_def)
   apply(case_tac steps; auto)
-  apply(case_tac a; simp add: postcondition_pack_def add: deed_inv.simps)
+  apply(simp add: postcondition_pack_def add: deed_inv.simps add: deed_postcondition_def)
  apply(case_tac steps; auto)
 apply(drule star_case; auto)
  apply(case_tac steps; auto)
-apply(case_tac a; simp add: postcondition_pack_def add: deed_inv.simps)
 done
 
 text {* It takes 45 minutes to compile this proof on my machine.  Ten minutes

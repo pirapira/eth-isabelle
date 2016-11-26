@@ -137,11 +137,6 @@ apply(simp only: if_splits(2))
 apply(auto)
 done
 
-lemma no_assertion_failure_in_fail [simp] :
-"I state \<Longrightarrow>
- no_assertion_failure_post I (state, ProgramToWorld ContractFail st bal v_opt)"
-apply(simp add: no_assertion_failure_post_def)
-done
 
 lemma invariant_kept:
 "no_assertion_failure fail_on_reentrance_invariant"

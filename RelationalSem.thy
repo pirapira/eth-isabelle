@@ -312,6 +312,12 @@ where
   snd fin \<noteq> ProgramAnnotationFailure)  (* No annotations have failed. *)
 "
 
+lemma no_assertion_failure_in_fail [simp] :
+"I state \<Longrightarrow>
+ no_assertion_failure_post I (state, ProgramToWorld ContractFail st bal v_opt)"
+apply(simp add: no_assertion_failure_post_def)
+done
+
 text {* @{term "no_assertion_failure"} is a template for statements.
 It takes a single argument @{term I} for the invariant.
 The invariant is assumed to hold at the initial state.
@@ -380,7 +386,7 @@ where
 =
   (I fin_observed \<and>
   postcondition initial_account initial_call (fin_observed, snd fin))"
-  
+
 text {* The whole template takes an invariant @{term I}, a @{term precondition}
 and a @{term postcondition}. The statement is about one invocation of the contract.
 This invocation can be a reentrancy.  The initial state is when the contract is invoked,
