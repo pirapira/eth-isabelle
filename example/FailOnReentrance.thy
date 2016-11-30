@@ -130,9 +130,9 @@ declare one_round.simps [simp]
 declare world_turn.simps [simp]
 declare contract_turn.simps [simp]
 
-lemma check_stack_depth_split [split] :
-"P (if check_stack_depth s i then X else ProgramToWorld a b c d) =
- (\<not> (\<not> check_stack_depth s i \<and> \<not> P (ProgramToWorld a b c d) \<or> check_stack_depth s i \<and> \<not> P X ))"
+lemma check_resources_split [split] :
+"P (if check_resources s i then X else ProgramToWorld a b c d) =
+ (\<not> (\<not> check_resources s i \<and> \<not> P (ProgramToWorld a b c d) \<or> check_resources s i \<and> \<not> P X ))"
 apply(simp only: if_splits(2))
 apply(auto)
 done

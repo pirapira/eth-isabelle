@@ -769,15 +769,15 @@ text {* The following lemma proves that the code of the Deed contract
 stays the same or becomes empty.  It also proves that no annotations fail, but
 there are no annotations anyway. *}
 
-lemma check_stack_depth_split [split] :
-"P (if check_stack_depth s i then X else ProgramToWorld a b c d) =
- (\<not> (\<not> check_stack_depth s i \<and> \<not> P (ProgramToWorld a b c d) \<or> check_stack_depth s i \<and> \<not> P X ))"
+lemma check_resources_split [split] :
+"P (if check_resources s i then X else ProgramToWorld a b c d) =
+ (\<not> (\<not> check_resources s i \<and> \<not> P (ProgramToWorld a b c d) \<or> check_resources s i \<and> \<not> P X ))"
 apply(simp only: if_splits(2))
 apply(auto)
 done
 
-lemma discard_check_stack_depth [dest!] :
-"check_stack_depth s i \<Longrightarrow> True"
+lemma discard_check_resources [dest!] :
+"check_resources s i \<Longrightarrow> True"
 apply(auto)
 done
 
