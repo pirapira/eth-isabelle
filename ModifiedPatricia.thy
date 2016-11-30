@@ -90,6 +90,6 @@ text "Or, include an MP tree in the account state."
 
 definition "TRIE" :: "MPTree option \<Rightarrow> 256 word"
 where
-"TRIE t = (case t of None \<Rightarrow> keccack([]) | Some tree \<Rightarrow> keccack(MP_c tree))"
+"TRIE t = (case t of None \<Rightarrow> keccak([]) | Some tree \<Rightarrow> keccak(MP_c tree))"
 
 end
