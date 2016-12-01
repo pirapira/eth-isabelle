@@ -95,7 +95,7 @@ type_synonym "state" = "address \<Rightarrow> account_state"
 
 definition "codeHash" :: "account_state \<Rightarrow> uint256"
 where
-"codeHash as = keccack (Code as)"
+"codeHash as = keccak (Code as)"
 
 definition "storageRoot" :: "account_state \<Rightarrow> uint256"
 where
