@@ -176,7 +176,8 @@ value "parse_byte 0xa8"
 
 fun parse_bytes_inner :: "nat \<Rightarrow> inst list \<Rightarrow> byte list \<Rightarrow> (inst list \<times> byte list) option"
 where
-"parse_bytes_inner 0 _ _ = None" | 
+"parse_bytes_inner 0 _ _ = None"
+|
 "parse_bytes_inner _ so_far [] = Some (rev so_far, [])" |
 "parse_bytes_inner (Suc fuel) so_far (b # rest) =
    (case parse_byte b of
@@ -195,8 +196,9 @@ where
 
 declare parse_byte_def [simp]
 
-
+(* TODO: fix this
 value "parse_bytes [0x60, 0x60, 0x60, 0x40]"
+*)
 
 text "I still want to parse something like 0x6060604052604051"
 text "How do I do that?"
@@ -244,6 +246,8 @@ where
 
 value "parse_byte 111"
 
+(* TODO: fix this
 value "parse_bytes [111, 200, 75, 166, 188, 149, 72, 64, 8, 246, 54, 47, 147, 22, 14, 243, 229, 99]"
+*)
 
 end
