@@ -1474,6 +1474,13 @@ let suicide v c = match v.venv_stack with
 end
 
 
+(* subsection {* Resource Checking *} *)
+
+
+(* Cmem is the function represented by C_{mem} in the yellow paper. *)
+val Cmem : int -> int
+let Cmem a = Gmemory * a + (a * a / 512)
+
 val check_resources : list w256 -> inst -> bool
 let check_resources s i =
   match inst_stack_numbers i with
