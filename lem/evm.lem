@@ -1477,9 +1477,14 @@ end
 (* subsection {* Resource Checking *} *)
 
 
-(* Cmem is the function represented by C_{mem} in the yellow paper. *)
+(* Cmem is the function denoted as C_{mem} in the yellow paper. *)
 val Cmem : int -> int
 let Cmem a = Gmemory * a + (a * a / 512)
+
+(* Csstore is the function denoted as C_\text{\tiny SSTORE} in the yellow paper. *)
+(* However, it takes the original word in the storage and the newly stored word. *)
+val Csstore : w256 -> w256 -> int
+let Csstore orig new = if not (new = 0) && orig = 0 then Gsset else Gsreset
 
 val check_resources : list w256 -> inst -> bool
 let check_resources s i =
