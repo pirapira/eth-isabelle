@@ -1486,6 +1486,11 @@ let Cmem a = Gmemory * a + (a * a / 512)
 val Csstore : w256 -> w256 -> int
 let Csstore orig new = if not (new = 0) && orig = 0 then Gsset else Gsreset
 
+(* Csuicide is the function denoted as C_\text{\tiny SUICIDE} in the yellow paper. *)
+(* However, it takes a boolean indicating new account creation. *)
+val Csuicide : bool -> int
+let Csuicide b = Gsuicide + (if b then Gsuicide else 0)
+
 val check_resources : list w256 -> inst -> bool
 let check_resources s i =
   match inst_stack_numbers i with
