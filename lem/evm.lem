@@ -1509,6 +1509,15 @@ let Cextra value emp = Gcall + Cxfer value + Cnew emp
 val L : int -> int
 let L x = x - x / 64
 
+(* Cgascap is the function denoted as C_{\text{\tiny GASCAP}} in the yellow paper. *)
+(* However, it takes the two topmost stack elements, a boolean indicating emptiness of the recipient, and the remaining gas of the caller *)
+val Cgascap : w256 -> w256 -> bool -> int -> int
+let Cgascap mu0 mu1 emp remaining_gas =
+  if remaining_gas >= Cextra mu1 emp then
+    intMin (L (uint mu0 - Cextra mu1 emp)) (uint mu0)
+  else
+    uint mu0
+
 val check_resources : list w256 -> inst -> bool
 let check_resources s i =
   match inst_stack_numbers i with
