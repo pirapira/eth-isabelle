@@ -1496,6 +1496,10 @@ let Csuicide b = Gsuicide + (if b then Gsuicide else 0)
 val Cnew : bool -> int
 let Cnew b = if b then Gnewaccount else 0
 
+(* Cxfer is the function denoted as C_\text{\tiny XFER} in the yellow paper. *)
+val Cxfer : w256 -> int
+let Cxfer value = if value = 0 then 0 else Gcallvalue
+
 val check_resources : list w256 -> inst -> bool
 let check_resources s i =
   match inst_stack_numbers i with
