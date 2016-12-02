@@ -1491,6 +1491,11 @@ let Csstore orig new = if not (new = 0) && orig = 0 then Gsset else Gsreset
 val Csuicide : bool -> int
 let Csuicide b = Gsuicide + (if b then Gsuicide else 0)
 
+(* Cnew is the funciton denoted as C_\text{\tiny NEW} in the yellow paper.*)
+(* However, it takes a boolean indicating if a new account is being created. *)
+val Cnew : bool -> int
+let Cnew b = if b then Gnewaccount else 0
+
 val check_resources : list w256 -> inst -> bool
 let check_resources s i =
   match inst_stack_numbers i with
