@@ -1492,13 +1492,18 @@ val Csuicide : bool -> int
 let Csuicide b = Gsuicide + (if b then Gsuicide else 0)
 
 (* Cnew is the funciton denoted as C_\text{\tiny NEW} in the yellow paper.*)
-(* However, it takes a boolean indicating if a new account is being created. *)
+(* However, it takes a boolean indicating emptiness of the recipient. *)
 val Cnew : bool -> int
-let Cnew b = if b then Gnewaccount else 0
+let Cnew emp = if emp then Gnewaccount else 0
 
 (* Cxfer is the function denoted as C_\text{\tiny XFER} in the yellow paper. *)
 val Cxfer : w256 -> int
 let Cxfer value = if value = 0 then 0 else Gcallvalue
+
+(* Cextra is the function denoted as C_\text{\tiny EXTRA} in the yellow paper. *)
+(* However, it takes a word indicating the transferred value, and a boolean indicating emptiness *)
+val Cextra : w256 -> bool -> int
+let Cextra value emp = Gcall + Cxfer value + Cnew emp
 
 val check_resources : list w256 -> inst -> bool
 let check_resources s i =
