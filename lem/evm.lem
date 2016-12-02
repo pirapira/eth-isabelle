@@ -1505,6 +1505,10 @@ let Cxfer value = if value = 0 then 0 else Gcallvalue
 val Cextra : w256 -> bool -> int
 let Cextra value emp = Gcall + Cxfer value + Cnew emp
 
+(* L is the function denoted as L in the yellow paper. *)
+val L : int -> int
+let L x = x - x / 64
+
 val check_resources : list w256 -> inst -> bool
 let check_resources s i =
   match inst_stack_numbers i with
