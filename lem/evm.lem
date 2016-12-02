@@ -1518,6 +1518,15 @@ let Cgascap mu0 mu1 emp remaining_gas =
   else
     uint mu0
 
+(* Ccallgas is the function denoted as C_{\text{\tiny CALLGAS}} in the yellow paper. *)
+(* However, it takes the three topmost stack elements, a boolean indicating emptiness of the recipient, and the remaining gas of the caller *)
+val Ccallgas : w256 -> w256 -> w256 -> bool -> int -> int
+let Ccallgas mu0 mu1 mu2 emp remaining_gas =
+  if mu2 = 0 then
+    Cgascap mu0 mu1 emp remaining_gas
+  else
+    Cgascap mu0 mu1 emp remaining_gas + Gcallstipend
+
 val check_resources : list w256 -> inst -> bool
 let check_resources s i =
   match inst_stack_numbers i with
