@@ -1550,8 +1550,8 @@ let thirdComponentOfC i s0 s1 s2 s3 recipient_empty orig new remaining_gas =
     -> Ccall s0 s1 s2 recipient_empty remaining_gas
   | Misc CALLCODE
     -> Ccall s0 s1 s2 recipient_empty remaining_gas
-  | Misc DELEGATECALL (* really correct for delegatecall? *)
-    -> Ccall s0 s1 s2 recipient_empty remaining_gas
+  | Misc DELEGATECALL
+    -> Ccall s0 s1 0  recipient_empty remaining_gas
   | Misc SUICIDE -> Csuicide recipient_empty
   | Misc CREATE -> Gcreate
   | Arith SHA3 -> Gsha3 + Gsha3word * ((uint s1 + 31) / 32)
