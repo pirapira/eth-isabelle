@@ -1532,6 +1532,12 @@ let Ccallgas mu0 mu1 mu2 emp remaining_gas =
 val Ccall : w256 -> w256 -> w256 -> bool -> int -> int
 let Ccall mu0 mu1 mu2 emp remaining_gas = Cgascap mu0 mu1 emp remaining_gas + Cextra mu2 emp
 
+(* log256floor takes a logarithm (base 256) of an integer and takes floor *)
+val log256floor : int -> int
+let rec log256floor x =
+  if x <= 255 then 0
+  else 1 + log256floor (x / 256)
+
 (* thirdComponentOfC is the third component in the definition of C (the gas function). *)
 (* However, it takes the next instruction, the four topmost stack elements, a boolean indicating emptiness of the recipient, an original word of sstore, a new word of sstore, and the remaining gas of the caller. *)
 val thirdComponentOfC : inst -> w256 -> w256 -> w256 -> w256 -> bool -> w256 -> w256 -> int -> int
