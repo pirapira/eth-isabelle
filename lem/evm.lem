@@ -1489,7 +1489,7 @@ let Csstore orig new = if not (new = 0) && orig = 0 then Gsset else Gsreset
 (* Csuicide is the function denoted as C_\text{\tiny SUICIDE} in the yellow paper. *)
 (* However, it takes a boolean indicating new account creation. *)
 val Csuicide : bool -> int
-let Csuicide b = Gsuicide + (if b then Gsuicide else 0)
+let Csuicide recipient_empty = Gsuicide + (if recipient_empty then Gnewaccount else 0)
 
 (* Cnew is the funciton denoted as C_\text{\tiny NEW} in the yellow paper.*)
 (* However, it takes a boolean indicating emptiness of the recipient. *)
@@ -1531,6 +1531,84 @@ let Ccallgas mu0 mu1 mu2 emp remaining_gas =
 (* However, it takes the three topmost stack elements, a boolean indicating emptiness of the recipient, and the remaining gas of the caller *)
 val Ccall : w256 -> w256 -> w256 -> bool -> int -> int
 let Ccall mu0 mu1 mu2 emp remaining_gas = Cgascap mu0 mu1 emp remaining_gas + Cextra mu2 emp
+
+(* thirdComponentOfC is the third component in the definition of C (the gas function). *)
+(* However, it takes the next instruction, the four topmost stack elements, a boolean indicating emptiness of the recipient, an original word of sstore, a new word of sstore, and the remaining gas of the caller. *)
+val thirdComponentOfC : inst -> w256 -> w256 -> w256 -> w256 -> bool -> w256 -> w256 -> int -> int
+let thirdComponentOfC i s0 s1 s2 s3 recipient_empty orig new remaining_gas =
+  match i with
+  | Storage SSTORE -> Csstore orig new
+  (* EXP is a bit complicated *)
+  | Memory CALLDATACOPY -> Gverylow + Gcopy * ((uint s2 + 31) / 32)
+  | Memory EXTCODECOPY -> Gextcode + Gcopy * ((uint s3 + 31) / 32)
+  | Log LOG0 -> Glog + Glogdata * uint s1
+  | Log LOG1 -> Glog + Glogdata * uint s1 + Glogtopic
+  | Log LOG2 -> Glog + Glogdata * uint s1 + 2 * Glogtopic
+  | Log LOG3 -> Glog + Glogdata * uint s1 + 3 * Glogtopic
+  | Log LOG4 -> Glog + Glogdata * uint s1 + 4 * Glogtopic
+  | Misc CALL
+    -> Ccall s0 s1 s2 recipient_empty remaining_gas
+  | Misc CALLCODE
+    -> Ccall s0 s1 s2 recipient_empty remaining_gas
+  | Misc DELEGATECALL (* really correct for delegatecall? *)
+    -> Ccall s0 s1 s2 recipient_empty remaining_gas
+  | Misc SUICIDE -> Csuicide recipient_empty
+  | Misc CREATE -> Gcreate
+  | Arith SHA3 -> Gsha3 + Gsha3word * ((uint s1 + 31) / 32)
+  | Pc JUMPDEST -> Gjumpsdest
+  | Storage SLOAD -> Gsload
+  | Misc STOP -> Gzero
+  | Misc RETURN -> Gzero
+  | Info ADDRESS -> Gbase
+  | Info ORIGIN -> Gbase
+  | Info CALLER -> Gbase
+  | Info CALLVALUE -> Gbase
+  | Info CALLDATASIZE -> Gbase
+  | Info CODESIZE -> Gbase
+  | Info GASPRICE -> Gbase
+  | Info COINBASE -> Gbase
+  | Info TIMESTAMP -> Gbase
+  | Info NUMBER -> Gbase
+  | Info DIFFICULTY -> Gbase
+  | Info GASLIMIT -> Gbase
+  | Stack POP -> Gbase
+  | Pc PC -> Gbase
+  | Memory MSIZE -> Gbase
+  | Info GAS -> Gbase
+  | Arith ADD -> Gverylow
+  | Arith SUB -> Gverylow
+  | Bits inst_NOT -> Gverylow
+  | Arith inst_LT -> Gverylow
+  | Arith inst_GT -> Gverylow
+  | Sarith SLT -> Gverylow
+  | Sarith SGT -> Gverylow
+  | Arith inst_EQ -> Gverylow
+  | Arith ISZERO -> Gverylow
+  | Bits inst_AND -> Gverylow
+  | Bits inst_OR -> Gverylow
+  | Bits inst_XOR -> Gverylow
+  | Bits BYTE -> Gverylow
+  | Stack CALLDATALOAD -> Gverylow
+  | Memory MLOAD -> Gverylow
+  | Memory MSTORE -> Gverylow
+  | Memory MSTORE8 -> Gverylow
+  | Stack PUSH_N -> Gverylow
+  | Dup _ -> Gverylow
+  | Swap _ -> Gverylow
+  | Arith MUL -> Glow
+  | Arith DIV -> Glow
+  | Sarith SDIV -> Glow
+  | Arith MOD -> Glow
+  | Sarith SMOD -> Glow
+  | Sarith SIGNEXTEND -> Glow
+  | Arith ADDMOD -> Gmid
+  | Arith MULMOD -> Gmid
+  | Pc JUMP -> Gmid
+  | Pc JUMPI -> Ghigh
+  | Info EXTCODESiZE -> Gextcode
+  | Info BALANCE -> Gbalance
+  | Info BLOCKHASH -> Gblockhash
+  end
 
 val check_resources : list w256 -> inst -> bool
 let check_resources s i =
