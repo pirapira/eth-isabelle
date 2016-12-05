@@ -1544,7 +1544,7 @@ val thirdComponentOfC : inst -> w256 -> w256 -> w256 -> w256 -> bool -> w256 -> 
 let thirdComponentOfC i s0 s1 s2 s3 recipient_empty orig new remaining_gas =
   match i with
   | Storage SSTORE -> Csstore orig new
-  (* EXP is a bit complicated *)
+  | Arith EXP -> Gexp + if s1 = 0 then 0 else Gexpbyte * (1 + log256floor (uint s1))
   | Memory CALLDATACOPY -> Gverylow + Gcopy * ((uint s2 + 31) / 32)
   | Memory EXTCODECOPY -> Gextcode + Gcopy * ((uint s3 + 31) / 32)
   | Log LOG0 -> Glog + Glogdata * uint s1
