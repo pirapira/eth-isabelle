@@ -1616,6 +1616,13 @@ let thirdComponentOfC i s0 s1 s2 s3 recipient_empty orig new remaining_gas =
   | Info BLOCKHASH -> Gblockhash
   end
 
+(* C is the function defined in the yellow paper as C.  This represents the gas consumption of an instruction. *)
+(* It takes the new memory consumption, the old memory consumption, the next instruction the four topmost stack elements, a boolean indicating emptiness of the recipient, an original word of sstore, a new word of sstore, and the remaining gas of the caller. *)
+val C : int -> int -> inst -> w256 -> w256 -> w256 -> w256 -> bool -> w256 -> w256 -> int -> int
+let C old_memory_consumption new_memory_consumption i s0 s1 s2 s3 recipient_empty orig new remaining_gas =
+  Cmem new_memory_consumption  - Cmem old_memory_consumption +
+  thirdComponentOfC i s0 s1 s2 s3 recipient_empty orig new remaining_gas
+
 val check_resources : list w256 -> inst -> bool
 let check_resources s i =
   match inst_stack_numbers i with
