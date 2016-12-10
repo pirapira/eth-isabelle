@@ -131,8 +131,8 @@ declare world_turn.simps [simp]
 declare contract_turn.simps [simp]
 
 lemma check_resources_split [split] :
-"P (if check_resources s i then X else ProgramToWorld a b c d) =
- (\<not> (\<not> check_resources s i \<and> \<not> P (ProgramToWorld a b c d) \<or> check_resources s i \<and> \<not> P X ))"
+"P (if check_resources v s i then X else ProgramToWorld a b c d) =
+ (\<not> (\<not> check_resources v s i \<and> \<not> P (ProgramToWorld a b c d) \<or> check_resources v s i \<and> \<not> P X ))"
 apply(simp only: if_splits(2))
 apply(auto)
 done

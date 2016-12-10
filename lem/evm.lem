@@ -967,6 +967,7 @@ type variable_env = <|
   venv_origin : address; (* the external account that started the current transaction *)
   venv_ext_program : address -> program; (* the codes of all accounts *)
   venv_block : block_info; (* the current block *)
+  venv_gas : int; (* remaining gas before the instruction *)
 |>
 
 (* The constant environment contains information that is rather stable. *)
@@ -1623,10 +1624,15 @@ let C old_memory_consumption new_memory_consumption i s0 s1 s2 s3 recipient_empt
   Cmem new_memory_consumption  - Cmem old_memory_consumption +
   thirdComponentOfC i s0 s1 s2 s3 recipient_empty orig new remaining_gas
 
-val check_resources : list w256 -> inst -> bool
-let check_resources s i =
+val predictGas : variable_env -> int
+declare isabelle target_rep function predictGas = `undefined`
+
+val check_resources : variable_env -> list w256 -> inst -> bool
+let check_resources v s i =
   match inst_stack_numbers i with
-  | (consumed, produced) -> intFromNat (length s) + produced - consumed <= 1024
+  | (consumed, produced) ->
+    (intFromNat (length s) + produced - consumed <= 1024) &&
+    predictGas v <= v.venv_gas
   end
 
 (* Finally, using the above definitions, I can define a function that operates an instruction *)
@@ -1787,7 +1793,7 @@ let rec program_sem v c tiny_step remaining_steps = match remaining_steps with
    match venv_next_instruction v c with
     | Nothing -> ProgramStepRunOut
     | Just i ->
-    if check_resources (v.venv_stack) i then
+    if check_resources v (v.venv_stack) i then
       match instruction_sem v c i with
       | InstructionContinue new_v ->
          (strict_if (new_v.venv_pc > v.venv_pc)
@@ -1910,7 +1916,7 @@ let empty_memory = (fun _ -> 0)
 
 
 indreln [build_venv_called : account_state -> call_env -> variable_env -> bool]
-  venv_called : forall bal a env origin ext block.
+  venv_called : forall bal a env origin ext block gas.
     bal a.account_address = a.account_balance ==>
     build_venv_called a env
  <| venv_stack = []; (* The stack is initialized for every invocation *)
@@ -1931,6 +1937,7 @@ indreln [build_venv_called : account_state -> call_env -> variable_env -> bool]
      venv_origin = origin; (* the origin of the transaction is arbitrarily chosen *)
      venv_ext_program = ext; (* the codes of the external programs are arbitrary. *)
      venv_block = block; (* the block information is chosen arbitrarily. *)
+     venv_gas = gas; (* the amount of gas is chosen arbitrarily. *)
    |>
 
 (* When an account returns to our contract, the variable environment is *)
@@ -1954,7 +1961,7 @@ indreln [build_venv_returned : account_state -> return_result -> variable_env ->
 venv_returned:
    forall a_code v_pc new_bal a_bal a_addr a_storage v_stack v_memory v_memory_usage
           v_storage v_balance v_caller v_value v_data v_init_storage v_init_balance
-          v_origin v_ext_program v_block mem_start mem_size r rest whichever.
+          v_origin v_ext_program v_block v_gas mem_start mem_size r rest whichever.
    (is_call_like (a_code.program_content (v_pc - 1))) &&
    (word256UGE new_bal a_bal) ==> (* the balance might have increased *)
    build_venv_returned
@@ -1979,6 +1986,7 @@ venv_returned:
          ; venv_origin = v_origin
          ; venv_ext_program = v_ext_program
          ; venv_block = v_block
+         ; venv_gas = v_gas
          |>, mem_start, mem_size) :: rest)
      ; account_killed = whichever
      |>
@@ -2002,4 +2010,6 @@ venv_returned:
        ; venv_balance_at_call = v_init_balance
        ; venv_origin = v_origin
        ; venv_ext_program = v_ext_program
-       ; venv_block = v_block |>)
+       ; venv_block = v_block
+       ; venv_gas = v_gas
+      |>)

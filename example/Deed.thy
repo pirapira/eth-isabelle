@@ -770,14 +770,14 @@ stays the same or becomes empty.  It also proves that no annotations fail, but
 there are no annotations anyway. *}
 
 lemma check_resources_split [split] :
-"P (if check_resources s i then X else ProgramToWorld a b c d) =
- (\<not> (\<not> check_resources s i \<and> \<not> P (ProgramToWorld a b c d) \<or> check_resources s i \<and> \<not> P X ))"
+"P (if check_resources v s i then X else ProgramToWorld a b c d) =
+ (\<not> (\<not> check_resources v s i \<and> \<not> P (ProgramToWorld a b c d) \<or> check_resources v s i \<and> \<not> P X ))"
 apply(simp only: if_splits(2))
 apply(auto)
 done
 
 lemma discard_check_resources [dest!] :
-"check_resources s i \<Longrightarrow> True"
+"check_resources v s i \<Longrightarrow> True"
 apply(auto)
 done
 
