@@ -166,7 +166,7 @@ apply(simp add: bin_rcat_def)
 apply(simp add: bin_cat_def)
 done
     
-declare instruction_sem.simps [simp]
+declare instruction_sem_def [simp]
 
 declare check_annotations_def [simp]
 declare program_sem.simps [simp]
