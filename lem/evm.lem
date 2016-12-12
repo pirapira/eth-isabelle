@@ -1635,11 +1635,23 @@ let check_resources v s i =
     predictGas v <= v.venv_gas
   end
 
+val subtract_gas : int -> instruction_result -> instruction_result
+let subtract_gas consumption orig =
+  match orig with
+  | InstructionContinue v ->
+    InstructionContinue <| v with venv_gas = v.venv_gas - consumption |>
+  | InstructionAnnotationFailure -> InstructionAnnotationFailure
+  | InstructionToWorld act st bal Nothing -> InstructionToWorld act st bal Nothing
+  | InstructionToWorld act st bal (Just (v, dst, len)) ->
+    InstructionToWorld act st bal (Just (<|v with venv_gas = v.venv_gas - consumption|>, dst, len))
+  end
+
 (* Finally, using the above definitions, I can define a function that operates an instruction *)
 (* on the execution environments. *)
 val instruction_sem : variable_env -> constant_env -> inst -> instruction_result
 let instruction_sem v c inst =
-  match inst with
+  subtract_gas (predictGas v)
+  (match inst with
   | Stack (PUSH_N lst) -> stack_0_1_op v c (word_of_bytes (constant_mark lst))
   | Unknown _ -> instruction_failure_result v
   | Storage SLOAD -> stack_1_1_op v c v.venv_storage
@@ -1737,7 +1749,7 @@ let instruction_sem v c inst =
 	  InstructionAnnotationFailure
   | Info GAS -> stack_0_1_op v c (gas v)
   | Memory MSIZE -> stack_0_1_op v c (word256FromInt v.venv_memory_usage)
-  end
+  end)
 
 (* subsection {* Programs' Answer to the World *} *)
 
