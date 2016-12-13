@@ -131,12 +131,24 @@ declare world_turn.simps [simp]
 declare contract_turn.simps [simp]
 
 lemma check_resources_split [split] :
-"P (if check_resources v s i then X else ProgramToWorld a b c d) =
- (\<not> (\<not> check_resources v s i \<and> \<not> P (ProgramToWorld a b c d) \<or> check_resources v s i \<and> \<not> P X ))"
+"P (if check_resources v con s i then X else ProgramToWorld a b c d) =
+ (\<not> (\<not> check_resources v con s i \<and> \<not> P (ProgramToWorld a b c d) \<or> check_resources v con s i \<and> \<not> P X ))"
 apply(simp only: if_splits(2))
 apply(auto)
 done
 
+lemma discard_check_resources [dest!] :
+"check_resources v c s i \<Longrightarrow> True"
+apply(auto)
+done
+
+declare subtract_gas.simps [simp]
+        predictGas_def [simp]
+        C_def [simp]
+        Cmem_def [simp]
+        venv_stack_default_def [simp]
+        thirdComponentOfC.simps [simp]
+        venv_next_instruction_default_def [simp]
 
 lemma invariant_kept:
 "no_assertion_failure fail_on_reentrance_invariant"

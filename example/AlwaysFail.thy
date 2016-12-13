@@ -54,12 +54,15 @@ apply(simp add: node_def)
 done
 
 declare program_sem.psimps [simp]
+(* declare instruction_sem_def [simp del]*)
 
 lemma check_resources_split [split] :
-"P (if check_resources s i then X else ProgramToWorld a b c d) =
- (\<not> (check_resources s i \<and> \<not> P X \<or> \<not> check_resources s i \<and> \<not> P (ProgramToWorld a b c d)))"
+"P (if check_resources v con s i then X else ProgramToWorld a b c d) =
+ (\<not> (check_resources v con s i \<and> \<not> P X \<or> \<not> check_resources v con s i \<and> \<not> P (ProgramToWorld a b c d)))"
 apply(simp only: if_splits(2))
 done
+
+declare subtract_gas.simps [simp]
 
 lemma always_fail_correct:
 "
@@ -70,6 +73,7 @@ lemma always_fail_correct:
 apply(rule AccountStep; auto)
 apply(case_tac steps; auto)
 done
+
 
 declare one_round.simps [simp]
 declare world_turn.simps [simp]

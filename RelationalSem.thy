@@ -369,9 +369,9 @@ an assumption about the initial call, and a conclusion about the state after the
 text {* I pack everything that I want when the contract fails or returns.
 This definition reduces the number of goals that I need to prove.
 Without this definition, the @{text auto} tactic
-splits a goal @{prop "A \<Longrightarrow> B \<and> C"} into two subgoals @{prop "A \<Longrightarrow> B"} and @{prop "A \<Longrightarrow> C"}.
+splits a goal @{prop "A \<Longrightarrow> B \<and> D"} into two subgoals @{prop "A \<Longrightarrow> B"} and @{prop "A \<Longrightarrow> D"}.
 When I do complicated case analysis on @{prop A}, the number of subgoals grow rapidly.
-So, I define @{term packed} to be @{prop "B \<and> C"} and prevent the @{text auto} tactic from noticing that it is a conjunction.
+So, I define @{term packed} to be @{prop "B \<and> D"} and prevent the @{text auto} tactic from noticing that it is a conjunction.
 *}
 
 text {* The following snippet says the invariant still holds in the observed final state%

@@ -770,16 +770,25 @@ stays the same or becomes empty.  It also proves that no annotations fail, but
 there are no annotations anyway. *}
 
 lemma check_resources_split [split] :
-"P (if check_resources v s i then X else ProgramToWorld a b c d) =
- (\<not> (\<not> check_resources v s i \<and> \<not> P (ProgramToWorld a b c d) \<or> check_resources v s i \<and> \<not> P X ))"
+"P (if check_resources v con s i then X else ProgramToWorld a b c d) =
+ (\<not> (\<not> check_resources v con s i \<and> \<not> P (ProgramToWorld a b c d) \<or> check_resources v con s i \<and> \<not> P X ))"
 apply(simp only: if_splits(2))
 apply(auto)
 done
 
 lemma discard_check_resources [dest!] :
-"check_resources v s i \<Longrightarrow> True"
+"check_resources v c s i \<Longrightarrow> True"
 apply(auto)
 done
+
+declare subtract_gas.simps [simp]
+        predictGas_def [simp]
+        C_def [simp]
+        Cmem_def [simp]
+        venv_stack_default_def [simp]
+        thirdComponentOfC.simps [simp]
+        venv_next_instruction_default_def [simp]
+
 
 lemma deed_keeps_invariant :
 "no_assertion_failure deed_inv"
@@ -1182,8 +1191,11 @@ apply(drule star_case; auto)
  apply(case_tac steps; auto)
 done
 
-text {* It takes 45 minutes to compile this proof on my machine.  Ten minutes
+text {* It takes 4 hours to compile this proof on my machine.  Ten minutes
 are spent translating the list of instructions into an AVL tree.
-Most of the rest is spent on following the proofs of the last two lemmata. *}
+Most of the rest is spent on following the proofs of the last two lemmata.
+Currently it's dealing with out-of-gas failures that can happen at any step.
+This needs to be abstracted away.
+*}
 
 end

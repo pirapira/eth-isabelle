@@ -1649,10 +1649,37 @@ let venv_recipient v c =
   | _ -> 0
   end
 
-val predictGas : variable_env -> constant_env -> int
-let predictGas v c =
-  let new_memory_consumption = 0 (* to be adjusted *) in
-  C v.venv_memory_usage new_memory_consumption (venv_next_instruction_default v c) (venv_stack_default 0 v) (venv_stack_default 1 v) (venv_stack_default 2 v) (venv_stack_default 3 v)
+val new_memory_consumption : inst -> variable_env -> int
+let new_memory_consumption i v =
+  match i with
+  | Arith SHA3 -> M v.venv_memory_usage (venv_stack_default 0 v) (venv_stack_default 1 v)
+  | Memory CALLDATACOPY ->
+    M v.venv_memory_usage (venv_stack_default 0 v) (venv_stack_default 2 v)
+  | Memory CODECOPY ->
+    M v.venv_memory_usage (venv_stack_default 0 v) (venv_stack_default 1 v)
+  | Memory EXTCODECOPY ->
+    M v.venv_memory_usage (venv_stack_default 1 v) (venv_stack_default 3 v)
+  | Memory MLOAD ->
+    M v.venv_memory_usage (venv_stack_default 0 v) 32
+  | Memory MSTORE ->
+    M v.venv_memory_usage (venv_stack_default 0 v) 32
+  | Memory MSTORE8 ->
+    M v.venv_memory_usage (venv_stack_default 0 v) 1
+  | Misc CREATE ->
+    M v.venv_memory_usage (venv_stack_default 1 v) (venv_stack_default 2 v)
+  | Misc CALL ->
+    M (M v.venv_memory_usage (venv_stack_default 3 v) (venv_stack_default 4 v)) (venv_stack_default 5 v) (venv_stack_default 6 v)
+  | Misc CALLCODE ->
+    M (M v.venv_memory_usage (venv_stack_default 3 v) (venv_stack_default 4 v)) (venv_stack_default 5 v) (venv_stack_default 6 v)
+  | Misc DELEGATECALL ->
+    M (M v.venv_memory_usage (venv_stack_default 2 v) (venv_stack_default 3 v)) (venv_stack_default 4 v) (venv_stack_default 5 v)
+  | Misc RETURN ->
+    M v.venv_memory_usage (venv_stack_default 0 v) (venv_stack_default 1 v)
+  end
+
+val predictGas : inst -> variable_env -> constant_env -> int
+let predictGas i v c =
+  C v.venv_memory_usage (new_memory_consumption i v) (venv_next_instruction_default v c) (venv_stack_default 0 v) (venv_stack_default 1 v) (venv_stack_default 2 v) (venv_stack_default 3 v)
    	(not (v.venv_account_existence (venv_recipient v c))) (v.venv_storage (venv_stack_default 0 v)) (venv_stack_default 1 v) (v.venv_gas)
 
 val check_resources : variable_env -> constant_env -> list w256 -> inst -> bool
@@ -1660,7 +1687,7 @@ let check_resources v c s i =
   match inst_stack_numbers i with
   | (consumed, produced) ->
     (intFromNat (length s) + produced - consumed <= 1024) &&
-    predictGas v c <= v.venv_gas
+    predictGas i v c <= v.venv_gas
   end
 
 val subtract_gas : int -> instruction_result -> instruction_result
@@ -1678,7 +1705,7 @@ let subtract_gas consumption orig =
 (* on the execution environments. *)
 val instruction_sem : variable_env -> constant_env -> inst -> instruction_result
 let instruction_sem v c inst =
-  subtract_gas (predictGas v c)
+  subtract_gas (predictGas inst v c)
   (match inst with
   | Stack (PUSH_N lst) -> stack_0_1_op v c (word_of_bytes (constant_mark lst))
   | Unknown _ -> instruction_failure_result v
@@ -1776,7 +1803,7 @@ let instruction_sem v c inst =
 	  (* Since I cannot guarantee anything about DELEGATECALL, I choose immediate failure. *)
 	  InstructionAnnotationFailure
   | Info GAS -> stack_0_1_op v c (gas v)
-  | Memory MSIZE -> stack_0_1_op v c (word256FromInt v.venv_memory_usage)
+  | Memory MSIZE -> stack_0_1_op v c (32 * word256FromInt v.venv_memory_usage)
   end)
 
 (* subsection {* Programs' Answer to the World *} *)
@@ -1837,7 +1864,7 @@ let rec program_sem v c tiny_step remaining_steps = match remaining_steps with
       match instruction_sem v c i with
       | InstructionContinue new_v ->
          (strict_if (new_v.venv_pc > v.venv_pc)
-           (blocked_program_sem new_v c (tiny_step - 1) (remaining_steps))
+           (blocked_program_sem new_v c (tiny_step - 1) (remaining_steps + 1 ))
            (blocked_program_sem new_v c c.cenv_program.program_length remaining_steps))
       | InstructionToWorld a st bal opt_pushed_v -> ProgramToWorld a st bal opt_pushed_v
       | _ -> ProgramInvalid
