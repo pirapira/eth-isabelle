@@ -1733,7 +1733,7 @@ let instruction_sem v c inst =
   | Bits inst_AND -> stack_2_1_op v c (fun a b -> a land b)
   | Bits inst_OR -> stack_2_1_op v c (fun a b -> a lor b)
   | Bits inst_XOR -> stack_2_1_op v c (fun a b -> a lxor b)
-  | Bits inst_NOT -> stack_1_1_op v c (fun a -> ~a)
+  | Bits inst_NOT -> stack_1_1_op v c (fun a -> lnot a)
   | Bits BYTE ->
 	  stack_2_1_op v c get_byte
   | Sarith SDIV -> stack_2_1_op v c
