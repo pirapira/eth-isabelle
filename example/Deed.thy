@@ -781,15 +781,6 @@ lemma discard_check_resources [dest!] :
 apply(auto)
 done
 
-declare subtract_gas.simps [simp]
-        predictGas_def [simp]
-        C_def [simp]
-        Cmem_def [simp]
-        venv_stack_default_def [simp]
-        thirdComponentOfC.simps [simp]
-        venv_next_instruction_default_def [simp]
-
-
 lemma deed_keeps_invariant :
 "no_assertion_failure deed_inv"
 -- "The proof is a brute-force case analysis.
