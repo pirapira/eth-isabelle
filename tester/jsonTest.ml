@@ -1,8 +1,25 @@
 open Yojson.Basic
 
+type env =
+  { currentCoinbase : string
+  ; currentDifficulty : string
+  ; currentGasLimit : string
+  ; currentNumber : string
+  ; currentTimestamp : string
+  }
+
+let parse_env (j : json) : env =
+  Util.(
+    { currentCoinbase = to_string (member "currentCoinbase" j)
+    ; currentDifficulty = to_string (member "currentDifficulty" j)
+    ; currentGasLimit = to_string (member "currentGasLimit" j)
+    ; currentNumber = to_string (member "currentNumber" j)
+    ; currentTimestamp = to_string (member "currentTimestamp" j)
+    })
+
 type test_case =
-  { callcreates : json
-  ; env : json
+  { callcreates : json list
+  ; env : env
   ; exec : json
   ; gas : json
   ; logs : json
@@ -13,8 +30,8 @@ type test_case =
 
 let parse_test_case (j : json) : test_case =
   Util.(
-  { callcreates = member "callcreates" j
-  ; env = member "env" j
+  { callcreates = to_list (member "callcreates" j)
+  ; env = parse_env (member "env" j)
   ; exec = member "exec" j
   ; gas = member "gas" j
   ; logs = member "logs" j
