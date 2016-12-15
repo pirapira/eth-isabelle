@@ -1227,7 +1227,7 @@ let call v c = match v.venv_stack with
         v.venv_storage
         (update_balance c.cenv_this (fun orig -> orig - e2) v.venv_balance)
         (Just (* saving the variable environment for timing *)
-          (<| venv_advance_pc c v with
+          (<| (venv_advance_pc c v) with
            venv_stack = rest;
            venv_balance = update_balance c.cenv_this (fun orig -> orig - e2) v.venv_balance;
            venv_memory_usage = M (M v.venv_memory_usage e3 e4) e5 e6 |>, uint e5, uint e6))
@@ -1251,7 +1251,7 @@ let delegatecall v c = match v.venv_stack with
               callarg_output_size = e6 |>)
           v.venv_storage v.venv_balance
           (Just (* save the variable environment for returns *)
-            (<| venv_advance_pc c v with venv_stack = rest; venv_memory_usage = M (M v.venv_memory_usage e3 e4) e5 e6 |>, uint e5, uint e6))
+            (<| (venv_advance_pc c v) with venv_stack = rest; venv_memory_usage = M (M v.venv_memory_usage e3 e4) e5 e6 |>, uint e5, uint e6))
   | _ -> instruction_failure_result v
 end
 
@@ -1274,7 +1274,7 @@ let callcode v c = match v.venv_stack with
           v.venv_storage
           (update_balance c.cenv_this (fun orig -> orig - e2) v.venv_balance)
           (Just (* saving the variable environment *)
-            (<| venv_advance_pc c v with
+            (<| (venv_advance_pc c v) with
                   venv_stack = rest;
                   venv_memory_usage = M (M v.venv_memory_usage e3 e4) e5 e6;
                   venv_balance = update_balance c.cenv_this (fun orig -> orig - e2) v.venv_balance |>, uint e5, uint e6))
@@ -1293,7 +1293,7 @@ let create v c = match v.venv_stack with
              <| createarg_value = vl; createarg_code = code |>)
             v.venv_storage new_balance
             (Just (* when returning to this invocation, use the following variable environment *)
-              (<| venv_advance_pc c v with venv_stack = rest;
+              (<| (venv_advance_pc c v) with venv_stack = rest;
                  venv_balance = new_balance;
                  venv_memory_usage = M v.venv_memory_usage code_start code_len |>, 0, 0))
   | _ -> instruction_failure_result v
@@ -1486,7 +1486,7 @@ let Cmem a = Gmemory * a + (a * a / 512)
 (* Csstore is the function denoted as C_\text{\tiny SSTORE} in the yellow paper. *)
 (* However, it takes the original word in the storage and the newly stored word. *)
 val Csstore : w256 -> w256 -> int
-let Csstore orig new = if not (new = 0) && orig = 0 then Gsset else Gsreset
+let Csstore orig newer = if not (newer = 0) && orig = 0 then Gsset else Gsreset
 
 (* Csuicide is the function denoted as C_\text{\tiny SUICIDE} in the yellow paper. *)
 (* However, it takes a boolean indicating new account creation. *)
@@ -1543,9 +1543,9 @@ let rec log256floor x =
 (* thirdComponentOfC is the third component in the definition of C (the gas function). *)
 (* However, it takes the next instruction, the four topmost stack elements, a boolean indicating emptiness of the recipient, an original word of sstore, a new word of sstore, and the remaining gas of the caller. *)
 val thirdComponentOfC : inst -> w256 -> w256 -> w256 -> w256 -> bool -> w256 -> w256 -> int -> int
-let thirdComponentOfC i s0 s1 s2 s3 recipient_empty orig new remaining_gas =
+let thirdComponentOfC i s0 s1 s2 s3 recipient_empty orig_val new_val remaining_gas =
   match i with
-  | Storage SSTORE -> Csstore orig new
+  | Storage SSTORE -> Csstore orig_val new_val
   | Arith EXP -> Gexp + if s1 = 0 then 0 else Gexpbyte * (1 + log256floor (uint s1))
   | Memory CALLDATACOPY -> Gverylow + Gcopy * ((uint s2 + 31) / 32)
   | Memory EXTCODECOPY -> Gextcode + Gcopy * ((uint s3 + 31) / 32)
@@ -1621,9 +1621,9 @@ let thirdComponentOfC i s0 s1 s2 s3 recipient_empty orig new remaining_gas =
 (* C is the function defined in the yellow paper as C.  This represents the gas consumption of an instruction. *)
 (* It takes the new memory consumption, the old memory consumption, the next instruction the four topmost stack elements, a boolean indicating emptiness of the recipient, an original word of sstore, a new word of sstore, and the remaining gas of the caller. *)
 val C : int -> int -> inst -> w256 -> w256 -> w256 -> w256 -> bool -> w256 -> w256 -> int -> int
-let C old_memory_consumption new_memory_consumption i s0 s1 s2 s3 recipient_empty orig new remaining_gas =
+let C old_memory_consumption new_memory_consumption i s0 s1 s2 s3 recipient_empty orig new_val remaining_gas =
   Cmem new_memory_consumption  - Cmem old_memory_consumption +
-  thirdComponentOfC i s0 s1 s2 s3 recipient_empty orig new remaining_gas
+  thirdComponentOfC i s0 s1 s2 s3 recipient_empty orig new_val remaining_gas
 
 val venv_next_instruction_default : variable_env -> constant_env -> inst
 let venv_next_instruction_default v c =
