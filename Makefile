@@ -26,7 +26,7 @@ lem-thy: lem/Block.thy lem/Evm.thy lem/EvmNonExec.thy lem/Keccak.thy lem/Rlp.thy
 
 lem-pdf: lem/Evm-use_inc.pdf lem/Block-use_inc.pdf lem/EvmNonExec-use_inc.pdf lem/Keccak-use_inc.pdf lem/Rlp-use_inc.pdf
 
-lem-ocaml: lem/evm.ml
+lem-ocaml: lem/evm.ml lem/word256.ml lem/word160.ml lem/word8.ml
 
 lem/block.lem: lem/evm.lem
 	touch lem/block.lem
@@ -51,6 +51,15 @@ lem/Evm.thy: lem/evm.lem
 
 lem/evm.ml: lem/evm.lem
 	lem -ocaml lem/evm.lem
+
+lem/word256.ml: lem/word256.lem
+	lem -ocaml lem/word256.lem
+
+lem/word160.ml: lem/word160.lem
+	lem -ocaml lem/word160.lem
+
+lem/word8.ml: lem/word8.lem
+	lem -ocaml lem/word8.lem
 
 lem/Evm-use_inc.tex lem/Evm-inc.tex: lem/evm.lem
 	lem -tex lem/evm.lem

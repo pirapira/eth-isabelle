@@ -1,5 +1,5 @@
-All files except the .thy files in [lem] directory are distributed under Apache License Version 2.0.
-Those .thy files in [lem] directory are distributed under the terms in [lem/lem-license].
+All files except the [.ml] and [.thy] files in [lem] directory are distributed under Apache License Version 2.0.
+Those [.ml] and [.thy] files in [lem] directory are distributed under the terms in [lem/lem-license].
 
 
 
