@@ -46,7 +46,7 @@ type test_case =
   ; exec : exec
   ; gas : string
   ; logs : json list
-  ; out : json
+  ; out : string
   ; post : json
   ; pre : json
   }
@@ -58,7 +58,7 @@ let parse_test_case (j : json) : test_case =
   ; exec = parse_exec (member "exec" j)
   ; gas = to_string (member "gas" j)
   ; logs = to_list (member "logs" j)
-  ; out = member "out" j
+  ; out = to_string (member "out" j)
   ; post = member "post" j
   ; pre = member "pre" j
   })
