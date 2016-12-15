@@ -44,7 +44,7 @@ type test_case =
   { callcreates : json list
   ; env : env
   ; exec : exec
-  ; gas : json
+  ; gas : string
   ; logs : json
   ; out : json
   ; post : json
@@ -56,7 +56,7 @@ let parse_test_case (j : json) : test_case =
   { callcreates = to_list (member "callcreates" j)
   ; env = parse_env (member "env" j)
   ; exec = parse_exec (member "exec" j)
-  ; gas = member "gas" j
+  ; gas = to_string (member "gas" j)
   ; logs = member "logs" j
   ; out = member "out" j
   ; post = member "post" j
