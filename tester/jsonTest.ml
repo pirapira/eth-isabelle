@@ -40,6 +40,24 @@ let parse_exec (j : json) : exec =
     ; value = to_string (member "value" j)
     })
 
+type account_state =
+  { balance : string
+  ; code : string
+  ; nonce : string
+  ; storage : json
+  }
+
+let parse_account_state (j : json) : account_state =
+  Util.(
+  { balance = to_string (member "balance" j)
+  ; code = to_string (member "code" j)
+  ; nonce = to_string (member "nonce" j)
+  ; storage = member "storage" j
+  })
+
+let parse_states (asc : (string * json) list) : (string * account_state) list =
+  List.map (fun (label, j) -> (label, parse_account_state j)) asc
+
 type test_case =
   { callcreates : json list
   ; env : env
@@ -47,8 +65,8 @@ type test_case =
   ; gas : string
   ; logs : json list
   ; out : string
-  ; post : (string * json) list
-  ; pre : (string * json) list
+  ; post : (string * account_state) list
+  ; pre : (string * account_state) list
   }
 
 let parse_test_case (j : json) : test_case =
@@ -59,8 +77,8 @@ let parse_test_case (j : json) : test_case =
   ; gas = to_string (member "gas" j)
   ; logs = to_list (member "logs" j)
   ; out = to_string (member "out" j)
-  ; post = to_assoc (member "post" j)
-  ; pre = to_assoc (member "pre" j)
+  ; post = parse_states (to_assoc (member "post" j))
+  ; pre = parse_states (to_assoc (member "pre" j))
   })
 
 let () =
