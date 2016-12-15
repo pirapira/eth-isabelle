@@ -47,8 +47,8 @@ type test_case =
   ; gas : string
   ; logs : json list
   ; out : string
-  ; post : json
-  ; pre : json
+  ; post : (string * json) list
+  ; pre : (string * json) list
   }
 
 let parse_test_case (j : json) : test_case =
@@ -59,8 +59,8 @@ let parse_test_case (j : json) : test_case =
   ; gas = to_string (member "gas" j)
   ; logs = to_list (member "logs" j)
   ; out = to_string (member "out" j)
-  ; post = member "post" j
-  ; pre = member "pre" j
+  ; post = to_assoc (member "post" j)
+  ; pre = to_assoc (member "pre" j)
   })
 
 let () =
