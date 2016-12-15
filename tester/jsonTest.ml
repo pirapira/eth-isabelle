@@ -69,27 +69,51 @@ type test_case =
   { callcreates : json list
   ; env : env
   ; exec : exec
-  ; gas : string
-  ; logs : json list
-  ; out : string
-  ; post : (string * account_state) list
+  ; gas : string option
+  ; logs : json list option
+  ; out : string option
+  ; post : (string * account_state) list option
   ; pre : (string * account_state) list
   }
 
 let parse_test_case (j : json) : test_case =
   Util.(
-  { callcreates = to_list (member "callcreates" j)
+  { callcreates =
+      (try
+        to_list (member "callcreates" j)
+       with Yojson.Basic.Util.Type_error _ ->
+        []
+      )
   ; env = parse_env (member "env" j)
   ; exec = parse_exec (member "exec" j)
-  ; gas = to_string (member "gas" j)
-  ; logs = to_list (member "logs" j)
-  ; out = to_string (member "out" j)
-  ; post = parse_states (to_assoc (member "post" j))
+  ; gas =
+      (try Some (to_string (member "gas" j))
+       with Yojson.Basic.Util.Type_error _ -> None)
+  ; logs =
+      (try Some (to_list (member "logs" j))
+       with Yojson.Basic.Util.Type_error _ -> None)
+  ; out =
+      (try Some (to_string (member "out" j))
+       with Yojson.Basic.Util.Type_error _ -> None)
+  ; post =
+      (try
+         Some (parse_states (to_assoc (member "post" j)))
+       with Yojson.Basic.Util.Type_error _ ->
+         None
+      )
   ; pre = parse_states (to_assoc (member "pre" j))
   })
 
 let () =
   let vm_arithmetic_test : json = Yojson.Basic.from_file "../tests/VMTests/vmArithmeticTest.json" in
+  let vm_arithmetic_test_assoc : (string * json) list = Util.to_assoc vm_arithmetic_test in
+  let () =
+    List.iter (fun (label, elm) ->
+        let () = Printf.printf "%s\n" label in
+        let case : test_case = parse_test_case elm in
+        ()
+      ) vm_arithmetic_test_assoc in
+  let vm_arithmetic_test : json = Yojson.Basic.from_file "../tests/VMTests/vmIOandFlowOperationsTest.json" in
   let vm_arithmetic_test_assoc : (string * json) list = Util.to_assoc vm_arithmetic_test in
   let () =
     List.iter (fun (label, elm) ->
