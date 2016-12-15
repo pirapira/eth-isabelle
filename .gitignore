@@ -18,3 +18,6 @@ lem/*.log
 lem/*.pdf
 lem/*.aux
 lem/evm.ml
+tester/*.native
+tester/_build
+output/

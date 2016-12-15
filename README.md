@@ -18,6 +18,7 @@ When you see `\<Rightarrow>` in the source, try using the [Isabelle2016](https:/
 * [OCaml](http://www.ocaml.org/) 4.02.3
 * [opam](https://opam.ocaml.org/) 1.2.2
 * yojson: use `opam install yojson`
+* bignum: use `opam install bignum`
 
 ## Makefile goals
 
