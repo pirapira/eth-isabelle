@@ -40,11 +40,18 @@ let parse_exec (j : json) : exec =
     ; value = to_string (member "value" j)
     })
 
+type storage = (string * string) list
+
+let parse_storage (j : json) : storage =
+  Util.(
+    List.map (fun (label, content) -> (label, to_string content)) (to_assoc j)
+  )
+
 type account_state =
   { balance : string
   ; code : string
   ; nonce : string
-  ; storage : json
+  ; storage : storage
   }
 
 let parse_account_state (j : json) : account_state =
@@ -52,7 +59,7 @@ let parse_account_state (j : json) : account_state =
   { balance = to_string (member "balance" j)
   ; code = to_string (member "code" j)
   ; nonce = to_string (member "nonce" j)
-  ; storage = member "storage" j
+  ; storage = parse_storage (member "storage" j)
   })
 
 let parse_states (asc : (string * json) list) : (string * account_state) list =
