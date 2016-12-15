@@ -17,10 +17,33 @@ let parse_env (j : json) : env =
     ; currentTimestamp = to_string (member "currentTimestamp" j)
     })
 
+type exec =
+  { address : string
+  ; caller : string
+  ; code : string
+  ; data : string
+  ; gas : string
+  ; gasPrice : string
+  ; origin : string
+  ; value : string
+  }
+
+let parse_exec (j : json) : exec =
+  Util.(
+    { address = to_string (member "address" j)
+    ; caller = to_string (member "caller" j)
+    ; code = to_string (member "code" j)
+    ; data = to_string (member "data" j)
+    ; gas = to_string (member "gas" j)
+    ; gasPrice = to_string (member "gasPrice" j)
+    ; origin = to_string (member "origin" j)
+    ; value = to_string (member "value" j)
+    })
+
 type test_case =
   { callcreates : json list
   ; env : env
-  ; exec : json
+  ; exec : exec
   ; gas : json
   ; logs : json
   ; out : json
@@ -32,7 +55,7 @@ let parse_test_case (j : json) : test_case =
   Util.(
   { callcreates = to_list (member "callcreates" j)
   ; env = parse_env (member "env" j)
-  ; exec = member "exec" j
+  ; exec = parse_exec (member "exec" j)
   ; gas = member "gas" j
   ; logs = member "logs" j
   ; out = member "out" j
