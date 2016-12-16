@@ -2,7 +2,7 @@ open Yojson.Basic
 
 type env =
   { currentCoinbase : string
-  ; currentDifficulty : string
+  ; currentDifficulty : Big_int.big_int
   ; currentGasLimit : string
   ; currentNumber : string
   ; currentTimestamp : string
@@ -11,11 +11,20 @@ type env =
 let parse_env (j : json) : env =
   Util.(
     { currentCoinbase = to_string (member "currentCoinbase" j)
-    ; currentDifficulty = to_string (member "currentDifficulty" j)
+    ; currentDifficulty = Big_int.big_int_of_string (to_string (member "currentDifficulty" j))
     ; currentGasLimit = to_string (member "currentGasLimit" j)
     ; currentNumber = to_string (member "currentNumber" j)
     ; currentTimestamp = to_string (member "currentTimestamp" j)
     })
+
+
+let format_env (e : env) : Easy_format.t =
+  let open Easy_format in
+  let lst : Easy_format.t list =
+    [ Label ((Atom ("currentCoinbase", atom), label), Atom (e.currentCoinbase, atom))
+    ; Label ((Atom ("currentDifficulty", atom), label), Atom (Big_int.string_of_big_int e.currentDifficulty, atom))
+    ] in
+  List (("{", ",", "}", list), lst)
 
 type exec =
   { address : string
@@ -77,6 +86,7 @@ type test_case =
   }
 
 let parse_test_case (j : json) : test_case =
+  let () = Easy_format.Pretty.to_stdout (format_env (parse_env (Util.member "env" j))) in
   Util.(
   { callcreates =
       (try
