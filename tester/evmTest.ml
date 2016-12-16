@@ -6,7 +6,7 @@ let pad_left (elm : 'a) (len : int) (orig : 'a list) =
   let padding = BatList.make remaining elm in
   padding @ orig
 
-let word256_of_big_int (b : Big_int.big_int) =
+let word_of_big_int (target_len : int) (b : Big_int.big_int) =
   let () = if BatBig_int.(lt_big_int b zero_big_int) then failwith "negative number cannot be turned into word256" else () in
   let binary : string = BatBig_int.to_string_in_binary b in
   (* should be a sequence of 0s and 1s *)
@@ -18,8 +18,13 @@ let word256_of_big_int (b : Big_int.big_int) =
         | _ -> failwith "neither 0 or 1"
       ) (BatString.to_list binary)
     in
-  let (h :: tl) = pad_left false 256 bl in
+  let (h :: tl) = pad_left false target_len bl in
+  (h, tl)
+
+let word256_of_big_int (b : Big_int.big_int) =
+  let (h, tl) = word_of_big_int 256 b in
   Word256.W256 (h, tl)
+
 
 let big_int_of_word256 (Word256.W256 (h, tl)) : Big_int.big_int =
   let bl = h :: tl in
