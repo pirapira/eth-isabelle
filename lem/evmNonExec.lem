@@ -17,7 +17,7 @@ let respond_to_call_correctly c a =
              r = ProgramStepRunOut ||
              (* the result matches the specification *)
              (exists pushed_venv st bal.
-              r = ProgramToWorld resulting_action st bal pushed_venv &&
+              r = ProgramToEnvironment resulting_action st bal pushed_venv &&
               final_state_pred
                 (update_account_state a resulting_action st bal pushed_venv))
            )))
@@ -31,7 +31,7 @@ let respond_to_return_correctly r a =
           (let r = program_sem initial_venv (build_cenv a) a.account_code.program_length steps in
            r = ProgramStepRunOut ||
            (exists pushed_venv st bal.
-            r = ProgramToWorld resulting_action st bal pushed_venv &&
+            r = ProgramToEnvironment resulting_action st bal pushed_venv &&
             final_state_pred
               (update_account_state (account_state_pop_ongoing_call a) resulting_action st bal pushed_venv))
           )))
@@ -45,12 +45,12 @@ let respond_to_fail_correctly f a =
         ( let r = program_sem initial_venv (build_cenv a) a.account_code.program_length steps in
           r = ProgramStepRunOut ||
           (exists pushed_venv st bal.
-             r = ProgramToWorld resulting_action st bal pushed_venv &&
+             r = ProgramToEnvironment resulting_action st bal pushed_venv &&
              final_state_pred (update_account_state (account_state_pop_ongoing_call a) resulting_action st bal pushed_venv)))))
 
-indreln [account_state_responds_to_world : (account_state -> bool) -> response_to_world -> bool]
+indreln [account_state_responds_to_environment : (account_state -> bool) -> response_to_environment -> bool]
 AccountStep: forall precond c r f.
   (forall a. precond a --> respond_to_call_correctly c a) &&
    (forall a. precond a --> respond_to_return_correctly r a) &&
    (forall a. precond a --> respond_to_fail_correctly f a) ==>
-   account_state_responds_to_world precond <| when_called = c; when_returned = r; when_failed = f |>
+   account_state_responds_to_environment precond <| when_called = c; when_returned = r; when_failed = f |>

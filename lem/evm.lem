@@ -767,24 +767,23 @@ let Gblockhash = 20
 
 (* section "A Contract Centric View of the EVM" *)
 
-(* subsection "The Interaction between the Contract and the World" *)
+(* subsection "The Interaction between the Contract and the Environment" *)
 
 (* In this development, the EVM execution is seen as an interaction between a single contract *)
-(* invocation *)
-(* and the rest of the world.  The world can call into the contract.  The contract can reply by just *)
+(* and the environment.  The environment can call into the contract.  The contract can reply by just *)
 (* finishing or failing, but it can also call an account\footnote{This might be the same account as our *)
 (* invocation, but still the deeper calls is part of the world.}.  When our contract execution calls an account, *)
-(* this is seen as an action towards the world, because the world then has to decide the *)
-(* result of this call.  The world can say that the call finished successfully or exceptionally. *)
-(* The world can also say that the call resulted in a reentrancy.  In other words, *)
-(* the world can call the contract again and change the storage and the balance of our contract. *)
-(* The whole process is captured as a game between the world and the contract. *)
+(* this is seen as an action towards the environment, because the environment then has to decide the *)
+(* result of this call.  The environment can say that the call finished successfully or exceptionally. *)
+(* The environment can also say that the call resulted in a reentrancy.  In other words, *)
+(* the environment can call the contract again and change the storage and the balance of our contract. *)
+(* The whole process is captured as a game between the environment and the contract. *)
 
-(* subsubsection "The World's Moves" *)
+(* subsubsection "The Environment's Moves" *)
 
-(* The world can call into our contract. *)
-(* Then the world provides our\footnote{ *)
-(* The contract's behavior is controlled by a concrete code, but the world's behavior is unrestricted.*)
+(* The environment can call into our contract. *)
+(* Then the environment provides our\footnote{ *)
+(* The contract's behavior is controlled by a concrete code, but the environment's behavior is unrestricted.*)
 (* So when I get emotional I call the contract ``our'' contract. *)
 (* } contract *)
 (* with the following information. *)
@@ -799,9 +798,9 @@ type call_env = <|
   callenv_balance : address -> w256; (* the balances of all accounts. *)
 |>
 
-(* After our contract calls accounts, the world can make those accounts *)
+(* After our contract calls accounts, the environment can make those accounts *)
 (* return into our contracts.  The return value is not under control of our current *)
-(* contract, so it is the world's move.  In that case, the world provides the *)
+(* contract, so it is the environment's move.  In that case, the environment provides the *)
 (* following information. *)
 
 type return_result = <|
@@ -812,17 +811,17 @@ type return_result = <|
 (* Even our account's balance (and its storage) might have changed at this moment. *)
 (* @{typ return_result} type is also used when our contract returns, as we will see. *)
 
-(* With these definitions now we can define the world's actions.  In addition to call and return, *)
+(* With these definitions now we can define the environment's actions.  In addition to call and return, *)
 (* there is another clause for failing back to the account.  This happens when our contract calls *)
 (* an account but the called account fails. *)
 
 (* When our contract deploys a smart contract, our contract should provide the following *)
 (* information. *)
 
-type world_action =
-| WorldCall of call_env (* the world calls into the account *)
-| WorldRet of return_result (* the world returns back to the account *)
-| WorldFail (* the world fails back to the account. *)
+type environment_action =
+| EnvironmentCall of call_env (* the environment calls into the account *)
+| EnvironmentRet of return_result (* the environment returns back to the account *)
+| EnvironmentFail (* the environment fails back to the account. *)
 
 
 (* subsubsection "The Contract's Moves" *)
@@ -986,7 +985,7 @@ type constant_env = <|
 type instruction_result =
 | InstructionContinue of variable_env (* the execution should continue. *)
 | InstructionAnnotationFailure (* the annotation turned out to be false. *)
-| InstructionToWorld of
+| InstructionToEnvironment of
   (* the execution has stopped; either for the moment just calling out another account, or *)
   (* finally finishing the current invocation *)
     contract_action   (* the contract's move *)
@@ -997,12 +996,12 @@ type instruction_result =
 (* When the contract fails, the result of the instruction always looks like this: *)
 val instruction_failure_result : variable_env -> instruction_result
 let instruction_failure_result v =
-  InstructionToWorld ContractFail v.venv_storage_at_call v.venv_balance_at_call Nothing
+  InstructionToEnvironment ContractFail v.venv_storage_at_call v.venv_balance_at_call Nothing
 
 (* When the contract returns, the result of the instruction always looks like this: *)
 val instruction_return_result : list byte -> variable_env -> instruction_result
 let instruction_return_result x v =
-  InstructionToWorld (ContractReturn x) v.venv_storage v.venv_balance Nothing
+  InstructionToEnvironment (ContractReturn x) v.venv_storage v.venv_balance Nothing
 
 (* subsection {* Useful Functions for Defining EVM Operations *} *)
 
@@ -1216,7 +1215,7 @@ let call v c = match v.venv_stack with
  | e0 :: e1 :: e2 :: e3 :: e4 :: e5 :: e6 :: rest ->
      if word256ULT (v.venv_balance c.cenv_this) e2 then instruction_failure_result v
      else
-       InstructionToWorld (ContractCall
+       InstructionToEnvironment (ContractCall
          <| callarg_gas = e0;
             callarg_code = w256_to_address e1;
             callarg_recipient = w256_to_address e1;
@@ -1240,7 +1239,7 @@ let delegatecall v c = match v.venv_stack with
  | e0 :: e1 :: e3 :: e4 :: e5 :: e6 :: rest ->
     if word256ULT (v.venv_balance c.cenv_this) v.venv_value_sent then instruction_failure_result v
      else
-       InstructionToWorld
+       InstructionToEnvironment
          (ContractCall
            <| callarg_gas = e0;
               callarg_code = w256_to_address e1;
@@ -1262,7 +1261,7 @@ let callcode v c = match v.venv_stack with
     if word256ULT (v.venv_balance c.cenv_this) e2 then
        instruction_failure_result v
      else
-       InstructionToWorld
+       InstructionToEnvironment
          (ContractCall
            <| callarg_gas = e0;
               callarg_code = w256_to_address e1;
@@ -1288,7 +1287,7 @@ let create v c = match v.venv_stack with
       if word256ULT (v.venv_balance c.cenv_this) vl then instruction_failure_result v else
       let code = cut_memory code_start (word256ToNat code_len) v.venv_memory in
       let new_balance = update_balance c.cenv_this (fun orig -> orig - vl) v.venv_balance in
-      InstructionToWorld
+      InstructionToEnvironment
            (ContractCreate
              <| createarg_value = vl; createarg_code = code |>)
             v.venv_storage new_balance
@@ -1312,7 +1311,7 @@ val ret : variable_env -> constant_env -> instruction_result
 let ret v _ =  match v.venv_stack with
  | e0 :: e1 :: _ ->
      let new_v = <| v with venv_memory_usage = M v.venv_memory_usage e0 e1 |> in
-     InstructionToWorld (ContractReturn (venv_returned_bytes new_v))
+     InstructionToEnvironment (ContractReturn (venv_returned_bytes new_v))
                            v.venv_storage v.venv_balance
                            Nothing (* No possibility of ever returning to this invocation. *)
  | _ -> instruction_failure_result v
@@ -1320,7 +1319,7 @@ end
 
 (* STOP is simpler than RETURN: *)
 val stop : variable_env -> constant_env -> instruction_result
-let stop v _ = InstructionToWorld (ContractReturn []) v.venv_storage v.venv_balance Nothing
+let stop v _ = InstructionToEnvironment (ContractReturn []) v.venv_storage v.venv_balance Nothing
 
 (* POP removes the topmost element of the stack: *)
 val pop : variable_env -> constant_env -> instruction_result
@@ -1471,7 +1470,7 @@ let suicide v c = match v.venv_stack with
         if addr = c.cenv_this then 0 else
         if addr = w256_to_address dst then v.venv_balance c.cenv_this + v.venv_balance addr else
         v.venv_balance addr in
-     InstructionToWorld ContractSuicide v.venv_storage new_balance Nothing
+     InstructionToEnvironment ContractSuicide v.venv_storage new_balance Nothing
  | _ -> instruction_failure_result v
 end
 
@@ -1697,9 +1696,9 @@ let subtract_gas consumption orig =
   | InstructionContinue v ->
     InstructionContinue (<| v with venv_gas = v.venv_gas - consumption |>)
   | InstructionAnnotationFailure -> InstructionAnnotationFailure
-  | InstructionToWorld act st bal Nothing -> InstructionToWorld act st bal Nothing
-  | InstructionToWorld act st bal (Just (v, dst, len)) ->
-    InstructionToWorld act st bal (Just (<|v with venv_gas = v.venv_gas - consumption|>, dst, len))
+  | InstructionToEnvironment act st bal Nothing -> InstructionToEnvironment act st bal Nothing
+  | InstructionToEnvironment act st bal (Just (v, dst, len)) ->
+    InstructionToEnvironment act st bal (Just (<|v with venv_gas = v.venv_gas - consumption|>, dst, len))
   end
 
 (* Finally, using the above definitions, I can define a function that operates an instruction *)
@@ -1807,7 +1806,7 @@ let instruction_sem v c inst =
   | Memory MSIZE -> stack_0_1_op v c (32 * word256FromInt v.venv_memory_usage)
   end)
 
-(* subsection {* Programs' Answer to the World *} *)
+(* subsection {* Programs' Answer to the Environment *} *)
 
 (* Execution of a program is harder than that of instructions.  The biggest difficulty is that *)
 (* the length of the execution is arbitrary.  In Isabelle/HOL all functions must terminate, so I need *)
@@ -1818,8 +1817,8 @@ let instruction_sem v c inst =
 
 type program_result =
 | ProgramStepRunOut (* the artificial step counter has run out *)
-| ProgramToWorld of contract_action * storage * (address -> w256) * maybe (variable_env * int * int)
-  (** the program stopped execution because an instruction wants to talk to the world
+| ProgramToEnvironment of contract_action * storage * (address -> w256) * maybe (variable_env * int * int)
+  (** the program stopped execution because an instruction wants to talk to the environment
   for example because the execution returned, failed, or called an account.
   *)
 | ProgramInvalid (* an unknown instruction is found.  Maybe this should just count as
@@ -1856,7 +1855,7 @@ let rec program_sem v c tiny_step remaining_steps = match remaining_steps with
  | 0 -> ProgramStepRunOut
  | remaining_steps + 1 ->
    if tiny_step <= 0 then
-     ProgramToWorld ContractFail v.venv_storage_at_call v.venv_balance_at_call Nothing else
+     ProgramToEnvironment ContractFail v.venv_storage_at_call v.venv_balance_at_call Nothing else
    if not (check_annotations v c) then ProgramAnnotationFailure else
    match venv_next_instruction v c with
     | Nothing -> ProgramStepRunOut
@@ -1867,11 +1866,11 @@ let rec program_sem v c tiny_step remaining_steps = match remaining_steps with
          (strict_if (new_v.venv_pc > v.venv_pc)
            (blocked_program_sem new_v c (tiny_step - 1) (remaining_steps  + 1))
            (blocked_program_sem new_v c c.cenv_program.program_length remaining_steps))
-      | InstructionToWorld a st bal opt_pushed_v -> ProgramToWorld a st bal opt_pushed_v
+      | InstructionToEnvironment a st bal opt_pushed_v -> ProgramToEnvironment a st bal opt_pushed_v
       | _ -> ProgramInvalid
       end
     else
-      ProgramToWorld ContractFail v.venv_storage_at_call v.venv_balance_at_call Nothing
+      ProgramToEnvironment ContractFail v.venv_storage_at_call v.venv_balance_at_call Nothing
    end
 end
 and blocked_program_sem v c l p _ = program_sem v c l p
@@ -1911,7 +1910,7 @@ val build_cenv : account_state -> constant_env
 let build_cenv a =
   <| cenv_program = a.account_code; cenv_this = a.account_address |>
 
-(* Next we turn to the case where the world returns back to the account after the account has *)
+(* Next we turn to the case where the environment returns back to the account after the account has *)
 (* called an account.  In this case, the account should contain one ongoing execution that is waiting *)
 (* for a call to return. *)
 
@@ -1967,7 +1966,7 @@ let update_account_state prev act st bal v_opt =
 
 type contract_behavior = contract_action * (account_state -> bool)
 
-type response_to_world = <|
+type response_to_environment = <|
   when_called : call_env -> contract_behavior;
   when_returned : return_result -> contract_behavior;
   when_failed : contract_behavior;
@@ -1976,7 +1975,7 @@ type response_to_world = <|
 val empty_memory : memory
 let empty_memory = (fun _ -> 0)
 
-(* Given an account state and a call from the world *)
+(* Given an account state and a call from the environment *)
 (* we can judge if a variable environment is possible or not.*)
 (* The block state is arbitrary.  This means we verify properties that hold*)
 (* on whatever block numbers and whatever difficulties and so on.*)
@@ -1997,9 +1996,9 @@ indreln [build_venv_called : account_state -> call_env -> variable_env -> bool]
                            then bal a.account_address + env.callenv_value else bal addr);
                         (* The balance is arbitrary, except that the balance of this account
                            is as specified in the account state plus the sent amount. *)
-     venv_caller = env.callenv_caller; (* the caller is specified by the world *)
-     venv_value_sent = env.callenv_value; (* the sent value is specified by the world *)
-     venv_data_sent = env.callenv_data; (* the sent data is specified by the world *)
+     venv_caller = env.callenv_caller; (* the caller is specified by the environment *)
+     venv_value_sent = env.callenv_value; (* the sent value is specified by the environment *)
+     venv_data_sent = env.callenv_data; (* the sent data is specified by the environment *)
      venv_storage_at_call = a.account_storage; (* the snapshot of the storage is remembered in case of failure *)
      venv_balance_at_call = bal; (* the snapshot of the balance is remembered in case of failure *)
      venv_origin = origin; (* the origin of the transaction is arbitrarily chosen *)

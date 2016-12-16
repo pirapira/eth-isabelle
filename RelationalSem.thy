@@ -123,41 +123,41 @@ text "Next we specify which program results might see a return."
 fun returnable_result :: "program_result \<Rightarrow> bool"
 where
   "returnable_result ProgramStepRunOut = False"
-| "returnable_result (ProgramToWorld (ContractCall _) _ _ _) = True"
-| "returnable_result (ProgramToWorld (ContractCreate _) _ _ _) = True"
-| "returnable_result (ProgramToWorld ContractSuicide _ _ _) = False"
-| "returnable_result (ProgramToWorld ContractFail _ _ _) = False"
+| "returnable_result (ProgramToEnvironment (ContractCall _) _ _ _) = True"
+| "returnable_result (ProgramToEnvironment (ContractCreate _) _ _ _) = True"
+| "returnable_result (ProgramToEnvironment ContractSuicide _ _ _) = False"
+| "returnable_result (ProgramToEnvironment ContractFail _ _ _) = False"
 -- {* because we are not modeling nested calls here, the effect of the nested calls are modeled in
       account\_state\_return\_change *}
-| "returnable_result (ProgramToWorld (ContractReturn _) _ _ _) = False"
+| "returnable_result (ProgramToEnvironment (ContractReturn _) _ _ _) = False"
 | "returnable_result (ProgramInit _) = False"
 | "returnable_result ProgramInvalid = False"
 | "returnable_result ProgramAnnotationFailure = False"
 
 subsection {* A Round of the Game *}
 
-text {* Now we are ready to specify the world's turn. *}
+text {* Now we are ready to specify the environment's turn. *}
 
-inductive world_turn ::
+inductive environment_turn ::
 "(account_state \<Rightarrow> bool) (* The invariant of our contract*)
 \<Rightarrow> (account_state * program_result)
-   (* the account state before the world's move
+   (* the account state before the environment's move
       and the last thing our account did *)
 \<Rightarrow> (account_state * variable_env)
-   (* the account state after the world's move
+   (* the account state after the environment's move
       and the variable environment from which our contract must start. *)
-\<Rightarrow> bool (* a boolean indicating if that is a possible world's move. *)"
+\<Rightarrow> bool (* a boolean indicating if that is a possible environment's move. *)"
 where
-  world_call: -- {* the world might call our contract.  We only consider the initial invocation here
-  because the deeper reentrant invocations are considered as a part of the adversarial world. 
-  The deeper reentrant invocations are performed without the world replying to the contract. *}
+  environment_call: -- {* the environment might call our contract.  We only consider the initial invocation here
+  because the deeper reentrant invocations are considered as a part of the adversarial environment. 
+  The deeper reentrant invocations are performed without the environment replying to the contract. *}
   "(* If a variable environment is built from the old account state *)
    (* and the call arguments, *)
    build_venv_called old_state callargs next_venv \<Longrightarrow>
    
-   (* the world makes a move, showing the variable environment. *)
-   world_turn I (old_state, ProgramInit callargs) (old_state, next_venv)"
-| world_return: -- {* the world might return to our contract. *}
+   (* the environment makes a move, showing the variable environment. *)
+   environment_turn I (old_state, ProgramInit callargs) (old_state, next_venv)"
+| environment_return: -- {* the environment might return to our contract. *}
   "(* If the account state can be changed during reentrancy,*)
    account_state_return_change I account_state_going_out account_state_back \<Longrightarrow>
 
@@ -167,21 +167,21 @@ where
    (* and the previous move of the contract was a call-like action, *)
    returnable_result program_r \<Longrightarrow>
 
-   (* the world can make a move, telling the contract to continue with *)
+   (* the environment can make a move, telling the contract to continue with *)
    (* the variable environment. *)
-   world_turn I (account_state_going_out, program_r)
+   environment_turn I (account_state_going_out, program_r)
                 (account_state_pop_ongoing_call account_state_back, new_v)"
 
-| world_fail: -- {* the world might fail from an account into our contract. *}
+| environment_fail: -- {* the environment might fail from an account into our contract. *}
   "(* If a variable environment can be recovered from the previous account state,*)
    build_venv_failed account_state_going_out = Some new_v \<Longrightarrow>
    
    (* and if the previous action from the contract was a call, *)
    returnable_result result = True \<Longrightarrow>
    
-   (* the world can make a move, telling the contract to continue with *) 
+   (* the environment can make a move, telling the contract to continue with *) 
    (* the variable environment. *)
-   world_turn I (account_state_going_out, result)
+   environment_turn I (account_state_going_out, result)
                 (account_state_pop_ongoing_call account_state_going_out, new_v)"
 
 text {* As a reply, our contract might make a move, or report an annotation failure.*}
@@ -189,14 +189,14 @@ text {* As a reply, our contract might make a move, or report an annotation fail
 inductive contract_turn ::
 "(account_state * variable_env) \<Rightarrow> (account_state * program_result) \<Rightarrow> bool"
 where
-  contract_to_world:
+  contract_to_environment:
   "(* Under a constant environment built from the old account state, *)
    build_cenv old_account = cenv \<Longrightarrow>
 
    (* if the program behaves like this, *)
    program_sem old_venv cenv 
       (program_length (cenv_program cenv)) steps
-      = ProgramToWorld act st bal opt_v \<Longrightarrow>
+      = ProgramToEnvironment act st bal opt_v \<Longrightarrow>
 
    (* and if the account state is updated from the program's result, *)
    account_state_going_out
@@ -204,7 +204,7 @@ where
 
    (* the contract makes a move and udates the account state. *)
    contract_turn (old_account, old_venv)
-      (account_state_going_out, ProgramToWorld act st bal opt_v)"
+      (account_state_going_out, ProgramToEnvironment act st bal opt_v)"
 
 | contract_annotation_failure:
   "(* If a constant environment is built from the old account state, *)  
@@ -217,7 +217,7 @@ where
    (* the contract makes a move, indicating the annotation failure. *)
    contract_turn (old_account, old_venv) (old_account, ProgramAnnotationFailure)"
 
-text {* When we combine the world's turn and the contract's turn, we get one round.
+text {* When we combine the environment's turn and the contract's turn, we get one round.
 The round is a binary relation over a single set.
 *}
 
@@ -227,7 +227,7 @@ inductive one_round ::
 (account_state * program_result) \<Rightarrow> bool"
 where
 round:
-"world_turn I a b \<Longrightarrow> contract_turn b c \<Longrightarrow> one_round I a c"
+"environment_turn I a b \<Longrightarrow> contract_turn b c \<Longrightarrow> one_round I a c"
 
 subsection {* Repetitions of rounds *}
 
@@ -250,19 +250,19 @@ Actually the rounds can go nowhere after this invocation fails.
 *}
 lemma no_entry_fail [dest!]:
 "star (one_round I)
-      (a, ProgramToWorld ContractFail st bal v_opt)
-      (b, c) \<Longrightarrow> b = a \<and> c = ProgramToWorld ContractFail st bal v_opt"
+      (a, ProgramToEnvironment ContractFail st bal v_opt)
+      (b, c) \<Longrightarrow> b = a \<and> c = ProgramToEnvironment ContractFail st bal v_opt"
 apply(drule star_case; simp)
-apply(simp add: one_round.simps add: world_turn.simps)
+apply(simp add: one_round.simps add: environment_turn.simps)
 done
 
 text {* Similarly, the rounds can go nowhere after this invocation returns. *}
 lemma no_entry_return [dest!]:
 "star (one_round I)
-      (a, ProgramToWorld (ContractReturn data) st bal v_opt)
-      (b, c) \<Longrightarrow> b = a \<and> c = ProgramToWorld (ContractReturn data) st bal v_opt"
+      (a, ProgramToEnvironment (ContractReturn data) st bal v_opt)
+      (b, c) \<Longrightarrow> b = a \<and> c = ProgramToEnvironment (ContractReturn data) st bal v_opt"
 apply(drule star_case; simp)
-apply(simp add: one_round.simps add: world_turn.simps)
+apply(simp add: one_round.simps add: environment_turn.simps)
 done
 
 text {* Also similarly, the rounds can go nowhere after this invocation
@@ -270,10 +270,10 @@ causes our contract to destroy itself.
 *}
 lemma no_entry_suicide [dest!]:
 "star (one_round I)
-      (a, ProgramToWorld ContractSuicide st bal v_opt)
-      (b, c) \<Longrightarrow> b = a \<and> c = ProgramToWorld ContractSuicide st bal v_opt"
+      (a, ProgramToEnvironment ContractSuicide st bal v_opt)
+      (b, c) \<Longrightarrow> b = a \<and> c = ProgramToEnvironment ContractSuicide st bal v_opt"
 apply(drule star_case; simp)
-apply(simp add: one_round.simps add: world_turn.simps)
+apply(simp add: one_round.simps add: environment_turn.simps)
 done
 
 text {* And then the rounds can go nowhere after an annotation failure. *}
@@ -282,7 +282,7 @@ lemma no_entry_annotation_failure [dest!]:
       (a, ProgramAnnotationFailure)
       (b, c) \<Longrightarrow> b = a \<and> c = ProgramAnnotationFailure"
 apply(drule star_case; simp)
-apply(simp add: one_round.simps add: world_turn.simps)
+apply(simp add: one_round.simps add: environment_turn.simps)
 done
 
 subsection {* How to State an Invariant *}
@@ -314,7 +314,7 @@ where
 
 lemma no_assertion_failure_in_fail [simp] :
 "I state \<Longrightarrow>
- no_assertion_failure_post I (state, ProgramToWorld ContractFail st bal v_opt)"
+ no_assertion_failure_post I (state, ProgramToEnvironment ContractFail st bal v_opt)"
 apply(simp add: no_assertion_failure_post_def)
 done
 

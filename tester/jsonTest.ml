@@ -3,7 +3,7 @@ open Yojson.Basic
 type env =
   { currentCoinbase : string
   ; currentDifficulty : Big_int.big_int
-  ; currentGasLimit : string
+  ; currentGasLimit : Big_int.big_int
   ; currentNumber : string
   ; currentTimestamp : string
   }
