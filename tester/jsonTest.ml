@@ -12,7 +12,11 @@ let to_big_int j = Big_int.big_int_of_string (to_string j)
 
 
 let parse_big_int_from_field field j =
-  let str = (to_string (Util.member field j)) in
+  let str = to_string (Util.member field j) in
+  let str = BatString.(of_list
+                         (List.filter
+                            (fun c -> c <> '"')
+                         (to_list str))) in
     try
       Big_int.big_int_of_string str
     with e ->

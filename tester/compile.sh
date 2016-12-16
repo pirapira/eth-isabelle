@@ -1,1 +1,1 @@
-ocamlbuild -pkgs yojson,bignum jsonTest.native evmTest.native
+ocamlbuild -pkgs yojson,bignum,batteries jsonTest.native evmTest.native
