@@ -1,7 +1,7 @@
 open Yojson.Basic
 
 type env =
-  { currentCoinbase : string
+  { currentCoinbase : Big_int.big_int
   ; currentDifficulty : Big_int.big_int
   ; currentGasLimit : Big_int.big_int
   ; currentNumber : Big_int.big_int
@@ -25,11 +25,26 @@ let parse_big_int_from_field field j =
         raise e
       end
 
+let parse_address_from_field field j =
+  let str = to_string (Util.member field j) in
+  let str = BatString.(of_list
+                         (List.filter
+                            (fun c -> c <> '"')
+                         (to_list str))) in
+  let str = "0x" ^ str in
+    try
+      Big_int.big_int_of_string str
+    with e ->
+      begin
+        let () = Printf.eprintf "parse error %s: %s %d%!\n" field str (String.length str) in
+        raise e
+      end
+
 let parse_env (j : json) : env =
   let () = Printf.eprintf "parse_env\n%!" in
   Util.(
     { currentCoinbase =
-        to_string (member "currentCoinbase" j)
+        parse_address_from_field "currentCoinbase" j
     ; currentDifficulty =
         parse_big_int_from_field "currentDifficulty" j
     ; currentGasLimit =
@@ -44,31 +59,31 @@ let parse_env (j : json) : env =
 let format_env (e : env) : Easy_format.t =
   let open Easy_format in
   let lst : Easy_format.t list =
-    [ Label ((Atom ("currentCoinbase", atom), label), Atom (e.currentCoinbase, atom))
+    [ Label ((Atom ("currentCoinbase", atom), label), Atom (Big_int.string_of_big_int e.currentCoinbase, atom))
     ; Label ((Atom ("currentDifficulty", atom), label), Atom (Big_int.string_of_big_int e.currentDifficulty, atom))
     ] in
   List (("{", ",", "}", list), lst)
 
 type exec =
-  { address : string
-  ; caller : string
+  { address : Big_int.big_int
+  ; caller : Big_int.big_int
   ; code : string
   ; data : string
   ; gas : Big_int.big_int
   ; gasPrice : Big_int.big_int
-  ; origin : string
+  ; origin : Big_int.big_int
   ; value : Big_int.big_int
   }
 
 let parse_exec (j : json) : exec =
   Util.(
-    { address = to_string (member "address" j)
-    ; caller = to_string (member "caller" j)
+    { address = parse_address_from_field "address" j
+    ; caller = parse_address_from_field "caller" j
     ; code = to_string (member "code" j)
     ; data = to_string (member "data" j)
     ; gas = parse_big_int_from_field "gas" j
     ; gasPrice = parse_big_int_from_field "gasPrice" j
-    ; origin = to_string (member "origin" j)
+    ; origin = parse_address_from_field  "origin" j
     ; value = parse_big_int_from_field "value" j
     })
 
