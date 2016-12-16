@@ -54,10 +54,10 @@ type exec =
   ; caller : string
   ; code : string
   ; data : string
-  ; gas : string
-  ; gasPrice : string
+  ; gas : Big_int.big_int
+  ; gasPrice : Big_int.big_int
   ; origin : string
-  ; value : string
+  ; value : Big_int.big_int
   }
 
 let parse_exec (j : json) : exec =
@@ -66,10 +66,10 @@ let parse_exec (j : json) : exec =
     ; caller = to_string (member "caller" j)
     ; code = to_string (member "code" j)
     ; data = to_string (member "data" j)
-    ; gas = to_string (member "gas" j)
-    ; gasPrice = to_string (member "gasPrice" j)
+    ; gas = parse_big_int_from_field "gas" j
+    ; gasPrice = parse_big_int_from_field "gasPrice" j
     ; origin = to_string (member "origin" j)
-    ; value = to_string (member "value" j)
+    ; value = parse_big_int_from_field "value" j
     })
 
 type storage = (string * string) list
@@ -80,17 +80,17 @@ let parse_storage (j : json) : storage =
   )
 
 type account_state =
-  { balance : string
+  { balance : Big_int.big_int
   ; code : string
-  ; nonce : string
+  ; nonce : Big_int.big_int
   ; storage : storage
   }
 
 let parse_account_state (j : json) : account_state =
   Util.(
-  { balance = to_string (member "balance" j)
+  { balance = parse_big_int_from_field "balance" j
   ; code = to_string (member "code" j)
-  ; nonce = to_string (member "nonce" j)
+  ; nonce = parse_big_int_from_field "nonce" j
   ; storage = parse_storage (member "storage" j)
   })
 
