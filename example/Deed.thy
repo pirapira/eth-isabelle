@@ -616,7 +616,7 @@ done
 
 declare (* deed_inv.simps [simp] this causesd many subgoals *)
         one_round.simps [simp]
-        world_turn.simps [simp]
+        environment_turn.simps [simp]
         contract_turn.simps [simp]
         x_def [simp]
 

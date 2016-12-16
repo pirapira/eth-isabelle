@@ -76,7 +76,7 @@ done
 
 
 declare one_round.simps [simp]
-declare world_turn.simps [simp]
+declare environment_turn.simps [simp]
 declare contract_turn.simps [simp]
 
 lemma no_assertion_failure:

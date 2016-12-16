@@ -127,7 +127,7 @@ where
 value "program_content (program_of_lst fail_on_reentrance_program program_content_of_lst) 8"
 
 declare one_round.simps [simp]
-declare world_turn.simps [simp]
+declare environment_turn.simps [simp]
 declare contract_turn.simps [simp]
 
 lemma check_resources_split [split] :
