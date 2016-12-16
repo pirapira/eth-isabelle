@@ -25,11 +25,13 @@ let word256_of_big_int (b : Big_int.big_int) =
   let (h, tl) = word_of_big_int 256 b in
   Word256.W256 (h, tl)
 
+let big_int_of_bit_list bl =
+  let nums : Big_int.big_int list = List.map (fun x -> if x then Big_int.unit_big_int else Big_int.zero_big_int) bl in
+  List.fold_left (fun x y -> Big_int.(add_big_int y (mult_int_big_int 2 x))) Big_int.zero_big_int nums
 
 let big_int_of_word256 (Word256.W256 (h, tl)) : Big_int.big_int =
   let bl = h :: tl in
-  let nums : Big_int.big_int list = List.map (fun x -> if x then Big_int.unit_big_int else Big_int.zero_big_int) bl in
-  List.fold_left (fun x y -> Big_int.(add_big_int y (mult_int_big_int 2 x))) Big_int.zero_big_int nums
+  big_int_of_bit_list bl
 
 let () =
   let x : Word256.word256 = Word256.W256 (true, []) in
