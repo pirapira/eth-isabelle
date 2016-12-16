@@ -4,17 +4,36 @@ type env =
   { currentCoinbase : string
   ; currentDifficulty : Big_int.big_int
   ; currentGasLimit : Big_int.big_int
-  ; currentNumber : string
-  ; currentTimestamp : string
+  ; currentNumber : Big_int.big_int
+  ; currentTimestamp : Big_int.big_int
   }
 
+let to_big_int j = Big_int.big_int_of_string (to_string j)
+
+
+let parse_big_int_from_field field j =
+  let str = (to_string (Util.member field j)) in
+    try
+      Big_int.big_int_of_string str
+    with e ->
+      begin
+        let () = Printf.eprintf "parse error %s: %s %d%!\n" field str (String.length str) in
+        raise e
+      end
+
 let parse_env (j : json) : env =
+  let () = Printf.eprintf "parse_env\n%!" in
   Util.(
-    { currentCoinbase = to_string (member "currentCoinbase" j)
-    ; currentDifficulty = Big_int.big_int_of_string (to_string (member "currentDifficulty" j))
-    ; currentGasLimit = to_string (member "currentGasLimit" j)
-    ; currentNumber = to_string (member "currentNumber" j)
-    ; currentTimestamp = to_string (member "currentTimestamp" j)
+    { currentCoinbase =
+        to_string (member "currentCoinbase" j)
+    ; currentDifficulty =
+        parse_big_int_from_field "currentDifficulty" j
+    ; currentGasLimit =
+        parse_big_int_from_field "currentGasLimit" j
+    ; currentNumber =
+        parse_big_int_from_field "currentNumber" j
+    ; currentTimestamp =
+        parse_big_int_from_field "currentTimestamp" j
     })
 
 
