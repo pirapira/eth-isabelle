@@ -1,0 +1,162 @@
+open Evm
+
+(** [program_impl] implements the partial map in [program] using
+ [Map] library of OCaml *)
+type program_impl
+
+let empty_program_impl : program_impl = failwith "empty_program_impl"
+
+let program_from_impl (imp : program_impl) : program =
+  failwith "program_from_impl"
+
+let store_instruction (inst : inst) (orig : program_impl) : program_impl =
+  failwith "store_instruction"
+
+let parse_instruction (str : string) : (inst * string) option =
+  let opcode = BatString.left str 2 in
+  let rest = BatString.tail str 2 in
+  match opcode with
+  | "00" -> Some (Misc STOP, rest)
+  | "01" -> Some (Arith ADD, rest)
+  | "02" -> Some (Arith MUL, rest)
+  | "03" -> Some (Arith SUB, rest)
+  | "04" -> Some (Arith DIV, rest)
+  | "05" -> Some (Sarith SDIV, rest)
+  | "06" -> Some (Arith MOD, rest)
+  | "07" -> Some (Sarith SMOD, rest)
+  | "08" -> Some (Arith ADDMOD, rest)
+  | "09" -> Some (Arith MULMOD, rest)
+  | "0a" -> Some (Arith EXP, rest)
+  | "0b" -> Some (Sarith SIGNEXTEND, rest)
+  | "10" -> Some (Arith Inst_LT, rest)
+  | "11" -> Some (Arith Inst_GT, rest)
+  | "12" -> Some (Sarith SLT, rest)
+  | "13" -> Some (Sarith SGT, rest)
+  | "14" -> Some (Arith Inst_EQ, rest)
+  | "15" -> Some (Arith ISZERO, rest)
+  | "16" -> Some (Bits Inst_AND, rest)
+  | "17" -> Some (Bits Inst_OR, rest)
+  | "18" -> Some (Bits Inst_XOR, rest)
+  | "19" -> Some (Bits Inst_NOT, rest)
+  | "1a" -> Some (Bits BYTE, rest)
+  | "20" -> Some (Arith SHA3, rest)
+  | "30" -> Some (Info ADDRESS, rest)
+  | "31" -> Some (Info BALANCE, rest)
+  | "32" -> Some (Info ORIGIN, rest)
+  | "33" -> Some (Info CALLER, rest)
+  | "34" -> Some (Info CALLVALUE, rest)
+  | "35" -> Some (Stack CALLDATALOAD, rest)
+  | "36" -> Some (Info CALLDATASIZE, rest)
+  | "37" -> Some (Memory CALLDATACOPY, rest)
+  | "38" -> Some (Info CODESIZE, rest)
+  | "39" -> Some (Memory CODECOPY, rest)
+  | "3a" -> Some (Info GASPRICE, rest)
+  | "3b" -> Some (Info EXTCODESIZE, rest)
+  | "3c" -> Some (Memory EXTCODECOPY, rest)
+  | "40" -> Some (Info BLOCKHASH, rest)
+  | "41" -> Some (Info COINBASE, rest)
+  | "42" -> Some (Info TIMESTAMP, rest)
+  | "43" -> Some (Info NUMBER, rest)
+  | "44" -> Some (Info DIFFICULTY, rest)
+  | "45" -> Some (Info GASLIMIT, rest)
+  | "50" -> Some (Stack POP, rest)
+  | "51" -> Some (Memory MLOAD, rest)
+  | "52" -> Some (Memory MSTORE, rest)
+  | "53" -> Some (Memory MSTORE8, rest)
+  | "54" -> Some (Storage SLOAD, rest)
+  | "55" -> Some (Storage SSTORE, rest)
+  | "56" -> Some (Pc JUMP, rest)
+  | "57" -> Some (Pc JUMPI, rest)
+  | "58" -> Some (Pc PC, rest)
+  | "59" -> Some (Memory MSIZE, rest)
+  | "5a" -> Some (Info GAS, rest)
+  | "5b" -> Some (Pc JUMPDEST, rest)
+  | "a0" -> Some (Log LOG0, rest)
+  | "a1" -> Some (Log LOG1, rest)
+  | "a2" -> Some (Log LOG2, rest)
+  | "a3" -> Some (Log LOG3, rest)
+  | "a4" -> Some (Log LOG4, rest)
+  | "f0" -> Some (Misc CREATE, rest)
+  | "f1" -> Some (Misc CALL, rest)
+  | "f2" -> Some (Misc CALLCODE, rest)
+  | "f3" -> Some (Misc RETURN, rest)
+  | "f4" -> Some (Misc DELEGATECALL, rest)
+  | "ff" -> Some (Misc SUICIDE, rest)
+  | _ ->
+     let opcode_num = int_of_string ("0x"^opcode) in
+     if 0x60 <= opcode_num && opcode_num <= 0x7f then
+       let l = opcode_num - 0x60 + 1 in
+       let (payload, rest) = BatString.(left rest (2 * l), tail rest (2 * l)) in
+       begin
+         if String.length payload < 2 * l then
+           None
+         else
+           Some (Stack (PUSH_N (Conv.byte_list_of_hex_string payload)), rest)
+       end
+     else if 0x80 <= opcode_num && opcode_num <= 0x8f then
+       Some (Dup (Conv.byte_of_int (opcode_num - 0x80 + 1)), rest)
+     else if 0x90 <= opcode_num && opcode_num <= 0x9f then
+       Some (Swap (Conv.byte_of_int (opcode_num - 0x90 + 1)), rest)
+     else
+       None
+
+let rec parse_code_inner (acc : program_impl) (hex_inner : string) : program * string =
+  match parse_instruction hex_inner with
+  | None -> (program_from_impl acc, hex_inner)
+  | Some (instr, rest) ->
+     parse_code_inner (store_instruction instr acc) rest
+
+(** [parse_code "0x...." returns a program and the
+ * remaining string
+ *)
+let parse_code (hex : string) : program * string =
+  if BatString.left hex 2 <> "0x"
+  then
+    failwith "parse_code: prefix is not 0x"
+  else
+    parse_code_inner empty_program_impl (BatString.right hex 2)
+
+
+(*
+#! /usr/bin/ruby
+
+
+input = ARGF.read
+
+if input[/^0x/]
+  input = input[2..-1]
+end
+
+
+i = 0
+
+while i + 2 <= input.size
+  byte = input[i, 2]
+  i = i + 2
+
+  case byte
+  when "60".."69", "6a".."6f", "70".."79", "7a".."7f"
+    size = byte.hex - "60".hex + 1
+    print "Stack (PUSH_N ["
+    while size > 0
+      byte = input[i, 2]
+      if size == 1
+        print "0x#{byte}"
+      else
+        print "0x#{byte}, "
+      end
+      i = i + 2
+      size = size - 1
+    end
+    puts "]) #"
+  when "80".."89", "8a".."8f"
+    num = byte[1].hex + 1
+    puts "Dup #{num} #"
+  when "90".."99", "9a".."9f"
+    num = byte[1].hex + 1
+    puts "Swap #{num} #"
+end
+
+
+puts "[]"
+ *)
