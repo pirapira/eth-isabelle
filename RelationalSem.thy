@@ -191,11 +191,11 @@ inductive contract_turn ::
 where
   contract_to_environment:
   "(* Under a constant environment built from the old account state, *)
-   build_cenv old_account = cenv \<Longrightarrow>
+   build_ccon old_account = ccon \<Longrightarrow>
 
    (* if the program behaves like this, *)
-   program_sem old_vcon cenv 
-      (program_length (cenv_program cenv)) steps
+   program_sem old_vcon ccon 
+      (program_length (ccon_program ccon)) steps
       = ProgramToEnvironment act st bal opt_v \<Longrightarrow>
 
    (* and if the account state is updated from the program's result, *)
@@ -208,11 +208,11 @@ where
 
 | contract_annotation_failure:
   "(* If a constant environment is built from the old account state, *)  
-   build_cenv old_account = cenv \<Longrightarrow>
+   build_ccon old_account = ccon \<Longrightarrow>
    
    (* and if the contract execution results in an annotation failure, *)
-   program_sem old_vcon cenv
-      (program_length (cenv_program cenv)) steps = ProgramAnnotationFailure \<Longrightarrow>
+   program_sem old_vcon ccon
+      (program_length (ccon_program ccon)) steps = ProgramAnnotationFailure \<Longrightarrow>
 
    (* the contract makes a move, indicating the annotation failure. *)
    contract_turn (old_account, old_vcon) (old_account, ProgramAnnotationFailure)"
