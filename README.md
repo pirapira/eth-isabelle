@@ -1,15 +1,19 @@
-# Formalization of Ethereum Virtual Machine in Isabelle/HOL
+# Formalization of Ethereum Virtual Machine in Lem
 
 This repository contains
 
-* a Keccak-256 implementation in Isabelle/HOL `KEC.thy`
+* a Keccak-256 implementation in Isabelle/HOL `KEC.thy` (to be ported to Lem)
 * a RLP implementation (in progress) `RLP.thy`
-* an EVM implementation `ContractSem.thy`
+* an EVM implementation in Lem `lem/evm.lem`
 * a relational semantics that captures the callee's nondeterministic behavior `RelationalSem.thy`
 * some example verified contracts in `example`
 * a parser that parses hex code and emits an Isabelle/HOL expression representing the program `parser/hexparser.rb`
 
 When you see `\<Rightarrow>` in the source, try using the [Isabelle2016](https://isabelle.in.tum.de/index.html) interface.  There you see `⇒` instead.
+
+## Lem?
+
+[Lem](https://www.cl.cam.ac.uk/~pes20/lem/) is a language that can be translated into Coq, Isabelle/HOL, HOL4, OCaml, HTML and LaTeX.
 
 ## Prerequisites
 
