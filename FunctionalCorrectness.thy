@@ -53,7 +53,7 @@ where "respond_to_call_correctly c a \<equiv>
          (* The specification says the execution should result in these *)
          c call_env = (resulting_action, final_state_pred) \<longrightarrow>
          ( \<forall> steps. (* and for any number of steps *)
-           ( let r = program_sem initial_venv (build_cenv a)
+           ( let r = program_sem initial_venv (build_ccon a)
                       (program_length (account_code a)) steps in
              (* either more steps are necessary, or *)
              r = ProgramStepRunOut \<or>
@@ -73,7 +73,7 @@ where
        build_vcon_returned a rr initial_venv \<longrightarrow>
        r rr = (resulting_action, final_state_pred) \<longrightarrow>
        ( \<forall> steps.
-          (let r = program_sem initial_venv (build_cenv a)
+          (let r = program_sem initial_venv (build_ccon a)
                      (program_length (account_code a)) steps in
            r = ProgramStepRunOut \<or>
            (\<exists> pushed_venv st bal.
@@ -92,7 +92,7 @@ where
       Some initial_venv = build_vcon_failed a \<longrightarrow>
       f = (resulting_action, final_state_pred) \<longrightarrow>
       (\<forall> steps.
-        (let r = program_sem initial_venv (build_cenv a)
+        (let r = program_sem initial_venv (build_ccon a)
                    (program_length (account_code a)) steps in
          r = ProgramStepRunOut \<or>
          (\<exists> pushed_venv st bal.
