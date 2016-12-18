@@ -10,7 +10,10 @@ type program_impl =
  (* annotations do not exist yet. *)
   }
 
-let empty_program_impl : program_impl = failwith "empty_program_impl"
+let empty_program_impl : program_impl =
+  { p_impl_content = IntMap.empty
+  ; p_impl_length = 0
+  }
 
 let program_from_impl (imp : program_impl) : program =
   failwith "program_from_impl"
