@@ -1,14 +1,21 @@
 open Evm
 
+module IntMap = BatMap.Make(BatInt)
+
 (** [program_impl] implements the partial map in [program] using
  [Map] library of OCaml *)
-type program_impl
+type program_impl =
+  { p_impl_content : inst IntMap.t
+  ; p_impl_length : int
+ (* annotations do not exist yet. *)
+  }
 
 let empty_program_impl : program_impl = failwith "empty_program_impl"
 
 let program_from_impl (imp : program_impl) : program =
   failwith "program_from_impl"
 
+(** The payload of PUSH instructions are stored as Unknown *)
 let store_instruction (inst : inst) (orig : program_impl) : program_impl =
   failwith "store_instruction"
 
