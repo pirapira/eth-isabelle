@@ -34,7 +34,7 @@ while i + 2 <= input.size
   when "08"
     puts "Arith ADDMOD #"
   when "09"
-    puts "Arith MUMOD #"
+    puts "Arith MULMOD #"
   when "0a"
     puts "Arith EXP #"
   when "0b"
