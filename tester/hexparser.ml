@@ -26,9 +26,24 @@ let program_from_impl (imp : program_impl) : program =
       fun _ -> []
   }
 
+let add_unknown_bytes_from (pos : int) (lst : byte list) (orig : inst IntMap.t) =
+  failwith "add_unknown_bytes_from"
+
 (** The payload of PUSH instructions are stored as Unknown *)
 let store_instruction (inst : inst) (orig : program_impl) : program_impl =
-  failwith "store_instruction"
+  let orig_map = orig.p_impl_content in
+  let added_map = IntMap.add orig.p_impl_length inst orig_map in
+  let (new_map, new_length) =
+    match inst with
+    | Stack (PUSH_N lst) ->
+       let new_map = add_unknown_bytes_from (orig.p_impl_length + 1) lst orig_map in
+       (new_map, orig.p_impl_length + 1 + List.length lst)
+    | _ ->
+       (added_map, orig.p_impl_length + 1)
+  in
+  { p_impl_content = new_map
+  ; p_impl_length = new_length
+  }
 
 let parse_instruction (str : string) : (inst * string) option =
   let opcode = BatString.left str 2 in
