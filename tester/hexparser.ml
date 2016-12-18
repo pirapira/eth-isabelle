@@ -26,8 +26,11 @@ let program_from_impl (imp : program_impl) : program =
       fun _ -> []
   }
 
-let add_unknown_bytes_from (pos : int) (lst : byte list) (orig : inst IntMap.t) =
-  failwith "add_unknown_bytes_from"
+let rec add_unknown_bytes_from (pos : int) (lst : byte list) (orig : inst IntMap.t) : inst IntMap.t =
+  match lst with
+  | [] -> orig
+  | h :: t ->
+     add_unknown_bytes_from (pos + 1) t (IntMap.add pos (Unknown h) orig)
 
 (** The payload of PUSH instructions are stored as Unknown *)
 let store_instruction (inst : inst) (orig : program_impl) : program_impl =
