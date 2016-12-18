@@ -49,7 +49,7 @@ abbreviation respond_to_call_correctly ::
        account_state \<Rightarrow> bool"
 where "respond_to_call_correctly c a \<equiv>
   (\<forall> call_env initial_venv resulting_action final_state_pred.
-     build_venv_called a call_env initial_venv \<longrightarrow>
+     build_vcon_called a call_env initial_venv \<longrightarrow>
          (* The specification says the execution should result in these *)
          c call_env = (resulting_action, final_state_pred) \<longrightarrow>
          ( \<forall> steps. (* and for any number of steps *)
@@ -70,7 +70,7 @@ abbreviation respond_to_return_correctly ::
 where
 "respond_to_return_correctly r a \<equiv>
    (\<forall> rr initial_venv final_state_pred resulting_action.
-       build_venv_returned a rr initial_venv \<longrightarrow>
+       build_vcon_returned a rr initial_venv \<longrightarrow>
        r rr = (resulting_action, final_state_pred) \<longrightarrow>
        ( \<forall> steps.
           (let r = program_sem initial_venv (build_cenv a)
@@ -89,7 +89,7 @@ abbreviation respond_to_fail_correctly ::
 where
 "respond_to_fail_correctly f a \<equiv>
    (\<forall> initial_venv final_state_pred resulting_action.
-      Some initial_venv = build_venv_failed a \<longrightarrow>
+      Some initial_venv = build_vcon_failed a \<longrightarrow>
       f = (resulting_action, final_state_pred) \<longrightarrow>
       (\<forall> steps.
         (let r = program_sem initial_venv (build_cenv a)

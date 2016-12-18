@@ -7,46 +7,46 @@ open import Evm
 
 val respond_to_call_correctly : (call_env -> contract_behavior) -> account_state -> bool
 let respond_to_call_correctly c a =
-  (forall call_env initial_venv resulting_action final_state_pred.
-     build_venv_called a call_env initial_venv -->
+  (forall call_env initial_vcon resulting_action final_state_pred.
+     build_vcon_called a call_env initial_vcon -->
          (* The specification says the execution should result in these *)
          c call_env = (resulting_action, final_state_pred) -->
          (forall steps. (* and for any number of steps *)
-           ( let r = program_sem initial_venv (build_cenv a) a.account_code.program_length steps in
+           ( let r = program_sem initial_vcon (build_cenv a) a.account_code.program_length steps in
              (* either more steps are necessary, or *)
              r = ProgramStepRunOut ||
              (* the result matches the specification *)
-             (exists pushed_venv st bal.
-              r = ProgramToEnvironment resulting_action st bal pushed_venv &&
+             (exists pushed_vcon st bal.
+              r = ProgramToEnvironment resulting_action st bal pushed_vcon &&
               final_state_pred
-                (update_account_state a resulting_action st bal pushed_venv))
+                (update_account_state a resulting_action st bal pushed_vcon))
            )))
 
 val respond_to_return_correctly : (return_result -> contract_behavior) -> account_state -> bool
 let respond_to_return_correctly r a =
-   (forall rr initial_venv final_state_pred resulting_action.
-       build_venv_returned a rr initial_venv -->
+   (forall rr initial_vcon final_state_pred resulting_action.
+       build_vcon_returned a rr initial_vcon -->
        r rr = (resulting_action, final_state_pred) -->
        (forall steps.
-          (let r = program_sem initial_venv (build_cenv a) a.account_code.program_length steps in
+          (let r = program_sem initial_vcon (build_cenv a) a.account_code.program_length steps in
            r = ProgramStepRunOut ||
-           (exists pushed_venv st bal.
-            r = ProgramToEnvironment resulting_action st bal pushed_venv &&
+           (exists pushed_vcon st bal.
+            r = ProgramToEnvironment resulting_action st bal pushed_vcon &&
             final_state_pred
-              (update_account_state (account_state_pop_ongoing_call a) resulting_action st bal pushed_venv))
+              (update_account_state (account_state_pop_ongoing_call a) resulting_action st bal pushed_vcon))
           )))
 
 val respond_to_fail_correctly : contract_behavior -> account_state -> bool
 let respond_to_fail_correctly f a =
-   (forall initial_venv final_state_pred resulting_action.
-      Just initial_venv = build_venv_failed a -->
+   (forall initial_vcon final_state_pred resulting_action.
+      Just initial_vcon = build_vcon_failed a -->
       f = (resulting_action, final_state_pred) -->
       (forall steps.
-        ( let r = program_sem initial_venv (build_cenv a) a.account_code.program_length steps in
+        ( let r = program_sem initial_vcon (build_cenv a) a.account_code.program_length steps in
           r = ProgramStepRunOut ||
-          (exists pushed_venv st bal.
-             r = ProgramToEnvironment resulting_action st bal pushed_venv &&
-             final_state_pred (update_account_state (account_state_pop_ongoing_call a) resulting_action st bal pushed_venv)))))
+          (exists pushed_vcon st bal.
+             r = ProgramToEnvironment resulting_action st bal pushed_vcon &&
+             final_state_pred (update_account_state (account_state_pop_ongoing_call a) resulting_action st bal pushed_vcon)))))
 
 indreln [account_state_responds_to_environment : (account_state -> bool) -> response_to_environment -> bool]
 AccountStep: forall precond c r f.

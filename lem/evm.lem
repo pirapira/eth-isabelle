@@ -949,25 +949,25 @@ type block_info = <|
 |>
 
 
-(* The variable environment contains information that is relatively volatile. *)
+(* The variable context contains information that is relatively volatile. *)
 
-type variable_env = <|
-  venv_stack : list w256;
-  venv_memory : memory;
-  venv_memory_usage : int; (* the current memory usage *)
-  venv_storage : storage;
-  venv_pc : int; (* the program counter *)
-  venv_balance : address -> w256; (* balances of all accounts *)
-  venv_caller : address; (* the caller's address *)
-  venv_value_sent : w256; (* the amount of Eth sent along the current invocation *)
-  venv_data_sent : list byte; (* the data sent along the current invocation *)
-  venv_storage_at_call : storage; (* the storage content at the invocation*)
-  venv_balance_at_call : address -> w256; (* the balances at the invocation *)
-  venv_origin : address; (* the external account that started the current transaction *)
-  venv_ext_program : address -> program; (* the codes of all accounts *)
-  venv_block : block_info; (* the current block *)
-  venv_gas : int; (* remaining gas before the instruction *)
-  venv_account_existence : address -> bool
+type variable_con = <|
+  vcon_stack : list w256;
+  vcon_memory : memory;
+  vcon_memory_usage : int; (* the current memory usage *)
+  vcon_storage : storage;
+  vcon_pc : int; (* the program counter *)
+  vcon_balance : address -> w256; (* balances of all accounts *)
+  vcon_caller : address; (* the caller's address *)
+  vcon_value_sent : w256; (* the amount of Eth sent along the current invocation *)
+  vcon_data_sent : list byte; (* the data sent along the current invocation *)
+  vcon_storage_at_call : storage; (* the storage content at the invocation*)
+  vcon_balance_at_call : address -> w256; (* the balances at the invocation *)
+  vcon_origin : address; (* the external account that started the current transaction *)
+  vcon_ext_program : address -> program; (* the codes of all accounts *)
+  vcon_block : block_info; (* the current block *)
+  vcon_gas : int; (* remaining gas before the instruction *)
+  vcon_account_existence : address -> bool
 |>
 
 (* The constant environment contains information that is rather stable. *)
@@ -983,7 +983,7 @@ type constant_env = <|
 (* executions.  The execution of a single instruction can result in the following cases: *)
 
 type instruction_result =
-| InstructionContinue of variable_env (* the execution should continue. *)
+| InstructionContinue of variable_con (* the execution should continue. *)
 | InstructionAnnotationFailure (* the annotation turned out to be false. *)
 | InstructionToEnvironment of
   (* the execution has stopped; either for the moment just calling out another account, or *)
@@ -991,17 +991,17 @@ type instruction_result =
     contract_action   (* the contract's move *)
   * storage           (* the new storage content *)
   * (address -> w256) (* the new balance of all accounts *)
-  * maybe (variable_env * int * int) (* the variable environment to return to *)
+  * maybe (variable_con * int * int) (* the variable environment to return to *)
 
 (* When the contract fails, the result of the instruction always looks like this: *)
-val instruction_failure_result : variable_env -> instruction_result
+val instruction_failure_result : variable_con -> instruction_result
 let instruction_failure_result v =
-  InstructionToEnvironment ContractFail v.venv_storage_at_call v.venv_balance_at_call Nothing
+  InstructionToEnvironment ContractFail v.vcon_storage_at_call v.vcon_balance_at_call Nothing
 
 (* When the contract returns, the result of the instruction always looks like this: *)
-val instruction_return_result : list byte -> variable_env -> instruction_result
+val instruction_return_result : list byte -> variable_con -> instruction_result
 let instruction_return_result x v =
-  InstructionToEnvironment (ContractReturn x) v.venv_storage v.venv_balance Nothing
+  InstructionToEnvironment (ContractReturn x) v.vcon_storage v.vcon_balance Nothing
 
 (* subsection {* Useful Functions for Defining EVM Operations *} *)
 
@@ -1013,7 +1013,7 @@ let instruction_return_result x v =
 (* we are analyzing a single invocation of a loopless contract, but *)
 (* gas accounting is a planned feature. *)
 
-val gas : variable_env -> w256
+val gas : variable_con -> w256
 let gas v = 30000
 declare isabelle target_rep function gas = `undefined`
 
@@ -1029,75 +1029,75 @@ val update_balance : address -> (w256 -> w256) -> (address -> w256) -> (address 
 let update_balance a f orig x = if x = a then f (orig a) else orig a
 
 (* Popping stack elements: *)
-val venv_pop_stack : nat -> variable_env -> variable_env
-let venv_pop_stack n v =
- <| v with venv_stack = drop n v.venv_stack |>
+val vcon_pop_stack : nat -> variable_con -> variable_con
+let vcon_pop_stack n v =
+ <| v with vcon_stack = drop n v.vcon_stack |>
 
 (* Peeking the topmost element of the stack: *)
-val venv_stack_top : variable_env -> maybe w256
-let venv_stack_top v = match v.venv_stack with
+val vcon_stack_top : variable_con -> maybe w256
+let vcon_stack_top v = match v.vcon_stack with
  | h :: _ -> Just h
  | [] -> Nothing
 end
 
 (* Updating the storage at an index: *)
-val venv_update_storage : w256 -> w256-> variable_env -> variable_env
-let venv_update_storage idx vall v =
-  <| v with venv_storage = (fun x -> if x = idx then vall else v.venv_storage x) |>
+val vcon_update_storage : w256 -> w256-> variable_con -> variable_con
+let vcon_update_storage idx vall v =
+  <| v with vcon_storage = (fun x -> if x = idx then vall else v.vcon_storage x) |>
 
 (* Peeking the next instruction: *)
-val venv_next_instruction : variable_env -> constant_env -> maybe inst
-let venv_next_instruction v c =
-   c.cenv_program.program_content v.venv_pc
+val vcon_next_instruction : variable_con -> constant_env -> maybe inst
+let vcon_next_instruction v c =
+   c.cenv_program.program_content v.vcon_pc
 
 (* Advancing the program counter: *)
-val venv_advance_pc : constant_env -> variable_env -> variable_env
-let venv_advance_pc c v = match venv_next_instruction v c with
- | Nothing -> <| v with venv_pc = v.venv_pc + 1 |>
- | Just inst -> <| v with venv_pc = v.venv_pc + inst_size inst |>
+val vcon_advance_pc : constant_env -> variable_con -> variable_con
+let vcon_advance_pc c v = match vcon_next_instruction v c with
+ | Nothing -> <| v with vcon_pc = v.vcon_pc + 1 |>
+ | Just inst -> <| v with vcon_pc = v.vcon_pc + inst_size inst |>
 end
 
 (* No-op, which just advances the program counter: *)
-val stack_0_0_op : variable_env -> constant_env -> instruction_result
-let stack_0_0_op v c = InstructionContinue (venv_advance_pc c v)
+val stack_0_0_op : variable_con -> constant_env -> instruction_result
+let stack_0_0_op v c = InstructionContinue (vcon_advance_pc c v)
 
 (* A general pattern of operations that pushes one element onto the stack:  *)
-val stack_0_1_op : variable_env -> constant_env -> w256 -> instruction_result
+val stack_0_1_op : variable_con -> constant_env -> w256 -> instruction_result
 let stack_0_1_op v c w =
-   InstructionContinue (venv_advance_pc c <| v with venv_stack = w :: v.venv_stack |>)
+   InstructionContinue (vcon_advance_pc c <| v with vcon_stack = w :: v.vcon_stack |>)
 
 
 (* A general pattern of operations that transforms the topmost element of the stack: *)
-val stack_1_1_op : variable_env -> constant_env -> (w256 -> w256) -> instruction_result
-let stack_1_1_op v c f = match v.venv_stack with
+val stack_1_1_op : variable_con -> constant_env -> (w256 -> w256) -> instruction_result
+let stack_1_1_op v c f = match v.vcon_stack with
   | [] -> instruction_failure_result v
-  | h :: t -> InstructionContinue (venv_advance_pc c <| v with venv_stack = f h :: t |>)
+  | h :: t -> InstructionContinue (vcon_advance_pc c <| v with vcon_stack = f h :: t |>)
 end
 
 (* A general pattern of operations that consume one word and produce two rwords: *)
-val stack_1_2_op : variable_env -> constant_env -> (w256 -> w256 * w256) -> instruction_result
-let stack_1_2_op v c f = match v.venv_stack with
+val stack_1_2_op : variable_con -> constant_env -> (w256 -> w256 * w256) -> instruction_result
+let stack_1_2_op v c f = match v.vcon_stack with
  | [] -> instruction_failure_result v
  | h :: t ->
      let (new0, new1) = f h in
-     InstructionContinue (venv_advance_pc c <| v with venv_stack = new0 :: new1 :: t |>)
+     InstructionContinue (vcon_advance_pc c <| v with vcon_stack = new0 :: new1 :: t |>)
 end
 
 (* A general pattern of operations that take two words and produce one word: *)
-val stack_2_1_op : variable_env -> constant_env -> (w256 -> w256 -> w256) -> instruction_result
-let stack_2_1_op v c f = match v.venv_stack with
+val stack_2_1_op : variable_con -> constant_env -> (w256 -> w256 -> w256) -> instruction_result
+let stack_2_1_op v c f = match v.vcon_stack with
  | operand0 :: operand1 :: rest ->
        InstructionContinue
-         (venv_advance_pc c <| v with venv_stack = f operand0 operand1 :: rest |>)
+         (vcon_advance_pc c <| v with vcon_stack = f operand0 operand1 :: rest |>)
   | _ -> instruction_failure_result v
 end
 
 (* A general pattern of operations that take three words and produce one word: *)
-val stack_3_1_op : variable_env -> constant_env -> (w256 -> w256 -> w256 -> w256) -> instruction_result
-let stack_3_1_op v c f = match v.venv_stack with
+val stack_3_1_op : variable_con -> constant_env -> (w256 -> w256 -> w256 -> w256) -> instruction_result
+let stack_3_1_op v c f = match v.vcon_stack with
  | operand0 :: operand1 :: operand2 :: rest ->
        InstructionContinue
-         (venv_advance_pc c <| v with venv_stack = f operand0 operand1 operand2 :: rest |>)
+         (vcon_advance_pc c <| v with vcon_stack = f operand0 operand1 operand2 :: rest |>)
  | _ -> instruction_failure_result v
 end
 
@@ -1105,11 +1105,11 @@ end
 
 (* SSTORE changes the storage so it does not fit into any of the patterns defined above. *)
 
-val sstore : variable_env -> constant_env -> instruction_result
-let sstore v c = match v.venv_stack with
+val sstore : variable_con -> constant_env -> instruction_result
+let sstore v c = match v.vcon_stack with
  | addr :: vl :: stack_tail ->
-      InstructionContinue (venv_advance_pc c
-        (venv_update_storage addr vl <| v with venv_stack = stack_tail |>))
+      InstructionContinue (vcon_advance_pc c
+        (vcon_update_storage addr vl <| v with vcon_stack = stack_tail |>))
  | _ -> instruction_failure_result v
 end
 
@@ -1117,39 +1117,39 @@ end
 (* out of the current execution environments.  When I try to remove this step, I face some *)
 (* circular definitions of data types. *)
 
-val build_aenv : variable_env -> constant_env -> aenv
+val build_aenv : variable_con -> constant_env -> aenv
 let build_aenv v c = <|
-  aenv_stack = v.venv_stack;
-  aenv_memory = v.venv_memory;
-  aenv_storage = v.venv_storage;
-  aenv_balance = v.venv_balance;
-  aenv_caller = v.venv_caller;
-  aenv_value_sent = v.venv_value_sent;
-  aenv_data_sent = v.venv_data_sent;
-  aenv_storage_at_call = v.venv_storage_at_call;
-  aenv_balance_at_call = v.venv_balance_at_call;
+  aenv_stack = v.vcon_stack;
+  aenv_memory = v.vcon_memory;
+  aenv_storage = v.vcon_storage;
+  aenv_balance = v.vcon_balance;
+  aenv_caller = v.vcon_caller;
+  aenv_value_sent = v.vcon_value_sent;
+  aenv_data_sent = v.vcon_data_sent;
+  aenv_storage_at_call = v.vcon_storage_at_call;
+  aenv_balance_at_call = v.vcon_balance_at_call;
   aenv_this = c.cenv_this;
-  aenv_origin = v.venv_origin;
+  aenv_origin = v.vcon_origin;
 |>
 
 (* In reality, EVM programs do not contain annotations so annotations never cause failures.*)
 (* However, during the verification, I want to catch annotation failures.  When the annotation *)
 (* evaluates to False, the execution stops and results in @{term InstructionAnnotationFailure}. *)
 
-val eval_annotation : annotation -> variable_env -> constant_env -> instruction_result
+val eval_annotation : annotation -> variable_con -> constant_env -> instruction_result
 let eval_annotation anno v c =
-   if anno (build_aenv v c) then InstructionContinue (venv_advance_pc c v)
+   if anno (build_aenv v c) then InstructionContinue (vcon_advance_pc c v)
     else InstructionAnnotationFailure
 
 (* The JUMP instruction has the following meaning.  When it cannot find the JUMPDEST instruction *)
 (* at the destination, the execution fails. *)
 
-val jump : variable_env -> constant_env -> instruction_result
-let jump v c = match v.venv_stack with
+val jump : variable_con -> constant_env -> instruction_result
+let jump v c = match v.vcon_stack with
  | [] -> instruction_failure_result v
  | pos :: tl ->
-     let v_new = <| v with venv_stack = tl; venv_pc = uint pos |> in
-     match venv_next_instruction v_new c with
+     let v_new = <| v with vcon_stack = tl; vcon_pc = uint pos |> in
+     match vcon_next_instruction v_new c with
       | Just (Pc JUMPDEST) -> InstructionContinue v_new
       | _ -> instruction_failure_result v
      end
@@ -1158,33 +1158,33 @@ end
 (* This function is a reminiscent of my struggle with the Isabelle/HOL simplifier. *)
 (* The second argument has no meaning but to control the Isabelle/HOL simplifier. *)
 
-val blockedInstructionContinue : variable_env -> bool -> instruction_result
+val blockedInstructionContinue : variable_con -> bool -> instruction_result
 let blockedInstructionContinue v _ = InstructionContinue v
 
 (* This is another reminiscent of my struggle against the Isabelle/HOL simplifier. *)
 (* Again, the simplifier is not allowed to expand the definition unless the second argument *)
 (* is known to be @{term True}.*)
 
-val blocked_jump : variable_env -> constant_env -> bool -> instruction_result
+val blocked_jump : variable_con -> constant_env -> bool -> instruction_result
 let blocked_jump v c _ = jump v c
 
 val strict_if : forall 'a. bool -> (bool -> 'a) -> (bool -> 'a) -> 'a
 let strict_if b x y = if b then x true else y true
 
 (* The JUMPI instruction is implemented using the JUMP instruction. *)
-val jumpi : variable_env -> constant_env -> instruction_result
-let jumpi v c = match v.venv_stack with
+val jumpi : variable_con -> constant_env -> instruction_result
+let jumpi v c = match v.vcon_stack with
  | pos :: cond :: rest ->
-    let new_env = <| v with venv_stack = pos :: rest |> in
+    let new_env = <| v with vcon_stack = pos :: rest |> in
     strict_if (cond = 0)
-           (blockedInstructionContinue (venv_advance_pc c (venv_pop_stack 2 v)))
+           (blockedInstructionContinue (vcon_advance_pc c (vcon_pop_stack 2 v)))
            (blocked_jump new_env c)
  | _ -> instruction_failure_result v
 end
 
 (* Looking up the call data size takes this work: *)
-val datasize : variable_env -> w256
-let datasize v = word256FromNat (length v.venv_data_sent)
+val datasize : variable_con -> w256
+let datasize v = word256FromNat (length v.vcon_data_sent)
 
 val word_of_bytes : list byte -> w256
 let word_of_bytes lst = word256FromBoollist (List.concat (map boolListFromWord8 lst))
@@ -1197,8 +1197,8 @@ let constant_mark lst = lst
 val read_word_from_bytes : nat -> list byte -> w256
 let read_word_from_bytes idx lst = word_of_bytes (take 32 (drop idx lst))
 
-val cut_data : variable_env -> w256 -> w256
-let cut_data v idx = read_word_from_bytes (word256ToNat idx) v.venv_data_sent
+val cut_data : variable_con -> w256 -> w256
+let cut_data v idx = read_word_from_bytes (word256ToNat idx) v.vcon_data_sent
 
 (* Looking up a number of bytes from the memory: *)
 val cut_memory : w256 -> nat -> (w256 -> byte) -> list byte
@@ -1210,55 +1210,55 @@ declare termination_argument cut_memory = automatic
 
 (* CALL instruction results in @{term ContractCall} action when there are enough stack elements *)
 (* (and gas, when we introduce the gas accounting). *)
-val call : variable_env -> constant_env -> instruction_result
-let call v c = match v.venv_stack with
+val call : variable_con -> constant_env -> instruction_result
+let call v c = match v.vcon_stack with
  | e0 :: e1 :: e2 :: e3 :: e4 :: e5 :: e6 :: rest ->
-     if word256ULT (v.venv_balance c.cenv_this) e2 then instruction_failure_result v
+     if word256ULT (v.vcon_balance c.cenv_this) e2 then instruction_failure_result v
      else
        InstructionToEnvironment (ContractCall
          <| callarg_gas = e0;
             callarg_code = w256_to_address e1;
             callarg_recipient = w256_to_address e1;
             callarg_value = e2;
-            callarg_data = cut_memory e3 (word256ToNat e4) v.venv_memory;
+            callarg_data = cut_memory e3 (word256ToNat e4) v.vcon_memory;
             callarg_output_begin = e5;
             callarg_output_size = e6 |>)
-        v.venv_storage
-        (update_balance c.cenv_this (fun orig -> orig - e2) v.venv_balance)
+        v.vcon_storage
+        (update_balance c.cenv_this (fun orig -> orig - e2) v.vcon_balance)
         (Just (* saving the variable environment for timing *)
-          (<| (venv_advance_pc c v) with
-           venv_stack = rest;
-           venv_balance = update_balance c.cenv_this (fun orig -> orig - e2) v.venv_balance;
-           venv_memory_usage = M (M v.venv_memory_usage e3 e4) e5 e6 |>, uint e5, uint e6))
+          (<| (vcon_advance_pc c v) with
+           vcon_stack = rest;
+           vcon_balance = update_balance c.cenv_this (fun orig -> orig - e2) v.vcon_balance;
+           vcon_memory_usage = M (M v.vcon_memory_usage e3 e4) e5 e6 |>, uint e5, uint e6))
   | _ -> instruction_failure_result v
 end
 
 (* DELEGATECALL is slightly different. *)
-val delegatecall : variable_env -> constant_env -> instruction_result
-let delegatecall v c = match v.venv_stack with
+val delegatecall : variable_con -> constant_env -> instruction_result
+let delegatecall v c = match v.vcon_stack with
  | e0 :: e1 :: e3 :: e4 :: e5 :: e6 :: rest ->
-    if word256ULT (v.venv_balance c.cenv_this) v.venv_value_sent then instruction_failure_result v
+    if word256ULT (v.vcon_balance c.cenv_this) v.vcon_value_sent then instruction_failure_result v
      else
        InstructionToEnvironment
          (ContractCall
            <| callarg_gas = e0;
               callarg_code = w256_to_address e1;
               callarg_recipient = w256_to_address e1;
-              callarg_value = v.venv_value_sent;
-              callarg_data = cut_memory e3 (word256ToNat e4) v.venv_memory;
+              callarg_value = v.vcon_value_sent;
+              callarg_data = cut_memory e3 (word256ToNat e4) v.vcon_memory;
               callarg_output_begin = e5;
               callarg_output_size = e6 |>)
-          v.venv_storage v.venv_balance
+          v.vcon_storage v.vcon_balance
           (Just (* save the variable environment for returns *)
-            (<| (venv_advance_pc c v) with venv_stack = rest; venv_memory_usage = M (M v.venv_memory_usage e3 e4) e5 e6 |>, uint e5, uint e6))
+            (<| (vcon_advance_pc c v) with vcon_stack = rest; vcon_memory_usage = M (M v.vcon_memory_usage e3 e4) e5 e6 |>, uint e5, uint e6))
   | _ -> instruction_failure_result v
 end
 
 (* CALLCODE is another variant. *)
-val callcode : variable_env -> constant_env -> instruction_result
-let callcode v c = match v.venv_stack with
+val callcode : variable_con -> constant_env -> instruction_result
+let callcode v c = match v.vcon_stack with
  | e0 :: e1 :: e2 :: e3 :: e4 :: e5 :: e6 :: rest ->
-    if word256ULT (v.venv_balance c.cenv_this) e2 then
+    if word256ULT (v.vcon_balance c.cenv_this) e2 then
        instruction_failure_result v
      else
        InstructionToEnvironment
@@ -1267,72 +1267,72 @@ let callcode v c = match v.venv_stack with
               callarg_code = w256_to_address e1;
               callarg_recipient = c.cenv_this;
               callarg_value = e2;
-              callarg_data = cut_memory e3 (word256ToNat e4) v.venv_memory;
+              callarg_data = cut_memory e3 (word256ToNat e4) v.vcon_memory;
               callarg_output_begin = e5;
               callarg_output_size = e6 |>)
-          v.venv_storage
-          (update_balance c.cenv_this (fun orig -> orig - e2) v.venv_balance)
+          v.vcon_storage
+          (update_balance c.cenv_this (fun orig -> orig - e2) v.vcon_balance)
           (Just (* saving the variable environment *)
-            (<| (venv_advance_pc c v) with
-                  venv_stack = rest;
-                  venv_memory_usage = M (M v.venv_memory_usage e3 e4) e5 e6;
-                  venv_balance = update_balance c.cenv_this (fun orig -> orig - e2) v.venv_balance |>, uint e5, uint e6))
+            (<| (vcon_advance_pc c v) with
+                  vcon_stack = rest;
+                  vcon_memory_usage = M (M v.vcon_memory_usage e3 e4) e5 e6;
+                  vcon_balance = update_balance c.cenv_this (fun orig -> orig - e2) v.vcon_balance |>, uint e5, uint e6))
   | _ -> instruction_failure_result v
 end
 
 (* CREATE is also similar because the instruction causes execution on another account. *)
-val create : variable_env -> constant_env -> instruction_result
-let create v c = match v.venv_stack with
+val create : variable_con -> constant_env -> instruction_result
+let create v c = match v.vcon_stack with
   | vl :: code_start :: code_len :: rest ->
-      if word256ULT (v.venv_balance c.cenv_this) vl then instruction_failure_result v else
-      let code = cut_memory code_start (word256ToNat code_len) v.venv_memory in
-      let new_balance = update_balance c.cenv_this (fun orig -> orig - vl) v.venv_balance in
+      if word256ULT (v.vcon_balance c.cenv_this) vl then instruction_failure_result v else
+      let code = cut_memory code_start (word256ToNat code_len) v.vcon_memory in
+      let new_balance = update_balance c.cenv_this (fun orig -> orig - vl) v.vcon_balance in
       InstructionToEnvironment
            (ContractCreate
              <| createarg_value = vl; createarg_code = code |>)
-            v.venv_storage new_balance
+            v.vcon_storage new_balance
             (Just (* when returning to this invocation, use the following variable environment *)
-              (<| (venv_advance_pc c v) with venv_stack = rest;
-                 venv_balance = new_balance;
-                 venv_memory_usage = M v.venv_memory_usage code_start code_len |>, 0, 0))
+              (<| (vcon_advance_pc c v) with vcon_stack = rest;
+                 vcon_balance = new_balance;
+                 vcon_memory_usage = M v.vcon_memory_usage code_start code_len |>, 0, 0))
   | _ -> instruction_failure_result v
 end
 
 (* For implementing RETURN, I need to cut a region from the memory
 according to the stack elements: *)
 
-let venv_returned_bytes v = match v.venv_stack with
- | e0 :: e1 :: _ -> cut_memory e0 (word256ToNat e1) v.venv_memory
+let vcon_returned_bytes v = match v.vcon_stack with
+ | e0 :: e1 :: _ -> cut_memory e0 (word256ToNat e1) v.vcon_memory
  | _ -> []
 end
 
 (* RETURN is modeled like this: *)
-val ret : variable_env -> constant_env -> instruction_result
-let ret v _ =  match v.venv_stack with
+val ret : variable_con -> constant_env -> instruction_result
+let ret v _ =  match v.vcon_stack with
  | e0 :: e1 :: _ ->
-     let new_v = <| v with venv_memory_usage = M v.venv_memory_usage e0 e1 |> in
-     InstructionToEnvironment (ContractReturn (venv_returned_bytes new_v))
-                           v.venv_storage v.venv_balance
+     let new_v = <| v with vcon_memory_usage = M v.vcon_memory_usage e0 e1 |> in
+     InstructionToEnvironment (ContractReturn (vcon_returned_bytes new_v))
+                           v.vcon_storage v.vcon_balance
                            Nothing (* No possibility of ever returning to this invocation. *)
  | _ -> instruction_failure_result v
 end
 
 (* STOP is simpler than RETURN: *)
-val stop : variable_env -> constant_env -> instruction_result
-let stop v _ = InstructionToEnvironment (ContractReturn []) v.venv_storage v.venv_balance Nothing
+val stop : variable_con -> constant_env -> instruction_result
+let stop v _ = InstructionToEnvironment (ContractReturn []) v.vcon_storage v.vcon_balance Nothing
 
 (* POP removes the topmost element of the stack: *)
-val pop : variable_env -> constant_env -> instruction_result
-let pop v c = match v.venv_stack with
- | _ :: tl -> InstructionContinue (venv_advance_pc c <| v with venv_stack = tl |>)
- | [] -> InstructionContinue (venv_advance_pc c v)
+val pop : variable_con -> constant_env -> instruction_result
+let pop v c = match v.vcon_stack with
+ | _ :: tl -> InstructionContinue (vcon_advance_pc c <| v with vcon_stack = tl |>)
+ | [] -> InstructionContinue (vcon_advance_pc c v)
 end
 
 (* The DUP instructions: *)
-val general_dup : byte -> variable_env -> constant_env -> instruction_result
-let general_dup n v c = match List.index v.venv_stack ((word8ToNat n) - 1) with
+val general_dup : byte -> variable_con -> constant_env -> instruction_result
+let general_dup n v c = match List.index v.vcon_stack ((word8ToNat n) - 1) with
   | Nothing -> instruction_failure_result v
-  | Just duplicated -> InstructionContinue (venv_advance_pc c <| v with venv_stack = duplicated :: v.venv_stack |>)
+  | Just duplicated -> InstructionContinue (vcon_advance_pc c <| v with vcon_stack = duplicated :: v.vcon_stack |>)
 end
 
 (* A utility function for storing a list of bytes in the memory: *)
@@ -1349,34 +1349,34 @@ let store_word_memory pos vl mem =
    store_byte_list_memory pos (word_rsplit vl) mem
 
 (* MSTORE writes one word to the memory: *)
-val mstore : variable_env -> constant_env -> instruction_result
-let mstore v c = match v.venv_stack with
+val mstore : variable_con -> constant_env -> instruction_result
+let mstore v c = match v.vcon_stack with
   | pos :: vl :: rest ->
-       let new_memory = store_word_memory pos vl v.venv_memory in
-       InstructionContinue (venv_advance_pc c
-         <| v with venv_stack = rest; venv_memory = new_memory;
-           venv_memory_usage = M v.venv_memory_usage pos 32
+       let new_memory = store_word_memory pos vl v.vcon_memory in
+       InstructionContinue (vcon_advance_pc c
+         <| v with vcon_stack = rest; vcon_memory = new_memory;
+           vcon_memory_usage = M v.vcon_memory_usage pos 32
           |>)
   | _ -> instruction_failure_result v
 end
 
 (* MLOAD reads one word from the memory: *)
-val mload : variable_env -> constant_env -> instruction_result
-let mload v c = match v.venv_stack with
+val mload : variable_con -> constant_env -> instruction_result
+let mload v c = match v.vcon_stack with
  | pos :: rest ->
-      let value = read_word_from_bytes 0 (cut_memory pos 32 v.venv_memory) in
-      InstructionContinue (venv_advance_pc c <| v with venv_stack = value :: rest; venv_memory_usage = M v.venv_memory_usage pos 32 |>)
+      let value = read_word_from_bytes 0 (cut_memory pos 32 v.vcon_memory) in
+      InstructionContinue (vcon_advance_pc c <| v with vcon_stack = value :: rest; vcon_memory_usage = M v.vcon_memory_usage pos 32 |>)
  | _ -> instruction_failure_result v
 end
 
 (* MSTORE8 writes one byte to the memory: *)
-val mstore8 : variable_env -> constant_env -> instruction_result
-let mstore8 v c = match v.venv_stack with
+val mstore8 : variable_con -> constant_env -> instruction_result
+let mstore8 v c = match v.vcon_stack with
  | pos :: vl :: rest ->
-   let new_memory = (fun p -> if p = pos then w256_to_byte vl else v.venv_memory p) in
-   InstructionContinue (venv_advance_pc c
-          <| v with venv_stack = rest; venv_memory_usage = M v.venv_memory_usage pos 8;
-                    venv_memory = new_memory |>)
+   let new_memory = (fun p -> if p = pos then w256_to_byte vl else v.vcon_memory p) in
+   InstructionContinue (vcon_advance_pc c
+          <| v with vcon_stack = rest; vcon_memory_usage = M v.vcon_memory_usage pos 8;
+                    vcon_memory = new_memory |>)
  | _ -> instruction_failure_result v
 end
 
@@ -1388,54 +1388,54 @@ let input_as_memory lst idx = match List.index lst (absnat idx) with
 end
 
 (* CALLDATACOPY: *)
-val calldatacopy : variable_env -> constant_env -> instruction_result
-let calldatacopy v c = match v.venv_stack with
+val calldatacopy : variable_con -> constant_env -> instruction_result
+let calldatacopy v c = match v.vcon_stack with
  | dst_start :: src_start :: len :: rest ->
-       let data = cut_memory src_start (absnat len) (input_as_memory v.venv_data_sent) in
-       let new_memory = store_byte_list_memory dst_start data v.venv_memory in
-       InstructionContinue (venv_advance_pc c
-         <| v with venv_stack = rest; venv_memory = new_memory;
-            venv_memory_usage = M v.venv_memory_usage dst_start len |>)
+       let data = cut_memory src_start (absnat len) (input_as_memory v.vcon_data_sent) in
+       let new_memory = store_byte_list_memory dst_start data v.vcon_memory in
+       InstructionContinue (vcon_advance_pc c
+         <| v with vcon_stack = rest; vcon_memory = new_memory;
+            vcon_memory_usage = M v.vcon_memory_usage dst_start len |>)
  | _ -> instruction_failure_result v
 end
 
 (* CODECOPY copies a region of the currently running code to the memory: *)
-val codecopy : variable_env -> constant_env -> instruction_result
-let codecopy v c = match v.venv_stack with
+val codecopy : variable_con -> constant_env -> instruction_result
+let codecopy v c = match v.vcon_stack with
  | dst_start :: src_start :: len :: rest ->
      let data = cut_memory src_start (absnat len)
                   (program_as_memory c.cenv_program) in
-     let new_memory = store_byte_list_memory dst_start data v.venv_memory in
-     InstructionContinue (venv_advance_pc c
-       <| v with venv_stack = rest; venv_memory = new_memory;
-                 venv_memory_usage = M v.venv_memory_usage dst_start len |>)
+     let new_memory = store_byte_list_memory dst_start data v.vcon_memory in
+     InstructionContinue (vcon_advance_pc c
+       <| v with vcon_stack = rest; vcon_memory = new_memory;
+                 vcon_memory_usage = M v.vcon_memory_usage dst_start len |>)
  | _ -> instruction_failure_result v
 end
 
 (* EXTCODECOPY copies a region of the code of an arbitrary account.: *)
-val extcodecopy : variable_env -> constant_env -> instruction_result
-let extcodecopy v c = match v.venv_stack with
+val extcodecopy : variable_con -> constant_env -> instruction_result
+let extcodecopy v c = match v.vcon_stack with
  | addr :: dst_start :: src_start :: len :: rest ->
      let data = cut_memory src_start (absnat len)
                   (program_as_memory
-                    (v.venv_ext_program (w256_to_address addr))) in
-     let new_memory = store_byte_list_memory dst_start data v.venv_memory in
-     InstructionContinue (venv_advance_pc c
-       <| v with venv_stack = rest; venv_memory = new_memory;
-                 venv_memory_usage = M v.venv_memory_usage dst_start len |>)
+                    (v.vcon_ext_program (w256_to_address addr))) in
+     let new_memory = store_byte_list_memory dst_start data v.vcon_memory in
+     InstructionContinue (vcon_advance_pc c
+       <| v with vcon_stack = rest; vcon_memory = new_memory;
+                 vcon_memory_usage = M v.vcon_memory_usage dst_start len |>)
  | _ -> instruction_failure_result v
 end
 
 (* PC instruction could be implemented by @{term stack_0_1_op}: *)
-val pc : variable_env -> constant_env -> instruction_result
+val pc : variable_con -> constant_env -> instruction_result
 let pc v c =
-   InstructionContinue (venv_advance_pc c
-     <| v with venv_stack = word256FromInt v.venv_pc :: v.venv_stack|>)
+   InstructionContinue (vcon_advance_pc c
+     <| v with vcon_stack = word256FromInt v.vcon_pc :: v.vcon_stack|>)
 
 (* Logging is currently no-op, until some property about event logging is wanted. *)
-val log : nat -> variable_env -> constant_env -> instruction_result
+val log : nat -> variable_con -> constant_env -> instruction_result
 let log n v c =
-   InstructionContinue (venv_advance_pc c (venv_pop_stack (n+2) v))
+   InstructionContinue (vcon_advance_pc c (vcon_pop_stack (n+2) v))
 
 (* For SWAP operations, I first define a swap operations on lists. *)
 val list_swap : forall 'a. nat -> list 'a -> maybe (list 'a)
@@ -1445,32 +1445,32 @@ let list_swap n lst = match (index lst n, index lst 0) with
 end
 
 (* Using this, I can specify the SWAP operations: *)
-val swap : nat -> variable_env -> constant_env -> instruction_result
-let swap n v c = match list_swap n v.venv_stack with
+val swap : nat -> variable_con -> constant_env -> instruction_result
+let swap n v c = match list_swap n v.vcon_stack with
  | Nothing -> instruction_failure_result v
- | Just new_stack -> InstructionContinue (venv_advance_pc c <| v with venv_stack = new_stack |>)
+ | Just new_stack -> InstructionContinue (vcon_advance_pc c <| v with vcon_stack = new_stack |>)
 end
 
 (* SHA3 instruciton in the EVM is actually Keccak 256. *)
 (* In this development, Keccak256 computation is defined in KEC.thy. *)
-val sha3 : variable_env -> constant_env -> instruction_result
-let sha3 v c = match v.venv_stack with
+val sha3 : variable_con -> constant_env -> instruction_result
+let sha3 v c = match v.vcon_stack with
  | start :: len :: rest ->
       InstructionContinue (
-        venv_advance_pc c <| v with venv_stack = keccak (cut_memory start (word256ToNat len) v.venv_memory) :: rest;
-                                    venv_memory_usage = M v.venv_memory_usage start len |>)
+        vcon_advance_pc c <| v with vcon_stack = keccak (cut_memory start (word256ToNat len) v.vcon_memory) :: rest;
+                                    vcon_memory_usage = M v.vcon_memory_usage start len |>)
  | _ -> instruction_failure_result v
 end
 
 (* The SUICIDE instruction involves value transfer. *)
-val suicide : variable_env -> constant_env -> instruction_result
-let suicide v c = match v.venv_stack with
+val suicide : variable_con -> constant_env -> instruction_result
+let suicide v c = match v.vcon_stack with
  | dst :: _ ->
      let new_balance addr =
         if addr = c.cenv_this then 0 else
-        if addr = w256_to_address dst then v.venv_balance c.cenv_this + v.venv_balance addr else
-        v.venv_balance addr in
-     InstructionToEnvironment ContractSuicide v.venv_storage new_balance Nothing
+        if addr = w256_to_address dst then v.vcon_balance c.cenv_this + v.vcon_balance addr else
+        v.vcon_balance addr in
+     InstructionToEnvironment ContractSuicide v.vcon_storage new_balance Nothing
  | _ -> instruction_failure_result v
 end
 
@@ -1624,99 +1624,99 @@ let C old_memory_consumption new_memory_consumption i s0 s1 s2 s3 recipient_empt
   Cmem new_memory_consumption  - Cmem old_memory_consumption +
   thirdComponentOfC i s0 s1 s2 s3 recipient_empty orig new_val remaining_gas
 
-val venv_next_instruction_default : variable_env -> constant_env -> inst
-let venv_next_instruction_default v c =
-    match venv_next_instruction v c with
+val vcon_next_instruction_default : variable_con -> constant_env -> inst
+let vcon_next_instruction_default v c =
+    match vcon_next_instruction v c with
     | Just i -> i
     | Nothing -> Misc STOP
     end
 
-val venv_stack_default : int -> variable_env -> w256
-let venv_stack_default idx v =
-  match List.index v.venv_stack (natFromInt idx) with
+val vcon_stack_default : int -> variable_con -> w256
+let vcon_stack_default idx v =
+  match List.index v.vcon_stack (natFromInt idx) with
   | Just w -> w
   | Nothing -> 0
   end
 
-val venv_recipient : variable_env -> constant_env -> address
-let venv_recipient v c =
-  match venv_next_instruction_default v c with
-  | Misc SUICIDE -> w256_to_address (venv_stack_default 0 v)
-  | Misc CALL -> w256_to_address (venv_stack_default 1 v)
+val vcon_recipient : variable_con -> constant_env -> address
+let vcon_recipient v c =
+  match vcon_next_instruction_default v c with
+  | Misc SUICIDE -> w256_to_address (vcon_stack_default 0 v)
+  | Misc CALL -> w256_to_address (vcon_stack_default 1 v)
   | Misc CALLCODE -> c.cenv_this
   | Misc DELGATECALL -> c.cenv_this
   | _ -> 0
   end
 
-val new_memory_consumption : inst -> variable_env -> int
+val new_memory_consumption : inst -> variable_con -> int
 let new_memory_consumption i v =
   match i with
-  | Arith SHA3 -> M v.venv_memory_usage (venv_stack_default 0 v) (venv_stack_default 1 v)
+  | Arith SHA3 -> M v.vcon_memory_usage (vcon_stack_default 0 v) (vcon_stack_default 1 v)
   | Memory CALLDATACOPY ->
-    M v.venv_memory_usage (venv_stack_default 0 v) (venv_stack_default 2 v)
+    M v.vcon_memory_usage (vcon_stack_default 0 v) (vcon_stack_default 2 v)
   | Memory CODECOPY ->
-    M v.venv_memory_usage (venv_stack_default 0 v) (venv_stack_default 1 v)
+    M v.vcon_memory_usage (vcon_stack_default 0 v) (vcon_stack_default 1 v)
   | Memory EXTCODECOPY ->
-    M v.venv_memory_usage (venv_stack_default 1 v) (venv_stack_default 3 v)
+    M v.vcon_memory_usage (vcon_stack_default 1 v) (vcon_stack_default 3 v)
   | Memory MLOAD ->
-    M v.venv_memory_usage (venv_stack_default 0 v) 32
+    M v.vcon_memory_usage (vcon_stack_default 0 v) 32
   | Memory MSTORE ->
-    M v.venv_memory_usage (venv_stack_default 0 v) 32
+    M v.vcon_memory_usage (vcon_stack_default 0 v) 32
   | Memory MSTORE8 ->
-    M v.venv_memory_usage (venv_stack_default 0 v) 1
+    M v.vcon_memory_usage (vcon_stack_default 0 v) 1
   | Misc CREATE ->
-    M v.venv_memory_usage (venv_stack_default 1 v) (venv_stack_default 2 v)
+    M v.vcon_memory_usage (vcon_stack_default 1 v) (vcon_stack_default 2 v)
   | Misc CALL ->
-    M (M v.venv_memory_usage (venv_stack_default 3 v) (venv_stack_default 4 v)) (venv_stack_default 5 v) (venv_stack_default 6 v)
+    M (M v.vcon_memory_usage (vcon_stack_default 3 v) (vcon_stack_default 4 v)) (vcon_stack_default 5 v) (vcon_stack_default 6 v)
   | Misc CALLCODE ->
-    M (M v.venv_memory_usage (venv_stack_default 3 v) (venv_stack_default 4 v)) (venv_stack_default 5 v) (venv_stack_default 6 v)
+    M (M v.vcon_memory_usage (vcon_stack_default 3 v) (vcon_stack_default 4 v)) (vcon_stack_default 5 v) (vcon_stack_default 6 v)
   | Misc DELEGATECALL ->
-    M (M v.venv_memory_usage (venv_stack_default 2 v) (venv_stack_default 3 v)) (venv_stack_default 4 v) (venv_stack_default 5 v)
+    M (M v.vcon_memory_usage (vcon_stack_default 2 v) (vcon_stack_default 3 v)) (vcon_stack_default 4 v) (vcon_stack_default 5 v)
   | Misc RETURN ->
-    M v.venv_memory_usage (venv_stack_default 0 v) (venv_stack_default 1 v)
-  | _ -> v.venv_memory_usage
+    M v.vcon_memory_usage (vcon_stack_default 0 v) (vcon_stack_default 1 v)
+  | _ -> v.vcon_memory_usage
   end
 
-val predictGas : inst -> variable_env -> constant_env -> int
+val predictGas : inst -> variable_con -> constant_env -> int
 let predictGas i v c =
-  C v.venv_memory_usage (new_memory_consumption i v) (venv_next_instruction_default v c) (venv_stack_default 0 v) (venv_stack_default 1 v) (venv_stack_default 2 v) (venv_stack_default 3 v)
-   	(not (v.venv_account_existence (venv_recipient v c))) (v.venv_storage (venv_stack_default 0 v)) (venv_stack_default 1 v) (v.venv_gas)
+  C v.vcon_memory_usage (new_memory_consumption i v) (vcon_next_instruction_default v c) (vcon_stack_default 0 v) (vcon_stack_default 1 v) (vcon_stack_default 2 v) (vcon_stack_default 3 v)
+   	(not (v.vcon_account_existence (vcon_recipient v c))) (v.vcon_storage (vcon_stack_default 0 v)) (vcon_stack_default 1 v) (v.vcon_gas)
 
-val check_resources : variable_env -> constant_env -> list w256 -> inst -> bool
+val check_resources : variable_con -> constant_env -> list w256 -> inst -> bool
 let check_resources v c s i =
   match inst_stack_numbers i with
   | (consumed, produced) ->
     (intFromNat (length s) + produced - consumed <= 1024) &&
-    predictGas i v c <= v.venv_gas
+    predictGas i v c <= v.vcon_gas
   end
 
 val subtract_gas : int -> instruction_result -> instruction_result
 let subtract_gas consumption orig =
   match orig with
   | InstructionContinue v ->
-    InstructionContinue (<| v with venv_gas = v.venv_gas - consumption |>)
+    InstructionContinue (<| v with vcon_gas = v.vcon_gas - consumption |>)
   | InstructionAnnotationFailure -> InstructionAnnotationFailure
   | InstructionToEnvironment act st bal Nothing -> InstructionToEnvironment act st bal Nothing
   | InstructionToEnvironment act st bal (Just (v, dst, len)) ->
-    InstructionToEnvironment act st bal (Just (<|v with venv_gas = v.venv_gas - consumption|>, dst, len))
+    InstructionToEnvironment act st bal (Just (<|v with vcon_gas = v.vcon_gas - consumption|>, dst, len))
   end
 
 (* Finally, using the above definitions, I can define a function that operates an instruction *)
 (* on the execution environments. *)
-val instruction_sem : variable_env -> constant_env -> inst -> instruction_result
+val instruction_sem : variable_con -> constant_env -> inst -> instruction_result
 let instruction_sem v c inst =
   subtract_gas (predictGas inst v c)
   (match inst with
   | Stack (PUSH_N lst) -> stack_0_1_op v c (word_of_bytes (constant_mark lst))
   | Unknown _ -> instruction_failure_result v
-  | Storage SLOAD -> stack_1_1_op v c v.venv_storage
+  | Storage SLOAD -> stack_1_1_op v c v.vcon_storage
   | Storage SSTORE -> sstore v c
   | Pc JUMPI -> jumpi v c
   | Pc JUMP -> jump v c
   | Pc JUMPDEST -> stack_0_0_op v c
   | Info CALLDATASIZE -> stack_0_1_op v c (datasize v)
   | Stack CALLDATALOAD -> stack_1_1_op v c (cut_data v)
-  | Info CALLER -> stack_0_1_op v c (address_to_w256 v.venv_caller)
+  | Info CALLER -> stack_0_1_op v c (address_to_w256 v.vcon_caller)
   | Arith ADD -> stack_2_1_op v c (fun a b -> a + b)
   | Arith SUB -> stack_2_1_op v c (fun a b -> a - b)
   | Arith ISZERO -> stack_1_1_op v c (fun a -> if a = 0 then 1 else 0)
@@ -1725,7 +1725,7 @@ let instruction_sem v c inst =
   | Misc STOP -> stop v c
   | Dup n -> general_dup n v c
   | Stack POP -> pop v c
-  | Info GASLIMIT -> stack_0_1_op v c v.venv_block.block_gaslimit
+  | Info GASLIMIT -> stack_0_1_op v c v.vcon_block.block_gaslimit
   | Arith inst_GT -> stack_2_1_op v c (fun a b -> if word256UGT a b then 1 else 0)
   | Arith inst_EQ -> stack_2_1_op v c (fun a b -> if a = b then 1 else 0)
   | Annotation a -> eval_annotation a v c
@@ -1769,18 +1769,18 @@ let instruction_sem v c inst =
   | Arith inst_LT -> stack_2_1_op v c (fun arg0 arg1 -> if word256UGT arg1 arg0 then 1 else 0)
   | Arith SHA3 -> sha3 v c
   | Info ADDRESS -> stack_0_1_op v c (address_to_w256 c.cenv_this)
-  | Info BALANCE -> stack_1_1_op v c (fun addr -> v.venv_balance (w256_to_address addr))
-  | Info ORIGIN -> stack_0_1_op v c (address_to_w256 v.venv_origin)
-  | Info CALLVALUE -> stack_0_1_op v c v.venv_value_sent
+  | Info BALANCE -> stack_1_1_op v c (fun addr -> v.vcon_balance (w256_to_address addr))
+  | Info ORIGIN -> stack_0_1_op v c (address_to_w256 v.vcon_origin)
+  | Info CALLVALUE -> stack_0_1_op v c v.vcon_value_sent
   | Info CODESIZE -> stack_0_1_op v c (word256FromInt c.cenv_program.program_length)
-  | Info GASPRICE -> stack_0_1_op v c v.venv_block.block_gasprice
+  | Info GASPRICE -> stack_0_1_op v c v.vcon_block.block_gasprice
   | Info EXTCODESIZE -> stack_1_1_op v c
-	   (fun arg -> word256FromInt (v.venv_ext_program (w256_to_address arg)).program_length)
-  | Info BLOCKHASH -> stack_1_1_op v c v.venv_block.block_blockhash
-  | Info COINBASE -> stack_0_1_op v c (address_to_w256 v.venv_block.block_coinbase)
-  | Info TIMESTAMP -> stack_0_1_op v c v.venv_block.block_timestamp
-  | Info NUMBER -> stack_0_1_op v c v.venv_block.block_number
-  | Info DIFFICULTY -> stack_0_1_op v c v.venv_block.block_difficulty
+	   (fun arg -> word256FromInt (v.vcon_ext_program (w256_to_address arg)).program_length)
+  | Info BLOCKHASH -> stack_1_1_op v c v.vcon_block.block_blockhash
+  | Info COINBASE -> stack_0_1_op v c (address_to_w256 v.vcon_block.block_coinbase)
+  | Info TIMESTAMP -> stack_0_1_op v c v.vcon_block.block_timestamp
+  | Info NUMBER -> stack_0_1_op v c v.vcon_block.block_number
+  | Info DIFFICULTY -> stack_0_1_op v c v.vcon_block.block_difficulty
   | Memory MLOAD -> mload v c
   | Memory MSTORE -> mstore v c
   | Memory MSTORE8 -> mstore8 v c
@@ -1803,7 +1803,7 @@ let instruction_sem v c inst =
 	  (* Since I cannot guarantee anything about DELEGATECALL, I choose immediate failure. *)
 	  InstructionAnnotationFailure
   | Info GAS -> stack_0_1_op v c (gas v)
-  | Memory MSIZE -> stack_0_1_op v c (32 * word256FromInt v.venv_memory_usage)
+  | Memory MSIZE -> stack_0_1_op v c (32 * word256FromInt v.vcon_memory_usage)
   end)
 
 (* subsection {* Programs' Answer to the Environment *} *)
@@ -1817,7 +1817,7 @@ let instruction_sem v c inst =
 
 type program_result =
 | ProgramStepRunOut (* the artificial step counter has run out *)
-| ProgramToEnvironment of contract_action * storage * (address -> w256) * maybe (variable_env * int * int)
+| ProgramToEnvironment of contract_action * storage * (address -> w256) * maybe (variable_con * int * int)
   (** the program stopped execution because an instruction wants to talk to the environment
   for example because the execution returned, failed, or called an account.
   *)
@@ -1835,13 +1835,13 @@ type program_result =
 
 (* Since our program struct contains a list of annotations for each program position, *)
 (* I have a function that checks all annotations at a particular program position: *)
-val check_annotations : variable_env -> constant_env -> bool
+val check_annotations : variable_con -> constant_env -> bool
 let check_annotations v c =
-  let annots = c.cenv_program.program_annotation v.venv_pc in
+  let annots = c.cenv_program.program_annotation v.vcon_pc in
   List.all (fun annot -> annot (build_aenv v c)) annots
 
-val program_sem : variable_env -> constant_env -> int -> nat -> program_result
-val blocked_program_sem : variable_env -> constant_env -> int -> nat -> bool -> program_result
+val program_sem : variable_con -> constant_env -> int -> nat -> program_result
+val blocked_program_sem : variable_con -> constant_env -> int -> nat -> bool -> program_result
 
 
 (* The program execution takes two counters. *)
@@ -1855,22 +1855,22 @@ let rec program_sem v c tiny_step remaining_steps = match remaining_steps with
  | 0 -> ProgramStepRunOut
  | remaining_steps + 1 ->
    if tiny_step <= 0 then
-     ProgramToEnvironment ContractFail v.venv_storage_at_call v.venv_balance_at_call Nothing else
+     ProgramToEnvironment ContractFail v.vcon_storage_at_call v.vcon_balance_at_call Nothing else
    if not (check_annotations v c) then ProgramAnnotationFailure else
-   match venv_next_instruction v c with
+   match vcon_next_instruction v c with
     | Nothing -> ProgramStepRunOut
     | Just i ->
-    if check_resources v c (v.venv_stack) i then
+    if check_resources v c (v.vcon_stack) i then
       match instruction_sem v c i with
       | InstructionContinue new_v ->
-         (strict_if (new_v.venv_pc > v.venv_pc)
+         (strict_if (new_v.vcon_pc > v.vcon_pc)
            (blocked_program_sem new_v c (tiny_step - 1) (remaining_steps  + 1))
            (blocked_program_sem new_v c c.cenv_program.program_length remaining_steps))
       | InstructionToEnvironment a st bal opt_pushed_v -> ProgramToEnvironment a st bal opt_pushed_v
       | _ -> ProgramInvalid
       end
     else
-      ProgramToEnvironment ContractFail v.venv_storage_at_call v.venv_balance_at_call Nothing
+      ProgramToEnvironment ContractFail v.vcon_storage_at_call v.vcon_balance_at_call Nothing
    end
 end
 and blocked_program_sem v c l p _ = program_sem v c l p
@@ -1890,7 +1890,7 @@ type account_state = <|
   account_storage : storage;
   account_code : program;
   account_balance : w256;
-  account_ongoing_calls : list (variable_env * int * int);
+  account_ongoing_calls : list (variable_con * int * int);
     (* the variable environments that are executing on this account, but waiting for calls to finish *)
   account_killed : bool;
     (* the boolean that indicates the account has executed SUICIDE in this transaction. *)
@@ -1920,12 +1920,12 @@ val is_call_like : maybe inst -> bool
 let is_call_like i = (i = Just (Misc CALL) || i = Just (Misc DELEGATECALL)
                  || i = Just (Misc CALLCODE) || i = Just (Misc CREATE))
 
-val build_venv_failed : account_state -> maybe variable_env
-let build_venv_failed a = match a.account_ongoing_calls with
+val build_vcon_failed : account_state -> maybe variable_con
+let build_vcon_failed a = match a.account_ongoing_calls with
  | [] -> Nothing
  | (recovered,_,_) :: _ ->
-      if is_call_like (a.account_code.program_content (recovered.venv_pc - 1)) then
-      Just (<| recovered with venv_stack = 0 :: recovered.venv_stack |>) (* 0 is pushed, indicating failure*)
+      if is_call_like (a.account_code.program_content (recovered.vcon_pc - 1)) then
+      Just (<| recovered with vcon_stack = 0 :: recovered.vcon_stack |>) (* 0 is pushed, indicating failure*)
       else Nothing
 end
 
@@ -1950,7 +1950,7 @@ let empty_account addr =
 
 (* And after our contract makes a move, the account state is updated as follows. *)
 
-val update_account_state : account_state -> contract_action -> storage -> (address -> w256) -> maybe (variable_env * int * int) -> account_state
+val update_account_state : account_state -> contract_action -> storage -> (address -> w256) -> maybe (variable_con * int * int) -> account_state
 let update_account_state prev act st bal v_opt =
    <| prev with
      account_storage = st;
@@ -1982,30 +1982,30 @@ let empty_memory = (fun _ -> 0)
 (* The origin of the transaction is also considered arbitrary.*)
 
 
-indreln [build_venv_called : account_state -> call_env -> variable_env -> bool]
-  venv_called : forall bal a env origin ext block gas existence.
+indreln [build_vcon_called : account_state -> call_env -> variable_con -> bool]
+  vcon_called : forall bal a env origin ext block gas existence.
     bal a.account_address = a.account_balance ==>
-    build_venv_called a env
- <| venv_stack = []; (* The stack is initialized for every invocation *)
-    venv_memory = empty_memory; (* The memory is also initialized for every invocation *)
-     venv_memory_usage = 0; (* The memory usage is initialized. *)
-     venv_storage = a.account_storage; (* The storage is taken from the account state *)
-     venv_pc = 0; (* The program counter is initialized to zero *)
-     venv_balance = (fun (addr:address) ->
+    build_vcon_called a env
+ <| vcon_stack = []; (* The stack is initialized for every invocation *)
+    vcon_memory = empty_memory; (* The memory is also initialized for every invocation *)
+     vcon_memory_usage = 0; (* The memory usage is initialized. *)
+     vcon_storage = a.account_storage; (* The storage is taken from the account state *)
+     vcon_pc = 0; (* The program counter is initialized to zero *)
+     vcon_balance = (fun (addr:address) ->
                          if addr = a.account_address
                            then bal a.account_address + env.callenv_value else bal addr);
                         (* The balance is arbitrary, except that the balance of this account
                            is as specified in the account state plus the sent amount. *)
-     venv_caller = env.callenv_caller; (* the caller is specified by the environment *)
-     venv_value_sent = env.callenv_value; (* the sent value is specified by the environment *)
-     venv_data_sent = env.callenv_data; (* the sent data is specified by the environment *)
-     venv_storage_at_call = a.account_storage; (* the snapshot of the storage is remembered in case of failure *)
-     venv_balance_at_call = bal; (* the snapshot of the balance is remembered in case of failure *)
-     venv_origin = origin; (* the origin of the transaction is arbitrarily chosen *)
-     venv_ext_program = ext; (* the codes of the external programs are arbitrary. *)
-     venv_block = block; (* the block information is chosen arbitrarily. *)
-     venv_gas = gas; (* the amount of gas is chosen arbitrarily. *)
-     venv_account_existence = existence (* existence is chosen arbitrarily *)
+     vcon_caller = env.callenv_caller; (* the caller is specified by the environment *)
+     vcon_value_sent = env.callenv_value; (* the sent value is specified by the environment *)
+     vcon_data_sent = env.callenv_data; (* the sent data is specified by the environment *)
+     vcon_storage_at_call = a.account_storage; (* the snapshot of the storage is remembered in case of failure *)
+     vcon_balance_at_call = bal; (* the snapshot of the balance is remembered in case of failure *)
+     vcon_origin = origin; (* the origin of the transaction is arbitrarily chosen *)
+     vcon_ext_program = ext; (* the codes of the external programs are arbitrary. *)
+     vcon_block = block; (* the block information is chosen arbitrarily. *)
+     vcon_gas = gas; (* the amount of gas is chosen arbitrarily. *)
+     vcon_account_existence = existence (* existence is chosen arbitrarily *)
    |>
 
 (* When an account returns to our contract, the variable environment is *)
@@ -2025,14 +2025,14 @@ let rec put_return_values orig lst b s =
   end
 declare termination_argument put_return_values = automatic
 
-indreln [build_venv_returned : account_state -> return_result -> variable_env -> bool]
-venv_returned:
+indreln [build_vcon_returned : account_state -> return_result -> variable_con -> bool]
+vcon_returned:
    forall a_code v_pc new_bal a_bal a_addr a_storage v_stack v_memory v_memory_usage
           v_storage v_balance v_caller v_value v_data v_init_storage v_init_balance
           v_origin v_ext_program v_block v_gas mem_start mem_size r rest whichever v_ex.
    (is_call_like (a_code.program_content (v_pc - 1))) &&
    (word256UGE new_bal a_bal) ==> (* the balance might have increased *)
-   build_venv_returned
+   build_vcon_returned
 
      (* here is the first argument *)
      <| account_address = a_addr (* all elements are spelled out for performance *)
@@ -2040,22 +2040,22 @@ venv_returned:
      ; account_code = a_code
      ; account_balance = a_bal
      ; account_ongoing_calls =
-         ((<| venv_stack = v_stack
-         ; venv_memory = v_memory
-         ; venv_memory_usage = v_memory_usage
-         ; venv_storage = v_storage
-         ; venv_pc = v_pc
-         ; venv_balance = v_balance
-         ; venv_caller = v_caller
-         ; venv_value_sent = v_value
-         ; venv_data_sent = v_data
-         ; venv_storage_at_call = v_init_storage
-         ; venv_balance_at_call = v_init_balance
-         ; venv_origin = v_origin
-         ; venv_ext_program = v_ext_program
-         ; venv_block = v_block
-         ; venv_gas = v_gas
-         ; venv_account_existence = v_ex
+         ((<| vcon_stack = v_stack
+         ; vcon_memory = v_memory
+         ; vcon_memory_usage = v_memory_usage
+         ; vcon_storage = v_storage
+         ; vcon_pc = v_pc
+         ; vcon_balance = v_balance
+         ; vcon_caller = v_caller
+         ; vcon_value_sent = v_value
+         ; vcon_data_sent = v_data
+         ; vcon_storage_at_call = v_init_storage
+         ; vcon_balance_at_call = v_init_balance
+         ; vcon_origin = v_origin
+         ; vcon_ext_program = v_ext_program
+         ; vcon_block = v_block
+         ; vcon_gas = v_gas
+         ; vcon_account_existence = v_ex
          |>, mem_start, mem_size) :: rest)
      ; account_killed = whichever
      |>
@@ -2064,22 +2064,22 @@ venv_returned:
      r
 
      (* here is the third argument *)
-     (<| venv_stack = 1 :: v_stack (* 1 is pushed, indicating a return *)
-       ; venv_memory =
+     (<| vcon_stack = 1 :: v_stack (* 1 is pushed, indicating a return *)
+       ; vcon_memory =
          put_return_values v_memory r.return_data mem_start mem_size
-       ; venv_memory_usage = v_memory_usage
-       ; venv_storage = a_storage
-       ; venv_pc = v_pc
-       ; venv_balance = (update_balance a_addr
+       ; vcon_memory_usage = v_memory_usage
+       ; vcon_storage = a_storage
+       ; vcon_pc = v_pc
+       ; vcon_balance = (update_balance a_addr
                             (fun _ -> new_bal) r.return_balance)
-       ; venv_caller = v_caller
-       ; venv_value_sent = v_value
-       ; venv_data_sent = v_data
-       ; venv_storage_at_call = v_init_storage
-       ; venv_balance_at_call = v_init_balance
-       ; venv_origin = v_origin
-       ; venv_ext_program = v_ext_program
-       ; venv_block = v_block
-       ; venv_gas = v_gas
-       ; venv_account_existence = v_ex
+       ; vcon_caller = v_caller
+       ; vcon_value_sent = v_value
+       ; vcon_data_sent = v_data
+       ; vcon_storage_at_call = v_init_storage
+       ; vcon_balance_at_call = v_init_balance
+       ; vcon_origin = v_origin
+       ; vcon_ext_program = v_ext_program
+       ; vcon_block = v_block
+       ; vcon_gas = v_gas
+       ; vcon_account_existence = v_ex
       |>)

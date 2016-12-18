@@ -21,8 +21,8 @@ imports Main "~~/src/HOL/Word/Word" "./ContractEnv" "./Instructions" "./KEC" "./
 
 begin
 
-declare venv_advance_pc_def [simp]
-declare venv_next_instruction_def [simp]
+declare vcon_advance_pc_def [simp]
+declare vcon_next_instruction_def [simp]
 declare call_def [simp]
 
 text {* When the if-condition is known to be True, the simplifier can
@@ -65,8 +65,8 @@ text {* When the contract returns, the result of the instruction always looks li
 declare instruction_return_result_def [simp]
 declare M_def [simp]
 declare update_balance_def [simp]
-declare venv_stack_top_def [simp]
-declare venv_update_storage_def [simp]
+declare vcon_stack_top_def [simp]
+declare vcon_update_storage_def [simp]
 declare stack_0_0_op_def [simp]
 declare stack_0_1_op_def [simp]
 declare stack_1_1_op_def [simp]
@@ -142,16 +142,16 @@ done
 
 declare swap_def [simp]
 
-definition sha3 :: "variable_env \<Rightarrow> constant_env \<Rightarrow> instruction_result"
+definition sha3 :: "variable_con \<Rightarrow> constant_env \<Rightarrow> instruction_result"
 where
 "sha3 v c \<equiv>
-  (case venv_stack v of
+  (case vcon_stack v of
     start # len # rest \<Rightarrow>
       InstructionContinue (
-        venv_advance_pc c v\<lparr> venv_stack := keccak
-                                         (cut_memory start (unat len) (venv_memory v))
+        vcon_advance_pc c v\<lparr> vcon_stack := keccak
+                                         (cut_memory start (unat len) (vcon_memory v))
                                         # rest
-                        , venv_memory_usage := M (venv_memory_usage v) start len
+                        , vcon_memory_usage := M (vcon_memory_usage v) start len
                         \<rparr>)
   | _ \<Rightarrow> instruction_failure_result v)"
 
@@ -176,15 +176,15 @@ lemma unblock_program_sem [simp] : "blocked_program_sem v c l p True = program_s
 apply(simp add: blocked_program_sem.psimps)
 done
 
-declare build_venv_called.simps [simp]
+declare build_vcon_called.simps [simp]
 
 declare build_cenv_def [simp]
 
 declare is_call_like_def [simp]
 
-declare build_venv_returned.simps [simp]
+declare build_vcon_returned.simps [simp]
 
-declare build_venv_failed_def [simp]
+declare build_vcon_failed_def [simp]
 
 declare account_state_pop_ongoing_call_def [simp]
 
@@ -229,7 +229,7 @@ done
 
 declare unat_def [simp]
         maybe_to_list.simps [simp]
-        venv_pop_stack_def [simp]
+        vcon_pop_stack_def [simp]
         of_bl_def [simp]
         to_bl_def [simp]
         bl_to_bin_def [simp]
@@ -289,9 +289,9 @@ declare Gzero_def [simp]
         Ccallgas_def [simp]
         Ccall_def [simp]
         thirdComponentOfC.simps [simp]
-        venv_next_instruction_default_def [simp]
-        venv_recipient_def [simp]
-        venv_stack_default_def [simp]
+        vcon_next_instruction_default_def [simp]
+        vcon_recipient_def [simp]
+        vcon_stack_default_def [simp]
         subtract_gas.simps [simp]
 
 end

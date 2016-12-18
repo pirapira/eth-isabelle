@@ -143,7 +143,7 @@ inductive environment_turn ::
 \<Rightarrow> (account_state * program_result)
    (* the account state before the environment's move
       and the last thing our account did *)
-\<Rightarrow> (account_state * variable_env)
+\<Rightarrow> (account_state * variable_con)
    (* the account state after the environment's move
       and the variable environment from which our contract must start. *)
 \<Rightarrow> bool (* a boolean indicating if that is a possible environment's move. *)"
@@ -153,16 +153,16 @@ where
   The deeper reentrant invocations are performed without the environment replying to the contract. *}
   "(* If a variable environment is built from the old account state *)
    (* and the call arguments, *)
-   build_venv_called old_state callargs next_venv \<Longrightarrow>
+   build_vcon_called old_state callargs next_vcon \<Longrightarrow>
    
    (* the environment makes a move, showing the variable environment. *)
-   environment_turn I (old_state, ProgramInit callargs) (old_state, next_venv)"
+   environment_turn I (old_state, ProgramInit callargs) (old_state, next_vcon)"
 | environment_return: -- {* the environment might return to our contract. *}
   "(* If the account state can be changed during reentrancy,*)
    account_state_return_change I account_state_going_out account_state_back \<Longrightarrow>
 
    (* and a variable environment can be recovered from the changed account state,*)
-   build_venv_returned account_state_back result new_v \<Longrightarrow>
+   build_vcon_returned account_state_back result new_v \<Longrightarrow>
 
    (* and the previous move of the contract was a call-like action, *)
    returnable_result program_r \<Longrightarrow>
@@ -174,7 +174,7 @@ where
 
 | environment_fail: -- {* the environment might fail from an account into our contract. *}
   "(* If a variable environment can be recovered from the previous account state,*)
-   build_venv_failed account_state_going_out = Some new_v \<Longrightarrow>
+   build_vcon_failed account_state_going_out = Some new_v \<Longrightarrow>
    
    (* and if the previous action from the contract was a call, *)
    returnable_result result = True \<Longrightarrow>
@@ -187,14 +187,14 @@ where
 text {* As a reply, our contract might make a move, or report an annotation failure.*}
 
 inductive contract_turn ::
-"(account_state * variable_env) \<Rightarrow> (account_state * program_result) \<Rightarrow> bool"
+"(account_state * variable_con) \<Rightarrow> (account_state * program_result) \<Rightarrow> bool"
 where
   contract_to_environment:
   "(* Under a constant environment built from the old account state, *)
    build_cenv old_account = cenv \<Longrightarrow>
 
    (* if the program behaves like this, *)
-   program_sem old_venv cenv 
+   program_sem old_vcon cenv 
       (program_length (cenv_program cenv)) steps
       = ProgramToEnvironment act st bal opt_v \<Longrightarrow>
 
@@ -203,7 +203,7 @@ where
      = update_account_state old_account act st bal opt_v \<Longrightarrow>
 
    (* the contract makes a move and udates the account state. *)
-   contract_turn (old_account, old_venv)
+   contract_turn (old_account, old_vcon)
       (account_state_going_out, ProgramToEnvironment act st bal opt_v)"
 
 | contract_annotation_failure:
@@ -211,11 +211,11 @@ where
    build_cenv old_account = cenv \<Longrightarrow>
    
    (* and if the contract execution results in an annotation failure, *)
-   program_sem old_venv cenv
+   program_sem old_vcon cenv
       (program_length (cenv_program cenv)) steps = ProgramAnnotationFailure \<Longrightarrow>
 
    (* the contract makes a move, indicating the annotation failure. *)
-   contract_turn (old_account, old_venv) (old_account, ProgramAnnotationFailure)"
+   contract_turn (old_account, old_vcon) (old_account, ProgramAnnotationFailure)"
 
 text {* When we combine the environment's turn and the contract's turn, we get one round.
 The round is a binary relation over a single set.
