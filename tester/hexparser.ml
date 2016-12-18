@@ -16,7 +16,15 @@ let empty_program_impl : program_impl =
   }
 
 let program_from_impl (imp : program_impl) : program =
-  failwith "program_from_impl"
+  { program_content =
+      (fun (pos : int) ->
+        try Some (IntMap.find pos imp.p_impl_content)
+        with Not_found -> None
+      )
+  ; program_length = imp.p_impl_length
+  ; program_annotation =
+      fun _ -> []
+  }
 
 (** The payload of PUSH instructions are stored as Unknown *)
 let store_instruction (inst : inst) (orig : program_impl) : program_impl =
