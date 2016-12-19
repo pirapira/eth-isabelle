@@ -51,6 +51,16 @@ let rec byte_list_of_hex_string (s : string) =
     let rest = BatString.tail s 2 in
     byte_of_int first_byte :: byte_list_of_hex_string rest
 
+let format_quad_as_list
+      (act : Evm.contract_action) (storage : Evm.storage)
+      (bal : Evm.address -> Evm.w256) (stashed_opt : (Evm.variable_con * int * int) option) : Easy_format.t list =
+  let open Easy_format in
+  [ Label ((Atom ("Action", atom), label), Atom ("to be printed", atom))
+  ; Atom ("storage to be printed", atom)
+  ; Atom ("balance to be printed", atom)
+  ; Atom ("stashed_opt to be printed", atom)
+  ]
+
 let format_program_result (r : Evm.program_result) : Easy_format.t =
   let open Evm in
   let open Easy_format in
@@ -59,7 +69,7 @@ let format_program_result (r : Evm.program_result) : Easy_format.t =
   | ProgramStepRunOut -> Atom ("ProgramStepRunOut", atom)
   | ProgramToEnvironment (act, storage, bal, stashed_opt) ->
      Label ((Atom ("ProgramToEnvironment", atom), label),
-            List (list_usual, [(* to be filled *)]))
+            List (list_usual, format_quad_as_list act storage bal stashed_opt))
   | ProgramInvalid -> Atom ("ProgramInvalid", atom)
   | ProgramAnnotationFailure -> Atom ("ProgramAnnotationFailure", atom)
   | ProgramInit cenv ->
