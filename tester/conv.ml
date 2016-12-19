@@ -50,3 +50,18 @@ let rec byte_list_of_hex_string (s : string) =
     let first_byte = int_of_string ("0x"^(BatString.left s 2)) in
     let rest = BatString.tail s 2 in
     byte_of_int first_byte :: byte_list_of_hex_string rest
+
+let format_program_result (r : Evm.program_result) : Easy_format.t =
+  let open Evm in
+  let open Easy_format in
+  let list_usual = ("{", ",", "}", list) in
+  match r with
+  | ProgramStepRunOut -> Atom ("ProgramStepRunOut", atom)
+  | ProgramToEnvironment (act, storage, bal, stashed_opt) ->
+     Label ((Atom ("ProgramToEnvironment", atom), label),
+            List (list_usual, [(* to be filled *)]))
+  | ProgramInvalid -> Atom ("ProgramInvalid", atom)
+  | ProgramAnnotationFailure -> Atom ("ProgramAnnotationFailure", atom)
+  | ProgramInit cenv ->
+     Label ((Atom ("ProgramInit", atom), label),
+            List (list_usual, [(* to be filled *)]))
