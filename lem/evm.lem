@@ -1760,10 +1760,10 @@ let instruction_sem v c inst =
 	   (fun a divisor -> (if divisor = 0 then 0 else a mod divisor))
   | Arith ADDMOD -> stack_3_1_op v c
 	   (fun a b divisor ->
-		   (if divisor = 0 then 0 else (a + b) mod divisor))
+		   (if divisor = 0 then 0 else word256FromInt ((uint a + uint b) mod (uint divisor))))
   | Arith MULMOD -> stack_3_1_op v c
 	   (fun a b divisor ->
-		   (if divisor = 0 then 0 else (a * b) mod divisor))
+		   (if divisor = 0 then 0 else word256FromInt ((uint a * uint b) mod (uint divisor))))
   | Arith EXP -> stack_2_1_op v c (fun a exponent -> word256FromInt (uint a ** word256ToNat exponent))
   | Arith inst_LT -> stack_2_1_op v c (fun arg0 arg1 -> if word256UGT arg1 arg0 then 1 else 0)
   | Arith SHA3 -> sha3 v c
