@@ -1047,7 +1047,10 @@ let vcon_update_storage idx vall v =
 (* Peeking the next instruction: *)
 val vcon_next_instruction : variable_con -> constant_con -> maybe inst
 let vcon_next_instruction v c =
-   c.ccon_program.program_content v.vcon_pc
+  match c.ccon_program.program_content v.vcon_pc with
+  | Just i -> Just i
+  | Nothing -> Just (Misc STOP)
+  end
 
 (* Advancing the program counter: *)
 val vcon_advance_pc : constant_con -> variable_con -> variable_con
