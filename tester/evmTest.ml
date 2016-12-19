@@ -9,9 +9,9 @@ let empty_program : program =
   ; program_annotation = (fun _ -> [])
   }
 
-let dummy_constant_env : constant_env =
-  { cenv_program = empty_program
-  ; cenv_this = word160_of_big_int (Big_int.big_int_of_int 100)
+let dummy_constant_con : constant_con =
+  { ccon_program = empty_program
+  ; ccon_this = word160_of_big_int (Big_int.big_int_of_int 100)
   }
 
 let empty_memory : memory = (fun _ -> byte_of_big_int Big_int.zero_big_int)
@@ -34,28 +34,30 @@ let dummy_block_info : block_info =
   ; block_gasprice = zero_word
   }
 
-let dummy_variable_env : variable_env =
-  { venv_stack = []
-  ; venv_memory = empty_memory
-  ; venv_memory_usage = 0
-  ; venv_storage = empty_storage
-  ; venv_pc = 0
-  ; venv_balance = empty_balance
-  ; venv_caller = dummy_address
-  ; venv_value_sent = zero_word
-  ; venv_data_sent = []
-  ; venv_storage_at_call = empty_storage
-  ; venv_balance_at_call = empty_balance
-  ; venv_origin = dummy_address
-  ; venv_ext_program = empty_ext_program
-  ; venv_block = dummy_block_info
-  ; venv_gas = 50000
-  ; venv_account_existence = fun _ -> false
+let dummy_variable_con : variable_con =
+  { vcon_stack = []
+  ; vcon_memory = empty_memory
+  ; vcon_memory_usage = 0
+  ; vcon_storage = empty_storage
+  ; vcon_pc = 0
+  ; vcon_balance = empty_balance
+  ; vcon_caller = dummy_address
+  ; vcon_value_sent = zero_word
+  ; vcon_data_sent = []
+  ; vcon_storage_at_call = empty_storage
+  ; vcon_balance_at_call = empty_balance
+  ; vcon_origin = dummy_address
+  ; vcon_ext_program = empty_ext_program
+  ; vcon_block = dummy_block_info
+  ; vcon_gas = 50000
+  ; vcon_account_existence = fun _ -> false
   }
-
 
 
 let () =
   let x : Word256.word256 = Word256.W256 (true, []) in
   let open Big_int in
-  Printf.printf "hello %s\n" (string_of_big_int (big_int_of_word256 (word256_of_big_int (BatBig_int.big_int_of_int (333)))))
+  let () = Printf.printf "hello %s\n" (string_of_big_int (big_int_of_word256 (word256_of_big_int (BatBig_int.big_int_of_int (333))))) in
+  let (_ : program_result) = program_sem dummy_variable_con dummy_constant_con 200 300 in
+  let () = Printf.printf "called EVM.\n" in
+  ()
