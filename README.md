@@ -14,7 +14,7 @@ When you see `\<Rightarrow>` in the source, try using the [Isabelle2016](https:/
 
 ## Lem?
 
-[Lem](https://www.cl.cam.ac.uk/~pes20/lem/) is a language that can be translated into Coq, Isabelle/HOL, HOL4, OCaml, HTML and LaTeX.
+[Lem](https://www.cl.cam.ac.uk/~pes20/lem/) is a language that can be translated into [Coq](https://coq.inria.fr/), [Isabelle/HOL](https://isabelle.in.tum.de/), [HOL4](https://hol-theorem-prover.org/), [OCaml](http://www.ocaml.org/), HTML and [LaTeX](https://www.latex-project.org/).
 
 ## Prerequisites
 
