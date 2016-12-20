@@ -42,5 +42,6 @@ let () =
     { cctx_program = test_case.exec.code
     ; cctx_this = Conv.word160_of_big_int test_case.exec.address
     } in
-  (* let ret : program_result = Evm.program_sem  in *)
+  let number = Big_int.int_of_big_int test_case.exec.gas in
+  let ret : program_result = Evm.program_sem v c number number in
   ()
