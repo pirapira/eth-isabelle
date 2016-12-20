@@ -93,12 +93,12 @@ let parse_exec (j : json) : exec =
     ; value = parse_big_int_from_field "value" j
     })
 
-type list_storage = (string * string) list
+type list_storage = (Big_int.big_int * string) list
 
 let parse_storage (j : json) : list_storage =
   Util.(
-    List.map (fun (label, content) -> (label, to_string content)) (to_assoc j)
-  )
+    List.map (fun ((label : string), content) ->
+        (Big_int.big_int_of_string label, to_string content)) (to_assoc j))
 
 type account_state =
   { balance : Big_int.big_int
@@ -129,8 +129,15 @@ type test_case =
   ; pre : (string * account_state) list
   }
 
-let lookup_storage (addr : address) (pre_state : (string * account_state) list) : storage =
-  failwith "lookup_storage"
+let lookup_storage (addr : address) (pre_state : (string * account_state) list) (index : w256) : w256 =
+  let addr_string = Conv.string_of_address addr in
+  try
+    let a : account_state = List.assoc addr_string pre_state in
+    let v : string = List.assoc (Conv.big_int_of_word256 index) a.storage in
+    let b : Big_int.big_int = Big_int.big_int_of_string v in
+    Conv.word256_of_big_int b
+  with Not_found ->
+       Conv.word256_of_big_int Big_int.zero_big_int
 
 let construct_global_balance (pre_state : (string * account_state) list) : address -> w256 =
   failwith "construct_global_balance"
