@@ -142,7 +142,7 @@ let lookup_storage (addr : address) (pre_state : (string * account_state) list) 
 let construct_global_balance (pre_state : (string * account_state) list) (addr : address) : w256 =
   failwith "construct_global_balance"
 
-let construct_ext_program (pre_state : (string * account_state) list) : address -> program =
+let construct_ext_program (pre_state : (string * account_state) list) (addr : address) : program =
   failwith "construct_ext_program"
 
 let construct_block_info (t : test_case) : block_info =

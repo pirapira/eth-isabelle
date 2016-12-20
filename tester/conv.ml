@@ -57,9 +57,12 @@ let string_of_address (addr : Word160.word160) : string =
   pad_left_string '0' 40 str
 
 let rec byte_list_of_hex_string (s : string) =
-  if String.length s < 2 then []
+  if BatString.left s 2 = "0x" then byte_list_of_hex_string (BatString.tail s 2)
+  else if String.length s < 2 then []
   else
-    let first_byte = int_of_string ("0x"^(BatString.left s 2)) in
+    let first_string = "0x"^(BatString.left s 2) in
+    let () = Printf.printf "parsing (byte_list_of_hex_string): %s\n%!" first_string in
+    let first_byte = int_of_string first_string in
     let rest = BatString.tail s 2 in
     byte_of_int first_byte :: byte_list_of_hex_string rest
 
