@@ -156,7 +156,11 @@ let construct_block_info (t : test_case) : block_info =
   }
 
 let construct_account_existence (pre_state : (string * account_state) list) (addr : address) : bool =
-  failwith "construct_account_existence"
+  let str = Conv.string_of_address addr in
+  try
+    let _ = List.assoc str pre_state in
+    true
+  with Not_found -> false
 
 let parse_test_case (j : json) : test_case =
   let () = Easy_format.Pretty.to_stdout (format_env (parse_env (Util.member "env" j))) in
