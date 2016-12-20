@@ -16,8 +16,8 @@ let respond_to_call_correctly c a =
              (* either more steps are necessary, or *)
              r = ProgramStepRunOut ||
              (* the result matches the specification *)
-             (exists pushed_vctx st bal.
-              r = ProgramToEnvironment resulting_action st bal pushed_vctx &&
+             (exists pushed_vctx st bal touched.
+              r = ProgramToEnvironment resulting_action st bal touched pushed_vctx &&
               final_state_pred
                 (update_account_state a resulting_action st bal pushed_vctx))
            )))
@@ -30,8 +30,8 @@ let respond_to_return_correctly r a =
        (forall steps.
           (let r = program_sem initial_vctx (build_cctx a) a.account_code.program_length steps in
            r = ProgramStepRunOut ||
-           (exists pushed_vctx st bal.
-            r = ProgramToEnvironment resulting_action st bal pushed_vctx &&
+           (exists pushed_vctx st bal touched.
+            r = ProgramToEnvironment resulting_action st bal touched pushed_vctx &&
             final_state_pred
               (update_account_state (account_state_pop_ongoing_call a) resulting_action st bal pushed_vctx))
           )))
@@ -44,8 +44,8 @@ let respond_to_fail_correctly f a =
       (forall steps.
         ( let r = program_sem initial_vctx (build_cctx a) a.account_code.program_length steps in
           r = ProgramStepRunOut ||
-          (exists pushed_vctx st bal.
-             r = ProgramToEnvironment resulting_action st bal pushed_vctx &&
+          (exists pushed_vctx st bal touched.
+             r = ProgramToEnvironment resulting_action st bal touched pushed_vctx &&
              final_state_pred (update_account_state (account_state_pop_ongoing_call a) resulting_action st bal pushed_vctx)))))
 
 indreln [account_state_responds_to_environment : (account_state -> bool) -> response_to_environment -> bool]

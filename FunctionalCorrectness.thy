@@ -53,13 +53,13 @@ where "respond_to_call_correctly c a \<equiv>
          (* The specification says the execution should result in these *)
          c call_env = (resulting_action, final_state_pred) \<longrightarrow>
          ( \<forall> steps. (* and for any number of steps *)
-           ( let r = program_sem initial_venv (build_ccon a)
+           ( let r = program_sem initial_venv (build_cctx a)
                       (program_length (account_code a)) steps in
              (* either more steps are necessary, or *)
              r = ProgramStepRunOut \<or>
              (* the result matches the specification *)
-             (\<exists> pushed_venv st bal.
-              r = ProgramToEnvironment resulting_action st bal pushed_venv \<and>
+             (\<exists> pushed_venv st bal touched.
+              r = ProgramToEnvironment resulting_action st bal touched pushed_venv \<and>
               final_state_pred
                 (update_account_state a resulting_action st bal pushed_venv)))))"
 
@@ -73,11 +73,11 @@ where
        build_vctx_returned a rr initial_venv \<longrightarrow>
        r rr = (resulting_action, final_state_pred) \<longrightarrow>
        ( \<forall> steps.
-          (let r = program_sem initial_venv (build_ccon a)
+          (let r = program_sem initial_venv (build_cctx a)
                      (program_length (account_code a)) steps in
            r = ProgramStepRunOut \<or>
-           (\<exists> pushed_venv st bal.
-            r = ProgramToEnvironment resulting_action st bal pushed_venv \<and>
+           (\<exists> pushed_venv st bal touched.
+            r = ProgramToEnvironment resulting_action st bal touched pushed_venv \<and>
             final_state_pred
               (update_account_state (account_state_pop_ongoing_call a)
                resulting_action st bal pushed_venv)))))"
@@ -92,11 +92,11 @@ where
       Some initial_venv = build_vctx_failed a \<longrightarrow>
       f = (resulting_action, final_state_pred) \<longrightarrow>
       (\<forall> steps.
-        (let r = program_sem initial_venv (build_ccon a)
+        (let r = program_sem initial_venv (build_cctx a)
                    (program_length (account_code a)) steps in
          r = ProgramStepRunOut \<or>
-         (\<exists> pushed_venv st bal.
-            r = ProgramToEnvironment resulting_action st bal pushed_venv \<and>
+         (\<exists> pushed_venv st bal touched.
+            r = ProgramToEnvironment resulting_action st bal touched pushed_venv \<and>
             final_state_pred
               (update_account_state (account_state_pop_ongoing_call a)
                  resulting_action st bal pushed_venv)))))"

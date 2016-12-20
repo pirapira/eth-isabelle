@@ -59,5 +59,3 @@ type block = <|
   block_timestampt : w256;
   block_nonce : w256;
 |>
-
-

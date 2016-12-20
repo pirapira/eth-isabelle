@@ -967,7 +967,8 @@ type variable_con = <|
   vctx_ext_program : address -> program; (* the codes of all accounts *)
   vctx_block : block_info; (* the current block *)
   vctx_gas : int; (* remaining gas before the instruction *)
-  vctx_account_existence : address -> bool
+  vctx_account_existence : address -> bool;
+  vctx_touched_storage_index : list w256
 |>
 
 (* The constant context contains information that is rather stable. *)
@@ -990,17 +991,18 @@ type instruction_result =
     contract_action   (* the contract's move *)
   * storage           (* the new storage content *)
   * (address -> w256) (* the new balance of all accounts *)
+  * list w256         (* the list of possibly changed storage indices *)
   * maybe (variable_con * int * int) (* the variable environment to return to *)
 
 (* When the contract fails, the result of the instruction always looks like this: *)
 val instruction_failure_result : variable_con -> instruction_result
 let instruction_failure_result v =
-  InstructionToEnvironment ContractFail v.vctx_storage_at_call v.vctx_balance_at_call Nothing
+  InstructionToEnvironment ContractFail v.vctx_storage_at_call v.vctx_balance_at_call [] Nothing
 
 (* When the contract returns, the result of the instruction always looks like this: *)
 val instruction_return_result : list byte -> variable_con -> instruction_result
 let instruction_return_result x v =
-  InstructionToEnvironment (ContractReturn x) v.vctx_storage v.vctx_balance Nothing
+  InstructionToEnvironment (ContractReturn x) v.vctx_storage v.vctx_balance v.vctx_touched_storage_index Nothing
 
 (* subsection {* Useful Functions for Defining EVM Operations *} *)
 
@@ -1111,7 +1113,7 @@ val sstore : variable_con -> constant_con -> instruction_result
 let sstore v c = match v.vctx_stack with
  | addr :: vl :: stack_tail ->
       InstructionContinue (vctx_advance_pc c
-        (vctx_update_storage addr vl <| v with vctx_stack = stack_tail |>))
+        (vctx_update_storage addr vl <| v with vctx_stack = stack_tail; vctx_touched_storage_index = addr :: v.vctx_touched_storage_index |>))
  | _ -> instruction_failure_result v
 end
 
@@ -1227,6 +1229,7 @@ let call v c = match v.vctx_stack with
             callarg_output_size = e6 |>)
         v.vctx_storage
         (update_balance c.cctx_this (fun orig -> orig - e2) v.vctx_balance)
+        v.vctx_touched_storage_index
         (Just (* saving the variable environment for timing *)
           (<| (vctx_advance_pc c v) with
            vctx_stack = rest;
@@ -1251,6 +1254,7 @@ let delegatecall v c = match v.vctx_stack with
               callarg_output_begin = e5;
               callarg_output_size = e6 |>)
           v.vctx_storage v.vctx_balance
+          v.vctx_touched_storage_index
           (Just (* save the variable environment for returns *)
             (<| (vctx_advance_pc c v) with vctx_stack = rest; vctx_memory_usage = M (M v.vctx_memory_usage e3 e4) e5 e6 |>, uint e5, uint e6))
   | _ -> instruction_failure_result v
@@ -1274,6 +1278,7 @@ let callcode v c = match v.vctx_stack with
               callarg_output_size = e6 |>)
           v.vctx_storage
           (update_balance c.cctx_this (fun orig -> orig - e2) v.vctx_balance)
+          v.vctx_touched_storage_index
           (Just (* saving the variable environment *)
             (<| (vctx_advance_pc c v) with
                   vctx_stack = rest;
@@ -1293,6 +1298,7 @@ let create v c = match v.vctx_stack with
            (ContractCreate
              <| createarg_value = vl; createarg_code = code |>)
             v.vctx_storage new_balance
+            v.vctx_touched_storage_index
             (Just (* when returning to this invocation, use the following variable environment *)
               (<| (vctx_advance_pc c v) with vctx_stack = rest;
                  vctx_balance = new_balance;
@@ -1315,13 +1321,15 @@ let ret v _ =  match v.vctx_stack with
      let new_v = <| v with vctx_memory_usage = M v.vctx_memory_usage e0 e1 |> in
      InstructionToEnvironment (ContractReturn (vctx_returned_bytes new_v))
                            v.vctx_storage v.vctx_balance
+                           v.vctx_touched_storage_index
                            Nothing (* No possibility of ever returning to this invocation. *)
  | _ -> instruction_failure_result v
 end
 
 (* STOP is simpler than RETURN: *)
 val stop : variable_con -> constant_con -> instruction_result
-let stop v _ = InstructionToEnvironment (ContractReturn []) v.vctx_storage v.vctx_balance Nothing
+let stop v _ =
+    InstructionToEnvironment (ContractReturn []) v.vctx_storage v.vctx_balance v.vctx_touched_storage_index Nothing
 
 (* POP removes the topmost element of the stack: *)
 val pop : variable_con -> constant_con -> instruction_result
@@ -1472,7 +1480,7 @@ let suicide v c = match v.vctx_stack with
         if addr = c.cctx_this then 0 else
         if addr = w256_to_address dst then v.vctx_balance c.cctx_this + v.vctx_balance addr else
         v.vctx_balance addr in
-     InstructionToEnvironment ContractSuicide v.vctx_storage new_balance Nothing
+     InstructionToEnvironment ContractSuicide v.vctx_storage new_balance v.vctx_touched_storage_index Nothing
  | _ -> instruction_failure_result v
 end
 
@@ -1698,9 +1706,9 @@ let subtract_gas consumption orig =
   | InstructionContinue v ->
     InstructionContinue (<| v with vctx_gas = v.vctx_gas - consumption |>)
   | InstructionAnnotationFailure -> InstructionAnnotationFailure
-  | InstructionToEnvironment act st bal Nothing -> InstructionToEnvironment act st bal Nothing
-  | InstructionToEnvironment act st bal (Just (v, dst, len)) ->
-    InstructionToEnvironment act st bal (Just (<|v with vctx_gas = v.vctx_gas - consumption|>, dst, len))
+  | InstructionToEnvironment act st bal touched Nothing -> InstructionToEnvironment act st bal touched Nothing
+  | InstructionToEnvironment act st bal touched (Just (v, dst, len)) ->
+    InstructionToEnvironment act st bal touched (Just (<|v with vctx_gas = v.vctx_gas - consumption|>, dst, len))
   end
 
 (* Finally, using the above definitions, I can define a function that operates an instruction *)
@@ -1819,7 +1827,7 @@ let instruction_sem v c inst =
 
 type program_result =
 | ProgramStepRunOut (* the artificial step counter has run out *)
-| ProgramToEnvironment of contract_action * storage * (address -> w256) * maybe (variable_con * int * int)
+| ProgramToEnvironment of contract_action * storage * (address -> w256) * list w256 * maybe (variable_con * int * int)
   (** the program stopped execution because an instruction wants to talk to the environment
   for example because the execution returned, failed, or called an account.
   *)
@@ -1857,7 +1865,7 @@ let rec program_sem v c tiny_step remaining_steps = match remaining_steps with
  | 0 -> ProgramStepRunOut
  | remaining_steps + 1 ->
    if tiny_step <= 0 then
-     ProgramToEnvironment ContractFail v.vctx_storage_at_call v.vctx_balance_at_call Nothing else
+     ProgramToEnvironment ContractFail v.vctx_storage_at_call v.vctx_balance_at_call [] Nothing else
    if not (check_annotations v c) then ProgramAnnotationFailure else
    match vctx_next_instruction v c with
     | Nothing -> ProgramStepRunOut
@@ -1868,11 +1876,12 @@ let rec program_sem v c tiny_step remaining_steps = match remaining_steps with
          (strict_if (new_v.vctx_pc > v.vctx_pc)
            (blocked_program_sem new_v c (tiny_step - 1) (remaining_steps  + 1))
            (blocked_program_sem new_v c c.cctx_program.program_length remaining_steps))
-      | InstructionToEnvironment a st bal opt_pushed_v -> ProgramToEnvironment a st bal opt_pushed_v
+      | InstructionToEnvironment a st bal touched opt_pushed_v ->
+          ProgramToEnvironment a st bal touched opt_pushed_v
       | _ -> ProgramInvalid
       end
     else
-      ProgramToEnvironment ContractFail v.vctx_storage_at_call v.vctx_balance_at_call Nothing
+      ProgramToEnvironment ContractFail v.vctx_storage_at_call v.vctx_balance_at_call [] Nothing
    end
 end
 and blocked_program_sem v c l p _ = program_sem v c l p
@@ -2007,7 +2016,8 @@ indreln [build_vctx_called : account_state -> call_env -> variable_con -> bool]
      vctx_ext_program = ext; (* the codes of the external programs are arbitrary. *)
      vctx_block = block; (* the block information is chosen arbitrarily. *)
      vctx_gas = gas; (* the amount of gas is chosen arbitrarily. *)
-     vctx_account_existence = existence (* existence is chosen arbitrarily *)
+     vctx_account_existence = existence; (* existence is chosen arbitrarily *)
+     vctx_touched_storage_index = []
    |>
 
 (* When an account returns to our contract, the variable environment is *)
@@ -2031,7 +2041,7 @@ indreln [build_vctx_returned : account_state -> return_result -> variable_con ->
 vctx_returned:
    forall a_code v_pc new_bal a_bal a_addr a_storage v_stack v_memory v_memory_usage
           v_storage v_balance v_caller v_value v_data v_init_storage v_init_balance
-          v_origin v_ext_program v_block v_gas mem_start mem_size r rest whichever v_ex.
+          v_origin v_ext_program v_block v_gas mem_start mem_size r rest whichever v_ex v_touched.
    (is_call_like (a_code.program_content (v_pc - 1))) &&
    (word256UGE new_bal a_bal) ==> (* the balance might have increased *)
    build_vctx_returned
@@ -2058,6 +2068,7 @@ vctx_returned:
          ; vctx_block = v_block
          ; vctx_gas = v_gas
          ; vctx_account_existence = v_ex
+         ; vctx_touched_storage_index = v_touched
          |>, mem_start, mem_size) :: rest)
      ; account_killed = whichever
      |>
@@ -2084,4 +2095,5 @@ vctx_returned:
        ; vctx_block = v_block
        ; vctx_gas = v_gas
        ; vctx_account_existence = v_ex
+       ; vctx_touched_storage_index = v_touched
       |>)
