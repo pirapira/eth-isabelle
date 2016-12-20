@@ -1,5 +1,6 @@
 open Yojson.Basic
 open Hexparser
+open Evm
 
 type env =
   { currentCoinbase : Big_int.big_int
@@ -92,9 +93,9 @@ let parse_exec (j : json) : exec =
     ; value = parse_big_int_from_field "value" j
     })
 
-type storage = (string * string) list
+type list_storage = (string * string) list
 
-let parse_storage (j : json) : storage =
+let parse_storage (j : json) : list_storage =
   Util.(
     List.map (fun (label, content) -> (label, to_string content)) (to_assoc j)
   )
@@ -103,7 +104,7 @@ type account_state =
   { balance : Big_int.big_int
   ; code : string
   ; nonce : Big_int.big_int
-  ; storage : storage
+  ; storage : list_storage
   }
 
 let parse_account_state (j : json) : account_state =
@@ -127,6 +128,21 @@ type test_case =
   ; post : (string * account_state) list option
   ; pre : (string * account_state) list
   }
+
+let lookup_storage (addr : address) (pre_state : (string * account_state) list) : storage =
+  failwith "lookup_storage"
+
+let construct_global_balance (pre_state : (string * account_state) list) : address -> w256 =
+  failwith "construct_global_balance"
+
+let construct_ext_program (pre_state : (string * account_state) list) : address -> program =
+  failwith "construct_ext_program"
+
+let construct_block_info (t : test_case) : block_info =
+  failwith "construct_block_info"
+
+let construct_account_existence (pre_state : (string * account_state) list) : address -> bool =
+  failwith "construct_account_existence"
 
 let parse_test_case (j : json) : test_case =
   let () = Easy_format.Pretty.to_stdout (format_env (parse_env (Util.member "env" j))) in
