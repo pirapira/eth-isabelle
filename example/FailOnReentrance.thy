@@ -59,9 +59,9 @@ where
      account_address st = fail_on_reentrance_address \<Longrightarrow>
      account_ongoing_calls st = [(ve, 0, 0)] \<Longrightarrow>
      account_killed st = False \<Longrightarrow>
-     vcon_pc ve = 28 \<Longrightarrow>
-     vcon_storage ve 0 = 1 \<Longrightarrow>
-     vcon_storage_at_call ve 0 = 0 \<Longrightarrow>
+     vctx_pc ve = 28 \<Longrightarrow>
+     vctx_storage ve 0 = 1 \<Longrightarrow>
+     vctx_storage_at_call ve 0 = 0 \<Longrightarrow>
      fail_on_reentrance_state 1 st"
 
 value "program_of_lst fail_on_reentrance_program"     
@@ -119,9 +119,9 @@ where
      account_address st = fail_on_reentrance_address \<Longrightarrow>
      account_ongoing_calls st = [(ve, 0, 0)] \<Longrightarrow>
      account_killed st = False \<Longrightarrow>
-     vcon_pc ve = 28 \<Longrightarrow>
-     vcon_storage ve 0 = 1 \<Longrightarrow>
-     vcon_storage_at_call ve 0 = 0 \<Longrightarrow>
+     vctx_pc ve = 28 \<Longrightarrow>
+     vctx_storage ve 0 = 1 \<Longrightarrow>
+     vctx_storage_at_call ve 0 = 0 \<Longrightarrow>
      fail_on_reentrance_invariant st"
 
 value "program_content (program_of_lst fail_on_reentrance_program program_content_of_lst) 8"

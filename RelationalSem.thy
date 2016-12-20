@@ -153,16 +153,16 @@ where
   The deeper reentrant invocations are performed without the environment replying to the contract. *}
   "(* If a variable environment is built from the old account state *)
    (* and the call arguments, *)
-   build_vcon_called old_state callargs next_vcon \<Longrightarrow>
+   build_vctx_called old_state callargs next_vctx \<Longrightarrow>
    
    (* the environment makes a move, showing the variable environment. *)
-   environment_turn I (old_state, ProgramInit callargs) (old_state, next_vcon)"
+   environment_turn I (old_state, ProgramInit callargs) (old_state, next_vctx)"
 | environment_return: -- {* the environment might return to our contract. *}
   "(* If the account state can be changed during reentrancy,*)
    account_state_return_change I account_state_going_out account_state_back \<Longrightarrow>
 
    (* and a variable environment can be recovered from the changed account state,*)
-   build_vcon_returned account_state_back result new_v \<Longrightarrow>
+   build_vctx_returned account_state_back result new_v \<Longrightarrow>
 
    (* and the previous move of the contract was a call-like action, *)
    returnable_result program_r \<Longrightarrow>
@@ -174,7 +174,7 @@ where
 
 | environment_fail: -- {* the environment might fail from an account into our contract. *}
   "(* If a variable environment can be recovered from the previous account state,*)
-   build_vcon_failed account_state_going_out = Some new_v \<Longrightarrow>
+   build_vctx_failed account_state_going_out = Some new_v \<Longrightarrow>
    
    (* and if the previous action from the contract was a call, *)
    returnable_result result = True \<Longrightarrow>
@@ -194,7 +194,7 @@ where
    build_ccon old_account = ccon \<Longrightarrow>
 
    (* if the program behaves like this, *)
-   program_sem old_vcon ccon 
+   program_sem old_vctx ccon 
       (program_length (ccon_program ccon)) steps
       = ProgramToEnvironment act st bal opt_v \<Longrightarrow>
 
@@ -203,7 +203,7 @@ where
      = update_account_state old_account act st bal opt_v \<Longrightarrow>
 
    (* the contract makes a move and udates the account state. *)
-   contract_turn (old_account, old_vcon)
+   contract_turn (old_account, old_vctx)
       (account_state_going_out, ProgramToEnvironment act st bal opt_v)"
 
 | contract_annotation_failure:
@@ -211,11 +211,11 @@ where
    build_ccon old_account = ccon \<Longrightarrow>
    
    (* and if the contract execution results in an annotation failure, *)
-   program_sem old_vcon ccon
+   program_sem old_vctx ccon
       (program_length (ccon_program ccon)) steps = ProgramAnnotationFailure \<Longrightarrow>
 
    (* the contract makes a move, indicating the annotation failure. *)
-   contract_turn (old_account, old_vcon) (old_account, ProgramAnnotationFailure)"
+   contract_turn (old_account, old_vctx) (old_account, ProgramAnnotationFailure)"
 
 text {* When we combine the environment's turn and the contract's turn, we get one round.
 The round is a binary relation over a single set.
