@@ -52,6 +52,7 @@ let parse_instruction (str : string) : (inst * string) option =
   let opcode = BatString.left str 2 in
   let rest = BatString.tail str 2 in
   match opcode with
+  | "" -> None
   | "00" -> Some (Misc STOP, rest)
   | "01" -> Some (Arith ADD, rest)
   | "02" -> Some (Arith MUL, rest)
@@ -119,6 +120,7 @@ let parse_instruction (str : string) : (inst * string) option =
   | "f4" -> Some (Misc DELEGATECALL, rest)
   | "ff" -> Some (Misc SUICIDE, rest)
   | _ ->
+     let () = Printf.printf "parsing 0x%s" opcode in
      let opcode_num = int_of_string ("0x"^opcode) in
      if 0x60 <= opcode_num && opcode_num <= 0x7f then
        let l = opcode_num - 0x60 + 1 in
@@ -152,47 +154,3 @@ let parse_code (hex : string) : program * string =
   else
     parse_code_inner empty_program_impl (BatString.right hex 2)
 
-
-(*
-#! /usr/bin/ruby
-
-
-input = ARGF.read
-
-if input[/^0x/]
-  input = input[2..-1]
-end
-
-
-i = 0
-
-while i + 2 <= input.size
-  byte = input[i, 2]
-  i = i + 2
-
-  case byte
-  when "60".."69", "6a".."6f", "70".."79", "7a".."7f"
-    size = byte.hex - "60".hex + 1
-    print "Stack (PUSH_N ["
-    while size > 0
-      byte = input[i, 2]
-      if size == 1
-        print "0x#{byte}"
-      else
-        print "0x#{byte}, "
-      end
-      i = i + 2
-      size = size - 1
-    end
-    puts "]) #"
-  when "80".."89", "8a".."8f"
-    num = byte[1].hex + 1
-    puts "Dup #{num} #"
-  when "90".."99", "9a".."9f"
-    num = byte[1].hex + 1
-    puts "Swap #{num} #"
-end
-
-
-puts "[]"
- *)
