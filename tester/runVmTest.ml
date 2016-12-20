@@ -10,4 +10,6 @@ let () =
   let (label, j) = List.nth vm_arithmetic_test_assoc 0 in
   let () = Printf.printf "test case: %s\n" label in
   let case : test_case = parse_test_case j in
+  let open Evm in
+  (*  let ret : program_result = Evm.program_sem  in *)
   ()

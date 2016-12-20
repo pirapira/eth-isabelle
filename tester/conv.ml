@@ -53,7 +53,7 @@ let rec byte_list_of_hex_string (s : string) =
 
 let format_quad_as_list
       (act : Evm.contract_action) (storage : Evm.storage)
-      (bal : Evm.address -> Evm.w256) (stashed_opt : (Evm.variable_con * int * int) option) : Easy_format.t list =
+      (bal : Evm.address -> Evm.w256) (stashed_opt : (Evm.variable_ctx * int * int) option) : Easy_format.t list =
   let open Easy_format in
   [ Label ((Atom ("Action", atom), label), Atom ("to be printed", atom))
   ; Atom ("storage to be printed", atom)
@@ -67,7 +67,7 @@ let format_program_result (r : Evm.program_result) : Easy_format.t =
   let list_usual = ("{", ",", "}", list) in
   match r with
   | ProgramStepRunOut -> Atom ("ProgramStepRunOut", atom)
-  | ProgramToEnvironment (act, storage, bal, stashed_opt) ->
+  | ProgramToEnvironment (act, storage, bal, touched, stashed_opt) ->
      Label ((Atom ("ProgramToEnvironment", atom), label),
             List (list_usual, format_quad_as_list act storage bal stashed_opt))
   | ProgramInvalid -> Atom ("ProgramInvalid", atom)
