@@ -972,8 +972,8 @@ type variable_con = <|
 
 (* The constant context contains information that is rather stable. *)
 type constant_con = <|
-  ccon_program : program; (* the code in the account under verification. *)
-  ccon_this : address; (* the address of the account under verification. *)
+  cctx_program : program; (* the code in the account under verification. *)
+  cctx_this : address; (* the address of the account under verification. *)
 |>
 
 (* subsection {* The Result of an Instruction *} *)
@@ -1047,7 +1047,7 @@ let vctx_update_storage idx vall v =
 (* Peeking the next instruction: *)
 val vctx_next_instruction : variable_con -> constant_con -> maybe inst
 let vctx_next_instruction v c =
-  match c.ccon_program.program_content v.vctx_pc with
+  match c.cctx_program.program_content v.vctx_pc with
   | Just i -> Just i
   | Nothing -> Just (Misc STOP)
   end
@@ -1130,7 +1130,7 @@ let build_aenv v c = <|
   aenv_data_sent = v.vctx_data_sent;
   aenv_storage_at_call = v.vctx_storage_at_call;
   aenv_balance_at_call = v.vctx_balance_at_call;
-  aenv_this = c.ccon_this;
+  aenv_this = c.cctx_this;
   aenv_origin = v.vctx_origin;
 |>
 
@@ -1215,7 +1215,7 @@ declare termination_argument cut_memory = automatic
 val call : variable_con -> constant_con -> instruction_result
 let call v c = match v.vctx_stack with
  | e0 :: e1 :: e2 :: e3 :: e4 :: e5 :: e6 :: rest ->
-     if word256ULT (v.vctx_balance c.ccon_this) e2 then instruction_failure_result v
+     if word256ULT (v.vctx_balance c.cctx_this) e2 then instruction_failure_result v
      else
        InstructionToEnvironment (ContractCall
          <| callarg_gas = e0;
@@ -1226,11 +1226,11 @@ let call v c = match v.vctx_stack with
             callarg_output_begin = e5;
             callarg_output_size = e6 |>)
         v.vctx_storage
-        (update_balance c.ccon_this (fun orig -> orig - e2) v.vctx_balance)
+        (update_balance c.cctx_this (fun orig -> orig - e2) v.vctx_balance)
         (Just (* saving the variable environment for timing *)
           (<| (vctx_advance_pc c v) with
            vctx_stack = rest;
-           vctx_balance = update_balance c.ccon_this (fun orig -> orig - e2) v.vctx_balance;
+           vctx_balance = update_balance c.cctx_this (fun orig -> orig - e2) v.vctx_balance;
            vctx_memory_usage = M (M v.vctx_memory_usage e3 e4) e5 e6 |>, uint e5, uint e6))
   | _ -> instruction_failure_result v
 end
@@ -1239,7 +1239,7 @@ end
 val delegatecall : variable_con -> constant_con -> instruction_result
 let delegatecall v c = match v.vctx_stack with
  | e0 :: e1 :: e3 :: e4 :: e5 :: e6 :: rest ->
-    if word256ULT (v.vctx_balance c.ccon_this) v.vctx_value_sent then instruction_failure_result v
+    if word256ULT (v.vctx_balance c.cctx_this) v.vctx_value_sent then instruction_failure_result v
      else
        InstructionToEnvironment
          (ContractCall
@@ -1260,25 +1260,25 @@ end
 val callcode : variable_con -> constant_con -> instruction_result
 let callcode v c = match v.vctx_stack with
  | e0 :: e1 :: e2 :: e3 :: e4 :: e5 :: e6 :: rest ->
-    if word256ULT (v.vctx_balance c.ccon_this) e2 then
+    if word256ULT (v.vctx_balance c.cctx_this) e2 then
        instruction_failure_result v
      else
        InstructionToEnvironment
          (ContractCall
            <| callarg_gas = e0;
               callarg_code = w256_to_address e1;
-              callarg_recipient = c.ccon_this;
+              callarg_recipient = c.cctx_this;
               callarg_value = e2;
               callarg_data = cut_memory e3 (word256ToNat e4) v.vctx_memory;
               callarg_output_begin = e5;
               callarg_output_size = e6 |>)
           v.vctx_storage
-          (update_balance c.ccon_this (fun orig -> orig - e2) v.vctx_balance)
+          (update_balance c.cctx_this (fun orig -> orig - e2) v.vctx_balance)
           (Just (* saving the variable environment *)
             (<| (vctx_advance_pc c v) with
                   vctx_stack = rest;
                   vctx_memory_usage = M (M v.vctx_memory_usage e3 e4) e5 e6;
-                  vctx_balance = update_balance c.ccon_this (fun orig -> orig - e2) v.vctx_balance |>, uint e5, uint e6))
+                  vctx_balance = update_balance c.cctx_this (fun orig -> orig - e2) v.vctx_balance |>, uint e5, uint e6))
   | _ -> instruction_failure_result v
 end
 
@@ -1286,9 +1286,9 @@ end
 val create : variable_con -> constant_con -> instruction_result
 let create v c = match v.vctx_stack with
   | vl :: code_start :: code_len :: rest ->
-      if word256ULT (v.vctx_balance c.ccon_this) vl then instruction_failure_result v else
+      if word256ULT (v.vctx_balance c.cctx_this) vl then instruction_failure_result v else
       let code = cut_memory code_start (word256ToNat code_len) v.vctx_memory in
-      let new_balance = update_balance c.ccon_this (fun orig -> orig - vl) v.vctx_balance in
+      let new_balance = update_balance c.cctx_this (fun orig -> orig - vl) v.vctx_balance in
       InstructionToEnvironment
            (ContractCreate
              <| createarg_value = vl; createarg_code = code |>)
@@ -1406,7 +1406,7 @@ val codecopy : variable_con -> constant_con -> instruction_result
 let codecopy v c = match v.vctx_stack with
  | dst_start :: src_start :: len :: rest ->
      let data = cut_memory src_start (absnat len)
-                  (program_as_memory c.ccon_program) in
+                  (program_as_memory c.cctx_program) in
      let new_memory = store_byte_list_memory dst_start data v.vctx_memory in
      InstructionContinue (vctx_advance_pc c
        <| v with vctx_stack = rest; vctx_memory = new_memory;
@@ -1469,8 +1469,8 @@ val suicide : variable_con -> constant_con -> instruction_result
 let suicide v c = match v.vctx_stack with
  | dst :: _ ->
      let new_balance addr =
-        if addr = c.ccon_this then 0 else
-        if addr = w256_to_address dst then v.vctx_balance c.ccon_this + v.vctx_balance addr else
+        if addr = c.cctx_this then 0 else
+        if addr = w256_to_address dst then v.vctx_balance c.cctx_this + v.vctx_balance addr else
         v.vctx_balance addr in
      InstructionToEnvironment ContractSuicide v.vctx_storage new_balance Nothing
  | _ -> instruction_failure_result v
@@ -1645,8 +1645,8 @@ let vctx_recipient v c =
   match vctx_next_instruction_default v c with
   | Misc SUICIDE -> w256_to_address (vctx_stack_default 0 v)
   | Misc CALL -> w256_to_address (vctx_stack_default 1 v)
-  | Misc CALLCODE -> c.ccon_this
-  | Misc DELGATECALL -> c.ccon_this
+  | Misc CALLCODE -> c.cctx_this
+  | Misc DELGATECALL -> c.cctx_this
   | _ -> 0
   end
 
@@ -1770,11 +1770,11 @@ let instruction_sem v c inst =
   | Arith EXP -> stack_2_1_op v c (fun a exponent -> word256FromInt (uint a ** word256ToNat exponent))
   | Arith inst_LT -> stack_2_1_op v c (fun arg0 arg1 -> if word256UGT arg1 arg0 then 1 else 0)
   | Arith SHA3 -> sha3 v c
-  | Info ADDRESS -> stack_0_1_op v c (address_to_w256 c.ccon_this)
+  | Info ADDRESS -> stack_0_1_op v c (address_to_w256 c.cctx_this)
   | Info BALANCE -> stack_1_1_op v c (fun addr -> v.vctx_balance (w256_to_address addr))
   | Info ORIGIN -> stack_0_1_op v c (address_to_w256 v.vctx_origin)
   | Info CALLVALUE -> stack_0_1_op v c v.vctx_value_sent
-  | Info CODESIZE -> stack_0_1_op v c (word256FromInt c.ccon_program.program_length)
+  | Info CODESIZE -> stack_0_1_op v c (word256FromInt c.cctx_program.program_length)
   | Info GASPRICE -> stack_0_1_op v c v.vctx_block.block_gasprice
   | Info EXTCODESIZE -> stack_1_1_op v c
 	   (fun arg -> word256FromInt (v.vctx_ext_program (w256_to_address arg)).program_length)
@@ -1839,7 +1839,7 @@ type program_result =
 (* I have a function that checks all annotations at a particular program position: *)
 val check_annotations : variable_con -> constant_con -> bool
 let check_annotations v c =
-  let annots = c.ccon_program.program_annotation v.vctx_pc in
+  let annots = c.cctx_program.program_annotation v.vctx_pc in
   List.all (fun annot -> annot (build_aenv v c)) annots
 
 val program_sem : variable_con -> constant_con -> int -> nat -> program_result
@@ -1867,7 +1867,7 @@ let rec program_sem v c tiny_step remaining_steps = match remaining_steps with
       | InstructionContinue new_v ->
          (strict_if (new_v.vctx_pc > v.vctx_pc)
            (blocked_program_sem new_v c (tiny_step - 1) (remaining_steps  + 1))
-           (blocked_program_sem new_v c c.ccon_program.program_length remaining_steps))
+           (blocked_program_sem new_v c c.cctx_program.program_length remaining_steps))
       | InstructionToEnvironment a st bal opt_pushed_v -> ProgramToEnvironment a st bal opt_pushed_v
       | _ -> ProgramInvalid
       end
@@ -1908,9 +1908,9 @@ type account_state = <|
 (* Construction of the constant environment is much simpler than that of *)
 (* a variable environment. *)
 
-val build_ccon : account_state -> constant_con
-let build_ccon a =
-  <| ccon_program = a.account_code; ccon_this = a.account_address |>
+val build_cctx : account_state -> constant_con
+let build_cctx a =
+  <| cctx_program = a.account_code; cctx_this = a.account_address |>
 
 (* Next we turn to the case where the environment returns back to the account after the account has *)
 (* called an account.  In this case, the account should contain one ongoing execution that is waiting *)

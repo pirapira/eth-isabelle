@@ -12,7 +12,7 @@ let respond_to_call_correctly c a =
          (* The specification says the execution should result in these *)
          c call_env = (resulting_action, final_state_pred) -->
          (forall steps. (* and for any number of steps *)
-           ( let r = program_sem initial_vctx (build_ccon a) a.account_code.program_length steps in
+           ( let r = program_sem initial_vctx (build_cctx a) a.account_code.program_length steps in
              (* either more steps are necessary, or *)
              r = ProgramStepRunOut ||
              (* the result matches the specification *)
@@ -28,7 +28,7 @@ let respond_to_return_correctly r a =
        build_vctx_returned a rr initial_vctx -->
        r rr = (resulting_action, final_state_pred) -->
        (forall steps.
-          (let r = program_sem initial_vctx (build_ccon a) a.account_code.program_length steps in
+          (let r = program_sem initial_vctx (build_cctx a) a.account_code.program_length steps in
            r = ProgramStepRunOut ||
            (exists pushed_vctx st bal.
             r = ProgramToEnvironment resulting_action st bal pushed_vctx &&
@@ -42,7 +42,7 @@ let respond_to_fail_correctly f a =
       Just initial_vctx = build_vctx_failed a -->
       f = (resulting_action, final_state_pred) -->
       (forall steps.
-        ( let r = program_sem initial_vctx (build_ccon a) a.account_code.program_length steps in
+        ( let r = program_sem initial_vctx (build_cctx a) a.account_code.program_length steps in
           r = ProgramStepRunOut ||
           (exists pushed_vctx st bal.
              r = ProgramToEnvironment resulting_action st bal pushed_vctx &&
