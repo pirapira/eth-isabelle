@@ -142,7 +142,7 @@ done
 
 declare swap_def [simp]
 
-definition sha3 :: "variable_con \<Rightarrow> constant_con \<Rightarrow> instruction_result"
+definition sha3 :: "variable_ctx \<Rightarrow> constant_ctx \<Rightarrow> instruction_result"
 where
 "sha3 v c \<equiv>
   (case vctx_stack v of
@@ -178,7 +178,7 @@ done
 
 declare build_vctx_called.simps [simp]
 
-declare build_ccon_def [simp]
+declare build_cctx_def [simp]
 
 declare is_call_like_def [simp]
 

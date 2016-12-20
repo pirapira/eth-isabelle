@@ -143,7 +143,7 @@ inductive environment_turn ::
 \<Rightarrow> (account_state * program_result)
    (* the account state before the environment's move
       and the last thing our account did *)
-\<Rightarrow> (account_state * variable_con)
+\<Rightarrow> (account_state * variable_ctx)
    (* the account state after the environment's move
       and the variable environment from which our contract must start. *)
 \<Rightarrow> bool (* a boolean indicating if that is a possible environment's move. *)"
@@ -187,7 +187,7 @@ where
 text {* As a reply, our contract might make a move, or report an annotation failure.*}
 
 inductive contract_turn ::
-"(account_state * variable_con) \<Rightarrow> (account_state * program_result) \<Rightarrow> bool"
+"(account_state * variable_ctx) \<Rightarrow> (account_state * program_result) \<Rightarrow> bool"
 where
   contract_to_environment:
   "(* Under a constant environment built from the old account state, *)
