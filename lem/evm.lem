@@ -2041,7 +2041,7 @@ indreln [build_vctx_returned : account_state -> return_result -> variable_ctx ->
 vctx_returned:
    forall a_code v_pc new_bal a_bal a_addr a_storage v_stack v_memory v_memory_usage
           v_storage v_balance v_caller v_value v_data v_init_storage v_init_balance
-          v_origin v_ext_program v_block v_gas mem_start mem_size r rest whichever v_ex v_touched.
+          v_origin v_ext_program v_ext_program' v_block v_gas mem_start mem_size r rest whichever v_ex v_ex' v_touched.
    (is_call_like (a_code.program_content (v_pc - 1))) &&
    (word256UGE new_bal a_bal) ==> (* the balance might have increased *)
    build_vctx_returned
@@ -2091,9 +2091,9 @@ vctx_returned:
        ; vctx_storage_at_call = v_init_storage
        ; vctx_balance_at_call = v_init_balance
        ; vctx_origin = v_origin
-       ; vctx_ext_program = v_ext_program
+       ; vctx_ext_program = v_ext_program'
        ; vctx_block = v_block
        ; vctx_gas = v_gas
-       ; vctx_account_existence = v_ex
+       ; vctx_account_existence = v_ex'
        ; vctx_touched_storage_index = v_touched
       |>)
