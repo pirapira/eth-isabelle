@@ -76,10 +76,12 @@ let format_quad_as_list
   ; Atom ("stashed_opt to be printed", atom)
   ]
 
+
+let list_usual = ("{", ",", "}", Easy_format.list)
+
 let format_program_result (r : Evm.program_result) : Easy_format.t =
   let open Evm in
   let open Easy_format in
-  let list_usual = ("{", ",", "}", list) in
   match r with
   | ProgramStepRunOut -> Atom ("ProgramStepRunOut", atom)
   | ProgramToEnvironment (act, storage, bal, touched, stashed_opt) ->
@@ -90,3 +92,28 @@ let format_program_result (r : Evm.program_result) : Easy_format.t =
   | ProgramInit cenv ->
      Label ((Atom ("ProgramInit", atom), label),
             List (list_usual, [(* to be filled *)]))
+
+let format_stack (stack : Word256.word256 list) =
+  Easy_format.(Atom ("format_stack", atom))
+
+let format_int (i : int) : Easy_format.t =
+  Easy_format.(Atom (string_of_int i, atom))
+
+let format_variable_ctx (v : Evm.variable_ctx) : Easy_format.t =
+  let open Easy_format in
+  let open Evm in
+  List (list_usual,
+        [ Label ((Atom ("stack", atom), label),
+                 format_stack v.vctx_stack)
+        ; Label ((Atom ("gas", atom), label),
+                 format_int v.vctx_gas)
+        ])
+
+let print_variable_ctx (v : Evm.variable_ctx) : unit =
+  Easy_format.Pretty.to_stdout (format_variable_ctx v)
+
+let format_constant_ctx (c : Evm.constant_ctx) : Easy_format.t =
+  failwith "format_constant_ctx"
+
+let print_constant_ctx (c : Evm.constant_ctx) : unit =
+  Easy_format.Pretty.to_stdout (format_constant_ctx c)

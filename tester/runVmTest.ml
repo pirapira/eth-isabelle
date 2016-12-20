@@ -38,10 +38,12 @@ let () =
     ; vctx_account_existence = construct_account_existence test_case.pre
     ; vctx_touched_storage_index = []
     } in
+  let () = Conv.print_variable_ctx v in
   let c : constant_ctx =
     { cctx_program = test_case.exec.code
     ; cctx_this = Conv.word160_of_big_int test_case.exec.address
     } in
+  let () = Conv.print_constant_ctx c in
   let number = Big_int.int_of_big_int test_case.exec.gas in
   let ret : program_result = Evm.program_sem v c number number in
   match ret with
