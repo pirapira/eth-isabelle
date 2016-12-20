@@ -4,6 +4,11 @@ let pad_left (elm : 'a) (len : int) (orig : 'a list) =
   let padding = BatList.make remaining elm in
   padding @ orig
 
+let pad_left_string (padding : char) (len : int) (orig : string) =
+  let lst = BatString.to_list orig in
+  let lst = pad_left '0' len lst in
+  BatString.of_list lst
+
 let word_of_big_int (target_len : int) (b : Big_int.big_int) =
   let () = if BatBig_int.(lt_big_int b zero_big_int) then failwith "negative number cannot be turned into word256" else () in
   let binary : string = BatBig_int.to_string_in_binary b in
@@ -43,6 +48,13 @@ let big_int_of_word256 (Word256.W256 (h, tl)) : Big_int.big_int =
 
 let big_int_of_word160 (Word160.W160 (h, tl)) : Big_int.big_int =
   big_int_of_bit_list (h :: tl)
+
+
+(** [string_of_address a] returns a string of 40 characters containing [0-9] and [a-f] *)
+let string_of_address (addr : Word160.word160) : string =
+  let b = big_int_of_word160 addr in
+  let str = BatBig_int.to_string_in_hexa b in
+  pad_left_string '0' 40 str
 
 let rec byte_list_of_hex_string (s : string) =
   if String.length s < 2 then []
