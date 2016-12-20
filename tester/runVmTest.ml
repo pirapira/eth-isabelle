@@ -52,7 +52,15 @@ let () =
   | ProgramToEnvironment (ContractCreate carg, st, bal, touched, pushed_opt) -> failwith "create"
   | ProgramToEnvironment (ContractFail, st, bal, touched, pushed_opt) -> failwith "fail"
   | ProgramToEnvironment (ContractSuicide, st, bal, touched, pushed_opt) -> failwith "suicide"
-  | ProgramToEnvironment (ContractReturn retval, st, bal, touched, pushed_opt) -> failwith "ret"
+  | ProgramToEnvironment (ContractReturn retval, st, bal, touched, pushed_opt) ->
+     begin
+       match test_case.callcreates, test_case.gas, test_case.logs, test_case.out, test_case.post with
+       | spec_created, Some spec_gas, Some spec_logs, Some spec_out, Some spec_post ->
+          let got_retval : string = hex_string_of_byte_list "0x" retval in
+          let () = assert (got_retval = spec_out) in
+          failwith "comparison needed"
+       | _ -> failwith "Some post conditions not available"
+     end
   | ProgramInvalid -> failwith "invalid"
   | ProgramAnnotationFailure -> failwith "annotation failure"
   | ProgramInit _ -> failwith "should not happen"

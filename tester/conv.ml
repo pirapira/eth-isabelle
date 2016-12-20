@@ -49,6 +49,8 @@ let big_int_of_word256 (Word256.W256 (h, tl)) : Big_int.big_int =
 let big_int_of_word160 (Word160.W160 (h, tl)) : Big_int.big_int =
   big_int_of_bit_list (h :: tl)
 
+let int_of_byte (Word8.W8 (h, tl) : Word8.word8) : int =
+  Big_int.int_of_big_int (big_int_of_bit_list (h :: tl))
 
 (** [string_of_address a] returns a string of 40 characters containing [0-9] and [a-f] *)
 let string_of_address (addr : Word160.word160) : string =
@@ -66,6 +68,15 @@ let rec byte_list_of_hex_string (s : string) =
     let rest = BatString.tail s 2 in
     byte_of_int first_byte :: byte_list_of_hex_string rest
 
+let rec hex_str_of_bl_inner (acc : string) (bs : Word8.word8 list) : string =
+  match bs with
+  | [] -> acc
+  | h :: t ->
+     hex_str_of_bl_inner (acc ^ BatPrintf.sprintf "%x" (int_of_byte h)) t
+
+let hex_string_of_byte_list (prefix : string) (bs : Word8.word8 list) : string =
+  prefix^(hex_str_of_bl_inner "" bs)
+
 let format_quad_as_list
       (act : Evm.contract_action) (storage : Evm.storage)
       (bal : Evm.address -> Evm.w256) (stashed_opt : (Evm.variable_ctx * int * int) option) : Easy_format.t list =
@@ -75,7 +86,6 @@ let format_quad_as_list
   ; Atom ("balance to be printed", atom)
   ; Atom ("stashed_opt to be printed", atom)
   ]
-
 
 let list_usual = ("{", ",", "}", Easy_format.list)
 
