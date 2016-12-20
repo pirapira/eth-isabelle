@@ -139,16 +139,23 @@ let lookup_storage (addr : address) (pre_state : (string * account_state) list) 
   with Not_found ->
        Conv.word256_of_big_int Big_int.zero_big_int
 
-let construct_global_balance (pre_state : (string * account_state) list) : address -> w256 =
+let construct_global_balance (pre_state : (string * account_state) list) (addr : address) : w256 =
   failwith "construct_global_balance"
 
 let construct_ext_program (pre_state : (string * account_state) list) : address -> program =
   failwith "construct_ext_program"
 
 let construct_block_info (t : test_case) : block_info =
-  failwith "construct_block_info"
+  { block_blockhash = (fun _ -> failwith "blockhash asked")
+  ; block_coinbase  = Conv.word160_of_big_int t.env.currentCoinbase
+  ; block_timestamp = Conv.word256_of_big_int t.env.currentTimestamp
+  ; block_number    = Conv.word256_of_big_int t.env.currentNumber
+  ; block_difficulty = Conv.word256_of_big_int t.env.currentDifficulty
+  ; block_gaslimit = Conv.word256_of_big_int t.env.currentGasLimit
+  ; block_gasprice = Conv.word256_of_big_int t.exec.gasPrice
+  }
 
-let construct_account_existence (pre_state : (string * account_state) list) : address -> bool =
+let construct_account_existence (pre_state : (string * account_state) list) (addr : address) : bool =
   failwith "construct_account_existence"
 
 let parse_test_case (j : json) : test_case =
