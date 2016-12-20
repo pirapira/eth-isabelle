@@ -1,6 +1,6 @@
 theory AlwaysFail
 
-imports Main "../ContractSem" "../RelationalSem" "../FunctionalCorrectness" "../ProgramInAvl"
+imports Main "../ContractSem" "../RelationalSem" "../lem/EvmNonExec" "../ProgramInAvl"
 
 begin
 
@@ -29,7 +29,7 @@ where
    , account_killed = False
    \<rparr>"
 
-abbreviation always_fail_spec :: "w256 \<Rightarrow> response_to_world"
+abbreviation always_fail_spec :: "w256 \<Rightarrow> response_to_environment"
 where
 " always_fail_spec initial_balance ==
   \<lparr> when_called = \<lambda> _. (ContractFail,
@@ -57,16 +57,19 @@ declare program_sem.psimps [simp]
 (* declare instruction_sem_def [simp del]*)
 
 lemma check_resources_split [split] :
-"P (if check_resources v con s i then X else ProgramToWorld a b c d) =
- (\<not> (check_resources v con s i \<and> \<not> P X \<or> \<not> check_resources v con s i \<and> \<not> P (ProgramToWorld a b c d)))"
+"P (if check_resources v con s i then X else ProgramToWorld a b c d e) =
+ (\<not> (check_resources v con s i \<and> \<not> P X \<or> \<not> check_resources v con s i \<and> \<not> P (ProgramToWorld a b c d e)))"
 apply(simp only: if_splits(2))
 done
 
 declare subtract_gas.simps [simp]
+declare respond_to_call_correctly_def [simp]
+declare respond_to_return_correctly_def [simp]
+declare respond_to_fail_correctly_def [simp]
 
 lemma always_fail_correct:
 "
-  account_state_responds_to_world
+  account_state_responds_to_environment
   (\<lambda> a. a = always_fail_account_state initial_balance)
   (always_fail_spec initial_balance)
 "
