@@ -2,8 +2,11 @@ open Yojson.Basic
 open Jsonparser
 open Constant
 
-(* for now executes the first vmTest found in a particular file *)
 
+let storage_comparison (spec_post : (string * account_state) list) (touched : Word256.word256 list) (actual_storage : Word256.word256 -> Word256.word256) : bool =
+  failwith "storage_comparison"
+
+(* for now executes the first vmTest found in a particular file *)
 let () =
   let () = Printf.printf "hello\n" in
   let vm_arithmetic_test : json = Yojson.Basic.from_file "../tests/VMTests/vmArithmeticTest.json" in
@@ -58,6 +61,7 @@ let () =
        | spec_created, Some spec_gas, Some spec_logs, Some spec_out, Some spec_post ->
           let got_retval : string = hex_string_of_byte_list "0x" retval in
           let () = assert (got_retval = spec_out) in
+          let () = assert (storage_comparison spec_post touched st) in
           failwith "comparison needed"
        | _ -> failwith "Some post conditions not available"
      end
