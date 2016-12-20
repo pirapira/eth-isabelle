@@ -38,5 +38,9 @@ let () =
     ; vctx_account_existence = construct_account_existence test_case.pre
     ; vctx_touched_storage_index = []
     } in
+  let c : constant_ctx =
+    { cctx_program = test_case.exec.code
+    ; cctx_this = Conv.word160_of_big_int test_case.exec.address
+    } in
   (* let ret : program_result = Evm.program_sem  in *)
   ()
