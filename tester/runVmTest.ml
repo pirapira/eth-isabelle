@@ -46,7 +46,11 @@ let () =
   let ret : program_result = Evm.program_sem v c number number in
   match ret with
   | ProgramStepRunOut -> failwith "runout"
-  | ProgramToEnvironment _ -> failwith "got something"
+  | ProgramToEnvironment (ContractCall carg, st, bal, touched, pushed_opt) -> failwith "call"
+  | ProgramToEnvironment (ContractCreate carg, st, bal, touched, pushed_opt) -> failwith "create"
+  | ProgramToEnvironment (ContractFail, st, bal, touched, pushed_opt) -> failwith "fail"
+  | ProgramToEnvironment (ContractSuicide, st, bal, touched, pushed_opt) -> failwith "suicide"
+  | ProgramToEnvironment (ContractReturn retval, st, bal, touched, pushed_opt) -> failwith "ret"
   | ProgramInvalid -> failwith "invalid"
   | ProgramAnnotationFailure -> failwith "annotation failure"
   | ProgramInit _ -> failwith "should not happen"
