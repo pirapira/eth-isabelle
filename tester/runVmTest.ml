@@ -44,4 +44,9 @@ let () =
     } in
   let number = Big_int.int_of_big_int test_case.exec.gas in
   let ret : program_result = Evm.program_sem v c number number in
-  ()
+  match ret with
+  | ProgramStepRunOut -> failwith "runout"
+  | ProgramToEnvironment _ -> failwith "got something"
+  | ProgramInvalid -> failwith "invalid"
+  | ProgramAnnotationFailure -> failwith "annotation failure"
+  | ProgramInit _ -> failwith "should not happen"
