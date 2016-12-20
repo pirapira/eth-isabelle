@@ -83,7 +83,9 @@ let parse_exec (j : json) : exec =
     ; caller = parse_address_from_field "caller" j
     ; code =
         begin
-          let (parsed, rest) = parse_code(to_string (member "code" j)) in
+          let code = to_string (member "code" j) in
+          let () = Printf.printf "code: %s\n%!" code in
+          let (parsed, rest) = parse_code code in
           if rest = "" then parsed else failwith "code parsing left some garbage data"
         end
     ; data = to_string (member "data" j)

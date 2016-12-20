@@ -113,7 +113,7 @@ let print_variable_ctx (v : Evm.variable_ctx) : unit =
   Easy_format.Pretty.to_stdout (format_variable_ctx v)
 
 let format_constant_ctx (c : Evm.constant_ctx) : Easy_format.t =
-  failwith "format_constant_ctx"
+  Easy_format.(Atom ("cctx", atom))
 
 let print_constant_ctx (c : Evm.constant_ctx) : unit =
   Easy_format.Pretty.to_stdout (format_constant_ctx c)

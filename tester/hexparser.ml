@@ -50,6 +50,7 @@ let store_instruction (inst : inst) (orig : program_impl) : program_impl =
 
 let parse_instruction (str : string) : (inst * string) option =
   let opcode = BatString.left str 2 in
+  let () = Printf.printf "parse_instruction, %s\n" opcode in
   let rest = BatString.tail str 2 in
   match opcode with
   | "" -> None
@@ -125,6 +126,7 @@ let parse_instruction (str : string) : (inst * string) option =
      if 0x60 <= opcode_num && opcode_num <= 0x7f then
        let l = opcode_num - 0x60 + 1 in
        let (payload, rest) = BatString.(left rest (2 * l), tail rest (2 * l)) in
+       let () = Printf.printf "payload: %s%!\n" payload in
        begin
          if String.length payload < 2 * l then
            None
@@ -152,5 +154,4 @@ let parse_code (hex : string) : program * string =
   then
     failwith "parse_code: prefix is not 0x"
   else
-    parse_code_inner empty_program_impl (BatString.right hex 2)
-
+    parse_code_inner empty_program_impl (BatString.tail hex 2)
