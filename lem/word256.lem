@@ -42,15 +42,15 @@ let word256NatOp binop w1 n = bs_to_w256 (binop (w256_to_bs w1) n)
 val word256UnaryOp : (bitSequence -> bitSequence) -> word256 -> word256
 let word256UnaryOp op w = bs_to_w256 (op (w256_to_bs w))
 
-val word256ToNat : word256 -> nat
-let word256ToNat w = natFromInteger (integerFromBitSeq (w256_to_bs w))
-declare isabelle target_rep function word256ToNat = `unat`
+val word256ToNatural : word256 -> natural
+let word256ToNatural w = naturalFromBitSeq (w256_to_bs w)
+declare isabelle target_rep function word256ToNatural = `unat`
 
-val word256ToInt : word256 -> int
-let word256ToInt w = intFromInteger (integerFromBitSeq (w256_to_bs w))
-declare isabelle target_rep function word256ToInt = `sint`
+val word256ToInteger : word256 -> integer
+let word256ToInteger w = integerFromBitSeq (w256_to_bs w)
+declare isabelle target_rep function word256ToInteger = `sint`
 
-declare isabelle target_rep function w256_to_bs = (fun w -> bitSeqFromInteger (Just 256) (integerFromInt (word256ToInt w)))
+declare isabelle target_rep function w256_to_bs = (fun w -> bitSeqFromInteger (Just 256) (word256ToInteger w))
 
 val word256FromInteger : integer -> word256
 let word256FromInteger i = bs_to_w256 (bitSeqFromInteger (Just 256) i)
@@ -59,6 +59,9 @@ declare isabelle target_rep function word256FromInteger = (fun i -> `word_of_int
 val word256FromInt : int -> word256
 let word256FromInt i = bs_to_w256 (bitSeqFromInteger (Just 256) (integerFromInt i))
 declare isabelle target_rep function word256FromInt = `word_of_int`
+
+val word256FromNatural : natural -> word256
+let word256FromNatural i = word256FromInteger (integerFromNatural i)
 
 val word256FromNat : nat -> word256
 let word256FromNat i = word256FromInteger (integerFromNat i)
@@ -251,15 +254,15 @@ instance (WordAsr word256)
 end
 
 val word256UGT : word256 -> word256 -> bool
-let word256UGT a b = word256ToNat a > word256ToNat b
+let word256UGT a b = word256ToNatural a > word256ToNatural b
 declare isabelle target_rep function word256UGT = infix `>`
 
 val word256ULT : word256 -> word256 -> bool
-let word256ULT a b = word256ToNat a < word256ToNat b
+let word256ULT a b = word256ToNatural a < word256ToNatural b
 declare isabelle target_rep function word256ULT = infix `<`
 
 val word256UGE : word256 -> word256 -> bool
-let word256UGE a b = word256ToNat a >= word256ToNat b
+let word256UGE a b = word256ToNatural a >= word256ToNatural b
 declare isabelle target_rep function word256UGE = infix `>=`
 
 declare isabelle target_rep function word256FromNumeral n = ((`word_of_int` n) : word256)

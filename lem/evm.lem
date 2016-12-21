@@ -27,18 +27,18 @@ type w256 = word256
 type address = word160
 type byte = word8
 
-val sintFromW256 : w256 -> int
-let sintFromW256 = word256ToInt
+val sintFromW256 : w256 -> integer
+let sintFromW256 = word256ToInteger
 
-val uint : w256 -> int
-let uint w = intFromNat (word256ToNat w)
+val uint : w256 -> integer
+let uint w = word256ToInteger w
 declare isabelle target_rep function uint = `Word.uint`
 
 (* val word256ToNat : w256 -> nat *)
 (* let word256ToNat = word256ToNat *)
 
 val absnat : w256 -> nat
-let absnat w = natFromInt (word256ToInt w)
+let absnat w = natFromInteger (word256ToInteger w)
 
 val byteFromNat : nat -> byte
 let byteFromNat = word8FromNat
@@ -50,15 +50,15 @@ val w256_of_bl : list bool -> w256
 let w256_of_bl = word256FromBoollist
 
 val w256_to_address : w256 -> address
-let w256_to_address w = word160FromNat (word256ToNat w)
+let w256_to_address w = word160FromNatural (word256ToNatural w)
 declare isabelle target_rep function w256_to_address = `Word.ucast`
 
 val address_to_w256 : address -> w256
-let address_to_w256 w = word256FromNat (word160ToNat w)
+let address_to_w256 w = word256FromNatural (word160ToNatural w)
 declare isabelle target_rep function address_to_w256 = `Word.ucast`
 
 val w256_to_byte : w256 -> byte
-let w256_to_byte w = word8FromNat (word256ToNat w)
+let w256_to_byte w = word8FromNatural (word256ToNatural w)
 declare isabelle target_rep function w256_to_byte = `Word.ucast`
 
 val byte_to_w256 : byte -> w256
@@ -659,109 +659,109 @@ declare termination_argument program_code = automatic
 
 (* section "Gas schedule" *)
 
-val Gzero : int
+val Gzero : integer
 let Gzero = 0
 
-val Gbase : int
+val Gbase : integer
 let Gbase = 2
 
-val Gverylow : int
+val Gverylow : integer
 let Gverylow = 3
 
-val Glow : int
+val Glow : integer
 let Glow = 5
 
-val Gmid : int
+val Gmid : integer
 let Gmid = 8
 
-val Ghigh : int
+val Ghigh : integer
 let Ghigh = 10
 
-val Gextcode : int
+val Gextcode : integer
 let Gextcode = 700
 
-val Gbalance : int
+val Gbalance : integer
 let Gbalance = 400
 
-val Gsload : int
+val Gsload : integer
 let Gsload = 200
 
-val Gjumpsdest : int
+val Gjumpsdest : integer
 let Gjumpsdest = 1
 
-val Gsset : int
+val Gsset : integer
 let Gsset = 20000
 
-val Gsreset : int
+val Gsreset : integer
 let Gsreset = 5000
 
-val Rsclear : int
+val Rsclear : integer
 let Rsclear = 15000
 
-val Rsuicide : int
+val Rsuicide : integer
 let Rsuicide = 24000
 
-val Gsuicide : int
+val Gsuicide : integer
 let Gsuicide = 5000
 
-val Gcreate : int
+val Gcreate : integer
 let Gcreate = 32000
 
-val Gcodedeposit : int
+val Gcodedeposit : integer
 let Gcodedeposit = 200
 
-val Gcall : int
+val Gcall : integer
 let Gcall = 700
 
-val Gcallvalue : int
+val Gcallvalue : integer
 let Gcallvalue = 9000
 
-val Gcallstipend : int
+val Gcallstipend : integer
 let Gcallstipend = 2300
 
-val Gnewaccount : int
+val Gnewaccount : integer
 let Gnewaccount = 25000
 
-val Gexp : int
+val Gexp : integer
 let Gexp = 10
 
-val Gexpbyte : int
+val Gexpbyte : integer
 let Gexpbyte = 50
 
-val Gmemory : int
+val Gmemory : integer
 let Gmemory = 3
 
-val Gtxcreate : int
+val Gtxcreate : integer
 let Gtxcreate = 32000
 
-val Gtxdatazero : int
+val Gtxdatazero : integer
 let Gtxdatazero = 4
 
-val Gtxdatanonzero : int
+val Gtxdatanonzero : integer
 let Gtxdatanonzero = 68
 
-val Gtransaction : int
+val Gtransaction : integer
 let Gtransaction = 21000
 
-val Glog : int
+val Glog : integer
 let Glog = 375
 
-val Glogdata : int
+val Glogdata : integer
 let Glogdata = 8
 
-val Glogtopic : int
+val Glogtopic : integer
 let Glogtopic = 375
 
-val Gsha3 : int
+val Gsha3 : integer
 let Gsha3 = 30
 
-val Gsha3word : int
+val Gsha3word : integer
 let Gsha3word = 6
 
-val Gcopy : int
+val Gcopy : integer
 let Gcopy = 3
 
-val Gblockhash : int
+val Gblockhash : integer
 let Gblockhash = 20
 
 
@@ -863,9 +863,9 @@ type contract_action =
 (* looking up instructions from the program counters. *)
 
 type program = <|
-  program_content : int -> maybe inst; (* a way to look up instructions from positions *)
-  program_length  : int; (* the length of the program in bytes *)
-  program_annotation : int -> list annotation; (* a mapping from positions to annotations *)
+  program_content : integer -> maybe inst; (* a way to look up instructions from positions *)
+  program_length  : integer; (* the length of the program in bytes *)
+  program_annotation : integer -> list annotation; (* a mapping from positions to annotations *)
 |>
 
 (* The empty program is easy to define. *)
@@ -887,16 +887,16 @@ let empty_program = <|
 (* Here is a function that inserts an annotation *)
 (* at a specified position. *)
 
-val prepend_annotation : int -> annotation -> (int -> list annotation) -> (int -> list annotation)
+val prepend_annotation : integer -> annotation -> (integer -> list annotation) -> (integer -> list annotation)
 let prepend_annotation pos annot orig p = if pos = p then annot :: orig p else orig p
 
 (* Currently annotations are inserted into a mapping with Isabelle/HOL's mapping updates. *)
 (* When this causes performance problems, I need to switch to AVL trees again. *)
 
-val program_annotation_of_lst : int -> list inst -> int -> list annotation
+val program_annotation_of_lst : int -> list inst -> integer -> list annotation
 let rec program_annotation_of_lst pos lst = match lst with
 | [] -> (fun _ -> [])
-| Annotation annot :: rest -> prepend_annotation pos annot (program_annotation_of_lst pos rest)
+| Annotation annot :: rest -> prepend_annotation (integerFromInt pos) annot (program_annotation_of_lst pos rest)
 | i :: rest -> program_annotation_of_lst (pos + inst_size i) rest
 end
 declare termination_argument program_annotation_of_lst = automatic
@@ -908,10 +908,10 @@ declare termination_argument program_annotation_of_lst = automatic
 (* an AVL tree, but this particular encoding is not part of the Lem definition. *)
 (* So such encoders are parametrised here. *)
 
-val program_of_lst : list inst -> (list inst -> (int -> maybe inst)) -> program
+val program_of_lst : list inst -> (list inst -> (integer -> maybe inst)) -> program
 let program_of_lst lst program_content_formatter = <|
   program_content = program_content_formatter lst;
-  program_length = intFromNat (length lst);
+  program_length = integerFromNat (length lst);
   program_annotation = program_annotation_of_lst 0 lst;
 |>
 
@@ -954,9 +954,9 @@ type block_info = <|
 type variable_ctx = <|
   vctx_stack : list w256;
   vctx_memory : memory;
-  vctx_memory_usage : int; (* the current memory usage *)
+  vctx_memory_usage : integer; (* the current memory usage *)
   vctx_storage : storage;
-  vctx_pc : int; (* the program counter *)
+  vctx_pc : integer; (* the program counter *)
   vctx_balance : address -> w256; (* balances of all accounts *)
   vctx_caller : address; (* the caller's address *)
   vctx_value_sent : w256; (* the amount of Eth sent along the current invocation *)
@@ -966,7 +966,7 @@ type variable_ctx = <|
   vctx_origin : address; (* the external account that started the current transaction *)
   vctx_ext_program : address -> program; (* the codes of all accounts *)
   vctx_block : block_info; (* the current block *)
-  vctx_gas : int; (* remaining gas before the instruction *)
+  vctx_gas : integer; (* remaining gas before the instruction *)
   vctx_account_existence : address -> bool;
   vctx_touched_storage_index : list w256
 |>
@@ -992,7 +992,7 @@ type instruction_result =
   * storage           (* the new storage content *)
   * (address -> w256) (* the new balance of all accounts *)
   * list w256         (* the list of possibly changed storage indices *)
-  * maybe (variable_ctx * int * int) (* the variable environment to return to *)
+  * maybe (variable_ctx * integer * integer) (* the variable environment to return to *)
 
 (* When the contract fails, the result of the instruction always looks like this: *)
 val instruction_failure_result : variable_ctx -> instruction_result
@@ -1021,7 +1021,7 @@ declare isabelle target_rep function gas = `undefined`
 (* This $M$ function is defined at the end of H.1.\,in the yellow paper. *)
 (* This function is useful for updating the memory usage counter. *)
 
-val M : int -> w256 -> w256 -> int
+val M : integer -> w256 -> w256 -> integer
 let M s f l =
   if l = 0 then s else max s ((uint f + uint l + 31) div 32)
 
@@ -1058,7 +1058,7 @@ let vctx_next_instruction v c =
 val vctx_advance_pc : constant_ctx -> variable_ctx -> variable_ctx
 let vctx_advance_pc c v = match vctx_next_instruction v c with
  | Nothing -> <| v with vctx_pc = v.vctx_pc + 1 |>
- | Just inst -> <| v with vctx_pc = v.vctx_pc + inst_size inst |>
+ | Just inst -> <| v with vctx_pc = v.vctx_pc + integerFromInt (inst_size inst) |>
 end
 
 (* No-op, which just advances the program counter: *)
@@ -1198,11 +1198,11 @@ val constant_mark : list byte -> list byte
 let constant_mark lst = lst
 
 (* Looking up a word from a list of bytes: *)
-val read_word_from_bytes : nat -> list byte -> w256
-let read_word_from_bytes idx lst = word_of_bytes (take 32 (drop idx lst))
+val read_word_from_bytes : natural -> list byte -> w256
+let read_word_from_bytes idx lst = word_of_bytes (take 32 (drop (natFromNatural idx) lst))
 
 val cut_data : variable_ctx -> w256 -> w256
-let cut_data v idx = read_word_from_bytes (word256ToNat idx) v.vctx_data_sent
+let cut_data v idx = read_word_from_bytes (word256ToNatural idx) v.vctx_data_sent
 
 (* Looking up a number of bytes from the memory: *)
 val cut_memory : w256 -> nat -> (w256 -> byte) -> list byte
@@ -1224,7 +1224,7 @@ let call v c = match v.vctx_stack with
             callarg_code = w256_to_address e1;
             callarg_recipient = w256_to_address e1;
             callarg_value = e2;
-            callarg_data = cut_memory e3 (word256ToNat e4) v.vctx_memory;
+            callarg_data = cut_memory e3 (natFromNatural (word256ToNatural e4)) v.vctx_memory;
             callarg_output_begin = e5;
             callarg_output_size = e6 |>)
         v.vctx_storage
@@ -1250,7 +1250,7 @@ let delegatecall v c = match v.vctx_stack with
               callarg_code = w256_to_address e1;
               callarg_recipient = w256_to_address e1;
               callarg_value = v.vctx_value_sent;
-              callarg_data = cut_memory e3 (word256ToNat e4) v.vctx_memory;
+              callarg_data = cut_memory e3 (natFromNatural (word256ToNatural e4)) v.vctx_memory;
               callarg_output_begin = e5;
               callarg_output_size = e6 |>)
           v.vctx_storage v.vctx_balance
@@ -1273,7 +1273,7 @@ let callcode v c = match v.vctx_stack with
               callarg_code = w256_to_address e1;
               callarg_recipient = c.cctx_this;
               callarg_value = e2;
-              callarg_data = cut_memory e3 (word256ToNat e4) v.vctx_memory;
+              callarg_data = cut_memory e3 (natFromNatural (word256ToNatural e4)) v.vctx_memory;
               callarg_output_begin = e5;
               callarg_output_size = e6 |>)
           v.vctx_storage
@@ -1292,7 +1292,7 @@ val create : variable_ctx -> constant_ctx -> instruction_result
 let create v c = match v.vctx_stack with
   | vl :: code_start :: code_len :: rest ->
       if word256ULT (v.vctx_balance c.cctx_this) vl then instruction_failure_result v else
-      let code = cut_memory code_start (word256ToNat code_len) v.vctx_memory in
+      let code = cut_memory code_start (natFromNatural (word256ToNatural code_len)) v.vctx_memory in
       let new_balance = update_balance c.cctx_this (fun orig -> orig - vl) v.vctx_balance in
       InstructionToEnvironment
            (ContractCreate
@@ -1310,7 +1310,7 @@ end
 according to the stack elements: *)
 
 let vctx_returned_bytes v = match v.vctx_stack with
- | e0 :: e1 :: _ -> cut_memory e0 (word256ToNat e1) v.vctx_memory
+ | e0 :: e1 :: _ -> cut_memory e0 (natFromNatural (word256ToNatural e1)) v.vctx_memory
  | _ -> []
 end
 
@@ -1440,7 +1440,7 @@ end
 val pc : variable_ctx -> constant_ctx -> instruction_result
 let pc v c =
    InstructionContinue (vctx_advance_pc c
-     <| v with vctx_stack = word256FromInt v.vctx_pc :: v.vctx_stack|>)
+     <| v with vctx_stack = word256FromInteger v.vctx_pc :: v.vctx_stack|>)
 
 (* Logging is currently no-op, until some property about event logging is wanted. *)
 val log : nat -> variable_ctx -> constant_ctx -> instruction_result
@@ -1467,7 +1467,7 @@ val sha3 : variable_ctx -> constant_ctx -> instruction_result
 let sha3 v c = match v.vctx_stack with
  | start :: len :: rest ->
       InstructionContinue (
-        vctx_advance_pc c <| v with vctx_stack = keccak (cut_memory start (word256ToNat len) v.vctx_memory) :: rest;
+        vctx_advance_pc c <| v with vctx_stack = keccak (cut_memory start (natFromNatural (word256ToNatural len)) v.vctx_memory) :: rest;
                                     vctx_memory_usage = M v.vctx_memory_usage start len |>)
  | _ -> instruction_failure_result v
 end
@@ -1489,49 +1489,49 @@ end
 
 
 (* Cmem is the function denoted as C_{mem} in the yellow paper. *)
-val Cmem : int -> int
+val Cmem : integer -> integer
 let Cmem a = Gmemory * a + (a * a / 512)
 
 (* Csstore is the function denoted as C_\text{\tiny SSTORE} in the yellow paper. *)
 (* However, it takes the original word in the storage and the newly stored word. *)
-val Csstore : w256 -> w256 -> int
+val Csstore : w256 -> w256 -> integer
 let Csstore orig newer = if not (newer = 0) && orig = 0 then Gsset else Gsreset
 
 (* Csuicide is the function denoted as C_\text{\tiny SUICIDE} in the yellow paper. *)
 (* However, it takes a boolean indicating new account creation. *)
-val Csuicide : bool -> int
+val Csuicide : bool -> integer
 let Csuicide recipient_empty = Gsuicide + (if recipient_empty then Gnewaccount else 0)
 
 (* Cnew is the funciton denoted as C_\text{\tiny NEW} in the yellow paper.*)
 (* However, it takes the sent value and a boolean indicating emptiness of the recipient. *)
-val Cnew : w256 -> bool -> int
+val Cnew : w256 -> bool -> integer
 let Cnew value emp = if emp && not (value = 0) then Gnewaccount else 0
 
 (* Cxfer is the function denoted as C_\text{\tiny XFER} in the yellow paper. *)
-val Cxfer : w256 -> int
+val Cxfer : w256 -> integer
 let Cxfer value = if value = 0 then 0 else Gcallvalue
 
 (* Cextra is the function denoted as C_\text{\tiny EXTRA} in the yellow paper. *)
 (* However, it takes a word indicating the transferred value, and a boolean indicating emptiness *)
-val Cextra : w256 -> bool -> int
+val Cextra : w256 -> bool -> integer
 let Cextra value emp = Gcall + Cxfer value + Cnew value emp
 
 (* L is the function denoted as L in the yellow paper. *)
-val L : int -> int
+val L : integer -> integer
 let L x = x - x / 64
 
 (* Cgascap is the function denoted as C_{\text{\tiny GASCAP}} in the yellow paper. *)
 (* However, it takes the two topmost stack elements, a boolean indicating emptiness of the recipient, and the remaining gas of the caller *)
-val Cgascap : w256 -> w256 -> bool -> int -> int
+val Cgascap : w256 -> w256 -> bool -> integer -> integer
 let Cgascap mu0 mu1 emp remaining_gas =
   if remaining_gas >= Cextra mu1 emp then
-    intMin (L (uint mu0 - Cextra mu1 emp)) (uint mu0)
+    integerMin (L (uint mu0 - Cextra mu1 emp)) (uint mu0)
   else
     uint mu0
 
 (* Ccallgas is the function denoted as C_{\text{\tiny CALLGAS}} in the yellow paper. *)
 (* However, it takes the three topmost stack elements, a boolean indicating emptiness of the recipient, and the remaining gas of the caller *)
-val Ccallgas : w256 -> w256 -> w256 -> bool -> int -> int
+val Ccallgas : w256 -> w256 -> w256 -> bool -> integer -> integer
 let Ccallgas mu0 mu1 mu2 emp remaining_gas =
   if mu2 = 0 then
     Cgascap mu0 mu1 emp remaining_gas
@@ -1540,18 +1540,18 @@ let Ccallgas mu0 mu1 mu2 emp remaining_gas =
 
 (* Ccall is the function denoted as C_{\text{\tiny CALL}} *)
 (* However, it takes the three topmost stack elements, a boolean indicating emptiness of the recipient, and the remaining gas of the caller *)
-val Ccall : w256 -> w256 -> w256 -> bool -> int -> int
+val Ccall : w256 -> w256 -> w256 -> bool -> integer -> integer
 let Ccall mu0 mu1 mu2 emp remaining_gas = Cgascap mu0 mu1 emp remaining_gas + Cextra mu2 emp
 
 (* log256floor takes a logarithm (base 256) of an integer and takes floor *)
-val log256floor : int -> int
+val log256floor : integer -> integer
 let rec log256floor x =
   if x <= 255 then 0
   else 1 + log256floor (x / 256)
 
 (* thirdComponentOfC is the third component in the definition of C (the gas function). *)
 (* However, it takes the next instruction, the four topmost stack elements, a boolean indicating emptiness of the recipient, an original word of sstore, a new word of sstore, and the remaining gas of the caller. *)
-val thirdComponentOfC : inst -> w256 -> w256 -> w256 -> w256 -> bool -> w256 -> w256 -> int -> int
+val thirdComponentOfC : inst -> w256 -> w256 -> w256 -> w256 -> bool -> w256 -> w256 -> integer -> integer
 let thirdComponentOfC i s0 s1 s2 s3 recipient_empty orig_val new_val remaining_gas =
   match i with
   | Storage SSTORE -> Csstore orig_val new_val
@@ -1629,7 +1629,7 @@ let thirdComponentOfC i s0 s1 s2 s3 recipient_empty orig_val new_val remaining_g
 
 (* C is the function defined in the yellow paper as C.  This represents the gas consumption of an instruction. *)
 (* It takes the new memory consumption, the old memory consumption, the next instruction the four topmost stack elements, a boolean indicating emptiness of the recipient, an original word of sstore, a new word of sstore, and the remaining gas of the caller. *)
-val C : int -> int -> inst -> w256 -> w256 -> w256 -> w256 -> bool -> w256 -> w256 -> int -> int
+val C : integer -> integer -> inst -> w256 -> w256 -> w256 -> w256 -> bool -> w256 -> w256 -> integer -> integer
 let C old_memory_consumption new_memory_consumption i s0 s1 s2 s3 recipient_empty orig new_val remaining_gas =
   Cmem new_memory_consumption  - Cmem old_memory_consumption +
   thirdComponentOfC i s0 s1 s2 s3 recipient_empty orig new_val remaining_gas
@@ -1658,7 +1658,7 @@ let vctx_recipient v c =
   | _ -> 0
   end
 
-val new_memory_consumption : inst -> variable_ctx -> int
+val new_memory_consumption : inst -> variable_ctx -> integer
 let new_memory_consumption i v =
   match i with
   | Arith SHA3 -> M v.vctx_memory_usage (vctx_stack_default 0 v) (vctx_stack_default 1 v)
@@ -1687,7 +1687,7 @@ let new_memory_consumption i v =
   | _ -> v.vctx_memory_usage
   end
 
-val predictGas : inst -> variable_ctx -> constant_ctx -> int
+val predictGas : inst -> variable_ctx -> constant_ctx -> integer
 let predictGas i v c =
   C v.vctx_memory_usage (new_memory_consumption i v) (vctx_next_instruction_default v c) (vctx_stack_default 0 v) (vctx_stack_default 1 v) (vctx_stack_default 2 v) (vctx_stack_default 3 v)
    	(not (v.vctx_account_existence (vctx_recipient v c))) (v.vctx_storage (vctx_stack_default 0 v)) (vctx_stack_default 1 v) (v.vctx_gas)
@@ -1700,7 +1700,7 @@ let check_resources v c s i =
     predictGas i v c <= v.vctx_gas
   end
 
-val subtract_gas : int -> instruction_result -> instruction_result
+val subtract_gas : integer -> instruction_result -> instruction_result
 let subtract_gas consumption orig =
   match orig with
   | InstructionContinue v ->
@@ -1747,10 +1747,10 @@ let instruction_sem v c inst =
 	  stack_2_1_op v c get_byte
   | Sarith SDIV -> stack_2_1_op v c
 	   (fun n divisor -> if divisor = 0 then 0 else
-						  word256FromInt ((sintFromW256 n) div (sintFromW256 divisor)))
+						  word256FromInteger ((sintFromW256 n) div (sintFromW256 divisor)))
   | Sarith SMOD -> stack_2_1_op v c
 	   (fun n divisor -> if divisor = 0 then 0 else
-						 word256FromInt ((sintFromW256 n) mod (sintFromW256 divisor)))
+						 word256FromInteger ((sintFromW256 n) mod (sintFromW256 divisor)))
   | Sarith SGT -> stack_2_1_op v c
 	   (fun elm0 elm1 -> if elm0 > elm1 then 1 else 0)
   | Sarith SLT -> stack_2_1_op v c
@@ -1759,9 +1759,9 @@ let instruction_sem v c inst =
 	   (fun len orig ->
 		  w256_of_bl (List.map (fun i ->
 			if i <= 256 - 8 * (uint len + 1)
-			then test_bit orig (natFromInt (256 - 8 * (uint len + 1)))
-			else test_bit orig (natFromInt i)
-		  ) (List.genlist (fun x -> intFromNat x) 256))
+			then test_bit orig (natFromInteger (256 - 8 * (uint len + 1)))
+			else test_bit orig (natFromInteger i)
+		  ) (List.genlist (fun x -> integerFromNat x) 256))
 	   )
   | Arith MUL -> stack_2_1_op v c
 	   (fun a b -> a * b)
@@ -1771,21 +1771,21 @@ let instruction_sem v c inst =
 	   (fun a divisor -> (if divisor = 0 then 0 else a mod divisor))
   | Arith ADDMOD -> stack_3_1_op v c
 	   (fun a b divisor ->
-		   (if divisor = 0 then 0 else word256FromInt ((uint a + uint b) mod (uint divisor))))
+		   (if divisor = 0 then 0 else word256FromInteger ((uint a + uint b) mod (uint divisor))))
   | Arith MULMOD -> stack_3_1_op v c
 	   (fun a b divisor ->
-		   (if divisor = 0 then 0 else word256FromInt ((uint a * uint b) mod (uint divisor))))
-  | Arith EXP -> stack_2_1_op v c (fun a exponent -> word256FromInt (uint a ** word256ToNat exponent))
+		   (if divisor = 0 then 0 else word256FromInteger ((uint a * uint b) mod (uint divisor))))
+  | Arith EXP -> stack_2_1_op v c (fun a exponent -> word256FromInteger (uint a ** (natFromNatural (word256ToNatural exponent))))
   | Arith inst_LT -> stack_2_1_op v c (fun arg0 arg1 -> if word256UGT arg1 arg0 then 1 else 0)
   | Arith SHA3 -> sha3 v c
   | Info ADDRESS -> stack_0_1_op v c (address_to_w256 c.cctx_this)
   | Info BALANCE -> stack_1_1_op v c (fun addr -> v.vctx_balance (w256_to_address addr))
   | Info ORIGIN -> stack_0_1_op v c (address_to_w256 v.vctx_origin)
   | Info CALLVALUE -> stack_0_1_op v c v.vctx_value_sent
-  | Info CODESIZE -> stack_0_1_op v c (word256FromInt c.cctx_program.program_length)
+  | Info CODESIZE -> stack_0_1_op v c (word256FromInteger c.cctx_program.program_length)
   | Info GASPRICE -> stack_0_1_op v c v.vctx_block.block_gasprice
   | Info EXTCODESIZE -> stack_1_1_op v c
-	   (fun arg -> word256FromInt (v.vctx_ext_program (w256_to_address arg)).program_length)
+	   (fun arg -> word256FromInteger (v.vctx_ext_program (w256_to_address arg)).program_length)
   | Info BLOCKHASH -> stack_1_1_op v c v.vctx_block.block_blockhash
   | Info COINBASE -> stack_0_1_op v c (address_to_w256 v.vctx_block.block_coinbase)
   | Info TIMESTAMP -> stack_0_1_op v c v.vctx_block.block_timestamp
@@ -1813,7 +1813,7 @@ let instruction_sem v c inst =
 	  (* Since I cannot guarantee anything about DELEGATECALL, I choose immediate failure. *)
 	  InstructionAnnotationFailure
   | Info GAS -> stack_0_1_op v c (gas v)
-  | Memory MSIZE -> stack_0_1_op v c (32 * word256FromInt v.vctx_memory_usage)
+  | Memory MSIZE -> stack_0_1_op v c (32 * word256FromInteger v.vctx_memory_usage)
   end)
 
 (* subsection {* Programs' Answer to the Environment *} *)
@@ -1827,7 +1827,8 @@ let instruction_sem v c inst =
 
 type program_result =
 | ProgramStepRunOut (* the artificial step counter has run out *)
-| ProgramToEnvironment of contract_action * storage * (address -> w256) * list w256 * maybe (variable_ctx * int * int)
+| ProgramToEnvironment of contract_action * storage * (address -> w256) * list w256
+   * maybe (variable_ctx * integer * integer)
   (** the program stopped execution because an instruction wants to talk to the environment
   for example because the execution returned, failed, or called an account.
   *)
@@ -1850,8 +1851,8 @@ let check_annotations v c =
   let annots = c.cctx_program.program_annotation v.vctx_pc in
   List.all (fun annot -> annot (build_aenv v c)) annots
 
-val program_sem : variable_ctx -> constant_ctx -> int -> nat -> program_result
-val blocked_program_sem : variable_ctx -> constant_ctx -> int -> nat -> bool -> program_result
+val program_sem : variable_ctx -> constant_ctx -> integer -> nat -> program_result
+val blocked_program_sem : variable_ctx -> constant_ctx -> integer -> nat -> bool -> program_result
 
 
 (* The program execution takes two counters. *)
@@ -1901,7 +1902,7 @@ type account_state = <|
   account_storage : storage;
   account_code : program;
   account_balance : w256;
-  account_ongoing_calls : list (variable_ctx * int * int);
+  account_ongoing_calls : list (variable_ctx * integer * integer);
     (* the variable environments that are executing on this account, but waiting for calls to finish *)
   account_killed : bool;
     (* the boolean that indicates the account has executed SUICIDE in this transaction. *)
@@ -1961,7 +1962,7 @@ let empty_account addr =
 
 (* And after our contract makes a move, the account state is updated as follows. *)
 
-val update_account_state : account_state -> contract_action -> storage -> (address -> w256) -> maybe (variable_ctx * int * int) -> account_state
+val update_account_state : account_state -> contract_action -> storage -> (address -> w256) -> maybe (variable_ctx * integer * integer) -> account_state
 let update_account_state prev act st bal v_opt =
    <| prev with
      account_storage = st;
@@ -2028,12 +2029,12 @@ indreln [build_vctx_called : account_state -> call_env -> variable_ctx -> bool]
 (* our contract might increase because some other contracts might have destroyed themselves, *)
 (* transferring value to our contract.*)
 
-val put_return_values : memory -> list byte -> int -> int -> memory
+val put_return_values : memory -> list byte -> integer -> integer -> memory
 let rec put_return_values orig lst b s =
   if s <= 0 then orig else
   match lst with
   | [] -> orig
-  | h :: t -> put_return_values (fun addr -> if addr = word256FromInt b then h else orig addr) t (b + 1) (s - 1)
+  | h :: t -> put_return_values (fun addr -> if addr = word256FromInteger b then h else orig addr) t (b + 1) (s - 1)
   end
 declare termination_argument put_return_values = automatic
 

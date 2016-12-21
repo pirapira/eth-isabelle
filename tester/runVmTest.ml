@@ -113,7 +113,11 @@ let test_one_case j : bool =
      let () = Printf.eprintf "We are not looking whatever happens after the contract creates" in
      true
   | ProgramToEnvironment (ContractFail, st, bal, touched, pushed_opt) ->
-     failwith "failure case not implemented"
+     begin
+       match test_case.callcreates, test_case.gas, test_case.logs, test_case.out, test_case.post with
+       | [], None, None, None, None -> true
+       | _ -> failwith "some postconditions are there for a failing case"
+     end
   | ProgramToEnvironment (ContractSuicide, st, bal, touched, pushed_opt) ->
      failwith "suicide case not implemented"
   | ProgramToEnvironment (ContractReturn retval, st, bal, touched, None) ->
@@ -138,8 +142,10 @@ let () =
   let () = Printf.printf "hello\n" in
   let vm_arithmetic_test : json = Yojson.Basic.from_file "../tests/VMTests/vmArithmeticTest.json" in
   let vm_arithmetic_test_assoc : (string * json) list = Util.to_assoc vm_arithmetic_test in
-  let (label, j) = List.nth vm_arithmetic_test_assoc 0 in
-  let () = Printf.printf "test case: %s\n" label in
-  let success : bool = test_one_case j in
-  let () = assert success in
-  ()
+  List.iter
+    (fun (label, j) ->
+      let () = Printf.printf "===========================test case: %s\n" label in
+      let success : bool = test_one_case j in
+      assert success
+    )
+    vm_arithmetic_test_assoc

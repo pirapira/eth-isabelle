@@ -58,6 +58,9 @@ let word8FromInt i:word8=  (bs_to_w8 (bitSeqFromInteger (Some( 8)) (Nat_big_num.
 (*val word8FromNat : nat -> word8*)
 let word8FromNat i:word8=  (word8FromInteger (Nat_big_num.of_int i))
 
+(*val word8FromNatural : natural -> word8*)
+let word8FromNatural i:word8=  (word8FromInteger ( i))
+
 (*val word8FromBoollist : list bool -> word8*)
 let word8FromBoollist lst:word8=  ((match bitSeqFromBoolList lst with
  | None -> bs_to_w8(bitSeqFromInteger None (Nat_big_num.of_int 0))

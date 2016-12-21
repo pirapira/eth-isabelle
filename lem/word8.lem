@@ -66,6 +66,9 @@ declare isabelle target_rep function word8FromInt = `word_of_int`
 val word8FromNat : nat -> word8
 let word8FromNat i = word8FromInteger (integerFromNat i)
 
+val word8FromNatural : natural -> word8
+let word8FromNatural i = word8FromInteger (integerFromNatural i)
+
 val word8FromBoollist : list bool -> word8
 let word8FromBoollist lst = match bitSeqFromBoolList lst with
  | Nothing -> bs_to_w8 0

@@ -41,17 +41,20 @@ let word256NatOp binop w1 n:word256=  (bs_to_w256 (binop (w256_to_bs w1) n))
 (*val word256UnaryOp : (bitSequence -> bitSequence) -> word256 -> word256*)
 let word256UnaryOp op w:word256=  (bs_to_w256 (op (w256_to_bs w)))
 
-(*val word256ToNat : word256 -> nat*)
-let word256ToNat w:int=  (abs (Nat_big_num.to_int (integerFromBitSeq (w256_to_bs w))))
+(*val word256ToNatural : word256 -> natural*)
+let word256ToNatural w:Nat_big_num.num=  (naturalFromBitSeq (w256_to_bs w))
 
-(*val word256ToInt : word256 -> int*)
-let word256ToInt w:int=  (Nat_big_num.to_int (integerFromBitSeq (w256_to_bs w)))
+(*val word256ToInteger : word256 -> integer*)
+let word256ToInteger w:Nat_big_num.num=  (integerFromBitSeq (w256_to_bs w))
 
 (*val word256FromInteger : integer -> word256*)
 let word256FromInteger i:word256=  (bs_to_w256 (bitSeqFromInteger (Some( 256)) i))
 
 (*val word256FromInt : int -> word256*)
 let word256FromInt i:word256=  (bs_to_w256 (bitSeqFromInteger (Some( 256)) (Nat_big_num.of_int i)))
+
+(*val word256FromNatural : natural -> word256*)
+let word256FromNatural i:word256=  (word256FromInteger ( i))
 
 (*val word256FromNat : nat -> word256*)
 let word256FromNat i:word256=  (word256FromInteger (Nat_big_num.of_int i))
@@ -235,11 +238,11 @@ let instance_Word_WordAsr_Word256_word256_dict:(word256)wordAsr_class= ({
   asr_method = word256Asr})
 
 (*val word256UGT : word256 -> word256 -> bool*)
-let word256UGT a b:bool=  (word256ToNat a > word256ToNat b)
+let word256UGT a b:bool=  (Nat_big_num.greater (word256ToNatural a) (word256ToNatural b))
 
 (*val word256ULT : word256 -> word256 -> bool*)
-let word256ULT a b:bool=  (word256ToNat a < word256ToNat b)
+let word256ULT a b:bool=  (Nat_big_num.less (word256ToNatural a) (word256ToNatural b))
 
 (*val word256UGE : word256 -> word256 -> bool*)
-let word256UGE a b:bool=  (word256ToNat a >= word256ToNat b)
+let word256UGE a b:bool=  (Nat_big_num.greater_equal (word256ToNatural a) (word256ToNatural b))
 
