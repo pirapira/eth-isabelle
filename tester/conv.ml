@@ -157,3 +157,6 @@ let string_of_word256 (Word256.W256 (h, lst)) =
 
 let string_of_word160 (Word160.W160 (h, lst)) =
   String.concat "," (List.map string_of_bool (h :: lst))
+
+let string_of_bitseq (Lem_word.BitSeq (_, h, lst)) =
+  String.concat "," (List.map string_of_bool (h :: lst))

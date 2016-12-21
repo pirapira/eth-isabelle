@@ -41,13 +41,16 @@ let word160NatOp binop w1 n = bs_to_w160 (binop (w160_to_bs w1) n)
 val word160UnaryOp : (bitSequence -> bitSequence) -> word160 -> word160
 let word160UnaryOp op w = bs_to_w160 (op (w160_to_bs w))
 
-val word160ToNatural : word160 -> natural
-let word160ToNatural w = naturalFromBitSeq (w160_to_bs w)
-declare isabelle target_rep function word160ToNatural = `unat`
-
 val word160ToInteger : word160 -> integer
 let word160ToInteger w = integerFromBitSeq (w160_to_bs w)
 declare isabelle target_rep function word160ToInteger = `sint`
+
+val size160 : integer
+let size160 = 2 ** 160
+
+val word160ToNatural : word160 -> natural
+let word160ToNatural w = naturalFromInteger ((word160ToInteger w) mod size160)
+declare isabelle target_rep function word160ToNatural = `unat`
 
 declare isabelle target_rep function w160_to_bs = (fun w -> bitSeqFromInteger (Just 160) (word160ToInteger w))
 

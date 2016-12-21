@@ -40,11 +40,14 @@ let word160NatOp binop w1 n:word160=  (bs_to_w160 (binop (w160_to_bs w1) n))
 (*val word160UnaryOp : (bitSequence -> bitSequence) -> word160 -> word160*)
 let word160UnaryOp op w:word160=  (bs_to_w160 (op (w160_to_bs w)))
 
-(*val word160ToNatural : word160 -> natural*)
-let word160ToNatural w:Nat_big_num.num=  (naturalFromBitSeq (w160_to_bs w))
-
 (*val word160ToInteger : word160 -> integer*)
 let word160ToInteger w:Nat_big_num.num=  (integerFromBitSeq (w160_to_bs w))
+
+(*val size160 : integer*)
+let size160:Nat_big_num.num=  (Nat_big_num.pow_int(Nat_big_num.of_int 2)( 160))
+
+(*val word160ToNatural : word160 -> natural*)
+let word160ToNatural w:Nat_big_num.num=  (Nat_big_num.abs ( Nat_big_num.modulus(word160ToInteger w) size160))
 
 (*val word160FromInteger : integer -> word160*)
 let word160FromInteger i:word160=  (bs_to_w160 (bitSeqFromInteger (Some( 160)) i))

@@ -632,7 +632,8 @@ let instance_Word_WordAsr_Num_int_dict:(int)wordAsr_class= ({
 (* some operations work also on positive numbers *)
 
 (*val naturalFromBitSeq : bitSequence -> natural*)
-let naturalFromBitSeq bs:Nat_big_num.num=  (Nat_big_num.abs (integerFromBitSeq bs))
+let naturalFromBitSeq bs:Nat_big_num.num=
+  (Nat_big_num.abs (integerFromBitSeq bs))
 
 (*val bitSeqFromNatural : maybe nat -> natural -> bitSequence*)
 let bitSeqFromNatural len n:bitSequence=  (bitSeqFromInteger len ( n))

@@ -42,13 +42,16 @@ let word256NatOp binop w1 n = bs_to_w256 (binop (w256_to_bs w1) n)
 val word256UnaryOp : (bitSequence -> bitSequence) -> word256 -> word256
 let word256UnaryOp op w = bs_to_w256 (op (w256_to_bs w))
 
-val word256ToNatural : word256 -> natural
-let word256ToNatural w = naturalFromBitSeq (w256_to_bs w)
-declare isabelle target_rep function word256ToNatural = `unat`
+val size256 : integer
+let size256 = 2 ** 256
 
 val word256ToInteger : word256 -> integer
 let word256ToInteger w = integerFromBitSeq (w256_to_bs w)
 declare isabelle target_rep function word256ToInteger = `sint`
+
+val word256ToNatural : word256 -> natural
+let word256ToNatural w = naturalFromInteger ((word256ToInteger w) mod size256)
+declare isabelle target_rep function word256ToNatural = `unat`
 
 declare isabelle target_rep function w256_to_bs = (fun w -> bitSeqFromInteger (Just 256) (word256ToInteger w))
 

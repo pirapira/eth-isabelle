@@ -31,7 +31,7 @@ val sintFromW256 : w256 -> integer
 let sintFromW256 = word256ToInteger
 
 val uint : w256 -> integer
-let uint w = word256ToInteger w
+let uint w = integerFromNatural (word256ToNatural w)
 declare isabelle target_rep function uint = `Word.uint`
 
 (* val word256ToNat : w256 -> nat *)

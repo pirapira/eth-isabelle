@@ -41,11 +41,14 @@ let word256NatOp binop w1 n:word256=  (bs_to_w256 (binop (w256_to_bs w1) n))
 (*val word256UnaryOp : (bitSequence -> bitSequence) -> word256 -> word256*)
 let word256UnaryOp op w:word256=  (bs_to_w256 (op (w256_to_bs w)))
 
-(*val word256ToNatural : word256 -> natural*)
-let word256ToNatural w:Nat_big_num.num=  (naturalFromBitSeq (w256_to_bs w))
+(*val size256 : integer*)
+let size256:Nat_big_num.num=  (Nat_big_num.pow_int(Nat_big_num.of_int 2)( 256))
 
 (*val word256ToInteger : word256 -> integer*)
 let word256ToInteger w:Nat_big_num.num=  (integerFromBitSeq (w256_to_bs w))
+
+(*val word256ToNatural : word256 -> natural*)
+let word256ToNatural w:Nat_big_num.num=  (Nat_big_num.abs ( Nat_big_num.modulus(word256ToInteger w) size256))
 
 (*val word256FromInteger : integer -> word256*)
 let word256FromInteger i:word256=  (bs_to_w256 (bitSeqFromInteger (Some( 256)) i))
