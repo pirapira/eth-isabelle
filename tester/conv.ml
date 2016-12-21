@@ -94,7 +94,7 @@ let hex_string_of_byte_list (prefix : string) (bs : Word8.word8 list) : string =
 
 let format_quad_as_list
       (act : Evm.contract_action) (storage : Evm.storage)
-      (bal : Evm.address -> Evm.w256) (stashed_opt : (Evm.variable_ctx * int * int) option) : Easy_format.t list =
+      (bal : Evm.address -> Evm.w256) (stashed_opt : (Evm.variable_ctx * Nat_big_num.num * Nat_big_num.num) option) : Easy_format.t list =
   let open Easy_format in
   [ Label ((Atom ("Action", atom), label), Atom ("to be printed", atom))
   ; Atom ("storage to be printed", atom)
@@ -121,8 +121,8 @@ let format_program_result (r : Evm.program_result) : Easy_format.t =
 let format_stack (stack : Word256.word256 list) =
   Easy_format.(Atom ("format_stack", atom))
 
-let format_int (i : int) : Easy_format.t =
-  Easy_format.(Atom (string_of_int i, atom))
+let format_integer (i : Nat_big_num.num) : Easy_format.t =
+  Easy_format.(Atom (Nat_big_num.to_string i, atom))
 
 let format_variable_ctx (v : Evm.variable_ctx) : Easy_format.t =
   let open Easy_format in
@@ -131,7 +131,7 @@ let format_variable_ctx (v : Evm.variable_ctx) : Easy_format.t =
         [ Label ((Atom ("stack", atom), label),
                  format_stack v.vctx_stack)
         ; Label ((Atom ("gas", atom), label),
-                 format_int v.vctx_gas)
+                 format_integer v.vctx_gas)
         ])
 
 let print_variable_ctx (v : Evm.variable_ctx) : unit =

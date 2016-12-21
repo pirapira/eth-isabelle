@@ -80,9 +80,9 @@ let test_one_case j : bool =
   let v : variable_ctx =
     { vctx_stack = []
     ; vctx_memory = empty_memory
-    ; vctx_memory_usage = 0
+    ; vctx_memory_usage = Nat_big_num.of_int 0
     ; vctx_storage = initial_storage
-    ; vctx_pc = 0
+    ; vctx_pc = Nat_big_num.of_int 0
     ; vctx_balance = initial_balance
     ; vctx_caller = word160_of_big_int test_case.exec.caller
     ; vctx_value_sent = word256_of_big_int test_case.exec.value
@@ -92,7 +92,7 @@ let test_one_case j : bool =
     ; vctx_origin = word160_of_big_int test_case.exec.origin
     ; vctx_ext_program = construct_ext_program test_case.pre
     ; vctx_block = construct_block_info test_case
-    ; vctx_gas = Big_int.int_of_big_int test_case.exec.gas
+    ; vctx_gas = Nat_big_num.of_string_nat (Big_int.string_of_big_int test_case.exec.gas)
     ; vctx_account_existence = construct_account_existence test_case.pre
     ; vctx_touched_storage_index = []
     } in
@@ -102,8 +102,8 @@ let test_one_case j : bool =
     ; cctx_this = Conv.word160_of_big_int test_case.exec.address
     } in
   let () = Conv.print_constant_ctx c in
-  let number = Big_int.int_of_big_int test_case.exec.gas in
-  let ret : program_result = Evm.program_sem v c number number in
+  let number = Nat_big_num.of_string (Big_int.string_of_big_int test_case.exec.gas) in
+  let ret : program_result = Evm.program_sem v c number (Nat_big_num.to_int number) in
   match ret with
   | ProgramStepRunOut -> false
   | ProgramToEnvironment (ContractCall carg, st, bal, touched, pushed_opt) ->

@@ -3,7 +3,7 @@ open Conv
 
 let empty_program : program =
   { program_content = (fun _ -> None)
-  ; program_length = 0
+  ; program_length = Nat_big_num.of_int 0
   ; program_annotation = (fun _ -> [])
   }
 
@@ -35,9 +35,9 @@ let dummy_block_info : block_info =
 let dummy_variable_con : variable_ctx =
   { vctx_stack = []
   ; vctx_memory = empty_memory
-  ; vctx_memory_usage = 0
+  ; vctx_memory_usage = Nat_big_num.of_int 0
   ; vctx_storage = empty_storage
-  ; vctx_pc = 0
+  ; vctx_pc = Nat_big_num.of_int 0
   ; vctx_balance = empty_balance
   ; vctx_caller = dummy_address
   ; vctx_value_sent = zero_word
@@ -47,7 +47,7 @@ let dummy_variable_con : variable_ctx =
   ; vctx_origin = dummy_address
   ; vctx_ext_program = empty_ext_program
   ; vctx_block = dummy_block_info
-  ; vctx_gas = 50000
+  ; vctx_gas = Nat_big_num.of_int 50000
   ; vctx_account_existence = (fun _ -> false)
   ; vctx_touched_storage_index = []
   }
