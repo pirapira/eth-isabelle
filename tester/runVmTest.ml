@@ -125,6 +125,7 @@ let test_one_case j : bool =
        match test_case.callcreates, test_case.gas, test_case.logs, test_case.out, test_case.post with
        | spec_created, Some spec_gas, Some spec_logs, Some spec_out, Some spec_post ->
           let got_retval : string = hex_string_of_byte_list "0x" retval in
+          let () = Printf.printf "got_retval: %s spec_out: %s\n%!" got_retval spec_out in
           let () = assert (got_retval = spec_out) in
           let () = assert (storage_comparison (Conv.word160_of_big_int test_case.exec.address) spec_post touched st) in
           let () = assert (balance_comparison (Conv.word160_of_big_int test_case.exec.address) spec_post bal) in

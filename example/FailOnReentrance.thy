@@ -1,6 +1,6 @@
 theory FailOnReentrance
 
-imports Main "../ContractSem" "../RelationalSem" "../FunctionalCorrectness" "../ProgramInAvl"
+imports Main "../ContractSem" "../RelationalSem" "../lem/EvmNonExec" "../ProgramInAvl"
 
 begin
 

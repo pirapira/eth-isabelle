@@ -1356,7 +1356,7 @@ end
 (* Using the function above, it is straightforward to store a byte in the memory. *)
 val store_word_memory : w256 -> w256 -> memory -> memory
 let store_word_memory pos vl mem =
-   store_byte_list_memory pos (word_rsplit vl) mem
+   store_byte_list_memory pos (reverse (word_rsplit vl)) mem
 
 (* MSTORE writes one word to the memory: *)
 val mstore : variable_ctx -> constant_ctx -> instruction_result

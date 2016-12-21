@@ -87,7 +87,7 @@ let rec hex_str_of_bl_inner (acc : string) (bs : Word8.word8 list) : string =
   match bs with
   | [] -> acc
   | h :: t ->
-     hex_str_of_bl_inner (acc ^ BatPrintf.sprintf "%x" (int_of_byte h)) t
+     hex_str_of_bl_inner (acc ^ BatPrintf.sprintf "%02x" (int_of_byte h)) t
 
 let hex_string_of_byte_list (prefix : string) (bs : Word8.word8 list) : string =
   prefix^(hex_str_of_bl_inner "" bs)
