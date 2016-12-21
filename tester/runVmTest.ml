@@ -43,8 +43,8 @@ let storage_comparison
       (actual_storage : Word256.word256 -> Word256.word256) : bool =
   let spec_storage : list_storage =
     try
-      let lookup_addr = (Conv.string_of_address addr) in
-      let () = Printf.printf "looking upa address %s\n" lookup_addr in
+      let lookup_addr = Conv.string_of_address addr in
+      (*      let () = Printf.printf "looking upa address %s\n" lookup_addr in *)
       let a : account_state = List.assoc lookup_addr spec_post in
       a.storage
     with Not_found -> [] in
@@ -58,7 +58,14 @@ let balance_comparison
       (addr : Word160.word160)
       (spec_post : (string * account_state) list)
       (actual_balance : Word160.word160 -> Word256.word256) =
-  failwith "balance_comparison"
+  let spec_balance : Big_int.big_int =
+    try
+      let lookup_addr = Conv.string_of_address addr in
+      let a : account_state = List.assoc lookup_addr spec_post in
+      a.balance
+    with Not_found -> Big_int.zero_big_int in
+  let actual_balance = Conv.big_int_of_word256 (actual_balance addr) in
+  Big_int.eq_big_int spec_balance actual_balance
 
 (* for now executes the first vmTest found in a particular file *)
 let () =

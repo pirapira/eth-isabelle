@@ -142,7 +142,12 @@ let lookup_storage (addr : address) (pre_state : (string * account_state) list) 
        Conv.word256_of_big_int Big_int.zero_big_int
 
 let construct_global_balance (pre_state : (string * account_state) list) (addr : address) : w256 =
-  failwith "construct_global_balance"
+  try
+    let lookup_addr = Conv.string_of_address addr in
+    let a : account_state = List.assoc lookup_addr pre_state in
+    Conv.word256_of_big_int a.balance
+  with
+    Not_found -> Conv.word256_of_big_int Big_int.zero_big_int
 
 let construct_ext_program (pre_state : (string * account_state) list) (addr : address) : program =
   failwith "construct_ext_program"
