@@ -39,7 +39,7 @@ let store_instruction (inst : inst) (orig : program_impl) : program_impl =
   let (new_map, new_length) =
     match inst with
     | Stack (PUSH_N lst) ->
-       let new_map = add_unknown_bytes_from (orig.p_impl_length + 1) lst orig_map in
+       let new_map = add_unknown_bytes_from (orig.p_impl_length + 1) lst added_map in
        (new_map, orig.p_impl_length + 1 + List.length lst)
     | _ ->
        (added_map, orig.p_impl_length + 1)
@@ -129,9 +129,13 @@ let parse_instruction (str : string) : (inst * string) option =
        let () = Printf.printf "payload: %s%!\n" payload in
        begin
          if String.length payload < 2 * l then
-           None
+           (Printf.printf "too short payload";
+           None)
          else
-           Some (Stack (PUSH_N (Conv.byte_list_of_hex_string payload)), rest)
+           (
+             Printf.printf "push parsed: rest length %d\n" (String.length rest);
+             Some (Stack (PUSH_N (Conv.byte_list_of_hex_string payload)), rest)
+           )
        end
      else if 0x80 <= opcode_num && opcode_num <= 0x8f then
        Some (Dup (Conv.byte_of_int (opcode_num - 0x80 + 1)), rest)

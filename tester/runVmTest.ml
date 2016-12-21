@@ -6,17 +6,26 @@ open Constant
 let spec_includes_actual (spec_storage : list_storage) (touched : Word256.word256 list) (actual_storage : Word256.word256 -> Word256.word256) : bool =
   (* for each touched index, check that the actual storage and the spec storage have the same thing. *)
   let f (idx : Word256.word256) =
+    let () = Printf.printf " idx touched: %s\n" (Big_int.string_of_big_int (Conv.big_int_of_word256 idx)) in
     let actual_value : Big_int.big_int = Conv.big_int_of_word256 (actual_storage idx) in
     let spec_value = (* This procedure needs to be split away. *)
       try Big_int.big_int_of_string (List.assoc (Conv.big_int_of_word256 idx) spec_storage)
       with Not_found -> Big_int.zero_big_int
     in
+    let () = assert (actual_value = spec_value) in
     actual_value = spec_value
   in
   List.for_all f touched
 
-let actual_includes_spec (spec_storage : list_storage) (actual_storage : Word256.word256 -> Word256.word256) =
-  failwith "actual_includes_spec"
+let actual_includes_spec (spec_storage : list_storage) (actual_storage : Word256.word256 -> Word256.word256) : bool =
+  (* for each pair in spec_storage, check the actual_storage *)
+  let f ((idx : Big_int.big_int), (v : string)) =
+    let spec_value = Big_int.big_int_of_string v in
+    let actual_value = Conv.big_int_of_word256 (actual_storage (Conv.word256_of_big_int idx)) in
+    let () = Printf.printf " comparing idx: %s spec: %s, actual: %s\n" (Big_int.string_of_big_int idx) (Big_int.string_of_big_int spec_value) (Big_int.string_of_big_int actual_value) in
+    let () = assert (spec_value = actual_value) in
+    spec_value = actual_value in
+  List.for_all f spec_storage
 
 let storage_comparison
       (addr : Word160.word160)
