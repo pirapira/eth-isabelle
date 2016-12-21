@@ -44,13 +44,13 @@ let big_int_of_bit_list bl =
   List.fold_left (fun x y -> Big_int.(add_big_int y (mult_int_big_int 2 x))) Big_int.zero_big_int nums
 
 let big_int_of_word256 (Word256.W256 (h, tl)) : Big_int.big_int =
-  big_int_of_bit_list (h :: tl)
+  big_int_of_bit_list (h :: (pad_left h 255 tl))
 
 let big_int_of_word160 (Word160.W160 (h, tl)) : Big_int.big_int =
-  big_int_of_bit_list (h :: tl)
+  big_int_of_bit_list (h :: (pad_left h 159 tl))
 
 let int_of_byte (Word8.W8 (h, tl) : Word8.word8) : int =
-  Big_int.int_of_big_int (big_int_of_bit_list (h :: tl))
+  Big_int.int_of_big_int (big_int_of_bit_list (h :: (pad_left h 7 tl)))
 
 (** [string_of_address a] returns a string of 40 characters containing [0-9] and [a-f] *)
 let string_of_address (addr : Word160.word160) : string =
@@ -127,3 +127,14 @@ let format_constant_ctx (c : Evm.constant_ctx) : Easy_format.t =
 
 let print_constant_ctx (c : Evm.constant_ctx) : unit =
   Easy_format.Pretty.to_stdout (format_constant_ctx c)
+
+
+let rec bigint_assoc (key : Big_int.big_int) (lst : (Big_int.big_int * 'a) list) : 'a =
+  match lst with
+  | [] -> raise Not_found
+  | (hk, kv) :: t ->
+     if Big_int.eq_big_int key hk then kv
+     else bigint_assoc key t
+
+let string_of_word256 (Word256.W256 (h, lst)) =
+  String.concat "," (List.map string_of_bool (h :: lst))
