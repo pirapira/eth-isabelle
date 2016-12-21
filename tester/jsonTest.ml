@@ -19,9 +19,12 @@ let () =
         ()
       ) vm_arithmetic_test_assoc
   in *)
-  let addr_big = Big_int.big_int_of_string "0x0f572e5295c57f15886f9b263e2f6d2d6c7b5ec6" in
+  let addr_big = Big_int.big_int_of_string "0x000000000000000000000000000000000000000f" in
   let addr_w = Conv.word160_of_big_int addr_big in
+  let () = assert (addr_w = Word160.W160 (false, [true; true; true; true]) ) in (* passes *)
+  let () = assert (Big_int.eq_big_int addr_big (Conv.big_int_of_word160 addr_w)) in
+  let () = Printf.printf "address_printed %s\n" (BatBig_int.to_string_in_hexa (Conv.big_int_of_word160 addr_w)) in
   let addr_s = Conv.string_of_address addr_w in
-  let () = assert (addr_s = "0f572e5295c57f15886f9b263e2f6d2d6c7b5ec6") in
+  let () = assert (addr_s = "000000000000000000000000000000000000000f") in
 
   ()

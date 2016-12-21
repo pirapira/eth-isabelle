@@ -2,7 +2,17 @@ let pad_left (elm : 'a) (len : int) (orig : 'a list) =
   let remaining = len - List.length orig in
   let () = Printf.printf "padding: remaining: %d\n%!" remaining in
   let padding = BatList.make remaining elm in
-  padding @ orig
+  let ret = padding @ orig in
+  let () = assert (List.length ret = len) in
+  ret
+
+let pad_right (elm : 'a) (len : int) (orig : 'a list) =
+  let remaining = len - List.length orig in
+  let () = Printf.printf "padding: remaining: %d\n%!" remaining in
+  let padding = BatList.make remaining elm in
+  let ret = orig @ padding in
+  let () = assert (List.length ret = len) in
+  ret
 
 let pad_left_string (padding : char) (len : int) (orig : string) =
   let lst = BatString.to_list orig in
@@ -19,9 +29,13 @@ let word_of_big_int (target_len : int) (b : Big_int.big_int) =
         | '0' -> false
         | '1' -> true
         | _ -> failwith "neither 0 or 1"
-      ) (BatString.to_list binary)
+      ) (List.rev (BatString.to_list binary))
     in
-  let (h :: tl) = pad_left false target_len bl in
+  let () = Printf.printf "current len bl :%d\n" (List.length bl) in
+  let bl = pad_right false target_len bl in
+  let () = Printf.printf "intermediate 1 : %s\n" (String.concat "," (List.map string_of_bool bl)) in
+  let Lem_word.BitSeq(_, h, tl) = Lem_word.(resizeBitSeq (Some target_len) (BitSeq (Some target_len, List.nth bl (target_len - 1), BatList.take (target_len - 1) bl))) in
+  let () = Printf.printf "intermediate 2 : %s\n" (String.concat "," (List.map string_of_bool (h :: tl))) in
   (h, tl)
 
 let word256_of_big_int (b : Big_int.big_int) =
@@ -41,16 +55,17 @@ let byte_of_int (i : int) =
 
 let big_int_of_bit_list bl =
   let nums : Big_int.big_int list = List.map (fun x -> if x then Big_int.unit_big_int else Big_int.zero_big_int) bl in
+  let nums = List.rev nums in
   List.fold_left (fun x y -> Big_int.(add_big_int y (mult_int_big_int 2 x))) Big_int.zero_big_int nums
 
 let big_int_of_word256 (Word256.W256 (h, tl)) : Big_int.big_int =
-  big_int_of_bit_list (h :: (pad_left h 255 tl))
+  big_int_of_bit_list (pad_right h 256 tl)
 
 let big_int_of_word160 (Word160.W160 (h, tl)) : Big_int.big_int =
-  big_int_of_bit_list (h :: (pad_left h 159 tl))
+  big_int_of_bit_list (pad_right h 160 tl)
 
 let int_of_byte (Word8.W8 (h, tl) : Word8.word8) : int =
-  Big_int.int_of_big_int (big_int_of_bit_list (h :: (pad_left h 7 tl)))
+  Big_int.int_of_big_int (big_int_of_bit_list (pad_right h 8 tl))
 
 (** [string_of_address a] returns a string of 40 characters containing [0-9] and [a-f] *)
 let string_of_address (addr : Word160.word160) : string =
@@ -132,9 +147,13 @@ let print_constant_ctx (c : Evm.constant_ctx) : unit =
 let rec bigint_assoc (key : Big_int.big_int) (lst : (Big_int.big_int * 'a) list) : 'a =
   match lst with
   | [] -> raise Not_found
-  | (hk, kv) :: t ->
-     if Big_int.eq_big_int key hk then kv
+  | (hk, hv) :: t ->
+     let () = Printf.printf "bigint_assoc: comparing %s and %s\n" (Big_int.string_of_big_int key) (Big_int.string_of_big_int hk) in
+     if Big_int.eq_big_int key hk then hv
      else bigint_assoc key t
 
 let string_of_word256 (Word256.W256 (h, lst)) =
+  String.concat "," (List.map string_of_bool (h :: lst))
+
+let string_of_word160 (Word160.W160 (h, lst)) =
   String.concat "," (List.map string_of_bool (h :: lst))

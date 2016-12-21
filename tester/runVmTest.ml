@@ -9,12 +9,13 @@ let spec_includes_actual (spec_storage : list_storage) (touched : Word256.word25
     let () = Printf.printf " idx touched: %s\n" (Big_int.string_of_big_int (Conv.big_int_of_word256 idx)) in
     let () = Printf.printf " actual word: %s\n" (Conv.string_of_word256 (actual_storage idx)) in
     let actual_value : Big_int.big_int = Conv.big_int_of_word256 (actual_storage idx) in
+    let spec_idx : Big_int.big_int = Conv.big_int_of_word256 idx in
     let spec_value = (* This procedure needs to be split away. *)
-      try Big_int.big_int_of_string (Conv.bigint_assoc (Conv.big_int_of_word256 idx) spec_storage)
+      try Big_int.big_int_of_string (Conv.bigint_assoc spec_idx spec_storage)
       with Not_found -> Big_int.zero_big_int
     in
-    let () = Printf.printf " comparing idx: %s, actual: %s, spec: %s\n" (Big_int.string_of_big_int (Conv.big_int_of_word256 idx))
-                           (Big_int.string_of_big_int actual_value) (Big_int.string_of_big_int spec_value) in
+    let () = Printf.printf " comparing idx: %s, actual: %s, spec: %s (by %s)\n" (Big_int.string_of_big_int (Conv.big_int_of_word256 idx))
+                           (Big_int.string_of_big_int actual_value) (Big_int.string_of_big_int spec_value) (Big_int.string_of_big_int spec_idx) in
     let ret = Big_int.eq_big_int actual_value spec_value in
     let () = assert ret in
     ret
@@ -25,8 +26,9 @@ let actual_includes_spec (spec_storage : list_storage) (actual_storage : Word256
   (* for each pair in spec_storage, check the actual_storage *)
   let f ((idx : Big_int.big_int), (v : string)) =
     let spec_value = Big_int.big_int_of_string v in
-    let actual_value = Conv.big_int_of_word256 (actual_storage (Conv.word256_of_big_int idx)) in
-    let () = Printf.printf " comparing idx: %s spec: %s, actual: %s\n" (Big_int.string_of_big_int idx) (Big_int.string_of_big_int spec_value) (Big_int.string_of_big_int actual_value) in
+    let actual_idx = (Conv.word256_of_big_int idx) in
+    let actual_value = Conv.big_int_of_word256 (actual_storage actual_idx) in
+    let () = Printf.printf " comparing idx: %s spec: %s, actual: %s (by idx: %s)\n" (Big_int.string_of_big_int idx) (Big_int.string_of_big_int spec_value) (Big_int.string_of_big_int actual_value) (Conv.string_of_word256 actual_idx) in
     let ret = Big_int.eq_big_int spec_value actual_value in
     let () = assert ret in
     spec_value = actual_value in
@@ -39,7 +41,9 @@ let storage_comparison
       (actual_storage : Word256.word256 -> Word256.word256) : bool =
   let spec_storage : list_storage =
     try
-      let a : account_state = List.assoc (Conv.string_of_address addr) spec_post in
+      let lookup_addr = (Conv.string_of_address addr) in
+      let () = Printf.printf "looking upa address %s\n" lookup_addr in
+      let a : account_state = List.assoc lookup_addr spec_post in
       a.storage
     with Not_found -> [] in
   spec_includes_actual spec_storage touched actual_storage &&
@@ -100,6 +104,9 @@ let () =
        | spec_created, Some spec_gas, Some spec_logs, Some spec_out, Some spec_post ->
           let got_retval : string = hex_string_of_byte_list "0x" retval in
           let () = assert (got_retval = spec_out) in
+          let () = Printf.printf "our address is 1 %s\n" (pad_left_string '0' 40 (BatBig_int.to_string_in_hexa test_case.exec.address)) in
+          let () = Printf.printf "our address is 2 %s\n" (Conv.string_of_word160 (Conv.word160_of_big_int test_case.exec.address)) in
+          let () = Printf.printf "our address is 3 %s\n" (string_of_address      (Conv.word160_of_big_int test_case.exec.address)) in
           let () = assert (storage_comparison (Conv.word160_of_big_int test_case.exec.address) spec_post touched st) in
           failwith "comparison needed"
        | _ -> failwith "Some post conditions not available"
