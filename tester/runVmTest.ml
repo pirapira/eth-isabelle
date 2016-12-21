@@ -67,13 +67,7 @@ let balance_comparison
   let actual_balance = Conv.big_int_of_word256 (actual_balance addr) in
   Big_int.eq_big_int spec_balance actual_balance
 
-(* for now executes the first vmTest found in a particular file *)
-let () =
-  let () = Printf.printf "hello\n" in
-  let vm_arithmetic_test : json = Yojson.Basic.from_file "../tests/VMTests/vmArithmeticTest.json" in
-  let vm_arithmetic_test_assoc : (string * json) list = Util.to_assoc vm_arithmetic_test in
-  let (label, j) = List.nth vm_arithmetic_test_assoc 0 in
-  let () = Printf.printf "test case: %s\n" label in
+let test_one_case j : bool =
   let test_case : test_case = parse_test_case j in
   let open Evm in
   let open Conv in
@@ -111,11 +105,17 @@ let () =
   let number = Big_int.int_of_big_int test_case.exec.gas in
   let ret : program_result = Evm.program_sem v c number number in
   match ret with
-  | ProgramStepRunOut -> failwith "runout"
-  | ProgramToEnvironment (ContractCall carg, st, bal, touched, pushed_opt) -> failwith "call"
-  | ProgramToEnvironment (ContractCreate carg, st, bal, touched, pushed_opt) -> failwith "create"
-  | ProgramToEnvironment (ContractFail, st, bal, touched, pushed_opt) -> failwith "fail"
-  | ProgramToEnvironment (ContractSuicide, st, bal, touched, pushed_opt) -> failwith "suicide"
+  | ProgramStepRunOut -> false
+  | ProgramToEnvironment (ContractCall carg, st, bal, touched, pushed_opt) ->
+     let () = Printf.eprintf "We are not looking whatever happens after the contract calls\n" in
+     true
+  | ProgramToEnvironment (ContractCreate carg, st, bal, touched, pushed_opt) ->
+     let () = Printf.eprintf "We are not looking whatever happens after the contract creates" in
+     true
+  | ProgramToEnvironment (ContractFail, st, bal, touched, pushed_opt) ->
+     failwith "failure case not implemented"
+  | ProgramToEnvironment (ContractSuicide, st, bal, touched, pushed_opt) ->
+     failwith "suicide case not implemented"
   | ProgramToEnvironment (ContractReturn retval, st, bal, touched, None) ->
      begin
        match test_case.callcreates, test_case.gas, test_case.logs, test_case.out, test_case.post with
@@ -124,11 +124,22 @@ let () =
           let () = assert (got_retval = spec_out) in
           let () = assert (storage_comparison (Conv.word160_of_big_int test_case.exec.address) spec_post touched st) in
           let () = assert (balance_comparison (Conv.word160_of_big_int test_case.exec.address) spec_post bal) in
-          ()
+          true
        | _ -> failwith "Some post conditions not available"
      end
   | ProgramToEnvironment (ContractReturn retval, st, bal, touched, Some _) ->
-     failwith "Not expected"
-  | ProgramInvalid -> failwith "invalid"
-  | ProgramAnnotationFailure -> failwith "annotation failure"
-  | ProgramInit _ -> failwith "should not happen"
+     false
+  | ProgramInvalid -> false
+  | ProgramAnnotationFailure -> false
+  | ProgramInit _ -> false
+
+(* for now executes the first vmTest found in a particular file *)
+let () =
+  let () = Printf.printf "hello\n" in
+  let vm_arithmetic_test : json = Yojson.Basic.from_file "../tests/VMTests/vmArithmeticTest.json" in
+  let vm_arithmetic_test_assoc : (string * json) list = Util.to_assoc vm_arithmetic_test in
+  let (label, j) = List.nth vm_arithmetic_test_assoc 0 in
+  let () = Printf.printf "test case: %s\n" label in
+  let success : bool = test_one_case j in
+  let () = assert success in
+  ()
