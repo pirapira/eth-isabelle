@@ -54,6 +54,12 @@ let storage_comparison
   (*  let () = Printf.printf "storage comparison done \n" in *)
   ret0 && ret1
 
+let balance_comparison
+      (addr : Word160.word160)
+      (spec_post : (string * account_state) list)
+      (actual_balance : Word160.word160 -> Word256.word256) =
+  failwith "balance_comparison"
+
 (* for now executes the first vmTest found in a particular file *)
 let () =
   let () = Printf.printf "hello\n" in
@@ -110,7 +116,8 @@ let () =
           let got_retval : string = hex_string_of_byte_list "0x" retval in
           let () = assert (got_retval = spec_out) in
           let () = assert (storage_comparison (Conv.word160_of_big_int test_case.exec.address) spec_post touched st) in
-          failwith "comparison needed"
+          let () = assert (balance_comparison (Conv.word160_of_big_int test_case.exec.address) spec_post bal) in
+          ()
        | _ -> failwith "Some post conditions not available"
      end
   | ProgramToEnvironment (ContractReturn retval, st, bal, touched, Some _) ->
