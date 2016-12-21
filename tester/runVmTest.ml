@@ -49,9 +49,9 @@ let storage_comparison
       a.storage
     with Not_found -> [] in
   let ret0 = spec_includes_actual spec_storage touched actual_storage in
-  let () = Printf.printf "storage comparison done one direction\n" in
+  (*   let () = Printf.printf "storage comparison done one direction\n" in *)
   let ret1 = actual_includes_spec spec_storage actual_storage in
-  let () = Printf.printf "storage comparison done \n" in
+  (*  let () = Printf.printf "storage comparison done \n" in *)
   ret0 && ret1
 
 (* for now executes the first vmTest found in a particular file *)
@@ -103,19 +103,18 @@ let () =
   | ProgramToEnvironment (ContractCreate carg, st, bal, touched, pushed_opt) -> failwith "create"
   | ProgramToEnvironment (ContractFail, st, bal, touched, pushed_opt) -> failwith "fail"
   | ProgramToEnvironment (ContractSuicide, st, bal, touched, pushed_opt) -> failwith "suicide"
-  | ProgramToEnvironment (ContractReturn retval, st, bal, touched, pushed_opt) ->
+  | ProgramToEnvironment (ContractReturn retval, st, bal, touched, None) ->
      begin
        match test_case.callcreates, test_case.gas, test_case.logs, test_case.out, test_case.post with
        | spec_created, Some spec_gas, Some spec_logs, Some spec_out, Some spec_post ->
           let got_retval : string = hex_string_of_byte_list "0x" retval in
           let () = assert (got_retval = spec_out) in
-          let () = Printf.printf "our address is 1 %s\n" (pad_left_string '0' 40 (BatBig_int.to_string_in_hexa test_case.exec.address)) in
-          let () = Printf.printf "our address is 2 %s\n" (Conv.string_of_word160 (Conv.word160_of_big_int test_case.exec.address)) in
-          let () = Printf.printf "our address is 3 %s\n" (string_of_address      (Conv.word160_of_big_int test_case.exec.address)) in
           let () = assert (storage_comparison (Conv.word160_of_big_int test_case.exec.address) spec_post touched st) in
           failwith "comparison needed"
        | _ -> failwith "Some post conditions not available"
      end
+  | ProgramToEnvironment (ContractReturn retval, st, bal, touched, Some _) ->
+     failwith "Not expected"
   | ProgramInvalid -> failwith "invalid"
   | ProgramAnnotationFailure -> failwith "annotation failure"
   | ProgramInit _ -> failwith "should not happen"
