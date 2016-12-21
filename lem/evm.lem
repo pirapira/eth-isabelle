@@ -82,7 +82,7 @@ end
 declare termination_argument  word_rsplit_aux = automatic
 
 val word_rsplit : w256 -> list byte
-let word_rsplit w = word_rsplit_aux (boolListFromWord256 w) 32 
+let word_rsplit w = reverse (word_rsplit_aux (boolListFromWord256 w) 32)
 declare isabelle target_rep function word_rsplit = `word_rsplit`
 
 val get_byte : w256 -> w256 -> w256
@@ -1191,7 +1191,7 @@ val datasize : variable_ctx -> w256
 let datasize v = word256FromNat (length v.vctx_data_sent)
 
 val word_of_bytes : list byte -> w256
-let word_of_bytes lst = word256FromBoollist (List.concat (map boolListFromWord8 lst))
+let word_of_bytes lst = word256FromBoollist (List.concat (map boolListFromWord8 (reverse lst)))
 declare isabelle target_rep function word_of_bytes = `Word.word_rcat`
 
 val constant_mark : list byte -> list byte
@@ -1356,7 +1356,7 @@ end
 (* Using the function above, it is straightforward to store a byte in the memory. *)
 val store_word_memory : w256 -> w256 -> memory -> memory
 let store_word_memory pos vl mem =
-   store_byte_list_memory pos (reverse (word_rsplit vl)) mem
+   store_byte_list_memory pos ((* reverse *) (word_rsplit vl)) mem
 
 (* MSTORE writes one word to the memory: *)
 val mstore : variable_ctx -> constant_ctx -> instruction_result
@@ -1768,7 +1768,9 @@ let instruction_sem v c inst =
   | Arith DIV -> stack_2_1_op v c
 	   (fun a divisor -> (if divisor = 0 then 0 else word256FromInteger ((uint a) div (uint divisor))))
   | Arith MOD -> stack_2_1_op v c
-	   (fun a divisor -> (if divisor = 0 then 0 else word256FromInteger ((uint a) mod (uint divisor))))
+	   (fun a divisor -> (if divisor = 0 then 0 else
+	   	    word256FromInteger ((uint a) mod (uint divisor))
+		))
   | Arith ADDMOD -> stack_3_1_op v c
 	   (fun a b divisor ->
 		   (if divisor = 0 then 0 else word256FromInteger ((uint a + uint b) mod (uint divisor))))

@@ -13,4 +13,6 @@ let () =
   let f = format_program_result r in
   let () = Easy_format.Pretty.to_stdout f in
   let () = Printf.printf "\ncalled EVM.\n" in
+  let () = Printf.printf "converting 10000 %s\n"
+                         Conv.(string_of_byte_list (Evm.word_rsplit (word256_of_big_int (Big_int.big_int_of_int 1000)))) in
   ()

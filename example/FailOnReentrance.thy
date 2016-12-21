@@ -80,7 +80,7 @@ where
  , callarg_output_size = 0
  \<rparr>"
 
-fun fail_on_reentrance_spec :: "nat \<Rightarrow> response_to_world"
+fun fail_on_reentrance_spec :: "nat \<Rightarrow> response_to_environment"
 where
   "fail_on_reentrance_spec 0 =
    \<lparr> when_called = \<lambda> _. (ContractCall something_to_call,
