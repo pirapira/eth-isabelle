@@ -4,6 +4,7 @@ open Constant
 
 
 let spec_includes_actual (spec_storage : list_storage) (touched : Word256.word256 list) (actual_storage : Word256.word256 -> Word256.word256) : bool =
+  let () = Printf.printf "sia\n" in
   (* for each touched index, check that the actual storage and the spec storage have the same thing. *)
   let f (idx : Word256.word256) =
     let () = Printf.printf " idx touched: %s\n" (Big_int.string_of_big_int (Conv.big_int_of_word256 idx)) in
@@ -23,6 +24,7 @@ let spec_includes_actual (spec_storage : list_storage) (touched : Word256.word25
   List.for_all f touched
 
 let actual_includes_spec (spec_storage : list_storage) (actual_storage : Word256.word256 -> Word256.word256) : bool =
+  let () = Printf.printf "ais\n" in
   (* for each pair in spec_storage, check the actual_storage *)
   let f ((idx : Big_int.big_int), (v : string)) =
     let spec_value = Big_int.big_int_of_string v in
@@ -31,7 +33,7 @@ let actual_includes_spec (spec_storage : list_storage) (actual_storage : Word256
     let () = Printf.printf " comparing idx: %s spec: %s, actual: %s (by idx: %s)\n" (Big_int.string_of_big_int idx) (Big_int.string_of_big_int spec_value) (Big_int.string_of_big_int actual_value) (Conv.string_of_word256 actual_idx) in
     let ret = Big_int.eq_big_int spec_value actual_value in
     let () = assert ret in
-    spec_value = actual_value in
+    ret in
   List.for_all f spec_storage
 
 let storage_comparison
@@ -46,8 +48,11 @@ let storage_comparison
       let a : account_state = List.assoc lookup_addr spec_post in
       a.storage
     with Not_found -> [] in
-  spec_includes_actual spec_storage touched actual_storage &&
-    actual_includes_spec spec_storage actual_storage
+  let ret0 = spec_includes_actual spec_storage touched actual_storage in
+  let () = Printf.printf "storage comparison done one direction\n" in
+  let ret1 = actual_includes_spec spec_storage actual_storage in
+  let () = Printf.printf "storage comparison done \n" in
+  ret0 && ret1
 
 (* for now executes the first vmTest found in a particular file *)
 let () =

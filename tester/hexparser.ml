@@ -50,7 +50,7 @@ let store_instruction (inst : inst) (orig : program_impl) : program_impl =
 
 let parse_instruction (str : string) : (inst * string) option =
   let opcode = BatString.left str 2 in
-  let () = Printf.printf "parse_instruction, %s\n" opcode in
+  (*  let () = Printf.printf "parse_instruction, %s\n" opcode in *)
   let rest = BatString.tail str 2 in
   match opcode with
   | "" -> None
@@ -133,7 +133,7 @@ let parse_instruction (str : string) : (inst * string) option =
            None)
          else
            (
-             Printf.printf "push parsed: rest length %d\n" (String.length rest);
+             (*             Printf.printf "push parsed: rest length %d\n" (String.length rest); *)
              Some (Stack (PUSH_N (Conv.byte_list_of_hex_string payload)), rest)
            )
        end
