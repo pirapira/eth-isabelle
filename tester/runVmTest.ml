@@ -3,8 +3,20 @@ open Jsonparser
 open Constant
 
 
-let storage_comparison (spec_post : (string * account_state) list) (touched : Word256.word256 list) (actual_storage : Word256.word256 -> Word256.word256) : bool =
-  failwith "storage_comparison"
+let spec_includes_actual (spec_storage : list_storage) (touched : Word256.word256 list) (actual_storage : Word256.word256 -> Word256.word256) =
+  failwith "spec_includes_actual"
+
+let actual_includes_spec (spec_storage : list_storage) (actual_storage : Word256.word256 -> Word256.word256) =
+  failwith "actual_includes_spec"
+
+let storage_comparison
+      (addr : Big_int.big_int)
+      (spec_post : (string * account_state) list)
+      (touched : Word256.word256 list)
+      (actual_storage : Word256.word256 -> Word256.word256) : bool =
+  let spec_storage : list_storage = failwith "spec_storage" in
+  spec_includes_actual spec_storage touched actual_storage &&
+    actual_includes_spec spec_storage actual_storage
 
 (* for now executes the first vmTest found in a particular file *)
 let () =
@@ -61,7 +73,7 @@ let () =
        | spec_created, Some spec_gas, Some spec_logs, Some spec_out, Some spec_post ->
           let got_retval : string = hex_string_of_byte_list "0x" retval in
           let () = assert (got_retval = spec_out) in
-          let () = assert (storage_comparison spec_post touched st) in
+          let () = assert (storage_comparison test_case.exec.address spec_post touched st) in
           failwith "comparison needed"
        | _ -> failwith "Some post conditions not available"
      end
