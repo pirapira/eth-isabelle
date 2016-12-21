@@ -1768,7 +1768,7 @@ let instruction_sem v c inst =
   | Arith DIV -> stack_2_1_op v c
 	   (fun a divisor -> (if divisor = 0 then 0 else a div divisor))
   | Arith MOD -> stack_2_1_op v c
-	   (fun a divisor -> (if divisor = 0 then 0 else a mod divisor))
+	   (fun a divisor -> (if divisor = 0 then 0 else word256FromInteger ((uint a) mod (uint divisor))))
   | Arith ADDMOD -> stack_3_1_op v c
 	   (fun a b divisor ->
 		   (if divisor = 0 then 0 else word256FromInteger ((uint a + uint b) mod (uint divisor))))
