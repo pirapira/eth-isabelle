@@ -10,11 +10,15 @@ let actual_includes_spec (spec_storage : list_storage) (actual_storage : Word256
   failwith "actual_includes_spec"
 
 let storage_comparison
-      (addr : Big_int.big_int)
+      (addr : Word160.word160)
       (spec_post : (string * account_state) list)
       (touched : Word256.word256 list)
       (actual_storage : Word256.word256 -> Word256.word256) : bool =
-  let spec_storage : list_storage = failwith "spec_storage" in
+  let spec_storage : list_storage =
+    try
+      let a : account_state = List.assoc (Conv.string_of_address addr) spec_post in
+      a.storage
+    with Not_found -> [] in
   spec_includes_actual spec_storage touched actual_storage &&
     actual_includes_spec spec_storage actual_storage
 
@@ -73,7 +77,7 @@ let () =
        | spec_created, Some spec_gas, Some spec_logs, Some spec_out, Some spec_post ->
           let got_retval : string = hex_string_of_byte_list "0x" retval in
           let () = assert (got_retval = spec_out) in
-          let () = assert (storage_comparison test_case.exec.address spec_post touched st) in
+          let () = assert (storage_comparison (Conv.word160_of_big_int test_case.exec.address) spec_post touched st) in
           failwith "comparison needed"
        | _ -> failwith "Some post conditions not available"
      end
