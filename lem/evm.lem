@@ -1301,10 +1301,17 @@ end
 val create : variable_ctx -> constant_ctx -> instruction_result
 let create v c = match v.vctx_stack with
   | vl :: code_start :: code_len :: rest ->
-      if word256ULT (v.vctx_balance c.cctx_this) vl then instruction_failure_result v else
-      let code = cut_memory code_start (word256ToNatural code_len) v.vctx_memory in
-      let new_balance = update_balance c.cctx_this (fun orig -> orig - vl) v.vctx_balance in
-      InstructionToEnvironment
+      if word256ULT (v.vctx_balance c.cctx_this) vl then
+        (InstructionContinue
+           (vctx_advance_pc c
+             <| v with
+                vctx_stack = (0 :: rest)
+             |>
+           ))
+      else
+        let code = cut_memory code_start (word256ToNatural code_len) v.vctx_memory in
+        let new_balance = update_balance c.cctx_this (fun orig -> orig - vl) v.vctx_balance in
+        InstructionToEnvironment
            (ContractCreate
              <| createarg_value = vl; createarg_code = code |>)
             v.vctx_storage new_balance
