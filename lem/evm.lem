@@ -1764,7 +1764,14 @@ let instruction_sem v c inst =
 	  stack_2_1_op v c get_byte
   | Sarith SDIV -> stack_2_1_op v c
 	   (fun n divisor -> if divisor = 0 then 0 else
-						  word256FromInteger ((sintFromW256 n) div (sintFromW256 divisor)))
+	   		  		  	 let divisor = sintFromW256 divisor in
+						 let n = sintFromW256 n in
+						 let min_int : integer = ~ (2 ** 255) in
+						 if n = min_int && divisor = ~1 then word256FromInteger min_int else
+						 if divisor < 0 then
+						   word256FromInteger ((~1 * n) div (~1 * divisor))
+						 else
+						   word256FromInteger (n div divisor))
   | Sarith SMOD -> stack_2_1_op v c
 	   (fun n divisor -> if divisor = 0 then 0 else
 						 word256FromInteger ((sintFromW256 n) mod (sintFromW256 divisor)))
