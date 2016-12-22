@@ -150,7 +150,14 @@ let construct_global_balance (pre_state : (string * account_state) list) (addr :
     Not_found -> Conv.word256_of_big_int Big_int.zero_big_int
 
 let construct_ext_program (pre_state : (string * account_state) list) (addr : address) : program =
-  failwith "construct_ext_program"
+  try
+    let lookup_addr = Conv.string_of_address addr in
+    let a : account_state = List.assoc lookup_addr pre_state in
+    let (p, rest) = parse_code a.code in
+    let () = assert (rest = "") in
+    p
+  with
+    Not_found -> empty_program
 
 let construct_block_info (t : test_case) : block_info =
   { block_blockhash = (fun num ->
