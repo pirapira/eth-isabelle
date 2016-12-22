@@ -160,15 +160,20 @@ let construct_ext_program (pre_state : (string * account_state) list) (addr : ad
     Not_found -> empty_program
 
 let construct_block_info (t : test_case) : block_info =
+  let block_number = Conv.word256_of_big_int t.env.currentNumber in
   { block_blockhash = (fun num ->
       let num : Big_int.big_int = Conv.big_int_of_word256 num in
       if Big_int.eq_big_int Big_int.zero_big_int num then
+        Conv.word256_of_big_int Big_int.zero_big_int
+      else if Big_int.lt_big_int num (Big_int.sub_big_int t.env.currentNumber (Big_int.big_int_of_int 256)) then
+        Conv.word256_of_big_int Big_int.zero_big_int
+      else if Big_int.gt_big_int num t.env.currentNumber then
         Conv.word256_of_big_int Big_int.zero_big_int
       else
         failwith "blockhash asked")
   ; block_coinbase  = Conv.word160_of_big_int t.env.currentCoinbase
   ; block_timestamp = Conv.word256_of_big_int t.env.currentTimestamp
-  ; block_number    = Conv.word256_of_big_int t.env.currentNumber
+  ; block_number    = block_number
   ; block_difficulty = Conv.word256_of_big_int t.env.currentDifficulty
   ; block_gaslimit = Conv.word256_of_big_int t.env.currentGasLimit
   ; block_gasprice = Conv.word256_of_big_int t.exec.gasPrice
