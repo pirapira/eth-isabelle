@@ -1193,7 +1193,7 @@ let datasize v = word256FromNat (length v.vctx_data_sent)
 val list_fill_right : bool -> nat -> list bool -> list bool
 let list_fill_right filled target orig =
   let filling_len = target - length orig in
-  append orig (replicate filling_len false)
+  append orig (replicate filling_len filled)
 
 val word_of_bytes : list byte -> w256
 let word_of_bytes lst = word256FromBoollist
@@ -1793,7 +1793,8 @@ let instruction_sem v c inst =
 	        if uint len >= 31 then
               W256 s lst
             else
-		    let len = 8 * (natFromNatural (word256ToNatural len) + 1) in
+		    let len = 8 * ((natFromNatural (word256ToNatural len)) + 1) in
+			let lst = list_fill_right s 255 lst in
             let bits = take len lst in
             let sign = match index bits (len - 1) with
 						| Just sign -> sign
