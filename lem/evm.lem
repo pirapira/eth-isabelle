@@ -1402,7 +1402,7 @@ val input_as_memory : list byte -> memory
 let input_as_memory lst (idx : w256) =
   let idx = uint idx in
   if 0 > idx then 0
-  else if integerFromNat (length lst) > idx then 0
+  else if integerFromNat (length lst) <= idx then 0
   else
     match List.index lst (natFromInteger idx) with
     | Nothing -> 0
