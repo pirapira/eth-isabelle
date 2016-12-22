@@ -48,6 +48,12 @@ let store_instruction (inst : inst) (orig : program_impl) : program_impl =
   ; p_impl_length = new_length
   }
 
+let string_right_fill (pad : char) (target : int) (orig : string) : string =
+  let () = assert (target >= String.length orig) in
+  let pad_len = target - String.length orig in
+  let padding = String.make pad_len pad in
+  orig ^ padding
+
 let parse_instruction (str : string) : (inst * string) option =
   let opcode = BatString.left str 2 in
   (*  let () = Printf.printf "parse_instruction, %s\n" opcode in *)
@@ -127,16 +133,12 @@ let parse_instruction (str : string) : (inst * string) option =
        let l = opcode_num - 0x60 + 1 in
        let (payload, rest) = BatString.(left rest (2 * l), tail rest (2 * l)) in
        let () = Printf.printf "payload: %s%!\n" payload in
-       begin
+       let payload =
          if String.length payload < 2 * l then
-           (Printf.printf "too short payload";
-           None)
+           string_right_fill '0' (2*l) payload
          else
-           (
-             (*             Printf.printf "push parsed: rest length %d\n" (String.length rest); *)
-             Some (Stack (PUSH_N (Conv.byte_list_of_hex_string payload)), rest)
-           )
-       end
+           payload in
+       Some (Stack (PUSH_N (Conv.byte_list_of_hex_string payload)), rest)
      else if 0x80 <= opcode_num && opcode_num <= 0x8f then
        Some (Dup (Conv.byte_of_int (opcode_num - 0x80 + 1)), rest)
      else if 0x90 <= opcode_num && opcode_num <= 0x9f then
