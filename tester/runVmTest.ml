@@ -151,4 +151,6 @@ let test_one_file (path : string) : unit =
 
 let () =
   let () = Printf.printf "hello\n" in
-  test_one_file "../tests/VMTests/vmArithmeticTest.json"
+  let () = test_one_file "../tests/VMTests/vmArithmeticTest.json" in
+  let () = test_one_file "../tests/VMTests/vmBitwiseLogicOperationTest.json" in
+  ()
