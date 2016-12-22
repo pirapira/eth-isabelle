@@ -1775,7 +1775,11 @@ let instruction_sem v c inst =
                               word256FromInteger (~1 * (n div (~1 * divisor)))
                            )
 						 else
-						   word256FromInteger (n div divisor))
+						   (if n < 0 then
+                              word256FromInteger (~1 * ((~1 * n) div divisor))
+                            else
+						      word256FromInteger (n div divisor))
+                           )
   | Sarith SMOD -> stack_2_1_op v c
 	   (fun n divisor -> if divisor = 0 then 0 else
 						 word256FromInteger ((sintFromW256 n) mod (sintFromW256 divisor)))
