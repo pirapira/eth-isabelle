@@ -1206,7 +1206,10 @@ let constant_mark lst = lst
 
 (* Looking up a word from a list of bytes: *)
 val read_word_from_bytes : natural -> list byte -> w256
-let read_word_from_bytes idx lst = word_of_bytes (take 32 (drop (natFromNatural idx) lst))
+let read_word_from_bytes idx lst =
+  if naturalFromNat (length lst) <= idx then 0
+  else
+    word_of_bytes (take 32 (drop (natFromNatural idx) lst))
 
 val cut_data : variable_ctx -> w256 -> w256
 let cut_data v idx = read_word_from_bytes (word256ToNatural idx) v.vctx_data_sent
