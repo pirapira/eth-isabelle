@@ -153,7 +153,12 @@ let construct_ext_program (pre_state : (string * account_state) list) (addr : ad
   failwith "construct_ext_program"
 
 let construct_block_info (t : test_case) : block_info =
-  { block_blockhash = (fun _ -> failwith "blockhash asked")
+  { block_blockhash = (fun num ->
+      let num : Big_int.big_int = Conv.big_int_of_word256 num in
+      if Big_int.eq_big_int Big_int.zero_big_int num then
+        Conv.word256_of_big_int Big_int.zero_big_int
+      else
+        failwith "blockhash asked")
   ; block_coinbase  = Conv.word160_of_big_int t.env.currentCoinbase
   ; block_timestamp = Conv.word256_of_big_int t.env.currentTimestamp
   ; block_number    = Conv.word256_of_big_int t.env.currentNumber
