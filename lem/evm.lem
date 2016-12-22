@@ -1454,10 +1454,21 @@ let pc v c =
    InstructionContinue (vctx_advance_pc c
      <| v with vctx_stack = word256FromInteger v.vctx_pc :: v.vctx_stack|>)
 
+val vctx_stack_default : int -> variable_ctx -> w256
+let vctx_stack_default idx v =
+  match List.index v.vctx_stack (natFromInt idx) with
+  | Just w -> w
+  | Nothing -> 0
+  end
+
 (* Logging is currently no-op, until some property about event logging is wanted. *)
 val log : nat -> variable_ctx -> constant_ctx -> instruction_result
 let log n v c =
-   InstructionContinue (vctx_advance_pc c (vctx_pop_stack (n+2) v))
+   InstructionContinue
+    (vctx_advance_pc c (vctx_pop_stack (n+2)
+	   <| v with
+          vctx_memory_usage = M v.vctx_memory_usage (vctx_stack_default 0 v) (vctx_stack_default 1 v)
+	    |>))
 
 (* For SWAP operations, I first define a swap operations on lists. *)
 val list_swap : forall 'a. nat -> list 'a -> maybe (list 'a)
@@ -1655,13 +1666,6 @@ let vctx_next_instruction_default v c =
     | Nothing -> Misc STOP
     end
 
-val vctx_stack_default : int -> variable_ctx -> w256
-let vctx_stack_default idx v =
-  match List.index v.vctx_stack (natFromInt idx) with
-  | Just w -> w
-  | Nothing -> 0
-  end
-
 val vctx_recipient : variable_ctx -> constant_ctx -> address
 let vctx_recipient v c =
   match vctx_next_instruction_default v c with
@@ -1698,6 +1702,7 @@ let new_memory_consumption i v =
     M (M v.vctx_memory_usage (vctx_stack_default 2 v) (vctx_stack_default 3 v)) (vctx_stack_default 4 v) (vctx_stack_default 5 v)
   | Misc RETURN ->
     M v.vctx_memory_usage (vctx_stack_default 0 v) (vctx_stack_default 1 v)
+  | Log _ -> M v.vctx_memory_usage (vctx_stack_default 0 v) (vctx_stack_default 1 v)
   | _ -> v.vctx_memory_usage
   end
 
