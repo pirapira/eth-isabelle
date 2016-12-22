@@ -1212,7 +1212,7 @@ val cut_data : variable_ctx -> w256 -> w256
 let cut_data v idx = read_word_from_bytes (word256ToNatural idx) v.vctx_data_sent
 
 (* Looking up a number of bytes from the memory: *)
-val cut_memory : w256 -> nat -> (w256 -> byte) -> list byte
+val cut_memory : w256 -> natural -> (w256 -> byte) -> list byte
 let rec cut_memory idx n memory = match n with
  | 0 -> []
  | n + 1 -> memory idx :: cut_memory (idx + 1) n memory
@@ -1231,7 +1231,7 @@ let call v c = match v.vctx_stack with
             callarg_code = w256_to_address e1;
             callarg_recipient = w256_to_address e1;
             callarg_value = e2;
-            callarg_data = cut_memory e3 (natFromNatural (word256ToNatural e4)) v.vctx_memory;
+            callarg_data = cut_memory e3 (word256ToNatural e4) v.vctx_memory;
             callarg_output_begin = e5;
             callarg_output_size = e6 |>)
         v.vctx_storage
@@ -1257,7 +1257,7 @@ let delegatecall v c = match v.vctx_stack with
               callarg_code = w256_to_address e1;
               callarg_recipient = w256_to_address e1;
               callarg_value = v.vctx_value_sent;
-              callarg_data = cut_memory e3 (natFromNatural (word256ToNatural e4)) v.vctx_memory;
+              callarg_data = cut_memory e3 (word256ToNatural e4) v.vctx_memory;
               callarg_output_begin = e5;
               callarg_output_size = e6 |>)
           v.vctx_storage v.vctx_balance
@@ -1280,7 +1280,7 @@ let callcode v c = match v.vctx_stack with
               callarg_code = w256_to_address e1;
               callarg_recipient = c.cctx_this;
               callarg_value = e2;
-              callarg_data = cut_memory e3 (natFromNatural (word256ToNatural e4)) v.vctx_memory;
+              callarg_data = cut_memory e3 (word256ToNatural e4) v.vctx_memory;
               callarg_output_begin = e5;
               callarg_output_size = e6 |>)
           v.vctx_storage
@@ -1299,7 +1299,7 @@ val create : variable_ctx -> constant_ctx -> instruction_result
 let create v c = match v.vctx_stack with
   | vl :: code_start :: code_len :: rest ->
       if word256ULT (v.vctx_balance c.cctx_this) vl then instruction_failure_result v else
-      let code = cut_memory code_start (natFromNatural (word256ToNatural code_len)) v.vctx_memory in
+      let code = cut_memory code_start (word256ToNatural code_len) v.vctx_memory in
       let new_balance = update_balance c.cctx_this (fun orig -> orig - vl) v.vctx_balance in
       InstructionToEnvironment
            (ContractCreate
@@ -1317,7 +1317,7 @@ end
 according to the stack elements: *)
 
 let vctx_returned_bytes v = match v.vctx_stack with
- | e0 :: e1 :: _ -> cut_memory e0 (natFromNatural (word256ToNatural e1)) v.vctx_memory
+ | e0 :: e1 :: _ -> cut_memory e0 (word256ToNatural e1) v.vctx_memory
  | _ -> []
 end
 
@@ -1399,16 +1399,21 @@ end
 
 (* For CALLDATACOPY, I need to look at the caller's data as memory. *)
 val input_as_memory : list byte -> memory
-let input_as_memory lst idx = match List.index lst (absnat idx) with
- | Nothing -> 0
- | Just a -> a
-end
+let input_as_memory lst (idx : w256) =
+  let idx = uint idx in
+  if 0 > idx then 0
+  else if integerFromNat (length lst) > idx then 0
+  else
+    match List.index lst (natFromInteger idx) with
+    | Nothing -> 0
+    | Just a -> a
+    end
 
 (* CALLDATACOPY: *)
 val calldatacopy : variable_ctx -> constant_ctx -> instruction_result
 let calldatacopy v c = match v.vctx_stack with
  | dst_start :: src_start :: len :: rest ->
-       let data = cut_memory src_start (absnat len) (input_as_memory v.vctx_data_sent) in
+       let data = cut_memory src_start (word256ToNatural len) (input_as_memory v.vctx_data_sent) in
        let new_memory = store_byte_list_memory dst_start data v.vctx_memory in
        InstructionContinue (vctx_advance_pc c
          <| v with vctx_stack = rest; vctx_memory = new_memory;
@@ -1420,7 +1425,7 @@ end
 val codecopy : variable_ctx -> constant_ctx -> instruction_result
 let codecopy v c = match v.vctx_stack with
  | dst_start :: src_start :: len :: rest ->
-     let data = cut_memory src_start (absnat len)
+     let data = cut_memory src_start (word256ToNatural len)
                   (program_as_memory c.cctx_program) in
      let new_memory = store_byte_list_memory dst_start data v.vctx_memory in
      InstructionContinue (vctx_advance_pc c
@@ -1433,7 +1438,7 @@ end
 val extcodecopy : variable_ctx -> constant_ctx -> instruction_result
 let extcodecopy v c = match v.vctx_stack with
  | addr :: dst_start :: src_start :: len :: rest ->
-     let data = cut_memory src_start (absnat len)
+     let data = cut_memory src_start (word256ToNatural len)
                   (program_as_memory
                     (v.vctx_ext_program (w256_to_address addr))) in
      let new_memory = store_byte_list_memory dst_start data v.vctx_memory in
@@ -1474,7 +1479,7 @@ val sha3 : variable_ctx -> constant_ctx -> instruction_result
 let sha3 v c = match v.vctx_stack with
  | start :: len :: rest ->
       InstructionContinue (
-        vctx_advance_pc c <| v with vctx_stack = keccak (cut_memory start (natFromNatural (word256ToNatural len)) v.vctx_memory) :: rest;
+        vctx_advance_pc c <| v with vctx_stack = keccak (cut_memory start (word256ToNatural len) v.vctx_memory) :: rest;
                                     vctx_memory_usage = M v.vctx_memory_usage start len |>)
  | _ -> instruction_failure_result v
 end

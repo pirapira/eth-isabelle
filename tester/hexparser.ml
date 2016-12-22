@@ -19,7 +19,9 @@ let program_from_impl (imp : program_impl) : program =
   { program_content =
       (fun (pos : Nat_big_num.num) ->
         try Some (IntMap.find (Nat_big_num.to_int pos) imp.p_impl_content)
-        with Not_found -> None
+        with
+        | Not_found -> None
+        | Failure _ -> None
       )
   ; program_length = Nat_big_num.of_int imp.p_impl_length
   ; program_annotation =
