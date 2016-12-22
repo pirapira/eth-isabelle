@@ -1788,13 +1788,21 @@ let instruction_sem v c inst =
   | Sarith SLT -> stack_2_1_op v c
 	   (fun elm0 elm1 -> if elm0 < elm1 then 1 else 0)
   | Sarith SIGNEXTEND -> stack_2_1_op v c
-	   (fun len orig ->
-		  w256_of_bl (List.map (fun i ->
-			if i <= 256 - 8 * (uint len + 1)
-			then test_bit orig (natFromInteger (256 - 8 * (uint len + 1)))
-			else test_bit orig (natFromInteger i)
-		  ) (List.genlist (fun x -> integerFromNat x) 256))
-	   )
+	   (fun len w ->
+          match w with W256 s lst ->
+	        if uint len >= 31 then
+              W256 s lst
+            else
+		    let len = 8 * (natFromNatural (word256ToNatural len) + 1) in
+            let bits = take len lst in
+            let sign = match index bits (len - 1) with
+						| Just sign -> sign
+						| Nothing -> false
+					   end in
+            let bits = take (len - 1) bits in
+			let bitseq : bitSequence = BitSeq (Just len) sign bits in
+            bs_to_w256 bitseq
+          end)
   | Arith MUL -> stack_2_1_op v c
 	   (fun a b -> a * b)
   | Arith DIV -> stack_2_1_op v c
