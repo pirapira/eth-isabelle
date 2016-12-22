@@ -166,3 +166,6 @@ let string_of_byte (b : Word8.word8) =
 
 let string_of_byte_list (lst : Word8.word8 list) =
   String.concat "," (List.map string_of_byte lst)
+
+let decimal_of_word256 (w : Word256.word256) =
+  Big_int.string_of_big_int (big_int_of_word256 w)

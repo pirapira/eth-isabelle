@@ -1190,8 +1190,14 @@ end
 val datasize : variable_ctx -> w256
 let datasize v = word256FromNat (length v.vctx_data_sent)
 
+val list_fill_right : bool -> nat -> list bool -> list bool
+let list_fill_right filled target orig =
+  let filling_len = target - length orig in
+  append orig (replicate filling_len false)
+
 val word_of_bytes : list byte -> w256
-let word_of_bytes lst = word256FromBoollist (List.concat (map boolListFromWord8 (reverse lst)))
+let word_of_bytes lst = word256FromBoollist
+                          (list_fill_right false 256 (List.concat (map boolListFromWord8 (reverse lst))))
 declare isabelle target_rep function word_of_bytes = `Word.word_rcat`
 
 val constant_mark : list byte -> list byte
@@ -1790,11 +1796,7 @@ let instruction_sem v c inst =
 		   (if divisor = 0 then 0 else word256FromInteger ((uint a * uint b) mod (uint divisor))))
   | Arith EXP -> stack_2_1_op v c (fun a exponent ->
       word256FromInteger
-	   (if word256ToNatural exponent > 256
-	    then 0
-	    else
-	      uint a ** (natFromNatural (word256ToNatural exponent)))
-      )
+	   (word_exp (uint a) (word256ToNatural exponent)))
   | Arith inst_LT -> stack_2_1_op v c (fun arg0 arg1 -> if word256UGT arg1 arg0 then 1 else 0)
   | Arith SHA3 -> sha3 v c
   | Info ADDRESS -> stack_0_1_op v c (address_to_w256 c.cctx_this)
