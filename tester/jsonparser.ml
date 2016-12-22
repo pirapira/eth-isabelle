@@ -100,7 +100,8 @@ type list_storage = (Big_int.big_int * string) list
 let parse_storage (j : json) : list_storage =
   Util.(
     List.map (fun ((label : string), content) ->
-        (Big_int.big_int_of_string label, to_string content)) (to_assoc j))
+        ((if label = "0x" then Big_int.zero_big_int else Big_int.big_int_of_string label),
+         to_string content)) (to_assoc j))
 
 type account_state =
   { balance : Big_int.big_int

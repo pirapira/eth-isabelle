@@ -160,6 +160,7 @@ let () =
   let () = test_one_file "../tests/VMTests/vmArithmeticTest.json" in
   let () = test_one_file "../tests/VMTests/vmBitwiseLogicOperationTest.json" in
   let () = test_one_file "../tests/VMTests/vmPushDupSwapTest.json" in
-  let () = test_one_file "../tests/VMTests/vmInputLimitsLight.json" in
+  (* passes. omitted for now let () = test_one_file "../tests/VMTests/vmInputLimitsLight.json" in *)
+  let () = test_one_file "../tests/VMTests/vmInputLimits.json" in
   let () = Printf.printf "all tests passed.\n" in
   ()
