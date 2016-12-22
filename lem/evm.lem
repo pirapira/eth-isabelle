@@ -1788,11 +1788,11 @@ let instruction_sem v c inst =
 						   (if n < 0 then
 						      word256FromInteger (~1 * ((~1 * n) mod (~1 * divisor)))
                             else
-                              word256FromInteger (~1 * (n mod (~1 * divisor)))
+                              word256FromInteger (n mod (~1 * divisor))
                            )
 						 else
 						   (if n < 0 then
-                              word256FromInteger ((~1 * n) mod divisor)
+                              word256FromInteger (~1 * ((~1 * n) mod divisor))
                             else
 						      word256FromInteger (n mod divisor))
                            )
