@@ -1674,7 +1674,7 @@ let new_memory_consumption i v =
   | Memory CALLDATACOPY ->
     M v.vctx_memory_usage (vctx_stack_default 0 v) (vctx_stack_default 2 v)
   | Memory CODECOPY ->
-    M v.vctx_memory_usage (vctx_stack_default 0 v) (vctx_stack_default 1 v)
+    M v.vctx_memory_usage (vctx_stack_default 0 v) (vctx_stack_default 2 v)
   | Memory EXTCODECOPY ->
     M v.vctx_memory_usage (vctx_stack_default 1 v) (vctx_stack_default 3 v)
   | Memory MLOAD ->
