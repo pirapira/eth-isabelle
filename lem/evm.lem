@@ -1711,6 +1711,17 @@ let subtract_gas consumption orig =
     InstructionToEnvironment act st bal touched (Just (<|v with vctx_gas = v.vctx_gas - consumption|>, dst, len))
   end
 
+val word_exp : integer -> natural -> integer
+let rec word_exp i n =
+  match n with
+  | 0 -> 1
+  | _ ->
+      let half = n / 2 in
+      let modulo = natFromNatural (n mod 2) in
+      let recur = word_exp i half in
+         ((i ** modulo) * recur * recur) mod (2 ** 256)
+  end
+
 (* Finally, using the above definitions, I can define a function that operates an instruction *)
 (* on the execution environments. *)
 val instruction_sem : variable_ctx -> constant_ctx -> inst -> instruction_result
