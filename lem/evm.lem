@@ -62,7 +62,7 @@ let w256_to_byte w = word8FromNatural (word256ToNatural w)
 declare isabelle target_rep function w256_to_byte = `Word.ucast`
 
 val byte_to_w256 : byte -> w256
-let byte_to_w256 w = word256FromInt (word8ToInt w)
+let byte_to_w256 w = word256FromNat (word8ToNat w)
 declare isabelle target_rep function byte_to_w256 = `Word.ucast`
 
 val keccak : list byte -> w256
@@ -87,7 +87,8 @@ declare isabelle target_rep function word_rsplit = `word_rsplit`
 
 val get_byte : w256 -> w256 -> w256
 let get_byte position w =
-  match List.index (word_rsplit w) (absnat position) with
+  if uint position >= 32 then 0 else
+  match List.index (word_rsplit w) (natFromInteger (uint position)) with
   | Nothing -> 0
   | Just (a:byte) -> byte_to_w256 a
   end
