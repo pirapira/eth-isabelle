@@ -26,6 +26,30 @@ When you see `\<Rightarrow>` in the source, try using the [Isabelle2016](https:/
 * bignum: use `opam install bignum`
 * easy-format: use `opam install easy-format`
 
+## How to read the proofs
+
+First translate the Lem definitions into Isabelle/HOL:
+```
+$ make lem-thy
+```
+
+Then, use Isabelle 2016 to open `./examples/Deed.thy`.  The prerequisite Isabelle/HOL files are automatically opened.
+
+## How to run VM tests
+
+Makesure the tests submodule is cloned
+```
+$ git submodule init tests
+$ git submodule update tests
+```
+
+And move to `tester` directory.
+```
+$ cd tester
+$ sh compile.sh
+$ ./runVmTest.native
+```
+
 ## Makefile goals
 
 * `make deed` produces a verified PDF document for the Deed contract in `output/document.pdf`.
