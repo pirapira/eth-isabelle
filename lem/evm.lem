@@ -1777,7 +1777,13 @@ let instruction_sem v c inst =
   | Arith MULMOD -> stack_3_1_op v c
 	   (fun a b divisor ->
 		   (if divisor = 0 then 0 else word256FromInteger ((uint a * uint b) mod (uint divisor))))
-  | Arith EXP -> stack_2_1_op v c (fun a exponent -> word256FromInteger (uint a ** (natFromNatural (word256ToNatural exponent))))
+  | Arith EXP -> stack_2_1_op v c (fun a exponent ->
+      word256FromInteger
+	   (if word256ToNatural exponent > 256
+	    then 0
+	    else
+	      uint a ** (natFromNatural (word256ToNatural exponent)))
+      )
   | Arith inst_LT -> stack_2_1_op v c (fun arg0 arg1 -> if word256UGT arg1 arg0 then 1 else 0)
   | Arith SHA3 -> sha3 v c
   | Info ADDRESS -> stack_0_1_op v c (address_to_w256 c.cctx_this)
