@@ -1351,7 +1351,7 @@ let stop v _ =
 val pop : variable_ctx -> constant_ctx -> instruction_result
 let pop v c = match v.vctx_stack with
  | _ :: tl -> InstructionContinue (vctx_advance_pc c <| v with vctx_stack = tl |>)
- | [] -> InstructionContinue (vctx_advance_pc c v)
+ | [] -> instruction_failure_result v
 end
 
 (* The DUP instructions: *)
