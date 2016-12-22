@@ -86,7 +86,7 @@ let parse_exec (j : json) : exec =
           let code = to_string (member "code" j) in
           let () = Printf.printf "code: %s\n%!" code in
           let (parsed, rest) = parse_code code in
-          if rest = "" then parsed else failwith "code parsing left some garbage data"
+          if rest = "" then parsed else failwith ("code parsing left some garbage data: "^rest)
         end
     ; data = to_string (member "data" j)
     ; gas = parse_big_int_from_field "gas" j

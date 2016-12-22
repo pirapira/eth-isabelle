@@ -145,6 +145,8 @@ let parse_instruction (str : string) : (inst * string) option =
        Some (Dup (Conv.byte_of_int (opcode_num - 0x80 + 1)), rest)
      else if 0x90 <= opcode_num && opcode_num <= 0x9f then
        Some (Swap (Conv.byte_of_int (opcode_num - 0x90 + 1)), rest)
+     else if String.length opcode = 2 then
+       Some (Unknown (Conv.byte_of_int opcode_num), rest)
      else
        None
 
