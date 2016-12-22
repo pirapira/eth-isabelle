@@ -148,7 +148,7 @@ let rec bigint_assoc (key : Big_int.big_int) (lst : (Big_int.big_int * 'a) list)
   match lst with
   | [] -> raise Not_found
   | (hk, hv) :: t ->
-     let () = Printf.printf "bigint_assoc: comparing %s and %s\n" (Big_int.string_of_big_int key) (Big_int.string_of_big_int hk) in
+     (*     let () = Printf.printf "bigint_assoc: comparing %s and %s\n" (Big_int.string_of_big_int key) (Big_int.string_of_big_int hk) in *)
      if Big_int.eq_big_int key hk then hv
      else bigint_assoc key t
 

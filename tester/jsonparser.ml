@@ -136,7 +136,7 @@ let lookup_storage (addr : address) (pre_state : (string * account_state) list) 
   let addr_string = Conv.string_of_address addr in
   try
     let a : account_state = List.assoc addr_string pre_state in
-    let v : string = List.assoc (Conv.big_int_of_word256 index) a.storage in
+    let v : string = Conv.bigint_assoc (Conv.big_int_of_word256 index) a.storage in
     let b : Big_int.big_int = Big_int.big_int_of_string v in
     Conv.word256_of_big_int b
   with Not_found ->
