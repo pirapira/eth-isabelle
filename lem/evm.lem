@@ -1782,7 +1782,20 @@ let instruction_sem v c inst =
                            )
   | Sarith SMOD -> stack_2_1_op v c
 	   (fun n divisor -> if divisor = 0 then 0 else
-						 word256FromInteger ((sintFromW256 n) mod (sintFromW256 divisor)))
+	   		  		  	 let divisor = sintFromW256 divisor in
+						 let n = sintFromW256 n in
+						 if divisor < 0 then
+						   (if n < 0 then
+						      word256FromInteger (~1 * ((~1 * n) mod (~1 * divisor)))
+                            else
+                              word256FromInteger (~1 * (n mod (~1 * divisor)))
+                           )
+						 else
+						   (if n < 0 then
+                              word256FromInteger ((~1 * n) mod divisor)
+                            else
+						      word256FromInteger (n mod divisor))
+                           )
   | Sarith SGT -> stack_2_1_op v c
 	   (fun elm0 elm1 -> if elm0 > elm1 then 1 else 0)
   | Sarith SLT -> stack_2_1_op v c
