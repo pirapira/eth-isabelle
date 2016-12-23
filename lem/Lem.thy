@@ -46,7 +46,7 @@
 (*  IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.                         *)
 (*========================================================================*)
 
-header{* Mappings of Syntax needed by Lem *}
+(* header{* Mappings of Syntax needed by Lem *} *)
 
 theory "Lem" 
 

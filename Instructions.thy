@@ -16,7 +16,7 @@
 
 theory Instructions
 
-imports Main "~~/src/HOL/Word/Word" "./ContractEnv" "./lem/Evm"
+imports Main "~~/src/HOL/Word/Word" "./lem/Evm"
 
 begin
 

@@ -20,35 +20,6 @@ imports Main "./Instructions"  "~~/src/HOL/Data_Structures/AVL_Map"
 
 begin
 
-subsubsection {* Integers can be compared *}
-
-text {* The AVL library requires the keys to be comparable.  We represent program positions 
-by integers.  So we have to prove that integers belong to the type class \textit{cmp} with the
-usual comparison operators.  *}
-
-instantiation int :: cmp
-begin
-definition cmp_int :: "int \<Rightarrow> int \<Rightarrow> Cmp.cmp"
-where
-cmp_int_def : " cmp_int x y =
-  (if x < y then Cmp.LT else (if x = y then Cmp.EQ else Cmp.GT))"
-
-declare cmp_int_def [simp]
-  
-instance proof
- fix x y :: int show "(cmp x y = cmp.LT) = (x < y)"
-  apply(simp add: cmp_int_def)
-  done
- fix x y :: int show "(cmp x y = cmp.EQ) = (x = y)"
-  apply(simp add: cmp_int_def)
-  done
- fix x y :: int show "(cmp x y = cmp.GT) = (x > y)"
-  apply(simp add: cmp_int_def)
-  done
-qed
-
-end
-
 subsubsection {* Storing the immediate values in the AVL tree *}
 
 text {* The data region of PUSH\_N instructions are encoded as

@@ -1,5 +1,9 @@
 (*** This file is part of Lem.  eth-isabelle project just uses it.  See lem-license. ***)
 
+(* Yoichi Hirai has modified this file for Isabelle2016-1.
+ * He redistributes the file under the license below.
+ *)
+
 (*========================================================================*)
 (*                        Lem                                             *)
 (*                                                                        *)
@@ -1050,7 +1054,7 @@ next
 
       from not_digs n2s_eq ind_hyp' digit_to_char_11[of "n1 mod 10" "n2' mod 10"]
       have "(n1 mod 10) = (n2' mod 10)" "n1 div 10 = n2' div 10" by simp_all 
-      thus "n1 = n2'" by (metis mod_div_equality)
+      thus "n1 = n2'" by (metis Rings.semiring_modulo_class.mod_div_mult_eq)
     qed
   qed
 qed 
