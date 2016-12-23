@@ -9,16 +9,16 @@ let () =
         let () = Printf.printf "%s\n" label in
         let case : test_case = parse_test_case elm in
         ()
-      ) vm_arithmetic_test_assoc in
+      ) vm_arithmetic_test_assoc in *)
   let vm_arithmetic_test : json = Yojson.Basic.from_file "../tests/VMTests/vmIOandFlowOperationsTest.json" in
   let vm_arithmetic_test_assoc : (string * json) list = Util.to_assoc vm_arithmetic_test in
   let () =
     List.iter (fun (label, elm) ->
-        let () = Printf.printf "%s\n" label in
+        let () = Printf.printf "%s\n%!" label in
         let case : test_case = parse_test_case elm in
         ()
       ) vm_arithmetic_test_assoc
-  in *)
+  in
   let addr_big = Big_int.big_int_of_string "0x000000000000000000000000000000000000000f" in
   let addr_w = Conv.word160_of_big_int addr_big in
   let () = assert (addr_w = Word160.W160 (false, [true; true; true; true]) ) in (* passes *)

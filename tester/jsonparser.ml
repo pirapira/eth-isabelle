@@ -8,7 +8,7 @@ type env =
   ; currentGasLimit : Big_int.big_int
   ; currentNumber : Big_int.big_int
   ; currentTimestamp : Big_int.big_int
-  ; previousHash : Big_int.big_int
+  ; previousHash : Big_int.big_int option
   }
 
 let to_big_int j = Big_int.big_int_of_string (to_string j)
@@ -57,7 +57,9 @@ let parse_env (j : json) : env =
     ; currentTimestamp =
         parse_big_int_from_field "currentTimestamp" j
     ; previousHash =
-        parse_address_from_field "previousHash" j
+        try
+          Some (parse_address_from_field "previousHash" j)
+        with Failure _ -> None
     })
 
 
@@ -174,7 +176,9 @@ let construct_block_info (t : test_case) : block_info =
       else if Big_int.gt_big_int num t.env.currentNumber then
         Conv.word256_of_big_int Big_int.zero_big_int
       else if Big_int.eq_big_int num t.env.currentNumber then
-        Conv.word256_of_big_int t.env.previousHash
+        match t.env.previousHash with
+        | Some pH -> Conv.word256_of_big_int pH
+        | None -> failwith "previousHash not available"
       else
         let () = Printf.printf "the current block is %s.\n" (Big_int.string_of_big_int t.env.currentNumber) in
         failwith (Printf.sprintf "blockhash asked for block %s" (Big_int.string_of_big_int num)))
