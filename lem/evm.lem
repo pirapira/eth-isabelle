@@ -702,8 +702,9 @@ let Rsclear = 15000
 val Rsuicide : integer
 let Rsuicide = 24000
 
-val Gsuicide : integer
-let Gsuicide = 5000
+val Gsuicide : natural -> integer
+let Gsuicide blocknumber =
+  if blocknumber >= 2463000 then 5000 else 0
 
 val Gcreate : integer
 let Gcreate = 32000
@@ -1548,8 +1549,8 @@ let Csstore orig newer = if not (newer = 0) && orig = 0 then Gsset else Gsreset
 
 (* Csuicide is the function denoted as C_\text{\tiny SUICIDE} in the yellow paper. *)
 (* However, it takes a boolean indicating new account creation. *)
-val Csuicide : bool -> integer
-let Csuicide recipient_empty = Gsuicide + (if recipient_empty then Gnewaccount else 0)
+val Csuicide : bool -> natural -> integer
+let Csuicide recipient_empty blocknumber = Gsuicide blocknumber + (if recipient_empty then Gnewaccount else 0)
 
 (* Cnew is the funciton denoted as C_\text{\tiny NEW} in the yellow paper.*)
 (* However, it takes the sent value and a boolean indicating emptiness of the recipient. *)
@@ -1600,8 +1601,8 @@ let rec log256floor x =
 
 (* thirdComponentOfC is the third component in the definition of C (the gas function). *)
 (* However, it takes the next instruction, the four topmost stack elements, a boolean indicating emptiness of the recipient, an original word of sstore, a new word of sstore, and the remaining gas of the caller. *)
-val thirdComponentOfC : inst -> w256 -> w256 -> w256 -> w256 -> bool -> w256 -> w256 -> integer -> integer
-let thirdComponentOfC i s0 s1 s2 s3 recipient_empty orig_val new_val remaining_gas =
+val thirdComponentOfC : inst -> w256 -> w256 -> w256 -> w256 -> bool -> w256 -> w256 -> integer -> natural -> integer
+let thirdComponentOfC i s0 s1 s2 s3 recipient_empty orig_val new_val remaining_gas blocknumber =
   match i with
   | Storage SSTORE -> Csstore orig_val new_val
   | Arith EXP -> Gexp + if s1 = 0 then 0 else Gexpbyte * (1 + log256floor (uint s1))
@@ -1619,7 +1620,7 @@ let thirdComponentOfC i s0 s1 s2 s3 recipient_empty orig_val new_val remaining_g
     -> Ccall s0 s1 s2 recipient_empty remaining_gas
   | Misc DELEGATECALL
     -> Ccall s0 s1 0  recipient_empty remaining_gas
-  | Misc SUICIDE -> Csuicide recipient_empty
+  | Misc SUICIDE -> Csuicide recipient_empty blocknumber
   | Misc CREATE -> Gcreate
   | Arith SHA3 -> Gsha3 + Gsha3word * ((uint s1 + 31) / 32)
   | Pc JUMPDEST -> Gjumpsdest
@@ -1680,10 +1681,10 @@ let thirdComponentOfC i s0 s1 s2 s3 recipient_empty orig_val new_val remaining_g
 
 (* C is the function defined in the yellow paper as C.  This represents the gas consumption of an instruction. *)
 (* It takes the new memory consumption, the old memory consumption, the next instruction the four topmost stack elements, a boolean indicating emptiness of the recipient, an original word of sstore, a new word of sstore, and the remaining gas of the caller. *)
-val C : integer -> integer -> inst -> w256 -> w256 -> w256 -> w256 -> bool -> w256 -> w256 -> integer -> integer
-let C old_memory_consumption new_memory_consumption i s0 s1 s2 s3 recipient_empty orig new_val remaining_gas =
+val C : integer -> integer -> inst -> w256 -> w256 -> w256 -> w256 -> bool -> w256 -> w256 -> integer -> natural -> integer
+let C old_memory_consumption new_memory_consumption i s0 s1 s2 s3 recipient_empty orig new_val remaining_gas blocknumber =
   Cmem new_memory_consumption  - Cmem old_memory_consumption +
-  thirdComponentOfC i s0 s1 s2 s3 recipient_empty orig new_val remaining_gas
+  thirdComponentOfC i s0 s1 s2 s3 recipient_empty orig new_val remaining_gas blocknumber
 
 val vctx_next_instruction_default : variable_ctx -> constant_ctx -> inst
 let vctx_next_instruction_default v c =
@@ -1735,7 +1736,8 @@ let new_memory_consumption i v =
 val predictGas : inst -> variable_ctx -> constant_ctx -> integer
 let predictGas i v c =
   C v.vctx_memory_usage (new_memory_consumption i v) (vctx_next_instruction_default v c) (vctx_stack_default 0 v) (vctx_stack_default 1 v) (vctx_stack_default 2 v) (vctx_stack_default 3 v)
-   	(not (v.vctx_account_existence (vctx_recipient v c))) (v.vctx_storage (vctx_stack_default 0 v)) (vctx_stack_default 1 v) (v.vctx_gas)
+    (not (v.vctx_account_existence (vctx_recipient v c))) (v.vctx_storage (vctx_stack_default 0 v)) (vctx_stack_default 1 v) (v.vctx_gas)
+    (word256ToNatural v.vctx_block.block_number)
 
 val check_resources : variable_ctx -> constant_ctx -> list w256 -> inst -> bool
 let check_resources v c s i =
@@ -1976,7 +1978,7 @@ let rec program_sem v c tiny_step remaining_steps = match remaining_steps with
            (blocked_program_sem new_v c c.cctx_program.program_length remaining_steps))
       | InstructionToEnvironment a st bal touched opt_pushed_v ->
           ProgramToEnvironment a st bal touched opt_pushed_v
-      | _ -> ProgramInvalid
+      | InstructionAnnotationFailure -> ProgramAnnotationFailure
       end
     else
       ProgramToEnvironment ContractFail v.vctx_storage_at_call v.vctx_balance_at_call [] Nothing
