@@ -124,6 +124,4 @@ apply(simp add: pre_post_conditions_def; auto)
 apply(case_tac steps; auto)
 done
 
-value "word_rsplit (1000 :: w256) :: byte list "
-
 end

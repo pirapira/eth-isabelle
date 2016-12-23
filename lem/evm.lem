@@ -1475,8 +1475,8 @@ end
 val extcodecopy : variable_ctx -> constant_ctx -> instruction_result
 let extcodecopy v c = match v.vctx_stack with
  | addr :: dst_start :: src_start :: len :: rest ->
-     let data = cut_memory src_start (word256ToNatural len)
-                  (program_as_memory
+     let data = cut_natural_map (word256ToNatural src_start) (word256ToNatural len)
+                  (program_as_natural_map
                     (v.vctx_ext_program (w256_to_address addr))) in
      let new_memory = store_byte_list_memory dst_start data v.vctx_memory in
      InstructionContinue (vctx_advance_pc c
