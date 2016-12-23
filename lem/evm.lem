@@ -1201,8 +1201,16 @@ end
 val datasize : variable_ctx -> w256
 let datasize v = word256FromNat (length v.vctx_data_sent)
 
+(** TODO: unify the following two functions *)
 val list_fill_right : bool -> nat -> list bool -> list bool
 let list_fill_right filled target orig =
+  if length orig >= target then orig else
+  let filling_len = target - length orig in
+  append orig (replicate filling_len filled)
+
+val byte_list_fill_right : byte -> nat -> list byte -> list byte
+let byte_list_fill_right filled target orig =
+  if length orig >= target then orig else
   let filling_len = target - length orig in
   append orig (replicate filling_len filled)
 
@@ -1219,7 +1227,9 @@ val read_word_from_bytes : natural -> list byte -> w256
 let read_word_from_bytes idx lst =
   if naturalFromNat (length lst) <= idx then 0
   else
-    word_of_bytes (take 32 (drop (natFromNatural idx) lst))
+    word_of_bytes
+    (byte_list_fill_right 0 32
+        (take 32 (drop (natFromNatural idx) lst)))
 
 val cut_data : variable_ctx -> w256 -> w256
 let cut_data v idx = read_word_from_bytes (word256ToNatural idx) v.vctx_data_sent

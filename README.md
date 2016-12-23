@@ -37,10 +37,15 @@ Then, use Isabelle 2016 to open `./examples/Deed.thy`.  The prerequisite Isabell
 
 ## How to run VM tests
 
-Makesure the tests submodule is cloned
+Make sure the tests submodule is cloned
 ```
 $ git submodule init tests
 $ git submodule update tests
+```
+
+Extract the OCaml definitions
+```
+$ make lem-ocaml
 ```
 
 And move to `tester` directory.
