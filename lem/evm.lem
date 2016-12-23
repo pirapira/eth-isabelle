@@ -921,17 +921,6 @@ let program_of_lst lst program_content_formatter = <|
 (* For CODECOPY instruction, the program must be seen as a byte-indexed read-only memory. *)
 (* Such a memory is here implemented by a lookup on an AVL tree.*)
 
-val program_as_memory : program -> memory
-let program_as_memory p idx =
-   match p.program_content (uint idx) with
-   | Nothing -> 0
-   | Just inst ->
-      match List.index (inst_code inst) 0 with
-      | Nothing -> 0
-      | Just a -> a
-      end
-   end
-
 val program_as_natural_map : program -> natural -> byte
 let program_as_natural_map p idx =
    match p.program_content (integerFromNatural idx) with
