@@ -54,7 +54,6 @@ declare empty_program_def [simp]
 declare prepend_annotation_def [simp]
 declare program_annotation_of_lst.simps [simp]
 declare program_of_lst_def [simp]
-declare program_as_memory_def [simp]
    
 subsection {* The Result of an Instruction *}
 
@@ -110,7 +109,6 @@ declare store_word_memory_def [simp]
 declare mstore_def [simp]
 declare mload_def [simp]
 declare mstore8_def [simp]
-declare input_as_memory_def [simp]
 declare calldatacopy_def [simp]
 declare codecopy_def [simp]
 declare extcodecopy_def [simp]
