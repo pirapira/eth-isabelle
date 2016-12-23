@@ -178,9 +178,11 @@ let () =
   let () = test_one_file "../tests/VMTests/vmIOandFlowOperationsTest.json" in
   let () = test_one_file "../tests/VMTests/vmPerformanceTest.json" in
   let () = test_one_file "../tests/VMTests/vmEnvironmentalInfoTest.json" in
+  let () = test_one_file "../tests/VMTests/vmSystemOperationsTest.json" in
+  let () = test_one_file "../tests/VMTests/vmtests.json" in
  *)
   (* don't know where to get the block headers from
   let () = test_one_file "../tests/VMTests/vmBlockInfoTest.json" in *)
-  let () = test_one_file "../tests/VMTests/vmSystemOperationsTest.json" in
+  let () = test_one_file "../tests/VMTests/RandomTests/randomTest.json" in
   let () = Printf.printf "all tests passed.  Except \"env1\" \n" in
   ()
