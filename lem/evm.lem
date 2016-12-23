@@ -932,6 +932,17 @@ let program_as_memory p idx =
       end
    end
 
+val program_as_natural_map : program -> natural -> byte
+let program_as_natural_map p idx =
+   match p.program_content (integerFromNatural idx) with
+   | Nothing -> 0
+   | Just inst ->
+      match List.index (inst_code inst) 0 with
+      | Nothing -> 0
+      | Just a -> a
+      end
+   end
+
 (* Execution Environments *)
 
 (* I model an instruction as a function that takes environments and modifies some parts of them. *)
@@ -1221,6 +1232,13 @@ let rec cut_memory idx n memory = match n with
 end
 declare termination_argument cut_memory = automatic
 
+val cut_natural_map : natural -> natural -> (natural -> byte) -> list byte
+let rec cut_natural_map idx n nmap = match n with
+ | 0 -> []
+ | n + 1 -> nmap idx :: cut_natural_map (idx + 1) n nmap
+end
+declare termination_argument cut_memory = automatic
+
 (* CALL instruction results in @{term ContractCall} action when there are enough stack elements *)
 (* (and gas, when we introduce the gas accounting). *)
 val call : variable_ctx -> constant_ctx -> instruction_result
@@ -1407,9 +1425,9 @@ let mstore8 v c = match v.vctx_stack with
 end
 
 (* For CALLDATACOPY, I need to look at the caller's data as memory. *)
-val input_as_memory : list byte -> memory
-let input_as_memory lst (idx : w256) =
-  let idx = uint idx in
+val input_as_natural_map : list byte -> natural -> byte
+let input_as_natural_map lst (idx : natural) =
+  let idx = integerFromNatural idx in
   if 0 > idx then 0
   else if integerFromNat (length lst) <= idx then 0
   else
@@ -1422,7 +1440,7 @@ let input_as_memory lst (idx : w256) =
 val calldatacopy : variable_ctx -> constant_ctx -> instruction_result
 let calldatacopy v c = match v.vctx_stack with
  | dst_start :: src_start :: len :: rest ->
-       let data = cut_memory src_start (word256ToNatural len) (input_as_memory v.vctx_data_sent) in
+       let data = cut_natural_map (word256ToNatural src_start) (word256ToNatural len) (input_as_natural_map v.vctx_data_sent) in
        let new_memory = store_byte_list_memory dst_start data v.vctx_memory in
        InstructionContinue (vctx_advance_pc c
          <| v with vctx_stack = rest; vctx_memory = new_memory;
@@ -1434,8 +1452,8 @@ end
 val codecopy : variable_ctx -> constant_ctx -> instruction_result
 let codecopy v c = match v.vctx_stack with
  | dst_start :: src_start :: len :: rest ->
-     let data = cut_memory src_start (word256ToNatural len)
-                  (program_as_memory c.cctx_program) in
+     let data = cut_natural_map (word256ToNatural src_start) (word256ToNatural len)
+                  (program_as_natural_map c.cctx_program) in
      let new_memory = store_byte_list_memory dst_start data v.vctx_memory in
      InstructionContinue (vctx_advance_pc c
        <| v with vctx_stack = rest; vctx_memory = new_memory;

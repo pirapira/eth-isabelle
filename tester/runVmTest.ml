@@ -164,7 +164,10 @@ let () =
   let () = test_one_file "../tests/VMTests/vmInputLimitsLight.json" in
   let () = test_one_file "../tests/VMTests/vmInputLimits.json" in
   let () = test_one_file "../tests/VMTests/vmIOandFlowOperationsTest.json" in
- *)
   let () = test_one_file "../tests/VMTests/vmPerformanceTest.json" in
+ *)
+  (* don't know where to get the block headers from
+  let () = test_one_file "../tests/VMTests/vmBlockInfoTest.json" in *)
+  let () = test_one_file "../tests/VMTests/vmEnvironmentalInfoTest.json" in
   let () = Printf.printf "all tests passed.\n" in
   ()

@@ -171,7 +171,8 @@ let construct_block_info (t : test_case) : block_info =
       else if Big_int.gt_big_int num t.env.currentNumber then
         Conv.word256_of_big_int Big_int.zero_big_int
       else
-        failwith "blockhash asked")
+        let () = Printf.printf "the current block is %s.\n" (Big_int.string_of_big_int t.env.currentNumber) in
+        failwith (Printf.sprintf "blockhash asked for block %s" (Big_int.string_of_big_int num)))
   ; block_coinbase  = Conv.word160_of_big_int t.env.currentCoinbase
   ; block_timestamp = Conv.word256_of_big_int t.env.currentTimestamp
   ; block_number    = block_number
