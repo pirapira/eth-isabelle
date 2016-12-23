@@ -1550,7 +1550,8 @@ let Csstore orig newer = if not (newer = 0) && orig = 0 then Gsset else Gsreset
 (* Csuicide is the function denoted as C_\text{\tiny SUICIDE} in the yellow paper. *)
 (* However, it takes a boolean indicating new account creation. *)
 val Csuicide : bool -> natural -> integer
-let Csuicide recipient_empty blocknumber = Gsuicide blocknumber + (if recipient_empty then Gnewaccount else 0)
+let Csuicide recipient_empty blocknumber =
+  Gsuicide blocknumber + (if recipient_empty && blocknumber >= 2463000 then Gnewaccount else 0)
 
 (* Cnew is the funciton denoted as C_\text{\tiny NEW} in the yellow paper.*)
 (* However, it takes the sent value and a boolean indicating emptiness of the recipient. *)

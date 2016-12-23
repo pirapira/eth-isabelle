@@ -124,7 +124,7 @@ let test_one_case j : bool =
      begin
        match test_case.callcreates, test_case.gas, test_case.logs, test_case.out, test_case.post with
        | spec_created, Some spec_gas, Some spec_logs, Some spec_out, Some spec_post ->
-          let () = Printf.eprintf "We are not filling in the gap of a transaction and a message call yet.  For the suicide case, this means we cannot compare the storage and the balance." in
+          let () = Printf.eprintf "We are not filling in the gap of a transaction and a message call yet.  For the suicide case, this means we cannot compare the storage and the balance.\n" in
           true
        | _ -> failwith "Some post conditions not available"
      end
