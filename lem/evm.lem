@@ -1244,7 +1244,13 @@ declare termination_argument cut_memory = automatic
 val call : variable_ctx -> constant_ctx -> instruction_result
 let call v c = match v.vctx_stack with
  | e0 :: e1 :: e2 :: e3 :: e4 :: e5 :: e6 :: rest ->
-     if word256ULT (v.vctx_balance c.cctx_this) e2 then instruction_failure_result v
+     if word256ULT (v.vctx_balance c.cctx_this) e2 then
+        (InstructionContinue
+           (vctx_advance_pc c
+             <| v with
+                vctx_stack = (0 :: rest)
+             |>
+           ))
      else
        InstructionToEnvironment (ContractCall
          <| callarg_gas = e0;
@@ -1269,7 +1275,13 @@ end
 val delegatecall : variable_ctx -> constant_ctx -> instruction_result
 let delegatecall v c = match v.vctx_stack with
  | e0 :: e1 :: e3 :: e4 :: e5 :: e6 :: rest ->
-    if word256ULT (v.vctx_balance c.cctx_this) v.vctx_value_sent then instruction_failure_result v
+    if word256ULT (v.vctx_balance c.cctx_this) v.vctx_value_sent then
+        (InstructionContinue
+           (vctx_advance_pc c
+             <| v with
+                vctx_stack = (0 :: rest)
+             |>
+           ))
      else
        InstructionToEnvironment
          (ContractCall
@@ -1292,7 +1304,12 @@ val callcode : variable_ctx -> constant_ctx -> instruction_result
 let callcode v c = match v.vctx_stack with
  | e0 :: e1 :: e2 :: e3 :: e4 :: e5 :: e6 :: rest ->
     if word256ULT (v.vctx_balance c.cctx_this) e2 then
-       instruction_failure_result v
+        (InstructionContinue
+           (vctx_advance_pc c
+             <| v with
+                vctx_stack = (0 :: rest)
+             |>
+           ))
      else
        InstructionToEnvironment
          (ContractCall
@@ -1770,6 +1787,19 @@ let rec word_exp i n =
          ((i ** modulo) * recur * recur) mod (2 ** 256)
   end
 
+
+val signextend : w256 -> w256 -> w256
+let signextend len w =
+  if uint len >= 31 then
+    w
+  else
+    let len : nat = 8 * ((natFromNatural (word256ToNatural len)) + 1) in
+    let mask : word256 = 2 ** len - 1 in
+    let masked : word256 = w land mask in
+    let middle : word256 = 2 ** (len - 1) in
+    if masked < middle then masked
+    else masked - middle - middle
+
 (* Finally, using the above definitions, I can define a function that operates an instruction *)
 (* on the execution environments. *)
 val instruction_sem : variable_ctx -> constant_ctx -> inst -> instruction_result
@@ -1842,23 +1872,7 @@ let instruction_sem v c inst =
 	   (fun elm0 elm1 -> if elm0 > elm1 then 1 else 0)
   | Sarith SLT -> stack_2_1_op v c
 	   (fun elm0 elm1 -> if elm0 < elm1 then 1 else 0)
-  | Sarith SIGNEXTEND -> stack_2_1_op v c
-	   (fun len w ->
-          match w with W256 s lst ->
-	        if uint len >= 31 then
-              W256 s lst
-            else
-		    let len = 8 * ((natFromNatural (word256ToNatural len)) + 1) in
-			let lst = list_fill_right s 255 lst in
-            let bits = take len lst in
-            let sign = match index bits (len - 1) with
-						| Just sign -> sign
-						| Nothing -> false
-					   end in
-            let bits = take (len - 1) bits in
-			let bitseq : bitSequence = BitSeq (Just len) sign bits in
-            bs_to_w256 bitseq
-          end)
+  | Sarith SIGNEXTEND -> stack_2_1_op v c signextend
   | Arith MUL -> stack_2_1_op v c
 	   (fun a b -> a * b)
   | Arith DIV -> stack_2_1_op v c
