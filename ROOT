@@ -43,8 +43,8 @@ session "all" = "HOL" +
     Instructions
     ContractSem
     RelationalSem
-    HP
-    YellowPaper
+    "attic/HP"
+    "attic/YellowPaper"
     "example/Optimization"
     "example/AlwaysFail"
     "example/FailOnReentrance"
