@@ -1244,15 +1244,14 @@ declare termination_argument cut_memory = automatic
 val call : variable_ctx -> constant_ctx -> instruction_result
 let call v c = match v.vctx_stack with
  | e0 :: e1 :: e2 :: e3 :: e4 :: e5 :: e6 :: rest ->
-     if word256ULT (v.vctx_balance c.cctx_this) e2 then
-        (InstructionContinue
+     strict_if (word256ULT (v.vctx_balance c.cctx_this) e2)
+        (fun _ -> (InstructionContinue
            (vctx_advance_pc c
              <| v with
                 vctx_stack = (0 :: rest)
              |>
-           ))
-     else
-       InstructionToEnvironment (ContractCall
+           )))
+       (fun _ -> InstructionToEnvironment (ContractCall
          <| callarg_gas = e0;
             callarg_code = w256_to_address e1;
             callarg_recipient = w256_to_address e1;
@@ -1267,7 +1266,7 @@ let call v c = match v.vctx_stack with
           (<| (vctx_advance_pc c v) with
            vctx_stack = rest;
            vctx_balance = update_balance c.cctx_this (fun orig -> orig - e2) v.vctx_balance;
-           vctx_memory_usage = M (M v.vctx_memory_usage e3 e4) e5 e6 |>, uint e5, uint e6))
+           vctx_memory_usage = M (M v.vctx_memory_usage e3 e4) e5 e6 |>, uint e5, uint e6)))
   | _ -> instruction_failure_result v
 end
 
@@ -1989,7 +1988,7 @@ let rec program_sem v c tiny_step remaining_steps = match remaining_steps with
       match instruction_sem v c i with
       | InstructionContinue new_v ->
          (strict_if (new_v.vctx_pc > v.vctx_pc)
-           (blocked_program_sem new_v c (tiny_step - 1) (remaining_steps  + 1))
+           (blocked_program_sem new_v c (tiny_step - 1) (remaining_steps  (* + 1 *)))
            (blocked_program_sem new_v c c.cctx_program.program_length remaining_steps))
       | InstructionToEnvironment a st bal touched opt_pushed_v ->
           ProgramToEnvironment a st bal touched opt_pushed_v
@@ -2156,7 +2155,7 @@ indreln [build_vctx_returned : account_state -> return_result -> variable_ctx ->
 vctx_returned:
    forall a_code v_pc new_bal a_bal a_addr a_storage v_stack v_memory v_memory_usage
           v_storage v_balance v_caller v_value v_data v_init_storage v_init_balance
-          v_origin v_ext_program v_ext_program' v_block v_gas mem_start mem_size r rest whichever v_ex v_ex' v_touched.
+          v_origin v_ext_program v_ext_program' v_block v_gas v_gas' mem_start mem_size r rest whichever v_ex v_ex' v_touched.
    (is_call_like (a_code.program_content (v_pc - 1))) &&
    (word256UGE new_bal a_bal) ==> (* the balance might have increased *)
    build_vctx_returned
@@ -2208,7 +2207,7 @@ vctx_returned:
        ; vctx_origin = v_origin
        ; vctx_ext_program = v_ext_program'
        ; vctx_block = v_block
-       ; vctx_gas = v_gas
+       ; vctx_gas = v_gas' (* safe approximation.  saving proof space *)
        ; vctx_account_existence = v_ex'
        ; vctx_touched_storage_index = v_touched
       |>)

@@ -75,6 +75,9 @@ lemma always_fail_correct:
 "
 apply(rule AccountStep; auto)
 apply(case_tac steps; auto)
+ apply(case_tac nat; auto)
+apply(case_tac nat; auto)
+apply(simp add: check_resources_def)
 done
 
 
@@ -86,12 +89,13 @@ lemma no_assertion_failure:
 "no_assertion_failure (\<lambda> a. \<exists> initial_balance. a = (always_fail_account_state initial_balance))"
 apply(simp add: no_assertion_failure_def)
 apply(auto)
- apply(drule star_case; auto simp add: no_assertion_failure_post_def)
+apply(drule star_case; auto simp add: no_assertion_failure_post_def)
   apply(case_tac steps; auto)
-  apply(drule star_case; auto)
-  apply(case_tac steps; auto)
+  apply(case_tac nat; auto)
  apply(case_tac steps; auto)
+ apply(case_tac nat; auto)
 apply(case_tac steps; auto)
+apply(case_tac nat; auto)
 done
 
 declare postcondition_pack_def [simp]
@@ -105,23 +109,33 @@ pre_post_conditions (\<lambda> a. \<exists> initial_balance. a = (always_fail_ac
 apply(simp add: pre_post_conditions_def; auto)
         apply(drule star_case; auto)
          apply(case_tac steps; auto)
+         apply(case_tac nat; auto)
         apply(case_tac steps; auto)
+        apply(case_tac nat; auto)
        apply(drule star_case; auto)
        apply(case_tac steps; auto)
+       apply(case_tac nat; auto)
       apply(drule star_case; auto)
       apply(case_tac steps; auto)
+      apply(case_tac nat; auto)
      apply(drule star_case; auto)
      apply(case_tac steps; auto)
+     apply(case_tac nat; auto)
     apply(drule star_case; auto)
     apply(case_tac steps; auto)
+    apply(case_tac nat; auto)
    apply(drule star_case; auto)
    apply(case_tac steps; auto)
+   apply(case_tac nat; auto)
   apply(drule star_case; auto)
   apply(case_tac steps; auto)
+  apply(case_tac nat; auto)
  apply(drule star_case; auto)
  apply(case_tac steps; auto)
+ apply(case_tac nat; auto)
  apply(drule star_case; auto)
 apply(case_tac steps; auto)
+apply(case_tac nat; auto)
 done
 
 end

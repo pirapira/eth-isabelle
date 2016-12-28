@@ -169,7 +169,6 @@ let test_one_file (path : string) : unit =
 
 let () =
   let () = Printf.printf "hello\n" in
-(*
   let () = test_one_file "../tests/VMTests/vmArithmeticTest.json" in
   let () = test_one_file "../tests/VMTests/vmBitwiseLogicOperationTest.json" in
   let () = test_one_file "../tests/VMTests/vmPushDupSwapTest.json" in
@@ -191,7 +190,6 @@ let () =
   let () = test_one_file "../tests/VMTests/RandomTests/201503120525PYTHON.json" in
   let () = test_one_file "../tests/VMTests/RandomTests/201503120547PYTHON.json" in
   let () = test_one_file "../tests/VMTests/RandomTests/201503120909PYTHON.json" in
- *)
   (* don't know where to get the block headers from
   let () = test_one_file "../tests/VMTests/vmBlockInfoTest.json" in *)
   (* need to implement CALLCODE somehow

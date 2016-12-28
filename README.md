@@ -33,7 +33,7 @@ First translate the Lem definitions into Isabelle/HOL:
 $ make lem-thy
 ```
 
-Then, use Isabelle2016-1 to open `./examples/Deed.thy`.  The prerequisite Isabelle/HOL files are automatically opened.
+Then, use Isabelle2016-1 to open `./examples/AlwaysFail.thy`.  The prerequisite Isabelle/HOL files are automatically opened.
 
 ## How to run VM tests
 
@@ -57,7 +57,7 @@ $ ./runVmTest.native
 
 ## Makefile goals
 
-* `make deed` produces a verified PDF document for the Deed contract in `output/document.pdf`.
+* (currently not working; now fixing) `make deed` produces a verified PDF document for the Deed contract in `output/document.pdf`.
 * `make doc` produces `output/document.pdf` as well as `lem/*.pdf`.
 * `make lem-thy` compiles the Lem sources into Isabelle/HOL
 * `make lem-pdf` compiles some of the Lem sources into PDF through LaTeX

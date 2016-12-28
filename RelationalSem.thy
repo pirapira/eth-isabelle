@@ -95,7 +95,7 @@ account_return:
  , account_code = code
  , account_balance = new_bal
  , account_ongoing_calls = ongoing
- , account_killed = killed
+ , account_killed = new_killed
  \<rparr>
  \<Longrightarrow>
  account_state_return_change
@@ -112,7 +112,7 @@ account_return:
  , account_code = code
  , account_balance = new_bal
  , account_ongoing_calls = ongoing
- , account_killed = killed
+ , account_killed = new_killed
  \<rparr>
  "
 
