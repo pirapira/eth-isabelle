@@ -67,7 +67,9 @@ let balance_comparison
   let actual_balance = Conv.big_int_of_word256 (actual_balance addr) in
   Big_int.eq_big_int spec_balance actual_balance
 
-let test_one_case j : bool =
+type testResult = TestSuccess | TestSkipped | TestFailure
+
+let test_one_case j : testResult =
   let test_case : test_case = parse_test_case j in
   let open Evm in
   let open Conv in
@@ -107,17 +109,17 @@ let test_one_case j : bool =
   match ret with
   | ProgramStepRunOut ->
      let () = Printf.printf "ProgramStepRunOut\n" in
-     false
+     TestFailure
   | ProgramToEnvironment (ContractCall carg, st, bal, touched, pushed_opt) ->
      let () = Printf.eprintf "We are not looking whatever happens after the contract calls\n" in
-     true
+     TestSkipped
   | ProgramToEnvironment (ContractCreate carg, st, bal, touched, pushed_opt) ->
      let () = Printf.eprintf "We are not looking whatever happens after the contract creates" in
-     true
+     TestSkipped
   | ProgramToEnvironment (ContractFail, st, bal, touched, pushed_opt) ->
      begin
        match test_case.callcreates, test_case.gas, test_case.logs, test_case.out, test_case.post with
-       | [], None, None, None, None -> true
+       | [], None, None, None, None -> TestSuccess
        | _ -> failwith "some postconditions are there for a failing case"
      end
   | ProgramToEnvironment (ContractSuicide, st, bal, touched, pushed_opt) ->
@@ -125,7 +127,7 @@ let test_one_case j : bool =
        match test_case.callcreates, test_case.gas, test_case.logs, test_case.out, test_case.post with
        | spec_created, Some spec_gas, Some spec_logs, Some spec_out, Some spec_post ->
           let () = Printf.eprintf "We are not filling in the gap of a transaction and a message call yet.  For the suicide case, this means we cannot compare the storage and the balance.\n" in
-          true
+          TestSuccess
        | _ -> failwith "Some post conditions not available"
      end
   | ProgramToEnvironment (ContractReturn retval, st, bal, touched, None) ->
@@ -137,21 +139,21 @@ let test_one_case j : bool =
           let () = assert (got_retval = spec_out) in
           let () = assert (storage_comparison (Conv.word160_of_big_int test_case.exec.address) spec_post touched st) in
           let () = assert (balance_comparison (Conv.word160_of_big_int test_case.exec.address) spec_post bal) in
-          true
+          TestSuccess
        | _ -> failwith "Some post conditions not available"
      end
   | ProgramToEnvironment (ContractReturn retval, st, bal, touched, Some _) ->
      let () = Printf.printf "unexpected return format\n" in
-     false
+     TestFailure
   | ProgramInvalid ->
      let () = Printf.printf "ProgramInvalid\n" in
-     false
+     TestFailure
   | ProgramAnnotationFailure ->
      let () = Printf.printf "ProgramAnnotationFailure\n" in
-     false
+     TestFailure
   | ProgramInit _ ->
      let () = Printf.printf "ProgramInit?\n" in
-     false
+     TestFailure
 
 let test_one_file (path : string) : unit =
   let vm_arithmetic_test : json = Yojson.Basic.from_file path in
@@ -162,8 +164,8 @@ let test_one_file (path : string) : unit =
       if label = "env1" then () else (* How to get the block hash? *)
       if label = "callcodeToNameRegistrator0" then () else (* need to implement callcode first *)
       if label = "callcodeToReturn1" then () else
-      let success : bool = test_one_case j in
-      assert success
+      let success = test_one_case j in
+      assert (success = TestSuccess)
     )
     vm_arithmetic_test_assoc
 
