@@ -57,7 +57,7 @@ $ ./runVmTest.native
 
 ## Makefile goals
 
-* (currently not working; now fixing) `make deed` produces a verified PDF document for the Deed contract in `output/document.pdf`.
+* `make deed` produces a verified PDF document for the Deed contract in `output/document.pdf`.
 * `make doc` produces `output/document.pdf` as well as `lem/*.pdf`.
 * `make lem-thy` compiles the Lem sources into Isabelle/HOL
 * `make lem-pdf` compiles some of the Lem sources into PDF through LaTeX
