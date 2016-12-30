@@ -678,14 +678,17 @@ let Gmid = 8
 val Ghigh : integer
 let Ghigh = 10
 
-val Gextcode : integer
-let Gextcode = 700
+val Gextcode : natural -> integer
+let Gextcode blocknumber =
+  if blocknumber >= 2463000 then 700 else 20
 
-val Gbalance : integer
-let Gbalance = 400
+val Gbalance : natural -> integer
+let Gbalance blocknumber =
+  if blocknumber >= 2463000 then 400 else 20
 
-val Gsload : integer
-let Gsload = 200
+val Gsload : natural -> integer
+let Gsload blocknumber =
+  if blocknumber >= 2463000 then 200 else 50
 
 val Gjumpsdest : integer
 let Gjumpsdest = 1
@@ -712,8 +715,9 @@ let Gcreate = 32000
 val Gcodedeposit : integer
 let Gcodedeposit = 200
 
-val Gcall : integer
-let Gcall = 700
+val Gcall : natural -> integer
+let Gcall blocknumber =
+  if blocknumber >= 2463000 then 700 else 40
 
 val Gcallvalue : integer
 let Gcallvalue = 9000
@@ -1580,8 +1584,8 @@ let Cxfer value = if value = 0 then 0 else Gcallvalue
 
 (* Cextra is the function denoted as C_\text{\tiny EXTRA} in the yellow paper. *)
 (* However, it takes a word indicating the transferred value, and a boolean indicating emptiness *)
-val Cextra : w256 -> bool -> integer
-let Cextra value emp = Gcall + Cxfer value + Cnew value emp
+val Cextra : w256 -> bool -> natural -> integer
+let Cextra value emp blocknumber = Gcall blocknumber + Cxfer value + Cnew value emp
 
 (* L is the function denoted as L in the yellow paper. *)
 val L : integer -> integer
@@ -1589,26 +1593,26 @@ let L x = x - x / 64
 
 (* Cgascap is the function denoted as C_{\text{\tiny GASCAP}} in the yellow paper. *)
 (* However, it takes the two topmost stack elements, a boolean indicating emptiness of the recipient, and the remaining gas of the caller *)
-val Cgascap : w256 -> w256 -> bool -> integer -> integer
-let Cgascap mu0 mu1 emp remaining_gas =
-  if remaining_gas >= Cextra mu1 emp then
-    integerMin (L (uint mu0 - Cextra mu1 emp)) (uint mu0)
+val Cgascap : w256 -> w256 -> bool -> integer -> natural -> integer
+let Cgascap mu0 mu1 emp remaining_gas blocknumber =
+  if remaining_gas >= Cextra mu1 emp blocknumber then
+    integerMin (L (uint mu0 - Cextra mu1 emp blocknumber)) (uint mu0)
   else
     uint mu0
 
 (* Ccallgas is the function denoted as C_{\text{\tiny CALLGAS}} in the yellow paper. *)
 (* However, it takes the three topmost stack elements, a boolean indicating emptiness of the recipient, and the remaining gas of the caller *)
-val Ccallgas : w256 -> w256 -> w256 -> bool -> integer -> integer
-let Ccallgas mu0 mu1 mu2 emp remaining_gas =
+val Ccallgas : w256 -> w256 -> w256 -> bool -> integer -> natural -> integer
+let Ccallgas mu0 mu1 mu2 emp remaining_gas blocknumber =
   if mu2 = 0 then
-    Cgascap mu0 mu1 emp remaining_gas
+    Cgascap mu0 mu1 emp remaining_gas blocknumber
   else
-    Cgascap mu0 mu1 emp remaining_gas + Gcallstipend
+    Cgascap mu0 mu1 emp remaining_gas blocknumber + Gcallstipend
 
 (* Ccall is the function denoted as C_{\text{\tiny CALL}} *)
 (* However, it takes the three topmost stack elements, a boolean indicating emptiness of the recipient, and the remaining gas of the caller *)
-val Ccall : w256 -> w256 -> w256 -> bool -> integer -> integer
-let Ccall mu0 mu1 mu2 emp remaining_gas = Cgascap mu0 mu1 emp remaining_gas + Cextra mu2 emp
+val Ccall : w256 -> w256 -> w256 -> bool -> integer -> natural -> integer
+let Ccall mu0 mu1 mu2 emp remaining_gas blocknumber = Cgascap mu0 mu1 emp remaining_gas blocknumber + Cextra mu2 emp blocknumber
 
 (* log256floor takes a logarithm (base 256) of an integer and takes floor *)
 val log256floor : integer -> integer
@@ -1625,23 +1629,23 @@ let thirdComponentOfC i s0 s1 s2 s3 recipient_empty orig_val new_val remaining_g
   | Arith EXP -> Gexp + if s1 = 0 then 0 else Gexpbyte * (1 + log256floor (uint s1))
   | Memory CALLDATACOPY -> Gverylow + Gcopy * ((uint s2 + 31) / 32)
   | Memory CODECOPY -> Gverylow + Gcopy * ((uint s2 + 31) / 32)
-  | Memory EXTCODECOPY -> Gextcode + Gcopy * ((uint s3 + 31) / 32)
+  | Memory EXTCODECOPY -> Gextcode blocknumber + Gcopy * ((uint s3 + 31) / 32)
   | Log LOG0 -> Glog + Glogdata * uint s1
   | Log LOG1 -> Glog + Glogdata * uint s1 + Glogtopic
   | Log LOG2 -> Glog + Glogdata * uint s1 + 2 * Glogtopic
   | Log LOG3 -> Glog + Glogdata * uint s1 + 3 * Glogtopic
   | Log LOG4 -> Glog + Glogdata * uint s1 + 4 * Glogtopic
   | Misc CALL
-    -> Ccall s0 s1 s2 recipient_empty remaining_gas
+    -> Ccall s0 s1 s2 recipient_empty remaining_gas blocknumber
   | Misc CALLCODE
-    -> Ccall s0 s1 s2 recipient_empty remaining_gas
+    -> Ccall s0 s1 s2 recipient_empty remaining_gas blocknumber
   | Misc DELEGATECALL
-    -> Ccall s0 s1 0  recipient_empty remaining_gas
+    -> Ccall s0 s1 0  recipient_empty remaining_gas blocknumber
   | Misc SUICIDE -> Csuicide recipient_empty blocknumber
   | Misc CREATE -> Gcreate
   | Arith SHA3 -> Gsha3 + Gsha3word * ((uint s1 + 31) / 32)
   | Pc JUMPDEST -> Gjumpsdest
-  | Storage SLOAD -> Gsload
+  | Storage SLOAD -> Gsload blocknumber
   | Misc STOP -> Gzero
   | Misc RETURN -> Gzero
   | Info ADDRESS -> Gbase
@@ -1690,8 +1694,8 @@ let thirdComponentOfC i s0 s1 s2 s3 recipient_empty orig_val new_val remaining_g
   | Arith MULMOD -> Gmid
   | Pc JUMP -> Gmid
   | Pc JUMPI -> Ghigh
-  | Info EXTCODESIZE -> Gextcode
-  | Info BALANCE -> Gbalance
+  | Info EXTCODESIZE -> Gextcode blocknumber
+  | Info BALANCE -> Gbalance blocknumber
   | Info BLOCKHASH -> Gblockhash
   | _ -> 0 (* How is this case dealt in the yellow paper? *)
   end
