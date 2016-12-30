@@ -124,6 +124,7 @@ fun returnable_result :: "program_result \<Rightarrow> bool"
 where
   "returnable_result ProgramStepRunOut = False"
 | "returnable_result (ProgramToEnvironment (ContractCall _) _ _ _ _) = True"
+| "returnable_result (ProgramToEnvironment (ContractDelegateCall _) _ _ _ _) = False"
 | "returnable_result (ProgramToEnvironment (ContractCreate _) _ _ _ _) = True"
 | "returnable_result (ProgramToEnvironment ContractSuicide _ _ _ _) = False"
 | "returnable_result (ProgramToEnvironment ContractFail _ _ _ _) = False"
@@ -133,6 +134,21 @@ where
 | "returnable_result (ProgramInit _) = False"
 | "returnable_result ProgramInvalid = False"
 | "returnable_result ProgramAnnotationFailure = False"
+
+fun returnable_from_delegate_call :: "program_result \<Rightarrow> bool"
+where
+  "returnable_from_delegate_call ProgramStepRunOut = False"
+| "returnable_from_delegate_call (ProgramToEnvironment (ContractCall _) _ _ _ _) = False"
+| "returnable_from_delegate_call (ProgramToEnvironment (ContractDelegateCall _) _ _ _ _) = True"
+| "returnable_from_delegate_call (ProgramToEnvironment (ContractCreate _) _ _ _ _) = False"
+| "returnable_from_delegate_call (ProgramToEnvironment ContractSuicide _ _ _ _) = False"
+| "returnable_from_delegate_call (ProgramToEnvironment ContractFail _ _ _ _) = False"
+-- {* because we are not modeling nested calls here, the effect of the nested calls are modeled in
+      account\_state\_return\_change *}
+| "returnable_from_delegate_call (ProgramToEnvironment (ContractReturn _) _ _ _ _) = False"
+| "returnable_from_delegate_call (ProgramInit _) = False"
+| "returnable_from_delegate_call ProgramInvalid = False"
+| "returnable_from_delegate_call ProgramAnnotationFailure = False"
 
 subsection {* A Round of the Game *}
 
@@ -172,6 +188,20 @@ where
    environment_turn I (account_state_going_out, program_r)
                 (account_state_pop_ongoing_call account_state_back, new_v)"
 
+| environment_return_after_delegate_call: -- {* the environment might return to our contract. *}
+  "(* If the account state can be changed during reentrancy,*)
+   (* the account state might be completely broken *)
+   build_vctx_returned account_state_back result new_v \<Longrightarrow>
+
+   (* and the previous move of the contract was a call-like action, *)
+   returnable_from_delegate_call program_r \<Longrightarrow>
+
+   (* the environment can make a move, telling the contract to continue with *)
+   (* the variable environment. *)
+   environment_turn I (account_state_going_out, program_r)
+                (account_state_pop_ongoing_call account_state_back, new_v)"
+
+  
 | environment_fail: -- {* the environment might fail from an account into our contract. *}
   "(* If a variable environment can be recovered from the previous account state,*)
    build_vctx_failed account_state_going_out = Some new_v \<Longrightarrow>

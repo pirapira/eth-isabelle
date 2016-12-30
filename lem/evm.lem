@@ -1288,7 +1288,7 @@ let delegatecall v c = match v.vctx_stack with
            ))
      else
        InstructionToEnvironment
-         (ContractCall
+         (ContractDelegateCall
            <| callarg_gas = e0;
               callarg_code = w256_to_address e1;
               callarg_recipient = w256_to_address e1;
@@ -1316,7 +1316,7 @@ let callcode v c = match v.vctx_stack with
            ))
      else
        InstructionToEnvironment
-         (ContractCall
+         (ContractDelegateCall
            <| callarg_gas = e0;
               callarg_code = w256_to_address e1;
               callarg_recipient = c.cctx_this;
@@ -1923,13 +1923,9 @@ let instruction_sem v c inst =
   | Log LOG4 -> log 4 v c
   | Swap n -> swap (word8ToNat n) v c
   | Misc CREATE -> create v c
-  | Misc CALLCODE -> (* callcode v c *)
-      (* Since I cannot guarantee anything about CALLCODE, I choose immediate failure. *)
-      InstructionAnnotationFailure
+  | Misc CALLCODE -> callcode v c
   | Misc SUICIDE -> suicide v c
-  | Misc DELEGATECALL -> (* delegatecall v c *)
-      (* Since I cannot guarantee anything about DELEGATECALL, I choose immediate failure. *)
-      InstructionAnnotationFailure
+  | Misc DELEGATECALL -> delegatecall v c
   | Info GAS -> stack_0_1_op v c (gas v - 2)
   | Memory MSIZE -> stack_0_1_op v c (32 * word256FromInteger v.vctx_memory_usage)
   end)
