@@ -858,6 +858,7 @@ type create_arguments = <|
 
 type contract_action =
 | ContractCall of call_arguments (* calling an account *)
+| ContractDelegateCall of call_arguments (* calling some code to run on behalf of the contract *)
 | ContractCreate of create_arguments (* deploying a smart contract *)
 | ContractFail (* failing back to the caller *)
 | ContractSuicide (* destroying itself and returning back to the caller *)

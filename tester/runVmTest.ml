@@ -113,6 +113,9 @@ let test_one_case j : testResult =
   | ProgramToEnvironment (ContractCall carg, st, bal, touched, pushed_opt) ->
      let () = Printf.eprintf "We are not looking whatever happens after the contract calls\n" in
      TestSkipped
+  | ProgramToEnvironment (ContractDelegateCall carg, st, bal, touched, pushed_opt) ->
+     let () = Printf.eprintf "We are not looking whatever happens after the contract calls\n" in
+     TestSkipped
   | ProgramToEnvironment (ContractCreate carg, st, bal, touched, pushed_opt) ->
      let () = Printf.eprintf "We are not looking whatever happens after the contract creates" in
      TestSkipped
