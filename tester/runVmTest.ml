@@ -199,8 +199,11 @@ let () =
   let () = test_one_file "../tests/VMTests/RandomTests/201503120525PYTHON.json" counters in
   let () = test_one_file "../tests/VMTests/RandomTests/201503120547PYTHON.json" counters in
   let () = test_one_file "../tests/VMTests/RandomTests/201503120909PYTHON.json" counters in
-  (* don't know where to get the block headers from
-  let () = test_one_file "../tests/VMTests/vmBlockInfoTest.json" in *)
+
+  (* TODO:
+  need to implement `LastHashes lastHashes(u256 _currentBlockNumber)` in `TestHelper.cpp`.
+  This can be done after keccak256 is ported into Lem.
+  let () = test_one_file "../tests/VMTests/vmBlockInfoTest.json" counters in *)
   (* need to implement CALLCODE somehow
   let () = test_one_file "../tests/VMTests/RandomTests/201503102037PYTHON.json" in
   let () = test_one_file "../tests/VMTests/RandomTests/201503102148PYTHON.json" in
