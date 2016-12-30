@@ -62,7 +62,6 @@ lemma check_resources_split [split] :
 apply(simp only: if_splits(2))
 done
 
-declare subtract_gas.simps [simp]
 declare respond_to_call_correctly_def [simp]
 declare respond_to_return_correctly_def [simp]
 declare respond_to_fail_correctly_def [simp]
