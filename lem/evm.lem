@@ -1513,9 +1513,9 @@ val log : nat -> variable_ctx -> constant_ctx -> instruction_result
 let log n v c =
    InstructionContinue
     (vctx_advance_pc c (vctx_pop_stack (n+2)
-	   <| v with
+       <| v with
           vctx_memory_usage = M v.vctx_memory_usage (vctx_stack_default 0 v) (vctx_stack_default 1 v)
-	    |>))
+        |>))
 
 (* For SWAP operations, I first define a swap operations on lists. *)
 val list_swap : forall 'a. nat -> list 'a -> maybe (list 'a)
@@ -1836,63 +1836,63 @@ let instruction_sem v c inst =
   | Bits inst_XOR -> stack_2_1_op v c (fun a b -> a lxor b)
   | Bits inst_NOT -> stack_1_1_op v c (fun a -> lnot a)
   | Bits BYTE ->
-	  stack_2_1_op v c get_byte
+      stack_2_1_op v c get_byte
   | Sarith SDIV -> stack_2_1_op v c
-	   (fun n divisor -> if divisor = 0 then 0 else
-	   		  		  	 let divisor = sintFromW256 divisor in
-						 let n = sintFromW256 n in
-						 let min_int : integer = ~ (2 ** 255) in
-						 if n = min_int && divisor = ~1 then word256FromInteger min_int else
-						 if divisor < 0 then
-						   (if n < 0 then
-						      word256FromInteger ((~1 * n) div (~1 * divisor))
+       (fun n divisor -> if divisor = 0 then 0 else
+                         let divisor = sintFromW256 divisor in
+                         let n = sintFromW256 n in
+                         let min_int : integer = ~ (2 ** 255) in
+                         if n = min_int && divisor = ~1 then word256FromInteger min_int else
+                         if divisor < 0 then
+                           (if n < 0 then
+                              word256FromInteger ((~1 * n) div (~1 * divisor))
                             else
                               word256FromInteger (~1 * (n div (~1 * divisor)))
                            )
-						 else
-						   (if n < 0 then
+                         else
+                           (if n < 0 then
                               word256FromInteger (~1 * ((~1 * n) div divisor))
                             else
-						      word256FromInteger (n div divisor))
+                              word256FromInteger (n div divisor))
                            )
   | Sarith SMOD -> stack_2_1_op v c
-	   (fun n divisor -> if divisor = 0 then 0 else
-	   		  		  	 let divisor = sintFromW256 divisor in
-						 let n = sintFromW256 n in
-						 if divisor < 0 then
-						   (if n < 0 then
-						      word256FromInteger (~1 * ((~1 * n) mod (~1 * divisor)))
+       (fun n divisor -> if divisor = 0 then 0 else
+                         let divisor = sintFromW256 divisor in
+                         let n = sintFromW256 n in
+                         if divisor < 0 then
+                           (if n < 0 then
+                              word256FromInteger (~1 * ((~1 * n) mod (~1 * divisor)))
                             else
                               word256FromInteger (n mod (~1 * divisor))
                            )
-						 else
-						   (if n < 0 then
+                         else
+                           (if n < 0 then
                               word256FromInteger (~1 * ((~1 * n) mod divisor))
                             else
-						      word256FromInteger (n mod divisor))
+                              word256FromInteger (n mod divisor))
                            )
   | Sarith SGT -> stack_2_1_op v c
-	   (fun elm0 elm1 -> if elm0 > elm1 then 1 else 0)
+       (fun elm0 elm1 -> if elm0 > elm1 then 1 else 0)
   | Sarith SLT -> stack_2_1_op v c
-	   (fun elm0 elm1 -> if elm0 < elm1 then 1 else 0)
+       (fun elm0 elm1 -> if elm0 < elm1 then 1 else 0)
   | Sarith SIGNEXTEND -> stack_2_1_op v c signextend
   | Arith MUL -> stack_2_1_op v c
-	   (fun a b -> a * b)
+       (fun a b -> a * b)
   | Arith DIV -> stack_2_1_op v c
-	   (fun a divisor -> (if divisor = 0 then 0 else word256FromInteger ((uint a) div (uint divisor))))
+       (fun a divisor -> (if divisor = 0 then 0 else word256FromInteger ((uint a) div (uint divisor))))
   | Arith MOD -> stack_2_1_op v c
-	   (fun a divisor -> (if divisor = 0 then 0 else
-	   	    word256FromInteger ((uint a) mod (uint divisor))
-		))
+       (fun a divisor -> (if divisor = 0 then 0 else
+            word256FromInteger ((uint a) mod (uint divisor))
+        ))
   | Arith ADDMOD -> stack_3_1_op v c
-	   (fun a b divisor ->
-		   (if divisor = 0 then 0 else word256FromInteger ((uint a + uint b) mod (uint divisor))))
+       (fun a b divisor ->
+           (if divisor = 0 then 0 else word256FromInteger ((uint a + uint b) mod (uint divisor))))
   | Arith MULMOD -> stack_3_1_op v c
-	   (fun a b divisor ->
-		   (if divisor = 0 then 0 else word256FromInteger ((uint a * uint b) mod (uint divisor))))
+       (fun a b divisor ->
+           (if divisor = 0 then 0 else word256FromInteger ((uint a * uint b) mod (uint divisor))))
   | Arith EXP -> stack_2_1_op v c (fun a exponent ->
       word256FromInteger
-	   (word_exp (uint a) (word256ToNatural exponent)))
+       (word_exp (uint a) (word256ToNatural exponent)))
   | Arith inst_LT -> stack_2_1_op v c (fun arg0 arg1 -> if word256UGT arg1 arg0 then 1 else 0)
   | Arith SHA3 -> sha3 v c
   | Info ADDRESS -> stack_0_1_op v c (address_to_w256 c.cctx_this)
@@ -1902,7 +1902,7 @@ let instruction_sem v c inst =
   | Info CODESIZE -> stack_0_1_op v c (word256FromInteger c.cctx_program.program_length)
   | Info GASPRICE -> stack_0_1_op v c v.vctx_block.block_gasprice
   | Info EXTCODESIZE -> stack_1_1_op v c
-	   (fun arg -> word256FromInteger (v.vctx_ext_program (w256_to_address arg)).program_length)
+       (fun arg -> word256FromInteger (v.vctx_ext_program (w256_to_address arg)).program_length)
   | Info BLOCKHASH -> stack_1_1_op v c v.vctx_block.block_blockhash
   | Info COINBASE -> stack_0_1_op v c (address_to_w256 v.vctx_block.block_coinbase)
   | Info TIMESTAMP -> stack_0_1_op v c v.vctx_block.block_timestamp
@@ -1923,12 +1923,12 @@ let instruction_sem v c inst =
   | Swap n -> swap (word8ToNat n) v c
   | Misc CREATE -> create v c
   | Misc CALLCODE -> (* callcode v c *)
-	  (* Since I cannot guarantee anything about CALLCODE, I choose immediate failure. *)
-	  InstructionAnnotationFailure
+      (* Since I cannot guarantee anything about CALLCODE, I choose immediate failure. *)
+      InstructionAnnotationFailure
   | Misc SUICIDE -> suicide v c
   | Misc DELEGATECALL -> (* delegatecall v c *)
-	  (* Since I cannot guarantee anything about DELEGATECALL, I choose immediate failure. *)
-	  InstructionAnnotationFailure
+      (* Since I cannot guarantee anything about DELEGATECALL, I choose immediate failure. *)
+      InstructionAnnotationFailure
   | Info GAS -> stack_0_1_op v c (gas v - 2)
   | Memory MSIZE -> stack_0_1_op v c (32 * word256FromInteger v.vctx_memory_usage)
   end)
