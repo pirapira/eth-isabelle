@@ -2113,6 +2113,7 @@ let empty_memory = (fun _ -> 0)
 
 indreln [build_vctx_called : account_state -> call_env -> variable_ctx -> bool]
   vctx_called : forall bal a env origin ext block gas existence.
+    word256ToNatural block.block_number >= 2463000 && (* only the newest version of EVM matters *)
     bal a.account_address = a.account_balance ==>
     build_vctx_called a env
  <| vctx_stack = []; (* The stack is initialized for every invocation *)
