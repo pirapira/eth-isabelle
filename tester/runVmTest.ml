@@ -155,43 +155,50 @@ let test_one_case j : testResult =
      let () = Printf.printf "ProgramInit?\n" in
      TestFailure
 
-let test_one_file (path : string) : unit =
+let test_one_file (path : string) ((num_success : int ref), (num_failure : int ref), (num_skipped : int ref)) : unit =
   let vm_arithmetic_test : json = Yojson.Basic.from_file path in
   let vm_arithmetic_test_assoc : (string * json) list = Util.to_assoc vm_arithmetic_test in
-  List.iter
+  let () =  List.iter
     (fun (label, j) ->
       let () = Printf.printf "===========================test case: %s\n" label in
       if label = "env1" then () else (* How to get the block hash? *)
       if label = "callcodeToNameRegistrator0" then () else (* need to implement callcode first *)
       if label = "callcodeToReturn1" then () else
-      let success = test_one_case j in
-      assert (success = TestSuccess)
+      match test_one_case j with
+      | TestSuccess -> num_success := !num_success + 1
+      | TestFailure -> num_failure := !num_failure + 1
+      | TestSkipped -> num_skipped := !num_skipped + 1
     )
-    vm_arithmetic_test_assoc
+    vm_arithmetic_test_assoc in
+  ()
 
 let () =
   let () = Printf.printf "hello\n" in
-  let () = test_one_file "../tests/VMTests/vmArithmeticTest.json" in
-  let () = test_one_file "../tests/VMTests/vmBitwiseLogicOperationTest.json" in
-  let () = test_one_file "../tests/VMTests/vmPushDupSwapTest.json" in
-  let () = test_one_file "../tests/VMTests/vmInputLimitsLight.json" in
-  let () = test_one_file "../tests/VMTests/vmInputLimits.json" in
-  let () = test_one_file "../tests/VMTests/vmIOandFlowOperationsTest.json" in
-  let () = test_one_file "../tests/VMTests/vmPerformanceTest.json" in
-  let () = test_one_file "../tests/VMTests/vmEnvironmentalInfoTest.json" in
-  let () = test_one_file "../tests/VMTests/vmSystemOperationsTest.json" in
-  let () = test_one_file "../tests/VMTests/vmtests.json" in
-  let () = test_one_file "../tests/VMTests/RandomTests/randomTest.json" in
-  let () = test_one_file "../tests/VMTests/RandomTests/201503110219PYTHON.json" in
-  let () = test_one_file "../tests/VMTests/RandomTests/201503110226PYTHON_DUP6.json" in
-  let () = test_one_file "../tests/VMTests/RandomTests/201503110346PYTHON_PUSH24.json" in
-  let () = test_one_file "../tests/VMTests/RandomTests/201503110526PYTHON.json" in
-  let () = test_one_file "../tests/VMTests/RandomTests/201503111844PYTHON.json" in
-  let () = test_one_file "../tests/VMTests/RandomTests/201503112218PYTHON.json" in
-  let () = test_one_file "../tests/VMTests/RandomTests/201503120317PYTHON.json" in
-  let () = test_one_file "../tests/VMTests/RandomTests/201503120525PYTHON.json" in
-  let () = test_one_file "../tests/VMTests/RandomTests/201503120547PYTHON.json" in
-  let () = test_one_file "../tests/VMTests/RandomTests/201503120909PYTHON.json" in
+  let num_success = ref 0 in
+  let num_failure = ref 0 in
+  let num_skipped = ref 0 in
+  let counters = (num_success, num_failure, num_skipped) in
+  let () = test_one_file "../tests/VMTests/vmArithmeticTest.json" counters in
+  let () = test_one_file "../tests/VMTests/vmBitwiseLogicOperationTest.json" counters in
+  let () = test_one_file "../tests/VMTests/vmPushDupSwapTest.json" counters in
+  let () = test_one_file "../tests/VMTests/vmInputLimitsLight.json" counters in
+  let () = test_one_file "../tests/VMTests/vmInputLimits.json" counters in
+  let () = test_one_file "../tests/VMTests/vmIOandFlowOperationsTest.json" counters in
+  let () = test_one_file "../tests/VMTests/vmPerformanceTest.json" counters in
+  let () = test_one_file "../tests/VMTests/vmEnvironmentalInfoTest.json" counters in
+  let () = test_one_file "../tests/VMTests/vmSystemOperationsTest.json" counters in
+  let () = test_one_file "../tests/VMTests/vmtests.json" counters in
+  let () = test_one_file "../tests/VMTests/RandomTests/randomTest.json" counters in
+  let () = test_one_file "../tests/VMTests/RandomTests/201503110219PYTHON.json" counters in
+  let () = test_one_file "../tests/VMTests/RandomTests/201503110226PYTHON_DUP6.json" counters in
+  let () = test_one_file "../tests/VMTests/RandomTests/201503110346PYTHON_PUSH24.json" counters in
+  let () = test_one_file "../tests/VMTests/RandomTests/201503110526PYTHON.json" counters in
+  let () = test_one_file "../tests/VMTests/RandomTests/201503111844PYTHON.json" counters in
+  let () = test_one_file "../tests/VMTests/RandomTests/201503112218PYTHON.json" counters in
+  let () = test_one_file "../tests/VMTests/RandomTests/201503120317PYTHON.json" counters in
+  let () = test_one_file "../tests/VMTests/RandomTests/201503120525PYTHON.json" counters in
+  let () = test_one_file "../tests/VMTests/RandomTests/201503120547PYTHON.json" counters in
+  let () = test_one_file "../tests/VMTests/RandomTests/201503120909PYTHON.json" counters in
   (* don't know where to get the block headers from
   let () = test_one_file "../tests/VMTests/vmBlockInfoTest.json" in *)
   (* need to implement CALLCODE somehow
@@ -199,5 +206,7 @@ let () =
   let () = test_one_file "../tests/VMTests/RandomTests/201503102148PYTHON.json" in
   and more in the same directory
    *)
-  let () = Printf.printf "all tests passed.  Except \"env1\" \n" in
+  let () = Printf.printf "success: %i\n" !num_success in
+  let () = Printf.printf "failure: %i\n" !num_failure in
+  let () = Printf.printf "skipped: %i\n" !num_skipped in
   ()
