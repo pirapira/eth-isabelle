@@ -13,13 +13,13 @@ clean-thy:
 clean-ocaml:
 	rm -rf lem/*.ml
 
-all-isabelle: KEC.thy FunctionalCorrectness.thy Parse.thy ContractEnv.thy Instructions.thy ContractSem.thy RelationalSem.thy HP.thy YellowPaper.thy example/Optimization.thy example/AlwaysFail.thy example/FailOnReentrance.thy example/Deed.thy lem/Block.thy lem/Evm.thy lem/EvmNonExec.thy lem/Keccak.thy lem/Rlp.thy lem/Word160.thy lem/Word256.thy lem/Word8.thy
+all-isabelle: KEC.thy Parse.thy Instructions.thy ContractSem.thy RelationalSem.thy example/Optimization.thy example/AlwaysFail.thy example/FailOnReentrance.thy example/Deed.thy lem/Block.thy lem/Evm.thy lem/EvmNonExec.thy lem/Keccak.thy lem/Rlp.thy lem/Word160.thy lem/Word256.thy lem/Word8.thy
 	isabelle build -d . all
 
 doc: deed lem-pdf
 
 deed: document/output.pdf
-document/output.pdf: KEC.thy ContractEnv.thy Instructions.thy ContractSem.thy RelationalSem.thy example/Deed.thy document/root.tex lem/Evm.thy
+document/output.pdf: KEC.thy Instructions.thy ContractSem.thy RelationalSem.thy example/Deed.thy document/root.tex lem/Evm.thy
 	sh document_generation.sh
 
 lem-thy: lem/Block.thy lem/Evm.thy lem/EvmNonExec.thy lem/Keccak.thy lem/Rlp.thy lem/Word160.thy lem/Word256.thy lem/Word8.thy
