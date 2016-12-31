@@ -71,10 +71,7 @@ declare
   initial_pos_def [simp]
   list_fill_right_def [simp]
   keccak'_def [simp]
-  keccak_def [simp]
   
-value "keccak' []"
-
 
   
 declare vctx_advance_pc_def [simp]
