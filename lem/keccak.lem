@@ -69,7 +69,7 @@ end
 val setf : list word64 -> nat -> word64 -> list word64
 let setf lst n w =
   if List.length lst < n then lst ++ genlist (fun _ -> 0) (List.length lst - n - 1) ++ [w]
-  else take (n-1) lst ++ [w] ++ drop (n+1) lst
+  else take n lst ++ [w] ++ drop (n+1) lst
 
 val theta1 : nat -> list word64 -> word64
 let theta1 i st =
@@ -89,15 +89,15 @@ let theta st =
   let t = genlist (fun i -> theta_t i bc) 5 in
   genlist (fun ji -> (get st ji) lxor (get t (ji mod 5))) 25
 
-val rho_pi_inner : nat -> word64 * list word64 -> word64 * list word64
-let rho_pi_inner i t_st =
+val rho_pi_inner : word64 * list word64 -> nat -> word64 * list word64
+let rho_pi_inner t_st i =
   let j = get_n keccakf_piln i in
   let bc = get (snd t_st) j in
   (bc, setf (snd t_st) j (rotl64 (fst t_st) (get_n keccakf_rotc i)))
 
 
 val rho_pi_changes : nat -> word64 * list word64 -> word64 * list word64
-let rho_pi_changes i t_st = foldr rho_pi_inner t_st (genlist (fun x -> x) i)
+let rho_pi_changes i t_st = foldl rho_pi_inner t_st (genlist (fun x -> x) i)
 
 val rho_pi : list word64 -> list word64
 let rho_pi st = snd (rho_pi_changes 24 (get st 1, st))
@@ -117,8 +117,8 @@ let chi st =
 val iota : nat -> list word64 -> list word64
 let iota r st = setf st 0 (get st 0 lxor get keccakf_randc r)
 
-val for_inner : nat -> list word64 -> list word64
-let for_inner r st = iota r (chi (rho_pi (theta st)))
+val for_inner : list word64 -> nat -> list word64
+let for_inner st r = iota r (chi (rho_pi (theta st)))
 
 let keccakf_rounds : nat = 24
 
@@ -130,14 +130,18 @@ let rec apply f n acc = match n with
  | n+1 -> f (apply f n acc)
 end
 
+val boolList64_inner : word64 -> nat -> list bool
+let rec boolList64_inner num rest =
+  if rest = 0 then []
+  else
+    let checked = (2 ** (rest - 1)) in
+    let quo = num / checked in
+    let taken = quo * checked in
+    (quo > 0) :: boolList64_inner (num - taken) (rest - 1)
 
 val boolListFromWord64 : word64 -> list bool
-let boolListFromWord64 w = snd (apply (fun (w,lst) -> (w lsr 1, (w land 1 = 0) :: lst)) 64 (w, []))
-
-(*
-val boolListFromWord8 : word8 -> list bool
-let boolListFromWord8 w = snd (apply (fun (w,lst) -> (w lsr 1, (w land 1 = 0) :: lst)) 8 (w, []))
-*)
+let boolListFromWord64 w = boolList64_inner w 64
+declare isabelle target_rep function boolListFromWord64 = `to_bl`
 
 val word_rsplit_aux : list bool -> nat -> list byte
 let rec word_rsplit_aux lst n = match n with
@@ -164,7 +168,7 @@ val invert_endian : word64 -> word64
 let invert_endian w = word_rcat_k (reverse (word_rsplit w))
 
 val keccakf : list word64 -> list word64
-let keccakf st = foldr for_inner st (genlist (fun i -> i) keccakf_rounds)
+let keccakf st = foldl for_inner st (genlist (fun i -> i) keccakf_rounds)
 
 let mdlen : nat = 256 div 8
 let rsiz : nat = 200 - mdlen * 2

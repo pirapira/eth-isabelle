@@ -183,7 +183,9 @@ let construct_block_info (t : test_case) : block_info =
         | Some pH -> Conv.word256_of_big_int pH
         | None -> failwith "previousHash not available"
       else
-        let ret = keccak (Evm.word_rsplit0 (Conv.word256_of_big_int num)) in
+        let hashed_byte_list = (Conv.string_as_byte_list
+                       (Big_int.string_of_big_int num)) in
+        let ret = keccak hashed_byte_list in
         let () = Printf.printf "going to return %s.\n" (Big_int.string_of_big_int (Conv.big_int_of_word256 ret)) in
         ret
     )
