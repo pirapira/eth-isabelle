@@ -16,7 +16,7 @@
 
 theory YellowPaper
 
-imports Main "~~/src/HOL/Word/Word" "./KEC" "./ModifiedPatricia"
+imports Main "~~/src/HOL/Word/Word" "../KEC" "./ModifiedPatricia"
 
 begin
 

@@ -37,9 +37,7 @@ session "all" = "HOL" +
     "~~/src/HOL/Word/Word"
     "~~/src/HOL/Data_Structures/AVL_Map"
     KEC
-    FunctionalCorrectness
     Parse
-    ContractEnv
     Instructions
     ContractSem
     RelationalSem
