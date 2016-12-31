@@ -3,7 +3,6 @@ session "deed" = "HOL" +
   theories [document = false]
     "~~/src/HOL/Word/Word"
     "~~/src/HOL/Data_Structures/AVL_Map"
-    KEC
     "lem/Lem_bool"
     "lem/Lem_basic_classes"
     "lem/Lem_tuple"
@@ -22,6 +21,7 @@ session "deed" = "HOL" +
     "lem/Word256"
     "lem/Word160"
     "lem/Word8"
+    "lem/Keccak"
     "lem/Evm"
   theories
     ContractEnv
@@ -36,7 +36,6 @@ session "all" = "HOL" +
   theories [document = false]
     "~~/src/HOL/Word/Word"
     "~~/src/HOL/Data_Structures/AVL_Map"
-    KEC
     Parse
     Instructions
     ContractSem

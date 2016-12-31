@@ -94,7 +94,7 @@ let hex_string_of_byte_list (prefix : string) (bs : Word8.word8 list) : string =
 
 let format_quad_as_list
       (act : Evm.contract_action) (storage : Evm.storage)
-      (bal : Evm.address -> Evm.w256) (stashed_opt : (Evm.variable_ctx * Nat_big_num.num * Nat_big_num.num) option) : Easy_format.t list =
+      (bal : Evm.address -> Keccak.w256) (stashed_opt : (Evm.variable_ctx * Nat_big_num.num * Nat_big_num.num) option) : Easy_format.t list =
   let open Easy_format in
   [ Label ((Atom ("Action", atom), label), Atom ("to be printed", atom))
   ; Atom ("storage to be printed", atom)

@@ -1,3 +1,4 @@
+open Keccak
 open Evm
 
 module IntMap = BatMap.Make(BatInt)

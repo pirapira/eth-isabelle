@@ -64,10 +64,6 @@ val byte_to_w256 : byte -> w256
 let byte_to_w256 w = word256FromNat (word8ToNat w)
 declare isabelle target_rep function byte_to_w256 = `Word.ucast`
 
-val keccak : list byte -> w256
-let keccak v = 0
-declare isabelle target_rep function keccak = `undefined`
-
 val test_bit : w256 -> nat -> bool
 let test_bit w n =
   if w land (1 lsr n) = 0 then false
@@ -334,9 +330,7 @@ let info_inst_numbers inst = match inst with
 | ORIGIN -> (0, 1)
 | CALLER -> (0, 1)
 | CALLVALUE -> (0, 1)
-| CALLDATALOAD -> (1, 1)
 | CALLDATASIZE -> (0, 1)
-| CALLER -> (0, 1)
 | CODESIZE -> (0, 1)
 | GASPRICE -> (0, 1)
 | EXTCODESIZE -> (1, 1)
@@ -604,7 +598,7 @@ end
 
 val inst_stack_numbers : inst -> stack_numbers
 let inst_stack_numbers i = match i with
-| Unknown byte -> (0, 0)
+| Unknown _ -> (0, 0)
 | Bits b -> bits_stack_nums b
 | Sarith s -> sarith_inst_nums s
 | Arith a -> arith_inst_numbers a
@@ -1520,7 +1514,6 @@ let swap n v c = match list_swap n v.vctx_stack with
 end
 
 (* SHA3 instruciton in the EVM is actually Keccak 256. *)
-(* In this development, Keccak256 computation is defined in KEC.thy. *)
 val sha3 : variable_ctx -> constant_ctx -> instruction_result
 let sha3 v c = match v.vctx_stack with
  | start :: len :: rest ->
@@ -1669,7 +1662,7 @@ let thirdComponentOfC i s0 s1 s2 s3 recipient_empty orig_val new_val remaining_g
   | Memory MLOAD -> Gverylow
   | Memory MSTORE -> Gverylow
   | Memory MSTORE8 -> Gverylow
-  | Stack PUSH_N -> Gverylow
+  | Stack (PUSH_N _) -> Gverylow
   | Dup _ -> Gverylow
   | Swap _ -> Gverylow
   | Arith MUL -> Glow
@@ -1708,7 +1701,7 @@ let vctx_recipient v c =
   | Misc SUICIDE -> w256_to_address (vctx_stack_default 0 v)
   | Misc CALL -> w256_to_address (vctx_stack_default 1 v)
   | Misc CALLCODE -> c.cctx_this
-  | Misc DELGATECALL -> c.cctx_this
+  | Misc DELEGATECALL -> c.cctx_this
   | _ -> 0
   end
 

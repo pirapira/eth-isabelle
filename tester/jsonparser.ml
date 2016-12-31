@@ -1,5 +1,6 @@
 open Yojson.Basic
 open Hexparser
+open Keccak
 open Evm
 
 type env =
@@ -181,7 +182,11 @@ let construct_block_info (t : test_case) : block_info =
         | None -> failwith "previousHash not available"
       else
         let () = Printf.printf "the current block is %s.\n" (Big_int.string_of_big_int t.env.currentNumber) in
-        failwith (Printf.sprintf "blockhash asked for block %s" (Big_int.string_of_big_int num)))
+        let () = Printf.printf "the asked block is %s.\n" (Big_int.string_of_big_int num) in
+        let ret = keccak (Evm.word_rsplit0 (Conv.word256_of_big_int num)) in
+        let () = Printf.printf "going to return %s.\n" (Big_int.string_of_big_int (Conv.big_int_of_word256 ret)) in
+        ret
+    )
   ; block_coinbase  = Conv.word160_of_big_int t.env.currentCoinbase
   ; block_timestamp = Conv.word256_of_big_int t.env.currentTimestamp
   ; block_number    = block_number

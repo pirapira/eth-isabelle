@@ -13,20 +13,20 @@ clean-thy:
 clean-ocaml:
 	rm -rf lem/*.ml
 
-all-isabelle: KEC.thy Parse.thy Instructions.thy ContractSem.thy RelationalSem.thy example/Optimization.thy example/AlwaysFail.thy example/FailOnReentrance.thy example/Deed.thy lem/Block.thy lem/Evm.thy lem/EvmNonExec.thy lem/Keccak.thy lem/Rlp.thy lem/Word160.thy lem/Word256.thy lem/Word8.thy
+all-isabelle: Parse.thy Instructions.thy ContractSem.thy RelationalSem.thy example/Optimization.thy example/AlwaysFail.thy example/FailOnReentrance.thy example/Deed.thy lem/Block.thy lem/Evm.thy lem/EvmNonExec.thy lem/Keccak.thy lem/Rlp.thy lem/Word160.thy lem/Word256.thy lem/Word8.thy
 	isabelle build -d . all
 
 doc: deed lem-pdf
 
 deed: document/output.pdf
-document/output.pdf: KEC.thy Instructions.thy ContractSem.thy RelationalSem.thy example/Deed.thy document/root.tex lem/Evm.thy
+document/output.pdf: Instructions.thy ContractSem.thy RelationalSem.thy example/Deed.thy document/root.tex lem/Evm.thy
 	sh document_generation.sh
 
 lem-thy: lem/Block.thy lem/Evm.thy lem/EvmNonExec.thy lem/Keccak.thy lem/Rlp.thy lem/Word160.thy lem/Word256.thy lem/Word8.thy lem/Keccak.thy
 
 lem-pdf: lem/Evm-use_inc.pdf lem/Block-use_inc.pdf lem/EvmNonExec-use_inc.pdf lem/Keccak-use_inc.pdf lem/Rlp-use_inc.pdf
 
-lem-ocaml: lem/evm.ml lem/word256.ml lem/word160.ml lem/word8.ml
+lem-ocaml: lem/evm.ml lem/word256.ml lem/word160.ml lem/word8.ml lem/keccak.ml
 
 lem/block.lem: lem/evm.lem
 	touch lem/block.lem
@@ -51,6 +51,9 @@ lem/Evm.thy: lem/evm.lem
 
 lem/evm.ml: lem/evm.lem
 	lem -ocaml lem/evm.lem
+
+lem/keccak.ml: lem/keccak.lem
+	lem -ocaml lem/keccak.lem
 
 lem/word256.ml: lem/word256.lem
 	lem -ocaml lem/word256.lem

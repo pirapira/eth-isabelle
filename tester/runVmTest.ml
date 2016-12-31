@@ -78,7 +78,7 @@ let test_one_case j : testResult =
 
   let addr : address = word160_of_big_int test_case.exec.address in
   let initial_storage : storage = lookup_storage addr test_case.pre in
-  let initial_balance : address -> w256 = construct_global_balance test_case.pre in
+  let initial_balance : address -> Keccak.w256 = construct_global_balance test_case.pre in
   let v : variable_ctx =
     { vctx_stack = []
     ; vctx_memory = empty_memory
@@ -181,7 +181,7 @@ let () =
   let num_failure = ref 0 in
   let num_skipped = ref 0 in
   let counters = (num_success, num_failure, num_skipped) in
-  let () = test_one_file "../tests/VMTests/vmArithmeticTest.json" counters in
+(*  let () = test_one_file "../tests/VMTests/vmArithmeticTest.json" counters in
   let () = test_one_file "../tests/VMTests/vmBitwiseLogicOperationTest.json" counters in
   let () = test_one_file "../tests/VMTests/vmPushDupSwapTest.json" counters in
   let () = test_one_file "../tests/VMTests/vmInputLimitsLight.json" counters in
@@ -201,12 +201,12 @@ let () =
   let () = test_one_file "../tests/VMTests/RandomTests/201503120317PYTHON.json" counters in
   let () = test_one_file "../tests/VMTests/RandomTests/201503120525PYTHON.json" counters in
   let () = test_one_file "../tests/VMTests/RandomTests/201503120547PYTHON.json" counters in
-  let () = test_one_file "../tests/VMTests/RandomTests/201503120909PYTHON.json" counters in
+  let () = test_one_file "../tests/VMTests/RandomTests/201503120909PYTHON.json" counters in *)
 
   (* TODO:
   need to implement `LastHashes lastHashes(u256 _currentBlockNumber)` in `TestHelper.cpp`.
-  This can be done after keccak256 is ported into Lem.
-  let () = test_one_file "../tests/VMTests/vmBlockInfoTest.json" counters in *)
+  This can be done after keccak256 is ported into Lem. *)
+  let () = test_one_file "../tests/VMTests/vmBlockInfoTest.json" counters in
   (* need to implement CALLCODE somehow
   let () = test_one_file "../tests/VMTests/RandomTests/201503102037PYTHON.json" in
   let () = test_one_file "../tests/VMTests/RandomTests/201503102148PYTHON.json" in
