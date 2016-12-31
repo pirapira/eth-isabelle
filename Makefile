@@ -22,7 +22,7 @@ deed: document/output.pdf
 document/output.pdf: KEC.thy Instructions.thy ContractSem.thy RelationalSem.thy example/Deed.thy document/root.tex lem/Evm.thy
 	sh document_generation.sh
 
-lem-thy: lem/Block.thy lem/Evm.thy lem/EvmNonExec.thy lem/Keccak.thy lem/Rlp.thy lem/Word160.thy lem/Word256.thy lem/Word8.thy
+lem-thy: lem/Block.thy lem/Evm.thy lem/EvmNonExec.thy lem/Keccak.thy lem/Rlp.thy lem/Word160.thy lem/Word256.thy lem/Word8.thy lem/Keccak.thy
 
 lem-pdf: lem/Evm-use_inc.pdf lem/Block-use_inc.pdf lem/EvmNonExec-use_inc.pdf lem/Keccak-use_inc.pdf lem/Rlp-use_inc.pdf
 

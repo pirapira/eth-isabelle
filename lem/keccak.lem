@@ -16,7 +16,7 @@
 open import Pervasives
 open import Word
 open import Word8
-import Evm
+open import Word256
 
 (*
 definition "rotl64 (x :: 64 word) n = (word_rotl n x :: 64 word)"
@@ -66,8 +66,8 @@ let get_n lst n = match index lst n with
  | Nothing -> 0
 end
 
-val set : list word64 -> nat -> word64 -> list word64
-let set lst n w =
+val setf : list word64 -> nat -> word64 -> list word64
+let setf lst n w =
   if List.length lst < n then lst ++ genlist (fun _ -> 0) (List.length lst - n - 1) ++ [w]
   else take (n-1) lst ++ [w] ++ drop (n+1) lst
 
@@ -93,7 +93,7 @@ val rho_pi_inner : nat -> word64 * list word64 -> word64 * list word64
 let rho_pi_inner i t_st =
   let j = get_n keccakf_piln i in
   let bc = get (snd t_st) j in
-  (bc, set (snd t_st) j (rotl64 (fst t_st) (get_n keccakf_rotc i)))
+  (bc, setf (snd t_st) j (rotl64 (fst t_st) (get_n keccakf_rotc i)))
 
 
 val rho_pi_changes : nat -> word64 * list word64 -> word64 * list word64
@@ -115,7 +115,7 @@ let chi st =
   List.concat (genlist (fun j -> chi_for_j (filterI st (fun i -> j * 5 <= i && i <= j*5 + 5))) 5)
 
 val iota : nat -> list word64 -> list word64
-let iota r st = set st 0 (get st 0 lxor get keccakf_randc r)
+let iota r st = setf st 0 (get st 0 lxor get keccakf_randc r)
 
 val for_inner : nat -> list word64 -> list word64
 let for_inner r st = iota r (chi (rho_pi (theta st)))
@@ -154,11 +154,11 @@ let rec word64FromBoollist lst = match lst with
  | [] -> 0
 end
 
-val word_rcat : list byte -> word64
-let word_rcat lst = word64FromBoollist (List.concat (map boolListFromWord8 lst))
+val word_rcat_k : list byte -> word64
+let word_rcat_k lst = word64FromBoollist (List.concat (map boolListFromWord8 lst))
 
 val invert_endian : word64 -> word64
-let invert_endian w = word_rcat (reverse (word_rsplit w))
+let invert_endian w = word_rcat_k (reverse (word_rsplit w))
 
 val keccakf : list word64 -> list word64
 let keccakf st = foldr for_inner st (genlist (fun i -> i) keccakf_rounds)
@@ -170,7 +170,7 @@ val word8_to_word64 : byte -> word64
 let word8_to_word64 w = int64FromNat (word8ToNat w)
 
 val update_byte : byte -> nat -> list word64 -> list word64
-let update_byte i p st = set st (p div 8) ((get st (p div 8)) lxor ((word8_to_word64 i) lsl (8 * (p mod 8))))
+let update_byte i p st = setf st (p div 8) ((get st (p div 8)) lxor ((word8_to_word64 i) lsl (8 * (p mod 8))))
 
 val sha3_update : list byte -> nat -> list word64 -> nat * list word64
 let rec sha3_update lst pos st = match lst with
@@ -196,5 +196,18 @@ let keccak' input =
    let mid = sha3_update input initial_pos initial_st in
    keccak_final (fst mid) (snd mid)
 
-val keccak : list byte -> Evm.w256
-let keccak input = Evm.word_of_bytes (keccak' input)
+type w256 = word256
+
+val list_fill_right : bool -> nat -> list bool -> list bool
+let list_fill_right filled target orig =
+  if length orig >= target then orig else
+  let filling_len = target - length orig in
+  append orig (replicate filling_len filled)
+
+val word_of_bytes : list byte -> w256
+let word_of_bytes lst = word256FromBoollist
+                          (list_fill_right false 256 (List.concat (map boolListFromWord8 (reverse lst))))
+declare isabelle target_rep function word_of_bytes = `Word.word_rcat`
+
+val keccak : list byte -> Word256.word256
+let keccak input = word_of_bytes (keccak' input)

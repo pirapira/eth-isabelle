@@ -20,6 +20,7 @@ open import Word256
 open import Word160
 open import Word8
 *)
+open import Keccak
 open import Evm
 
 type transaction = <|

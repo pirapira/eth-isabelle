@@ -19,13 +19,12 @@ open import Word
 open import Word256
 open import Word160
 open import Word8
+open import Keccak
 
 (* The frequently used machine word types are named here.  For example, address *)
 (* is the type of 160-bit machine words.  The type w256 is the type of EVM machine words. *)
 
-type w256 = word256
 type address = word160
-type byte = word8
 
 val sintFromW256 : w256 -> integer
 let sintFromW256 = word256ToInteger
@@ -1196,23 +1195,11 @@ end
 val datasize : variable_ctx -> w256
 let datasize v = word256FromNat (length v.vctx_data_sent)
 
-(** TODO: unify the following two functions *)
-val list_fill_right : bool -> nat -> list bool -> list bool
-let list_fill_right filled target orig =
-  if length orig >= target then orig else
-  let filling_len = target - length orig in
-  append orig (replicate filling_len filled)
-
 val byte_list_fill_right : byte -> nat -> list byte -> list byte
 let byte_list_fill_right filled target orig =
   if length orig >= target then orig else
   let filling_len = target - length orig in
   append orig (replicate filling_len filled)
-
-val word_of_bytes : list byte -> w256
-let word_of_bytes lst = word256FromBoollist
-                          (list_fill_right false 256 (List.concat (map boolListFromWord8 (reverse lst))))
-declare isabelle target_rep function word_of_bytes = `Word.word_rcat`
 
 val constant_mark : list byte -> list byte
 let constant_mark lst = lst
@@ -1698,7 +1685,7 @@ let thirdComponentOfC i s0 s1 s2 s3 recipient_empty orig_val new_val remaining_g
   | Info EXTCODESIZE -> Gextcode blocknumber
   | Info BALANCE -> Gbalance blocknumber
   | Info BLOCKHASH -> Gblockhash
-  | _ -> 0 (* How is this case dealt in the yellow paper? *)
+  | _ -> 0 (* How is this case dealt in the yellow paper *)
   end
 
 (* C is the function defined in the yellow paper as C.  This represents the gas consumption of an instruction. *)
@@ -1962,7 +1949,7 @@ type program_result =
 (* I have a function that checks all annotations at a particular program position: *)
 val check_annotations : variable_ctx -> constant_ctx -> bool
 let check_annotations v c =
-  let annots = c.cctx_program.program_annotation v.vctx_pc in
+  let annots : list annotation = c.cctx_program.program_annotation v.vctx_pc in
   List.all (fun annot -> annot (build_aenv v c)) annots
 
 val program_sem : variable_ctx -> constant_ctx -> integer -> nat -> program_result

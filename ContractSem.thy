@@ -33,6 +33,48 @@ termination log256floor by lexicographic_order
 termination word_exp by lexicographic_order
 
 
+declare
+  rotl64_def [simp]
+  big_def [simp]
+  keccakf_randc_def [simp]
+  keccakf_rotc_def [simp]
+  keccakf_piln_def [simp]
+  get_def [simp]
+  get_n_def [simp]
+  setf_def [simp]
+  theta_t_def [simp]
+  theta_def [simp]
+  rho_pi_inner_def [simp]
+  rho_pi_changes_def [simp]
+  rho_pi_def [simp]
+  chi_for_j_def [simp]
+  filterI_def [simp]
+  chi_def [simp]
+  iota_def [simp]
+  for_inner_def [simp]
+  keccakf_rounds_def [simp]
+  apply0.psimps [simp]
+  boolListFromWord64_def [simp]
+  boolListFromWord8_def [simp]
+  word_rsplit_aux.psimps [simp]
+  word64FromBoollist.psimps [simp]
+  word_rcat_def [simp]
+  invert_endian_def [simp]
+  keccakf_def [simp]
+  mdlen_def [simp]
+  rsiz_def [simp]
+  word8_to_word64_def [simp]
+  update_byte_def [simp]
+  sha3_update.psimps [simp]
+  keccak_final_def [simp]
+  initial_st_def [simp]
+  initial_pos_def [simp]
+  list_fill_right_def [simp]
+  keccak'_def [simp]
+  keccak_def [simp]
+  
+value "keccak' []"
+
 
   
 declare vctx_advance_pc_def [simp]
@@ -173,11 +215,11 @@ declare general_dup_def [simp]
 declare suicide_def [simp]
 
 lemma "Word.word_rcat [(0x01 :: byte), 0x02] = (0x0102 :: w256)"
-apply(simp add: word_rcat_def)
+apply(simp only: Word.word_rcat_def)
 apply(simp add: bin_rcat_def)
 apply(simp add: bin_cat_def)
 done
-    
+
 declare instruction_sem_def [simp]
 
 declare check_annotations_def [simp]
@@ -235,8 +277,8 @@ done
 
 lemma word_rcat_constant [simp] :
 "word_rcat (constant_mark lst) = of_bl (List.concat (map to_bl lst))"
-apply(simp add: word_rcat_bl)
-apply(simp add: constant_mark_def)
+apply(simp only: word_rcat_bl)
+apply(simp only: constant_mark_def)
 done
 
 declare unat_def [simp]
@@ -305,5 +347,6 @@ declare Gzero_def [simp]
         vctx_recipient_def [simp]
         vctx_stack_default_def [simp]
         subtract_gas.simps [simp]
-
+        constant_mark_def [simp]
+        bin_rcat_def [simp]
 end
