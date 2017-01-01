@@ -184,7 +184,7 @@ let () =
   let num_failure = ref 0 in
   let num_skipped = ref 0 in
   let counters = (num_success, num_failure, num_skipped) in
-(*  let () = test_one_file "../tests/VMTests/vmArithmeticTest.json" counters in
+  let () = test_one_file "../tests/VMTests/vmArithmeticTest.json" counters in
   let () = test_one_file "../tests/VMTests/vmBitwiseLogicOperationTest.json" counters in
   let () = test_one_file "../tests/VMTests/vmPushDupSwapTest.json" counters in
   let () = test_one_file "../tests/VMTests/vmInputLimitsLight.json" counters in
@@ -204,17 +204,10 @@ let () =
   let () = test_one_file "../tests/VMTests/RandomTests/201503120317PYTHON.json" counters in
   let () = test_one_file "../tests/VMTests/RandomTests/201503120525PYTHON.json" counters in
   let () = test_one_file "../tests/VMTests/RandomTests/201503120547PYTHON.json" counters in
-  let () = test_one_file "../tests/VMTests/RandomTests/201503120909PYTHON.json" counters in *)
-
-  (* TODO:
-  need to implement `LastHashes lastHashes(u256 _currentBlockNumber)` in `TestHelper.cpp`.
-  This can be done after keccak256 is ported into Lem. *)
+  let () = test_one_file "../tests/VMTests/RandomTests/201503120909PYTHON.json" counters in
   let () = test_one_file "../tests/VMTests/vmBlockInfoTest.json" counters in
-  (* need to implement CALLCODE somehow
-  let () = test_one_file "../tests/VMTests/RandomTests/201503102037PYTHON.json" in
-  let () = test_one_file "../tests/VMTests/RandomTests/201503102148PYTHON.json" in
-  and more in the same directory
-   *)
+  let () = test_one_file "../tests/VMTests/RandomTests/201503102037PYTHON.json" counters in
+  let () = test_one_file "../tests/VMTests/RandomTests/201503102148PYTHON.json" counters in
   let () = Printf.printf "success: %i\n" !num_success in
   let () = Printf.printf "failure: %i\n" !num_failure in
   let () = Printf.printf "skipped: %i\n" !num_skipped in
