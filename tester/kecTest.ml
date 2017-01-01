@@ -1,21 +1,19 @@
 let () =
   let () = Printf.printf "49 is as bool list %s\n"
                          (Conv.string_of_bool_list (Keccak.boolListFromWord64 (Int64.of_int 49))) in
-  let () = Printf.printf "[49] is hashed into %s\n"
+  let () = Printf.printf "'256' is hashed into %s\n"
                 (Conv.string_of_byte_list
-                   (Keccak.keccak' [Conv.byte_of_int 49])) in
-  let () = Printf.printf "sha3_update [49] initial_pos initial_st is hashed into %s\n"
-                (Conv.string_of_int_64list
-                   (Keccak.(sha3_update [Conv.byte_of_int 49] initial_pos initial_st))) in
-  let () = Printf.printf "iota 1 [49,,,] is %s\n"
-                (Conv.string_of_64list
-                   (Keccak.(iota 1 (List.map Int64.of_int [49; 0;0;0;0;0;0])))) in
-  let () = Printf.printf "keccakf [49,,,,] is %s\n"
-                         (Conv.string_of_64list
-                            (Keccak.keccakf
-                                ( List.map Int64.of_int [49;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0]))) in
-  let () = Printf.printf "word_rsplit 49 is %s\n"
-                         (Conv.string_of_byte_list Keccak.(word_rsplit (Int64.of_int 49))) in
-  let () = Printf.printf "boolList from word64 49 is %s\n"
-                         (Conv.string_of_bool_list Keccak.(boolListFromWord64 (Int64.of_int 49))) in
+                   (Keccak.keccak' (List.map Conv.byte_of_int [50;53;54]))) in
+  let () = Printf.printf
+             "the last 64 word is split into %s\n"
+             (Conv.string_of_byte_list
+                (List.rev (Keccak.word_rsplit
+                             (Big_int.int64_of_big_int
+                             (Big_int.big_int_of_string "-5899601735930514117"))))) in
+  let () = Printf.printf
+             "the last 64 word is split into a boollist %s\n"
+             (Conv.string_of_bool_list
+                (Keccak.boolListFromWord64
+                             (Big_int.int64_of_big_int
+                             (Big_int.big_int_of_string "-5899601735930514117")))) in
   ()

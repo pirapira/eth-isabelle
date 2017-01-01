@@ -137,7 +137,7 @@ let rec boolList64_inner num rest =
     let checked = (2 ** (rest - 1)) in
     let quo = num / checked in
     let taken = quo * checked in
-    (quo > 0) :: boolList64_inner (num - taken) (rest - 1)
+    (quo <> 0) :: boolList64_inner (num - taken) (rest - 1)
 
 val boolListFromWord64 : word64 -> list bool
 let boolListFromWord64 w = boolList64_inner w 64
