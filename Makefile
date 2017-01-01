@@ -8,10 +8,10 @@ clean-pdf:
 	rm -rf lem/*.tex lem/*.aux lem/*.log lem/*.toc lem/*.pdf lem/*~
 
 clean-thy:
-	rm -rf lem/*.thy
+	git clean -f lem/*.thy
 
 clean-ocaml:
-	rm -rf lem/*.ml
+	git clean -f lem/*.ml
 
 all-isabelle: Parse.thy Instructions.thy ContractSem.thy RelationalSem.thy example/Optimization.thy example/AlwaysFail.thy example/FailOnReentrance.thy example/Deed.thy lem/Block.thy lem/Evm.thy lem/EvmNonExec.thy lem/Keccak.thy lem/Rlp.thy lem/Word160.thy lem/Word256.thy lem/Word8.thy
 	isabelle build -d . all
