@@ -53,7 +53,6 @@ declare
   iota_def [simp]
   for_inner_def [simp]
   keccakf_rounds_def [simp]
-  apply0.psimps [simp]
   word_rsplit_aux.psimps [simp]
   word64FromBoollist.psimps [simp]
   word_rcat_def [simp]

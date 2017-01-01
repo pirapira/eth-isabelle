@@ -124,12 +124,6 @@ let keccakf_rounds : nat = 24
 
 type byte = word8
 
-val apply : forall 'a. ('a -> 'a) -> nat -> 'a -> 'a
-let rec apply f n acc = match n with
- | 0 -> acc
- | n+1 -> f (apply f n acc)
-end
-
 val boolList64_inner : word64 -> nat -> list bool
 let rec boolList64_inner num rest =
   if rest = 0 then []
