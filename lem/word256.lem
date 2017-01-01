@@ -77,7 +77,7 @@ end
 declare isabelle target_rep function word256FromBoollist = `of_bl`
 
 val boolListFromWord256 : word256 -> list bool
-let boolListFromWord256 w = boolListFrombitSeq 256 (w256_to_bs w)
+let boolListFromWord256 w = List.reverse (boolListFrombitSeq 256 (w256_to_bs w))
 declare isabelle target_rep function boolListFromWord256 = `to_bl`
 
 val word256FromNumeral : numeral -> word256
