@@ -66,7 +66,7 @@ val word160FromNatural : natural -> word160
 let word160FromNatural i = word160FromInteger (integerFromNatural i)
 
 val word160FromBoollist : list bool -> word160
-let word160FromBoollist lst = match bitSeqFromBoolList lst with
+let word160FromBoollist lst = match bitSeqFromBoolList (List.reverse lst) with
  | Nothing -> bs_to_w160 0
  | Just a -> bs_to_w160 a
 end

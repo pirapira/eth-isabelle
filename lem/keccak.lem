@@ -211,10 +211,16 @@ let list_fill_right filled target orig =
   let filling_len = target - length orig in
   append orig (replicate filling_len filled)
 
+val list_fill_left : bool -> nat -> list bool -> list bool
+let list_fill_left filled target orig =
+  if length orig >= target then orig else
+  let filling_len = target - length orig in
+  append (replicate filling_len filled) orig
+
 val word_of_bytes : list byte -> w256
 let word_of_bytes lst = word256FromBoollist
-                          (list_fill_right false 256
-                            (List.concat (map boolListFromWord8 (reverse lst))))
+                          (list_fill_left false 256
+                            (List.concat (map boolListFromWord8 lst)))
 declare isabelle target_rep function word_of_bytes = `Word.word_rcat`
 
 val keccak : list byte -> Word256.word256

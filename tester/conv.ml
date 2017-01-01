@@ -178,3 +178,10 @@ let char_as_byte (c : char) : Word8.word8 =
 
 let string_as_byte_list (str : string) =
   (List.map char_as_byte (BatString.to_list str))
+
+let string_of_64list (lst : Int64.t list) =
+  String.concat "," (List.map Int64.to_string lst)
+
+let string_of_int_64list ((n, lst) : (int * Int64.t list)) =
+  (string_of_int n)^", "^
+  string_of_64list lst

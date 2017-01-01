@@ -70,7 +70,7 @@ val word256FromNat : nat -> word256
 let word256FromNat i = word256FromInteger (integerFromNat i)
 
 val word256FromBoollist : list bool -> word256
-let word256FromBoollist lst = match bitSeqFromBoolList lst with
+let word256FromBoollist lst = match bitSeqFromBoolList (List.reverse lst) with
  | Nothing -> bs_to_w256 0
  | Just a -> bs_to_w256 a
 end
