@@ -179,9 +179,7 @@ let construct_block_info (t : test_case) : block_info =
       else if Big_int.gt_big_int num t.env.currentNumber then
         Conv.word256_of_big_int Big_int.zero_big_int
       else if Big_int.eq_big_int num t.env.currentNumber then
-        match t.env.previousHash with
-        | Some pH -> Conv.word256_of_big_int pH
-        | None -> failwith "previousHash not available"
+        Conv.word256_of_big_int Big_int.zero_big_int
       else
         let hashed_byte_list = (Conv.string_as_byte_list
                        (Big_int.string_of_big_int num)) in
