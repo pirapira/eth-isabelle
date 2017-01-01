@@ -184,6 +184,7 @@ let () =
   let num_failure = ref 0 in
   let num_skipped = ref 0 in
   let counters = (num_success, num_failure, num_skipped) in
+  let () = test_one_file "../tests/VMTests/vmSha3Test.json" counters in
   let () = test_one_file "../tests/VMTests/vmArithmeticTest.json" counters in
   let () = test_one_file "../tests/VMTests/vmBitwiseLogicOperationTest.json" counters in
   let () = test_one_file "../tests/VMTests/vmPushDupSwapTest.json" counters in
