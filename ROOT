@@ -25,7 +25,6 @@ session "deed" = "HOL" +
     "lem/Evm"
   theories
     ContractEnv
-    Instructions
     ContractSem
     RelationalSem
     "example/Deed"
@@ -37,7 +36,6 @@ session "all" = "HOL" +
     "~~/src/HOL/Word/Word"
     "~~/src/HOL/Data_Structures/AVL_Map"
     Parse
-    Instructions
     ContractSem
     RelationalSem
     "attic/HP"

@@ -16,7 +16,7 @@
 
 theory Parse
 
-imports Main "./Instructions" 
+imports Main "./lem/Evm"
 
 begin
 
@@ -205,7 +205,7 @@ text "How do I do that?"
 
 text "Maybe Isabelle/HOL has some string literals."
 
-value "''foobar'' :: char list"
+value "''foobar'' ! 1  :: char"
 
 definition byte_of_char :: "char \<Rightarrow> byte"
 where
@@ -213,36 +213,24 @@ where
 
 declare byte_of_char_def [simp]
 
-definition int_of_hex_char :: "char \<Rightarrow> int"
+definition integer_of_hex_char :: "char \<Rightarrow> integer"
 where
-"int_of_hex_char c =
-   (case c of
-      CHR ''0'' \<Rightarrow> 0
-    | CHR ''1'' \<Rightarrow> 1
-    | CHR ''2'' \<Rightarrow> 2
-    | CHR ''3'' \<Rightarrow> 3
-    | CHR ''4'' \<Rightarrow> 4
-    | CHR ''5'' \<Rightarrow> 5
-    | CHR ''6'' \<Rightarrow> 6
-    | CHR ''7'' \<Rightarrow> 7
-    | CHR ''8'' \<Rightarrow> 8
-    | CHR ''9'' \<Rightarrow> 9
-    | CHR ''a'' \<Rightarrow> 10
-    | CHR ''b'' \<Rightarrow> 11
-    | CHR ''c'' \<Rightarrow> 12
-    | CHR ''d'' \<Rightarrow> 13
-    | CHR ''e'' \<Rightarrow> 14
-    | CHR ''f'' \<Rightarrow> 15
+"integer_of_hex_char c =
+   (if integer_of_char c \<ge> 48 \<and> integer_of_char c < 58 then
+      integer_of_char c - 48
+    else if integer_of_char c \<ge> 97 \<and> integer_of_char c < 103 then
+      integer_of_char c - 87
+    else 0
    )"
 
-declare int_of_hex_char_def [simp]
+declare integer_of_hex_char_def [simp]
 
-value "int_of_hex_char (CHR ''0'')"
+value "integer_of_hex_char (CHR ''0'')"
 
 fun bytes_of_hex_content :: "char list \<Rightarrow> byte list"
 where
 "bytes_of_hex_content [] = []" |
-"bytes_of_hex_content (m # n # rest) = (word_of_int ((int_of_hex_char m) * 16 + int_of_hex_char n) # bytes_of_hex_content rest)"
+"bytes_of_hex_content (m # n # rest) = (word_of_int (int_of_integer ((integer_of_hex_char m) * 16 + integer_of_hex_char n)) # bytes_of_hex_content rest)"
 
 value "parse_byte 111"
 

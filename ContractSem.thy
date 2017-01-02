@@ -16,7 +16,7 @@
 
 theory ContractSem
 
-imports Main "~~/src/HOL/Word/Word" "./Instructions" "./lem/Evm"
+imports Main "~~/src/HOL/Word/Word" "./lem/Evm"
 (* If ./lem/Evm is missing, try executing `make lem-thy` *)
 
 begin
@@ -343,4 +343,23 @@ declare Gzero_def [simp]
         subtract_gas.simps [simp]
         constant_mark_def [simp]
         bin_rcat_def [simp]
+        
+declare bits_inst_code.simps [simp]
+declare sarith_inst_code.simps [simp]
+declare arith_inst_code.simps [simp]
+declare info_inst_code.simps [simp]
+declare dup_inst_code_def [simp]
+declare memory_inst_code.simps [simp]
+declare storage_inst_code.simps [simp]
+declare pc_inst_code.simps [simp]
+declare stack_inst_code.simps [simp]
+declare swap_inst_code_def [simp]
+declare log_inst_code.simps [simp]
+declare misc_inst_code.simps [simp]
+declare inst_code.simps [simp]
+declare inst_size_def [simp]
+declare drop_bytes.simps [simp]
+declare program_size.simps [simp]
+declare program_code.simps [simp]
+
 end
