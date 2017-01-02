@@ -184,31 +184,22 @@ let () =
   let num_failure = ref 0 in
   let num_skipped = ref 0 in
   let counters = (num_success, num_failure, num_skipped) in
-  let () = test_one_file "../tests/VMTests/vmSha3Test.json" counters in
-  let () = test_one_file "../tests/VMTests/vmArithmeticTest.json" counters in
-  let () = test_one_file "../tests/VMTests/vmBitwiseLogicOperationTest.json" counters in
-  let () = test_one_file "../tests/VMTests/vmPushDupSwapTest.json" counters in
-  let () = test_one_file "../tests/VMTests/vmInputLimitsLight.json" counters in
-  let () = test_one_file "../tests/VMTests/vmInputLimits.json" counters in
-  let () = test_one_file "../tests/VMTests/vmIOandFlowOperationsTest.json" counters in
-  let () = test_one_file "../tests/VMTests/vmPerformanceTest.json" counters in
-  let () = test_one_file "../tests/VMTests/vmEnvironmentalInfoTest.json" counters in
-  let () = test_one_file "../tests/VMTests/vmSystemOperationsTest.json" counters in
-  let () = test_one_file "../tests/VMTests/vmtests.json" counters in
-  let () = test_one_file "../tests/VMTests/RandomTests/randomTest.json" counters in
-  let () = test_one_file "../tests/VMTests/RandomTests/201503110219PYTHON.json" counters in
-  let () = test_one_file "../tests/VMTests/RandomTests/201503110226PYTHON_DUP6.json" counters in
-  let () = test_one_file "../tests/VMTests/RandomTests/201503110346PYTHON_PUSH24.json" counters in
-  let () = test_one_file "../tests/VMTests/RandomTests/201503110526PYTHON.json" counters in
-  let () = test_one_file "../tests/VMTests/RandomTests/201503111844PYTHON.json" counters in
-  let () = test_one_file "../tests/VMTests/RandomTests/201503112218PYTHON.json" counters in
-  let () = test_one_file "../tests/VMTests/RandomTests/201503120317PYTHON.json" counters in
-  let () = test_one_file "../tests/VMTests/RandomTests/201503120525PYTHON.json" counters in
-  let () = test_one_file "../tests/VMTests/RandomTests/201503120547PYTHON.json" counters in
-  let () = test_one_file "../tests/VMTests/RandomTests/201503120909PYTHON.json" counters in
-  let () = test_one_file "../tests/VMTests/vmBlockInfoTest.json" counters in
-  let () = test_one_file "../tests/VMTests/RandomTests/201503102037PYTHON.json" counters in
-  let () = test_one_file "../tests/VMTests/RandomTests/201503102148PYTHON.json" counters in
+  let vmtests = BatSys.readdir "../tests/VMTests" in
+  let () =
+    Array.iter
+      (fun filename ->
+        let path = "../tests/VMTests/"^filename in
+        if not (BatSys.is_directory path) then test_one_file path counters
+      )
+      vmtests in
+  let randomtests = BatSys.readdir "../tests/VMTests/RandomTests" in
+  let () =
+    Array.iter
+      (fun filename ->
+        let path = "../tests/VMTests/RandomTests/"^filename in
+        if not (BatSys.is_directory path) then test_one_file path counters
+      )
+      randomtests in
   let () = Printf.printf "success: %i\n" !num_success in
   let () = Printf.printf "failure: %i\n" !num_failure in
   let () = Printf.printf "skipped: %i\n" !num_skipped in
