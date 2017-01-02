@@ -35,7 +35,7 @@ session "all" = "HOL" +
   theories [document = false]
     "~~/src/HOL/Word/Word"
     "~~/src/HOL/Data_Structures/AVL_Map"
-    Parse
+    "attic/Parse"
     ContractSem
     RelationalSem
     "attic/HP"

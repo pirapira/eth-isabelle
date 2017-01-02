@@ -16,7 +16,7 @@
 
 theory Parse
 
-imports Main "./lem/Evm"
+imports Main "../lem/Evm"
 
 begin
 
