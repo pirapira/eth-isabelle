@@ -78,27 +78,27 @@ lemma updateL [simp] : "update x y Leaf = Node 1 Leaf (x,y) Leaf"
 apply(simp add: update.simps)
 done
 
-lemma updateN_EQ [simp]: "cmp x a = EQ \<Longrightarrow> update x y (Node h l (a, b) r) = Node h l (x, y) r"
+lemma updateN_EQ [simp]: "cmp x a = Cmp.EQ \<Longrightarrow> update x y (Node h l (a, b) r) = Node h l (x, y) r"
 apply(simp add: update.simps)
 done
 
-lemma updateN_GT [simp]: "cmp x a = GT \<Longrightarrow> update x y (Node h l (a, b) r) = balR l (a, b) (update x y r)"
+lemma updateN_GT [simp]: "cmp x a = Cmp.GT \<Longrightarrow> update x y (Node h l (a, b) r) = balR l (a, b) (update x y r)"
 apply(simp add: update.simps)
 done
 
-lemma updateN_LT [simp]: "cmp x a = LT \<Longrightarrow> update x y (Node h l (a, b) r) = balL (update x y l) (a, b) r"
+lemma updateN_LT [simp]: "cmp x a = Cmp.LT \<Longrightarrow> update x y (Node h l (a, b) r) = balL (update x y l) (a, b) r"
 apply(simp add: update.simps)
 done
 
-lemma lookupN_EQ [simp]: "cmp x a = EQ \<Longrightarrow> lookup (Node h l (a, b) r) x = Some b"
+lemma lookupN_EQ [simp]: "cmp x a = Cmp.EQ \<Longrightarrow> lookup (Node h l (a, b) r) x = Some b"
 apply(simp add: lookup.simps)
 done
 
-lemma lookupN_GT [simp]: "cmp x a = GT \<Longrightarrow> lookup (Node h l (a, b) r) x = lookup r x"
+lemma lookupN_GT [simp]: "cmp x a = Cmp.GT \<Longrightarrow> lookup (Node h l (a, b) r) x = lookup r x"
 apply(simp add: lookup.simps)
 done
 
-lemma lookupN_LT [simp]: "cmp x a = LT \<Longrightarrow> lookup (Node h l (a, b) r) x = lookup l x"
+lemma lookupN_LT [simp]: "cmp x a = Cmp.LT \<Longrightarrow> lookup (Node h l (a, b) r) x = lookup l x"
 apply(simp add: lookup.simps)
 done
 
