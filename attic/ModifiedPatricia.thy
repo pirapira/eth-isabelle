@@ -16,7 +16,7 @@
 
 theory ModifiedPatricia
 
-imports Main "./HP" "./RLP" "../KEC"
+imports Main "./HP" "./RLP" "../lem/Keccak"
 
 begin
 

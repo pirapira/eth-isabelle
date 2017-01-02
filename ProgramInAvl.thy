@@ -16,7 +16,7 @@
 
 theory ProgramInAvl
 
-imports Main "./Instructions"  "~~/src/HOL/Data_Structures/AVL_Map"
+imports Main "~~/src/HOL/Data_Structures/AVL_Map" "./ContractSem"
 
 begin
 
