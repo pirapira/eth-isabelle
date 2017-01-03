@@ -6,6 +6,6 @@ Plan:
 ### 0.0.1 (not relased yet)
 
 Features:
- * EVM definition in Lem with all instructions
+ * EVM definition in Lem with all instructions; thanks Sami Mäkelä for the porting and bug spottings.
  * Execution of VM Tests
  * Example proofs in Isabelle/HOL in `example` directory
