@@ -1112,7 +1112,8 @@ val sstore : variable_ctx -> constant_ctx -> instruction_result
 let sstore v c = match v.vctx_stack with
  | addr :: vl :: stack_tail ->
       InstructionContinue (vctx_advance_pc c
-        (vctx_update_storage addr vl <| v with vctx_stack = stack_tail; vctx_touched_storage_index = addr :: v.vctx_touched_storage_index |>))
+        (vctx_update_storage addr vl
+           <| v with vctx_stack = stack_tail; vctx_touched_storage_index = addr :: v.vctx_touched_storage_index |>))
  | _ -> instruction_failure_result v
 end
 
@@ -1280,7 +1281,8 @@ let delegatecall v c = match v.vctx_stack with
           v.vctx_storage v.vctx_balance
           v.vctx_touched_storage_index
           (Just (* save the variable environment for returns *)
-            (<| (vctx_advance_pc c v) with vctx_stack = rest; vctx_memory_usage = M (M v.vctx_memory_usage e3 e4) e5 e6 |>, uint e5, uint e6))
+            (<| (vctx_advance_pc c v) with
+                 vctx_stack = rest; vctx_memory_usage = M (M v.vctx_memory_usage e3 e4) e5 e6 |>, uint e5, uint e6))
   | _ -> instruction_failure_result v
 end
 
@@ -1411,7 +1413,8 @@ val mload : variable_ctx -> constant_ctx -> instruction_result
 let mload v c = match v.vctx_stack with
  | pos :: rest ->
       let value = read_word_from_bytes 0 (cut_memory pos 32 v.vctx_memory) in
-      InstructionContinue (vctx_advance_pc c <| v with vctx_stack = value :: rest; vctx_memory_usage = M v.vctx_memory_usage pos 32 |>)
+      InstructionContinue
+        (vctx_advance_pc c <| v with vctx_stack = value :: rest; vctx_memory_usage = M v.vctx_memory_usage pos 32 |>)
  | _ -> instruction_failure_result v
 end
 
@@ -1518,8 +1521,9 @@ val sha3 : variable_ctx -> constant_ctx -> instruction_result
 let sha3 v c = match v.vctx_stack with
  | start :: len :: rest ->
       InstructionContinue (
-        vctx_advance_pc c <| v with vctx_stack = keccak (cut_memory start (word256ToNatural len) v.vctx_memory) :: rest;
-                                    vctx_memory_usage = M v.vctx_memory_usage start len |>)
+        vctx_advance_pc c
+           <| v with vctx_stack = keccak (cut_memory start (word256ToNatural len) v.vctx_memory) :: rest;
+                     vctx_memory_usage = M v.vctx_memory_usage start len |>)
  | _ -> instruction_failure_result v
 end
 
@@ -1573,7 +1577,8 @@ val L : integer -> integer
 let L x = x - x / 64
 
 (* Cgascap is the function denoted as C_{\text{\tiny GASCAP}} in the yellow paper. *)
-(* However, it takes the two topmost stack elements, a boolean indicating emptiness of the recipient, and the remaining gas of the caller *)
+(* However, it takes the two topmost stack elements,
+   a boolean indicating emptiness of the recipient, and the remaining gas of the caller *)
 val Cgascap : w256 -> w256 -> bool -> integer -> natural -> integer
 let Cgascap mu0 mu1 emp remaining_gas blocknumber =
   if remaining_gas >= Cextra mu1 emp blocknumber then
@@ -1582,7 +1587,8 @@ let Cgascap mu0 mu1 emp remaining_gas blocknumber =
     uint mu0
 
 (* Ccallgas is the function denoted as C_{\text{\tiny CALLGAS}} in the yellow paper. *)
-(* However, it takes the three topmost stack elements, a boolean indicating emptiness of the recipient, and the remaining gas of the caller *)
+(* However, it takes the three topmost stack elements,
+   a boolean indicating emptiness of the recipient, and the remaining gas of the caller *)
 val Ccallgas : w256 -> w256 -> w256 -> bool -> integer -> natural -> integer
 let Ccallgas mu0 mu1 mu2 emp remaining_gas blocknumber =
   if mu2 = 0 then
@@ -1591,7 +1597,8 @@ let Ccallgas mu0 mu1 mu2 emp remaining_gas blocknumber =
     Cgascap mu0 mu1 emp remaining_gas blocknumber + Gcallstipend
 
 (* Ccall is the function denoted as C_{\text{\tiny CALL}} *)
-(* However, it takes the three topmost stack elements, a boolean indicating emptiness of the recipient, and the remaining gas of the caller *)
+(* However, it takes the three topmost stack elements, a boolean indicating
+   emptiness of the recipient, and the remaining gas of the caller *)
 val Ccall : w256 -> w256 -> w256 -> bool -> integer -> natural -> integer
 let Ccall mu0 mu1 mu2 emp remaining_gas blocknumber = Cgascap mu0 mu1 emp remaining_gas blocknumber + Cextra mu2 emp blocknumber
 
@@ -1602,7 +1609,8 @@ let rec log256floor x =
   else 1 + log256floor (x / 256)
 
 (* thirdComponentOfC is the third component in the definition of C (the gas function). *)
-(* However, it takes the next instruction, the four topmost stack elements, a boolean indicating emptiness of the recipient, an original word of sstore, a new word of sstore, and the remaining gas of the caller. *)
+(* However, it takes the next instruction, the four topmost stack elements,
+   a boolean indicating emptiness of the recipient, an original word of sstore, a new word of sstore, and the remaining gas of the caller. *)
 val thirdComponentOfC : inst -> w256 -> w256 -> w256 -> w256 -> bool -> w256 -> w256 -> integer -> natural -> integer
 let thirdComponentOfC i s0 s1 s2 s3 recipient_empty orig_val new_val remaining_gas blocknumber =
   match i with
@@ -1682,7 +1690,9 @@ let thirdComponentOfC i s0 s1 s2 s3 recipient_empty orig_val new_val remaining_g
   end
 
 (* C is the function defined in the yellow paper as C.  This represents the gas consumption of an instruction. *)
-(* It takes the new memory consumption, the old memory consumption, the next instruction the four topmost stack elements, a boolean indicating emptiness of the recipient, an original word of sstore, a new word of sstore, and the remaining gas of the caller. *)
+(* It takes the new memory consumption, the old memory consumption, the next instruction the four
+   topmost stack elements, a boolean indicating emptiness of the recipient, an original word of sstore,
+   a new word of sstore, and the remaining gas of the caller. *)
 val C : integer -> integer -> inst -> w256 -> w256 -> w256 -> w256 -> bool -> w256 -> w256 -> integer -> natural -> integer
 let C old_memory_consumption new_memory_consumption i s0 s1 s2 s3 recipient_empty orig new_val remaining_gas blocknumber =
   Cmem new_memory_consumption  - Cmem old_memory_consumption +
@@ -1724,11 +1734,14 @@ let new_memory_consumption i v =
   | Misc CREATE ->
     M v.vctx_memory_usage (vctx_stack_default 1 v) (vctx_stack_default 2 v)
   | Misc CALL ->
-    M (M v.vctx_memory_usage (vctx_stack_default 3 v) (vctx_stack_default 4 v)) (vctx_stack_default 5 v) (vctx_stack_default 6 v)
+    M (M v.vctx_memory_usage (vctx_stack_default 3 v) (vctx_stack_default 4 v))
+      (vctx_stack_default 5 v) (vctx_stack_default 6 v)
   | Misc CALLCODE ->
-    M (M v.vctx_memory_usage (vctx_stack_default 3 v) (vctx_stack_default 4 v)) (vctx_stack_default 5 v) (vctx_stack_default 6 v)
+    M (M v.vctx_memory_usage (vctx_stack_default 3 v) (vctx_stack_default 4 v))
+      (vctx_stack_default 5 v) (vctx_stack_default 6 v)
   | Misc DELEGATECALL ->
-    M (M v.vctx_memory_usage (vctx_stack_default 2 v) (vctx_stack_default 3 v)) (vctx_stack_default 4 v) (vctx_stack_default 5 v)
+    M (M v.vctx_memory_usage (vctx_stack_default 2 v) (vctx_stack_default 3 v))
+      (vctx_stack_default 4 v) (vctx_stack_default 5 v)
   | Misc RETURN ->
     M v.vctx_memory_usage (vctx_stack_default 0 v) (vctx_stack_default 1 v)
   | Log _ -> M v.vctx_memory_usage (vctx_stack_default 0 v) (vctx_stack_default 1 v)
@@ -1737,9 +1750,10 @@ let new_memory_consumption i v =
 
 val predict_gas : inst -> variable_ctx -> constant_ctx -> integer
 let predict_gas i v c =
-  C v.vctx_memory_usage (new_memory_consumption i v) (vctx_next_instruction_default v c) (vctx_stack_default 0 v) (vctx_stack_default 1 v) (vctx_stack_default 2 v) (vctx_stack_default 3 v)
-    (not (v.vctx_account_existence (vctx_recipient v c))) (v.vctx_storage (vctx_stack_default 0 v)) (vctx_stack_default 1 v) (v.vctx_gas)
-    (word256ToNatural v.vctx_block.block_number)
+  C v.vctx_memory_usage (new_memory_consumption i v) (vctx_next_instruction_default v c)
+    (vctx_stack_default 0 v) (vctx_stack_default 1 v) (vctx_stack_default 2 v) (vctx_stack_default 3 v)
+    (not (v.vctx_account_existence (vctx_recipient v c))) (v.vctx_storage (vctx_stack_default 0 v))
+    (vctx_stack_default 1 v) (v.vctx_gas) (word256ToNatural v.vctx_block.block_number)
 
 val check_resources : variable_ctx -> constant_ctx -> list w256 -> inst -> bool
 let check_resources v c s i =
@@ -2056,7 +2070,8 @@ let empty_account addr =
 
 (* And after our contract makes a move, the account state is updated as follows. *)
 
-val update_account_state : account_state -> contract_action -> storage -> (address -> w256) -> maybe (variable_ctx * integer * integer) -> account_state
+val update_account_state :
+  account_state -> contract_action -> storage -> (address -> w256) -> maybe (variable_ctx * integer * integer) -> account_state
 let update_account_state prev act st bal v_opt =
    <| prev with
      account_storage = st;
