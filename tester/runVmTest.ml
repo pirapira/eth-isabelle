@@ -100,6 +100,7 @@ let test_one_case j : testResult =
     ; vctx_gas = Nat_big_num.of_string_nat (Big_int.string_of_big_int test_case.exec.gas)
     ; vctx_account_existence = construct_account_existence test_case.pre
     ; vctx_touched_storage_index = []
+    ; vctx_logs = []
     } in
   let () = Conv.print_variable_ctx v in
   let c : constant_ctx =
