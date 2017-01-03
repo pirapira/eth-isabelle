@@ -114,22 +114,22 @@ let test_one_case j : testResult =
   | ProgramStepRunOut ->
      let () = Printf.printf "ProgramStepRunOut\n" in
      TestFailure
-  | ProgramToEnvironment (ContractCall carg, st, bal, touched, pushed_opt) ->
+  | ProgramToEnvironment (ContractCall carg, st, bal, touched, logs, pushed_opt) ->
      let () = Printf.eprintf "We are not looking whatever happens after the contract calls\n" in
      TestSkipped
-  | ProgramToEnvironment (ContractDelegateCall carg, st, bal, touched, pushed_opt) ->
+  | ProgramToEnvironment (ContractDelegateCall carg, st, bal, touched, logs, pushed_opt) ->
      let () = Printf.eprintf "We are not looking whatever happens after the contract calls\n" in
      TestSkipped
-  | ProgramToEnvironment (ContractCreate carg, st, bal, touched, pushed_opt) ->
+  | ProgramToEnvironment (ContractCreate carg, st, bal, touched, logs, pushed_opt) ->
      let () = Printf.eprintf "We are not looking whatever happens after the contract creates" in
      TestSkipped
-  | ProgramToEnvironment (ContractFail, st, bal, touched, pushed_opt) ->
+  | ProgramToEnvironment (ContractFail, st, bal, touched, logs, pushed_opt) ->
      begin
        match test_case.callcreates, test_case.gas, test_case.logs, test_case.out, test_case.post with
        | [], None, None, None, None -> TestSuccess
        | _ -> failwith "some postconditions are there for a failing case"
      end
-  | ProgramToEnvironment (ContractSuicide, st, bal, touched, pushed_opt) ->
+  | ProgramToEnvironment (ContractSuicide, st, bal, touched, logs, pushed_opt) ->
      begin
        match test_case.callcreates, test_case.gas, test_case.logs, test_case.out, test_case.post with
        | spec_created, Some spec_gas, Some spec_logs, Some spec_out, Some spec_post ->
@@ -137,7 +137,7 @@ let test_one_case j : testResult =
           TestSuccess
        | _ -> failwith "Some post conditions not available"
      end
-  | ProgramToEnvironment (ContractReturn retval, st, bal, touched, None) ->
+  | ProgramToEnvironment (ContractReturn retval, st, bal, touched, logs, None) ->
      begin
        match test_case.callcreates, test_case.gas, test_case.logs, test_case.out, test_case.post with
        | spec_created, Some spec_gas, Some spec_logs, Some spec_out, Some spec_post ->
@@ -149,7 +149,7 @@ let test_one_case j : testResult =
           else TestSuccess
        | _ -> failwith "Some post conditions not available"
      end
-  | ProgramToEnvironment (ContractReturn retval, st, bal, touched, Some _) ->
+  | ProgramToEnvironment (ContractReturn retval, st, bal, touched, logs, Some _) ->
      let () = Printf.printf "unexpected return format\n" in
      TestFailure
   | ProgramInvalid ->

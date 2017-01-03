@@ -123,14 +123,14 @@ text "Next we specify which program results might see a return."
 fun returnable_result :: "program_result \<Rightarrow> bool"
 where
   "returnable_result ProgramStepRunOut = False"
-| "returnable_result (ProgramToEnvironment (ContractCall _) _ _ _ _) = True"
-| "returnable_result (ProgramToEnvironment (ContractDelegateCall _) _ _ _ _) = False"
-| "returnable_result (ProgramToEnvironment (ContractCreate _) _ _ _ _) = True"
-| "returnable_result (ProgramToEnvironment ContractSuicide _ _ _ _) = False"
-| "returnable_result (ProgramToEnvironment ContractFail _ _ _ _) = False"
+| "returnable_result (ProgramToEnvironment (ContractCall _) _ _ _ _ _) = True"
+| "returnable_result (ProgramToEnvironment (ContractDelegateCall _) _ _ _ _ _) = False"
+| "returnable_result (ProgramToEnvironment (ContractCreate _) _ _ _ _ _) = True"
+| "returnable_result (ProgramToEnvironment ContractSuicide _ _ _ _ _) = False"
+| "returnable_result (ProgramToEnvironment ContractFail _ _ _ _ _) = False"
 -- {* because we are not modeling nested calls here, the effect of the nested calls are modeled in
       account\_state\_return\_change *}
-| "returnable_result (ProgramToEnvironment (ContractReturn _) _ _ _ _) = False"
+| "returnable_result (ProgramToEnvironment (ContractReturn _) _ _ _ _ _) = False"
 | "returnable_result (ProgramInit _) = False"
 | "returnable_result ProgramInvalid = False"
 | "returnable_result ProgramAnnotationFailure = False"
@@ -138,14 +138,14 @@ where
 fun returnable_from_delegate_call :: "program_result \<Rightarrow> bool"
 where
   "returnable_from_delegate_call ProgramStepRunOut = False"
-| "returnable_from_delegate_call (ProgramToEnvironment (ContractCall _) _ _ _ _) = False"
-| "returnable_from_delegate_call (ProgramToEnvironment (ContractDelegateCall _) _ _ _ _) = True"
-| "returnable_from_delegate_call (ProgramToEnvironment (ContractCreate _) _ _ _ _) = False"
-| "returnable_from_delegate_call (ProgramToEnvironment ContractSuicide _ _ _ _) = False"
-| "returnable_from_delegate_call (ProgramToEnvironment ContractFail _ _ _ _) = False"
+| "returnable_from_delegate_call (ProgramToEnvironment (ContractCall _) _ _ _ _ _) = False"
+| "returnable_from_delegate_call (ProgramToEnvironment (ContractDelegateCall _) _ _ _ _ _) = True"
+| "returnable_from_delegate_call (ProgramToEnvironment (ContractCreate _) _ _ _ _ _) = False"
+| "returnable_from_delegate_call (ProgramToEnvironment ContractSuicide _ _ _ _ _) = False"
+| "returnable_from_delegate_call (ProgramToEnvironment ContractFail _ _ _ _ _) = False"
 -- {* because we are not modeling nested calls here, the effect of the nested calls are modeled in
       account\_state\_return\_change *}
-| "returnable_from_delegate_call (ProgramToEnvironment (ContractReturn _) _ _ _ _) = False"
+| "returnable_from_delegate_call (ProgramToEnvironment (ContractReturn _) _ _ _ _ _) = False"
 | "returnable_from_delegate_call (ProgramInit _) = False"
 | "returnable_from_delegate_call ProgramInvalid = False"
 | "returnable_from_delegate_call ProgramAnnotationFailure = False"
@@ -226,7 +226,7 @@ where
    (* if the program behaves like this, *)
    program_sem old_vctx cctx 
       (program_length (cctx_program cctx)) steps
-      = ProgramToEnvironment act st bal touched opt_v \<Longrightarrow>
+      = ProgramToEnvironment act st bal touched logs opt_v \<Longrightarrow>
 
    (* and if the account state is updated from the program's result, *)
    account_state_going_out
@@ -234,7 +234,7 @@ where
 
    (* the contract makes a move and udates the account state. *)
    contract_turn (old_account, old_vctx)
-      (account_state_going_out, ProgramToEnvironment act st bal touched opt_v)"
+      (account_state_going_out, ProgramToEnvironment act st bal touched logs opt_v)"
 
 | contract_annotation_failure:
   "(* If a constant environment is built from the old account state, *)  
@@ -280,8 +280,8 @@ Actually the rounds can go nowhere after this invocation fails.
 *}
 lemma no_entry_fail [dest!]:
 "star (one_round I)
-      (a, ProgramToEnvironment ContractFail st bal touched v_opt)
-      (b, c) \<Longrightarrow> b = a \<and> c = ProgramToEnvironment ContractFail st bal touched v_opt"
+      (a, ProgramToEnvironment ContractFail st bal touched logs v_opt)
+      (b, c) \<Longrightarrow> b = a \<and> c = ProgramToEnvironment ContractFail st bal touched logs v_opt"
 apply(drule star_case; simp)
 apply(simp add: one_round.simps add: environment_turn.simps)
 done
@@ -289,8 +289,8 @@ done
 text {* Similarly, the rounds can go nowhere after this invocation returns. *}
 lemma no_entry_return [dest!]:
 "star (one_round I)
-      (a, ProgramToEnvironment (ContractReturn data) st bal touched v_opt)
-      (b, c) \<Longrightarrow> b = a \<and> c = ProgramToEnvironment (ContractReturn data) st bal touched v_opt"
+      (a, ProgramToEnvironment (ContractReturn data) st bal touched logs v_opt)
+      (b, c) \<Longrightarrow> b = a \<and> c = ProgramToEnvironment (ContractReturn data) st bal touched logs v_opt"
 apply(drule star_case; simp)
 apply(simp add: one_round.simps add: environment_turn.simps)
 done
@@ -300,8 +300,8 @@ causes our contract to destroy itself.
 *}
 lemma no_entry_suicide [dest!]:
 "star (one_round I)
-      (a, ProgramToEnvironment ContractSuicide st bal touched v_opt)
-      (b, c) \<Longrightarrow> b = a \<and> c = ProgramToEnvironment ContractSuicide st bal touched v_opt"
+      (a, ProgramToEnvironment ContractSuicide st bal touched logs v_opt)
+      (b, c) \<Longrightarrow> b = a \<and> c = ProgramToEnvironment ContractSuicide st bal touched logs v_opt"
 apply(drule star_case; simp)
 apply(simp add: one_round.simps add: environment_turn.simps)
 done
@@ -344,7 +344,7 @@ where
 
 lemma no_assertion_failure_in_fail [simp] :
 "I state \<Longrightarrow>
- no_assertion_failure_post I (state, ProgramToEnvironment ContractFail st bal touched v_opt)"
+ no_assertion_failure_post I (state, ProgramToEnvironment ContractFail st bal touched logs v_opt)"
 apply(simp add: no_assertion_failure_post_def)
 done
 

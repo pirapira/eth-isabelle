@@ -1961,7 +1961,7 @@ let instruction_sem v c inst =
 
 type program_result =
 | ProgramStepRunOut (* the artificial step counter has run out *)
-| ProgramToEnvironment of contract_action * storage * (address -> w256) * list w256
+| ProgramToEnvironment of contract_action * storage * (address -> w256) * list w256 * list log_entry
    * maybe (variable_ctx * integer * integer)
   (** the program stopped execution because an instruction wants to talk to the environment
   for example because the execution returned, failed, or called an account.
@@ -2000,7 +2000,7 @@ let rec program_sem v c tiny_step remaining_steps = match remaining_steps with
  | 0 -> ProgramStepRunOut
  | remaining_steps + 1 ->
    if tiny_step <= 0 then
-     ProgramToEnvironment ContractFail v.vctx_storage_at_call v.vctx_balance_at_call [] Nothing else
+     ProgramToEnvironment ContractFail v.vctx_storage_at_call v.vctx_balance_at_call [] [] Nothing else
    if not (check_annotations v c) then ProgramAnnotationFailure else
    match vctx_next_instruction v c with
     | Nothing -> ProgramStepRunOut
@@ -2012,11 +2012,11 @@ let rec program_sem v c tiny_step remaining_steps = match remaining_steps with
            (blocked_program_sem new_v c (tiny_step - 1) (remaining_steps  (* + 1 *)))
            (blocked_program_sem new_v c c.cctx_program.program_length remaining_steps))
       | InstructionToEnvironment a st bal touched logs opt_pushed_v ->
-          ProgramToEnvironment a st bal touched opt_pushed_v
+          ProgramToEnvironment a st bal touched logs opt_pushed_v
       | InstructionAnnotationFailure -> ProgramAnnotationFailure
       end
     else
-      ProgramToEnvironment ContractFail v.vctx_storage_at_call v.vctx_balance_at_call [] Nothing
+      ProgramToEnvironment ContractFail v.vctx_storage_at_call v.vctx_balance_at_call [] [] Nothing
    end
 end
 and blocked_program_sem v c l p _ = program_sem v c l p
