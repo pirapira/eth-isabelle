@@ -1512,7 +1512,7 @@ let vctx_stack_default idx v =
 val create_log_entry : nat -> variable_ctx -> constant_ctx -> log_entry
 let create_log_entry n v c =
   <| log_addr = c.cctx_this
-   ; log_topics = take n v.vctx_stack
+   ; log_topics = drop 2 (take (n + 2) v.vctx_stack)
    ; log_data = vctx_returned_bytes v
   |>
 

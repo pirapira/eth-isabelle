@@ -133,14 +133,14 @@ let parse_states (asc : (string * json) list) : (string * account_state) list =
 type log =
   { logAddress : Big_int.big_int
   ; logData : string
-  ; topics : Big_int.big_int list (* TODO: parse more *)
+  ; topics : Big_int.big_int list
   }
 
 let parse_log (j : json) : log =
   Util.(
-  { logAddress = parse_big_int_from_field "address" j
+  { logAddress = parse_address_from_field "address" j
   ; logData = to_string (member "data" j)
-  ; topics = List.map (fun j -> parse_big_int_from_string (to_string j)) (to_list (member "topics" j))
+  ; topics = List.map (fun j -> parse_big_int_from_string ("0x" ^ to_string j)) (to_list (member "topics" j))
   }
   )
 

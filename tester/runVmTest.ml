@@ -70,6 +70,22 @@ let balance_comparison
   let actual_balance = Conv.big_int_of_word256 (actual_balance addr) in
   Big_int.eq_big_int spec_balance actual_balance
 
+let compare_topics (actual : Keccak.w256) (spec : Big_int.big_int) =
+  Big_int.eq_big_int spec (Conv.big_int_of_word256 actual)
+
+let compare_log_entry (actual : Evm.log_entry) (spec : log) =
+  assert(Big_int.eq_big_int (Conv.big_int_of_word160 actual.Evm.log_addr) spec.logAddress);
+  assert(BatList.for_all2 compare_topics actual.Evm.log_topics spec.topics);
+  assert(spec.logData = Conv.hex_string_of_byte_list "0x" actual.Evm.log_data);
+  true
+
+let log_comparison
+    (actual_log : Evm.log_entry list) (spec_log : log list) =
+  let actual_log = List.rev actual_log in
+  List.length actual_log = List.length spec_log &&
+    (BatList.for_all2 compare_log_entry actual_log spec_log)
+
+
 type testResult = TestSuccess | TestSkipped | TestFailure
 
 let test_one_case j : testResult =
@@ -146,6 +162,7 @@ let test_one_case j : testResult =
           if (got_retval <> spec_out) then TestFailure
           else if not (storage_comparison (Conv.word160_of_big_int test_case.exec.address) spec_post touched st) then TestFailure
           else if not (balance_comparison (Conv.word160_of_big_int test_case.exec.address) spec_post bal) then TestFailure
+          else if not (log_comparison logs spec_logs) then TestFailure
           else TestSuccess
        | _ -> failwith "Some post conditions not available"
      end
