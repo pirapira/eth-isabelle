@@ -2,5 +2,5 @@
 
 Features:
  * EVM definition in Lem with all instructions
- * VM Tests
+ * Execution of VM Tests
  * Example proofs in Isabelle/HOL in `example` directory

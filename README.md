@@ -2,11 +2,10 @@
 
 This repository contains
 
-* a Keccak-256 implementation in Isabelle/HOL `KEC.thy` (to be ported to Lem)
-* a RLP implementation (in progress) `RLP.thy`
 * an EVM implementation in Lem `lem/evm.lem`
+* a Keccak-256 implementation in Lem `lem/keccak.lem` (to be ported to Lem)
 * a form of functional correctness defined in Lem `lem/evmNonExec.lem`
-* a relational semantics that captures the callee's nondeterministic behavior `RelationalSem.thy`
+* a relational semantics that captures the environment's nondeterministic behavior `RelationalSem.thy`
 * some example verified contracts in `example`
 * a parser that parses hex code and emits an Isabelle/HOL expression representing the program `parser/hexparser.rb`
 
