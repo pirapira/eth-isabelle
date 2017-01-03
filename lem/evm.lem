@@ -949,6 +949,14 @@ type block_info = <|
 |>
 
 
+(* A log entry is something like this. *)
+type log_entry = <|
+  log_addr   : address;
+  log_topics : list w256;
+  log_data   : list byte;
+|>
+
+
 (* The variable context contains information that is relatively volatile. *)
 
 type variable_ctx = <|
@@ -968,7 +976,8 @@ type variable_ctx = <|
   vctx_block : block_info; (* the current block *)
   vctx_gas : integer; (* remaining gas before the instruction *)
   vctx_account_existence : address -> bool;
-  vctx_touched_storage_index : list w256
+  vctx_touched_storage_index : list w256;
+  vctx_logs : list log_entry
 |>
 
 (* The constant context contains information that is rather stable. *)
@@ -2128,7 +2137,8 @@ indreln [build_vctx_called : account_state -> call_env -> variable_ctx -> bool]
      vctx_block = block; (* the block information is chosen arbitrarily. *)
      vctx_gas = gas; (* the amount of gas is chosen arbitrarily. *)
      vctx_account_existence = existence; (* existence is chosen arbitrarily *)
-     vctx_touched_storage_index = []
+     vctx_touched_storage_index = [];
+     vctx_logs = []
    |>
 
 (* When an account returns to our contract, the variable environment is *)
@@ -2152,7 +2162,8 @@ indreln [build_vctx_returned : account_state -> return_result -> variable_ctx ->
 vctx_returned:
    forall a_code v_pc new_bal a_bal a_addr a_storage v_stack v_memory v_memory_usage
           v_storage v_balance v_caller v_value v_data v_init_storage v_init_balance
-          v_origin v_ext_program v_ext_program' v_block v_gas v_gas' mem_start mem_size r rest whichever v_ex v_ex' v_touched.
+          v_origin v_ext_program v_ext_program' v_block v_gas v_gas' mem_start mem_size
+          r rest whichever v_ex v_ex' v_touched v_logs.
    (is_call_like (a_code.program_content (v_pc - 1))) &&
    (word256UGE new_bal a_bal) ==> (* the balance might have increased *)
    build_vctx_returned
@@ -2180,6 +2191,7 @@ vctx_returned:
          ; vctx_gas = v_gas
          ; vctx_account_existence = v_ex
          ; vctx_touched_storage_index = v_touched
+         ; vctx_logs = v_logs
          |>, mem_start, mem_size) :: rest)
      ; account_killed = whichever
      |>
@@ -2207,4 +2219,5 @@ vctx_returned:
        ; vctx_gas = v_gas' (* safe approximation.  saving proof space *)
        ; vctx_account_existence = v_ex'
        ; vctx_touched_storage_index = v_touched
+       ; vctx_logs = v_logs
       |>)
