@@ -1001,17 +1001,18 @@ type instruction_result =
   * storage           (* the new storage content *)
   * (address -> w256) (* the new balance of all accounts *)
   * list w256         (* the list of possibly changed storage indices *)
+  * list log_entry    (* logs *)
   * maybe (variable_ctx * integer * integer) (* the variable environment to return to *)
 
 (* When the contract fails, the result of the instruction always looks like this: *)
 val instruction_failure_result : variable_ctx -> instruction_result
 let instruction_failure_result v =
-  InstructionToEnvironment ContractFail v.vctx_storage_at_call v.vctx_balance_at_call [] Nothing
+  InstructionToEnvironment ContractFail v.vctx_storage_at_call v.vctx_balance_at_call [] [] Nothing
 
 (* When the contract returns, the result of the instruction always looks like this: *)
 val instruction_return_result : list byte -> variable_ctx -> instruction_result
 let instruction_return_result x v =
-  InstructionToEnvironment (ContractReturn x) v.vctx_storage v.vctx_balance v.vctx_touched_storage_index Nothing
+  InstructionToEnvironment (ContractReturn x) v.vctx_storage v.vctx_balance v.vctx_touched_storage_index v.vctx_logs Nothing
 
 (* subsection {* Useful Functions for Defining EVM Operations *} *)
 
@@ -1258,6 +1259,7 @@ let call v c = match v.vctx_stack with
         v.vctx_storage
         (update_balance c.cctx_this (fun orig -> orig - e2) v.vctx_balance)
         v.vctx_touched_storage_index
+        v.vctx_logs
         (Just (* saving the variable environment for timing *)
           (<| (vctx_advance_pc c v) with
            vctx_stack = rest;
@@ -1289,6 +1291,7 @@ let delegatecall v c = match v.vctx_stack with
               callarg_output_size = e6 |>)
           v.vctx_storage v.vctx_balance
           v.vctx_touched_storage_index
+          v.vctx_logs
           (Just (* save the variable environment for returns *)
             (<| (vctx_advance_pc c v) with
                  vctx_stack = rest; vctx_memory_usage = M (M v.vctx_memory_usage e3 e4) e5 e6 |>, uint e5, uint e6))
@@ -1319,6 +1322,7 @@ let callcode v c = match v.vctx_stack with
           v.vctx_storage
           (update_balance c.cctx_this (fun orig -> orig - e2) v.vctx_balance)
           v.vctx_touched_storage_index
+          v.vctx_logs
           (Just (* saving the variable environment *)
             (<| (vctx_advance_pc c v) with
                   vctx_stack = rest;
@@ -1346,6 +1350,7 @@ let create v c = match v.vctx_stack with
              <| createarg_value = vl; createarg_code = code |>)
             v.vctx_storage new_balance
             v.vctx_touched_storage_index
+            v.vctx_logs
             (Just (* when returning to this invocation, use the following variable environment *)
               (<| (vctx_advance_pc c v) with vctx_stack = rest;
                  vctx_balance = new_balance;
@@ -1369,6 +1374,7 @@ let ret v _ =  match v.vctx_stack with
      InstructionToEnvironment (ContractReturn (vctx_returned_bytes new_v))
                            v.vctx_storage v.vctx_balance
                            v.vctx_touched_storage_index
+                           v.vctx_logs
                            Nothing (* No possibility of ever returning to this invocation. *)
  | _ -> instruction_failure_result v
 end
@@ -1376,7 +1382,8 @@ end
 (* STOP is simpler than RETURN: *)
 val stop : variable_ctx -> constant_ctx -> instruction_result
 let stop v _ =
-    InstructionToEnvironment (ContractReturn []) v.vctx_storage v.vctx_balance v.vctx_touched_storage_index Nothing
+    InstructionToEnvironment (ContractReturn []) v.vctx_storage v.vctx_balance v.vctx_touched_storage_index
+      v.vctx_logs Nothing
 
 (* POP removes the topmost element of the stack: *)
 val pop : variable_ctx -> constant_ctx -> instruction_result
@@ -1553,7 +1560,8 @@ let suicide v c = match v.vctx_stack with
         if addr = c.cctx_this then 0 else
         if addr = w256_to_address dst then v.vctx_balance c.cctx_this + v.vctx_balance addr else
         v.vctx_balance addr in
-     InstructionToEnvironment ContractSuicide v.vctx_storage new_balance v.vctx_touched_storage_index Nothing
+     InstructionToEnvironment ContractSuicide v.vctx_storage new_balance v.vctx_touched_storage_index
+        v.vctx_logs Nothing
  | _ -> instruction_failure_result v
 end
 
@@ -1787,9 +1795,9 @@ let subtract_gas consumption orig =
   | InstructionContinue v ->
     InstructionContinue (<| v with vctx_gas = v.vctx_gas - consumption |>)
   | InstructionAnnotationFailure -> InstructionAnnotationFailure
-  | InstructionToEnvironment act st bal touched Nothing -> InstructionToEnvironment act st bal touched Nothing
-  | InstructionToEnvironment act st bal touched (Just (v, dst, len)) ->
-    InstructionToEnvironment act st bal touched (Just (<|v with vctx_gas = v.vctx_gas - consumption|>, dst, len))
+  | InstructionToEnvironment act st bal touched logs Nothing -> InstructionToEnvironment act st bal touched logs Nothing
+  | InstructionToEnvironment act st bal touched logs (Just (v, dst, len)) ->
+    InstructionToEnvironment act st bal touched logs (Just (<|v with vctx_gas = v.vctx_gas - consumption|>, dst, len))
   end
 
 val word_exp : integer -> natural -> integer
@@ -2003,7 +2011,7 @@ let rec program_sem v c tiny_step remaining_steps = match remaining_steps with
          (strict_if (new_v.vctx_pc > v.vctx_pc)
            (blocked_program_sem new_v c (tiny_step - 1) (remaining_steps  (* + 1 *)))
            (blocked_program_sem new_v c c.cctx_program.program_length remaining_steps))
-      | InstructionToEnvironment a st bal touched opt_pushed_v ->
+      | InstructionToEnvironment a st bal touched logs opt_pushed_v ->
           ProgramToEnvironment a st bal touched opt_pushed_v
       | InstructionAnnotationFailure -> ProgramAnnotationFailure
       end
