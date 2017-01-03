@@ -977,7 +977,7 @@ type variable_ctx = <|
   vctx_gas : integer; (* remaining gas before the instruction *)
   vctx_account_existence : address -> bool;
   vctx_touched_storage_index : list w256;
-  vctx_logs : list log_entry
+  vctx_logs : list log_entry (* stored newest first *)
 |>
 
 (* The constant context contains information that is rather stable. *)
@@ -1502,13 +1502,22 @@ let vctx_stack_default idx v =
   | Nothing -> 0
   end
 
+val create_log_entry : nat -> variable_ctx -> constant_ctx -> log_entry
+let create_log_entry n v c =
+  <| log_addr = c.cctx_this
+   ; log_topics = take n v.vctx_stack
+   ; log_data = vctx_returned_bytes v
+  |>
+
 (* Logging is currently no-op, until some property about event logging is wanted. *)
 val log : nat -> variable_ctx -> constant_ctx -> instruction_result
 let log n v c =
+   let new_log_entry = create_log_entry n v c in
    InstructionContinue
     (vctx_advance_pc c (vctx_pop_stack (n+2)
        <| v with
-          vctx_memory_usage = M v.vctx_memory_usage (vctx_stack_default 0 v) (vctx_stack_default 1 v)
+          vctx_memory_usage = M v.vctx_memory_usage (vctx_stack_default 0 v) (vctx_stack_default 1 v);
+          vctx_logs = new_log_entry ::  v.vctx_logs
         |>))
 
 (* For SWAP operations, I first define a swap operations on lists. *)
