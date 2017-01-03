@@ -15,8 +15,7 @@ type env =
 let to_big_int j = Big_int.big_int_of_string (to_string j)
 
 
-let parse_big_int_from_field field j =
-  let str = to_string (Util.member field j) in
+let parse_big_int_from_string str =
   let str = BatString.(of_list
                          (List.filter
                             (fun c -> c <> '"')
@@ -25,9 +24,13 @@ let parse_big_int_from_field field j =
       Big_int.big_int_of_string str
     with e ->
       begin
-        let () = Printf.eprintf "parse error %s: %s %d%!\n" field str (String.length str) in
+        let () = Printf.eprintf "parse error %s %d%!\n" str (String.length str) in
         raise e
       end
+
+let parse_big_int_from_field field j =
+  let str = to_string (Util.member field j) in
+  parse_big_int_from_string str
 
 let parse_address_from_field field j =
   let str = to_string (Util.member field j) in
@@ -127,12 +130,26 @@ let parse_account_state (j : json) : account_state =
 let parse_states (asc : (string * json) list) : (string * account_state) list =
   List.map (fun (label, j) -> (label, parse_account_state j)) asc
 
+type log =
+  { logAddress : Big_int.big_int
+  ; logData : string
+  ; topics : Big_int.big_int list (* TODO: parse more *)
+  }
+
+let parse_log (j : json) : log =
+  Util.(
+  { logAddress = parse_big_int_from_field "address" j
+  ; logData = to_string (member "data" j)
+  ; topics = List.map (fun j -> parse_big_int_from_string (to_string j)) (to_list (member "topics" j))
+  }
+  )
+
 type test_case =
   { callcreates : json list
   ; env : env
   ; exec : exec
   ; gas : string option
-  ; logs : json list option
+  ; logs : log list option
   ; out : string option
   ; post : (string * account_state) list option
   ; pre : (string * account_state) list
@@ -217,7 +234,7 @@ let parse_test_case (j : json) : test_case =
       (try Some (to_string (member "gas" j))
        with Yojson.Basic.Util.Type_error _ -> None)
   ; logs =
-      (try Some (to_list (member "logs" j))
+      (try Some (List.map parse_log (to_list (member "logs" j)))
        with Yojson.Basic.Util.Type_error _ -> None)
   ; out =
       (try Some (to_string (member "out" j))
