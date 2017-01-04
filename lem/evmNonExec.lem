@@ -7,7 +7,7 @@ open import Evm
 
 val respond_to_call_correctly : (call_env -> contract_behavior) -> account_state -> bool
 let respond_to_call_correctly c a =
-  (forall call_env initial_vctx resulting_action final_state_pred.
+  (forall call_env initial_vctx resulting_action final_state_pred logs.
      build_vctx_called a call_env initial_vctx -->
          (* The specification says the execution should result in these *)
          c call_env = (resulting_action, final_state_pred) -->
@@ -17,35 +17,35 @@ let respond_to_call_correctly c a =
              r = ProgramStepRunOut ||
              (* the result matches the specification *)
              (exists pushed_vctx st bal touched.
-              r = ProgramToEnvironment resulting_action st bal touched pushed_vctx &&
+              r = ProgramToEnvironment resulting_action st bal touched logs pushed_vctx &&
               final_state_pred
                 (update_account_state a resulting_action st bal pushed_vctx))
            )))
 
 val respond_to_return_correctly : (return_result -> contract_behavior) -> account_state -> bool
 let respond_to_return_correctly r a =
-   (forall rr initial_vctx final_state_pred resulting_action.
+   (forall rr initial_vctx final_state_pred resulting_action logs.
        build_vctx_returned a rr initial_vctx -->
        r rr = (resulting_action, final_state_pred) -->
        (forall steps.
           (let r = program_sem initial_vctx (build_cctx a) a.account_code.program_length steps in
            r = ProgramStepRunOut ||
            (exists pushed_vctx st bal touched.
-            r = ProgramToEnvironment resulting_action st bal touched pushed_vctx &&
+            r = ProgramToEnvironment resulting_action st bal touched logs pushed_vctx &&
             final_state_pred
               (update_account_state (account_state_pop_ongoing_call a) resulting_action st bal pushed_vctx))
           )))
 
 val respond_to_fail_correctly : contract_behavior -> account_state -> bool
 let respond_to_fail_correctly f a =
-   (forall initial_vctx final_state_pred resulting_action.
+   (forall initial_vctx final_state_pred resulting_action logs.
       Just initial_vctx = build_vctx_failed a -->
       f = (resulting_action, final_state_pred) -->
       (forall steps.
         ( let r = program_sem initial_vctx (build_cctx a) a.account_code.program_length steps in
           r = ProgramStepRunOut ||
           (exists pushed_vctx st bal touched.
-             r = ProgramToEnvironment resulting_action st bal touched pushed_vctx &&
+             r = ProgramToEnvironment resulting_action st bal touched logs pushed_vctx &&
              final_state_pred (update_account_state (account_state_pop_ongoing_call a) resulting_action st bal pushed_vctx)))))
 
 indreln [account_state_responds_to_environment : (account_state -> bool) -> response_to_environment -> bool]
