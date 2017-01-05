@@ -24,6 +24,7 @@ When you see `\<Rightarrow>` in the source, try using the [Isabelle2016-1](https
 * yojson: use `opam install yojson`
 * bignum: use `opam install bignum`
 * easy-format: use `opam install easy-format`
+* bisect\_ppx: use `opam install bisect_ppx`
 
 ## How to read the proofs
 
@@ -50,8 +51,17 @@ $ make lem-ocaml
 And move to `tester` directory.
 ```
 $ cd tester
+``
+
+One way is to run the VM Test.
+```
 $ sh compile.sh
 $ ./runVmTest.native
+```
+
+Another way is to run the VM Test and measure the coverage.
+```
+$ sh measure_coverage.sh
 ```
 
 ## Makefile goals

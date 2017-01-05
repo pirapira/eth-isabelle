@@ -25,3 +25,5 @@ lem/word256.ml
 tester/*.native
 tester/_build
 output/
+tester/coverage/
+tester/bisect*.out
