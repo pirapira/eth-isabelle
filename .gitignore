@@ -19,6 +19,7 @@ lem/*.pdf
 lem/*.aux
 lem/keccak.ml
 lem/evm.ml
+lem/word8.ml
 lem/word160.ml
 lem/word256.ml
 tester/*.native
