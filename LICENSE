@@ -1,5 +1,10 @@
-All files except the [.ml] and [.thy] files in [lem] directory are distributed under Apache License Version 2.0.
-Those [.ml] and [.thy] files in [lem] directory are distributed under the terms in [lem/lem-license].
+All files except
+* the [.ml] and [.thy] files in [lem] directory and
+* the [tester/bisect_ppx_plugin*] files
+are distributed under Apache License Version 2.0.
+
+The [.ml] and [.thy] files in [lem] directory are distributed under the terms in [lem/lem-license].
+The [tester/bisect_ppx_plugin*] files are in the public domain as stated in these files.
 
 
 
