@@ -3,7 +3,7 @@
 This repository contains
 
 * an EVM implementation in Lem `lem/evm.lem`
-* a Keccak-256 implementation in Lem `lem/keccak.lem` (to be ported to Lem)
+* a Keccak-256 implementation in Lem `lem/keccak.lem`
 * a form of functional correctness defined in Lem `lem/evmNonExec.lem`
 * a relational semantics that captures the environment's nondeterministic behavior `RelationalSem.thy`
 * some example verified contracts in `example`
