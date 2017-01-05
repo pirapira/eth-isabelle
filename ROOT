@@ -24,7 +24,6 @@ session "deed" = "HOL" +
     "lem/Keccak"
     "lem/Evm"
   theories
-    ContractEnv
     ContractSem
     RelationalSem
     "example/Deed"
