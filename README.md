@@ -48,7 +48,7 @@ $ make lem-ocaml
 And move to `tester` directory.
 ```
 $ cd tester
-``
+```
 
 One way is to run the VM Test.
 ```
