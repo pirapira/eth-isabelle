@@ -27,3 +27,4 @@ tester/_build
 output/
 tester/coverage/
 tester/bisect*.out
+*.marks
