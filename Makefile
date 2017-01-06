@@ -19,7 +19,7 @@ all-isabelle: attic/Parse.thy ContractSem.thy RelationalSem.thy example/Optimiza
 doc: deed lem-pdf
 
 deed: document/output.pdf
-document/output.pdf: ContractSem.thy RelationalSem.thy example/Deed.thy document/root.tex lem/Evm.thy
+document/output.pdf: ContractSem.thy RelationalSem.thy example/Deed.thy document/root.tex lem/Evm.thy lem/Word256.thy lem/Word160.thy lem/Word8.thy lem/Keccak.thy
 	sh document_generation.sh
 
 lem-thy: lem/Block.thy lem/Evm.thy lem/EvmNonExec.thy lem/Keccak.thy lem/Rlp.thy lem/Word160.thy lem/Word256.thy lem/Word8.thy lem/Keccak.thy
