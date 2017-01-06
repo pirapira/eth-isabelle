@@ -21,6 +21,7 @@ When you see `\<Rightarrow>` in the source, try using the [Isabelle2016-1](https
 * [lem](http://www.cl.cam.ac.uk/~pes20/lem/built-doc/lem-manual.html#installation)
 * [OCaml](http://www.ocaml.org/) 4.02.3
 * [opam](https://opam.ocaml.org/) 1.2.2
+* ocamlfind: use `opam install ocamlfind`
 * yojson: use `opam install yojson`
 * bignum: use `opam install bignum`
 * easy-format: use `opam install easy-format`
