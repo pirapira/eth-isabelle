@@ -4787,7 +4787,7 @@ apply(drule star_case; auto)
 apply(case_tac steps; auto)
 done
 
-text {* It takes ?? hours to compile this proof on my machine.  Ten minutes
+text {* It takes 3 hours to compile this proof on my machine.  Ten minutes
 are spent translating the list of instructions into an AVL tree.
 Most of the rest is spent on following the proofs of the last two lemmata.
 Currently it's dealing with out-of-gas failures that can happen at any step.
