@@ -1,19 +1,36 @@
 theory Hoare
 
-imports Main "./ContractSem"
+imports Main "./lem/Evm"
 
 begin
-  
-(* With Hoare Triples, we cannot deal with programs that jump out *)
-(* However, as long as we stick to structured programming, it does not matter. *)
 
-(* position independent program representation *)
+(* Following Magnus Myreen's thesis "Formal verification of machine-code programs" 3.2.4 *)  
 
-  
-(* concatenation *)
-  
-(* if then else *)
-  
+datatype state_element =
+    StackHeightElm "nat"
+  | StackElm "nat * w256" (* position, value *)
+    (* The position is counted from the bottom *)
+    (* StackElement (0, 300) says the oldest element on the stack is 300 *)
+  | StorageElm "w256 * w256" (* index, value *)
+  | MemoryElm "w256 * byte" (* address, value *)
+  | LogElm "nat * log_entry" (* position, log *)
+    (* Log (0, entry) says that the first recorded log entry is 0 *)
+  | PcElm "int" (* program counter *)
+  | GasElm "int" (* remaining gas *)
+  | MemoryUsageElm "int" (* current memory usage *)
+  | CodeElm "int * inst" (* a position containing an instruction *)
+  | ThisAccountElm "address" (* The address of this account *)
+  | BlockInfoElm "block_info" (* the current block *)
+  | ActionToEnvironmentElm "contract_action option" (* None indicates continued execution *)
+
+
+(* The initial state should contain a lot of MemoryElm (x, 0).
+ * So the set representation should be concise for that.
+ *)
+
+
+(* Some rules about this if-then-else should be derivable. *)
+
 definition if_then_else :: "int \<Rightarrow> inst list \<Rightarrow> inst list \<Rightarrow> inst list \<Rightarrow> inst list"
 where
 "if_then_else beginning cond then_case else_case =
