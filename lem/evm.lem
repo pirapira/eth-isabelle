@@ -64,18 +64,6 @@ val byte_to_w256 : byte -> w256
 let byte_to_w256 w = word256FromNat (word8ToNat w)
 declare isabelle target_rep function byte_to_w256 = `Word.ucast`
 
-val test_bit : w256 -> nat -> bool
-let test_bit w n =
-  if w land (1 lsr n) = 0 then false
-  else true
-
-val word_rsplit256_aux : list bool -> nat -> list byte
-let rec word_rsplit256_aux lst n = match n with
- | 0 -> []
- | n+1 -> word8FromBoollist (take 8 lst) :: word_rsplit_aux (drop 8 lst) n
-end
-declare termination_argument  word_rsplit256_aux = automatic
-
 val word_rsplit256 : w256 -> list byte
 let word_rsplit256 w = (word_rsplit_aux (boolListFromWord256 w) 32)
 declare isabelle target_rep function word_rsplit256 = `word_rsplit`
@@ -621,36 +609,6 @@ end
 val inst_size : inst -> int
 let inst_size i = intFromNat (length (inst_code i))
 
-(* This can also be used to find jump destinations from a sequence of opcodes. *)
-
-val drop_bytes : list inst -> nat -> list inst
-let rec drop_bytes prg n = match (prg, n) with
-| (prg, 0) -> prg
-| (Stack (PUSH_N v) :: rest, bytes) -> drop_bytes rest (bytes - 1 - length v)
-| (Annotation _ :: rest, bytes) -> drop_bytes rest bytes
-| (_ :: rest, bytes) -> drop_bytes rest (bytes - 1)
-| _ -> []
-end
-declare termination_argument drop_bytes = automatic
-
-(* Also it is possible to compute the size of a program as the number of bytes, *)
-
-val program_size : list inst -> int
-let rec program_size lst = match lst with
-| i :: rest -> inst_size i + program_size rest
-| [] -> 0
-end
-declare termination_argument program_size = automatic
-
-(* as well as computing the byte representation of the program. *)
-
-val program_code : list inst -> list byte
-let rec program_code lst = match lst with
-| [] -> []
-| inst :: rest -> inst_code inst ++ program_code rest
-end
-declare termination_argument program_code = automatic
-
 (* section "Gas schedule" *)
 
 val Gzero : integer
@@ -1043,13 +1001,6 @@ val vctx_pop_stack : nat -> variable_ctx -> variable_ctx
 let vctx_pop_stack n v =
  <| v with vctx_stack = drop n v.vctx_stack |>
 
-(* Peeking the topmost element of the stack: *)
-val vctx_stack_top : variable_ctx -> maybe w256
-let vctx_stack_top v = match v.vctx_stack with
- | h :: _ -> Just h
- | [] -> Nothing
-end
-
 (* Updating the storage at an index: *)
 val vctx_update_storage : w256 -> w256-> variable_ctx -> variable_ctx
 let vctx_update_storage idx vall v =
@@ -1085,15 +1036,6 @@ val stack_1_1_op : variable_ctx -> constant_ctx -> (w256 -> w256) -> instruction
 let stack_1_1_op v c f = match v.vctx_stack with
   | [] -> instruction_failure_result v
   | h :: t -> InstructionContinue (vctx_advance_pc c <| v with vctx_stack = f h :: t |>)
-end
-
-(* A general pattern of operations that consume one word and produce two rwords: *)
-val stack_1_2_op : variable_ctx -> constant_ctx -> (w256 -> w256 * w256) -> instruction_result
-let stack_1_2_op v c f = match v.vctx_stack with
- | [] -> instruction_failure_result v
- | h :: t ->
-     let (new0, new1) = f h in
-     InstructionContinue (vctx_advance_pc c <| v with vctx_stack = new0 :: new1 :: t |>)
 end
 
 (* A general pattern of operations that take two words and produce one word: *)
