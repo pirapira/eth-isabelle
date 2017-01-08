@@ -7,7 +7,7 @@ begin
 (* Following Magnus Myreen's thesis "Formal verification of machine-code programs" 3.2.4 *)  
 
 datatype state_element =
-    StackHeightElm "nat"
+    StackHeightElm "nat"  (* considering making it int *)
   | StackElm "nat * w256" (* position, value *)
     (* The position is counted from the bottom *)
     (* StackElement (0, 300) says the oldest element on the stack is 300 *)
@@ -20,14 +20,78 @@ datatype state_element =
   | MemoryUsageElm "int" (* current memory usage *)
   | CodeElm "int * inst" (* a position containing an instruction *)
   | ThisAccountElm "address" (* The address of this account *)
-  | BlockInfoElm "block_info" (* the current block *)
+  | BalanceElm "address * w256" (* address, amount *)
+  | BlockInfoElm "block_info" (* the current block.  This might be broken down to more elements. *)
+  | CallerElm "address"
+  | OriginElm "address"
+  | SentValueElm "w256"
+  | SentDataLengthElm "nat" (* considering making it int *)
+  | SentDataElm "nat * byte" (* position, content.  Considering making position an int *)
+  | ExtProgramSizeElm "address * int" (* address, size.  Considering making size an int *)
+  | ExtProgramElm "address * nat * byte" (* address, position, byte.  Considering making position an int *)
   | ActionToEnvironmentElm "contract_action option" (* None indicates continued execution *)
 
 
-(* The initial state should contain a lot of MemoryElm (x, 0).
- * So the set representation should be concise for that.
- *)
+definition memory_as_set :: "memory \<Rightarrow> state_element set"
+  where
+    "memory_as_set m == { MemoryElm (a, v) | a v. m a = v }"
+    
+definition storage_as_set :: "storage \<Rightarrow> state_element set"
+  where
+    "storage_as_set s == { StorageElm (i, v) | i v. s i = v}"
 
+definition balance_as_set :: "(address \<Rightarrow> w256) \<Rightarrow> state_element set"
+  where
+    "balance_as_set b == { BalanceElm (a, v) | a v. b a = v }"
+
+definition stack_as_set :: "w256 list \<Rightarrow> state_element set"
+  where
+    "stack_as_set s == { StackHeightElm (length s) } \<union>
+                       { StackElm (idx, v) | idx v. s ! idx = v }"
+
+definition data_sent_as_set :: "byte list \<Rightarrow> state_element set"
+  where
+    "data_sent_as_set lst == { SentDataLengthElm (length lst) } \<union>
+                             { SentDataElm (idx, v) | idx v. lst ! idx = v }"
+
+definition ext_program_as_set :: "(address \<Rightarrow> program) \<Rightarrow> state_element set"
+  where
+    "ext_program_as_set ext ==
+      { ExtProgramSizeElm (adr, s) | adr s. program_length (ext adr) = s } \<union>
+      { ExtProgramElm (adr, pos, b) | adr pos b. program_as_natural_map (ext adr) pos = b }
+    "
+
+definition log_as_set :: "log_entry list \<Rightarrow> state_element set"
+  where
+    "log_as_set logs ==
+      { LogElm (pos, l) | pos l. logs ! pos = l}
+    "
+
+definition program_as_set :: "program \<Rightarrow> state_element set"
+  where
+    "program_as_set prg ==
+      { CodeElm (pos, i) | pos i. program_content prg pos = Some i  } \<union>
+      { CodeElm (pos, Misc STOP) | pos. program_content prg pos = None }
+    "
+
+definition context_as_set :: "variable_ctx \<Rightarrow> constant_ctx \<Rightarrow> state_element set"
+  where
+    "context_as_set v c ==
+       stack_as_set (vctx_stack v)
+    \<union> memory_as_set (vctx_memory v)
+    \<union> storage_as_set (vctx_storage v)
+    \<union> balance_as_set (vctx_balance v)
+    \<union> log_as_set (vctx_logs v)
+    \<union> program_as_set (cctx_program c)
+    \<union> { MemoryUsageElm (vctx_memory_usage v)
+      , CallerElm (vctx_caller v)
+      , SentValueElm (vctx_value_sent v)
+      , OriginElm (vctx_origin v)
+      , BlockInfoElm (vctx_block v)
+      , GasElm (vctx_gas v)
+      , ThisAccountElm (cctx_this c)
+      }
+    "
 
 (* Some rules about this if-then-else should be derivable. *)
 
