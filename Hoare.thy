@@ -37,7 +37,7 @@ definition contract_action_as_set :: "contract_action \<Rightarrow> state_elemen
 definition memory_as_set :: "memory \<Rightarrow> state_element set"
   where
     "memory_as_set m == { MemoryElm (a, v) | a v. m a = v }"
-    
+
 definition storage_as_set :: "storage \<Rightarrow> state_element set"
   where
     "storage_as_set s == { StorageElm (i, v) | i v. s i = v}"
@@ -167,9 +167,9 @@ definition program_result_as_set :: "constant_ctx \<Rightarrow> program_result \
         | ProgramInit _ \<Rightarrow> {}
         )"
 
-definition code :: "(int \<Rightarrow> inst option) \<Rightarrow> state_element set \<Rightarrow> bool"
+definition code :: "(int * inst) set \<Rightarrow> state_element set \<Rightarrow> bool"
   where
-    "code f s == s = { CodeElm(pos, i) | pos i. f pos = Some i }"
+    "code f s == s = { CodeElm(pos, i) | pos i. (pos, i) \<in> f }"
 
 definition no_assertion :: "constant_ctx \<Rightarrow> bool"
   where "no_assertion c == (\<forall> pos. program_annotation (cctx_program c) pos = [])"
@@ -178,15 +178,14 @@ definition recent_protocol :: "variable_ctx \<Rightarrow> bool"
   where "recent_protocol v == block_number (vctx_block v) \<ge> 2463000"
 
 definition triple ::
- "(state_element set \<Rightarrow> bool) \<Rightarrow> (int \<Rightarrow> inst option) \<Rightarrow> (state_element set \<Rightarrow> bool) \<Rightarrow> bool"
+ "(state_element set \<Rightarrow> bool) \<Rightarrow> (int * inst) set \<Rightarrow> (state_element set \<Rightarrow> bool) \<Rightarrow> bool"
 where
   "triple pre insts post ==
     \<forall> va_ctx co_ctx rest. no_assertion co_ctx \<longrightarrow> recent_protocol va_ctx \<longrightarrow>
        (pre ** code insts ** rest) (contexts_as_set va_ctx co_ctx) \<longrightarrow>
-       (\<exists> k. (post ** code insts ** rest) (program_result_as_set co_ctx (program_sem va_ctx co_ctx k (nat k))))
-"
+       (\<exists> k. (post ** code insts ** rest) (program_result_as_set co_ctx (program_sem va_ctx co_ctx k (nat k))))"
 
-  
+
 (* Some rules about this if-then-else should be derivable. *)
 
 definition if_then_else :: "int \<Rightarrow> inst list \<Rightarrow> inst list \<Rightarrow> inst list \<Rightarrow> inst list"
