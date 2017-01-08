@@ -74,24 +74,30 @@ definition program_as_set :: "program \<Rightarrow> state_element set"
       { CodeElm (pos, Misc STOP) | pos. program_content prg pos = None }
     "
 
-definition context_as_set :: "variable_ctx \<Rightarrow> constant_ctx \<Rightarrow> state_element set"
+definition constant_ctx_as_set :: "constant_ctx \<Rightarrow> state_element set"
   where
-    "context_as_set v c ==
+    "constant_ctx_as_set c == program_as_set (cctx_program c) \<union> { ThisAccountElm (cctx_this c) }"
+
+definition variable_ctx_as_set :: "variable_ctx \<Rightarrow> state_element set"
+  where
+    "variable_ctx_as_set v ==
        stack_as_set (vctx_stack v)
     \<union> memory_as_set (vctx_memory v)
     \<union> storage_as_set (vctx_storage v)
     \<union> balance_as_set (vctx_balance v)
     \<union> log_as_set (vctx_logs v)
-    \<union> program_as_set (cctx_program c)
     \<union> { MemoryUsageElm (vctx_memory_usage v)
       , CallerElm (vctx_caller v)
       , SentValueElm (vctx_value_sent v)
       , OriginElm (vctx_origin v)
       , BlockInfoElm (vctx_block v)
       , GasElm (vctx_gas v)
-      , ThisAccountElm (cctx_this c)
-      }
-    "
+      }"
+
+definition contexts_as_set :: "variable_ctx \<Rightarrow> constant_ctx \<Rightarrow> state_element set"
+  where
+    "contexts_as_set v c ==
+       constant_ctx_as_set c \<union> variable_ctx_as_set v"
 
 (* From Magnus Myreen's thesis, Section 3.3 *)
 definition sep :: "(state_element set \<Rightarrow> bool) \<Rightarrow> (state_element set \<Rightarrow> bool) \<Rightarrow> state_element set \<Rightarrow> bool"
@@ -126,23 +132,24 @@ apply(auto simp add: sep_def stack_def)
 done
 
 lemma stack_sound1 :
-  "StackElm (pos, w) \<in> context_as_set var con \<Longrightarrow> vctx_stack var ! pos = w"
-  apply(auto simp add: context_as_set_def stack_as_set_def memory_as_set_def
+  "StackElm (pos, w) \<in> contexts_as_set var con \<Longrightarrow> vctx_stack var ! pos = w"
+  apply(simp add: contexts_as_set_def variable_ctx_as_set_def constant_ctx_as_set_def
+      stack_as_set_def memory_as_set_def
       balance_as_set_def storage_as_set_def log_as_set_def program_as_set_def)
   done
 
 lemma stack_sem :
-  "(stack pos w ** p) (context_as_set var con) \<Longrightarrow> vctx_stack var ! pos = w"
+  "(stack pos w ** p) (contexts_as_set var con) \<Longrightarrow> vctx_stack var ! pos = w"
   apply(drule stack_sound0)
   apply(drule stack_sound1)
   apply(simp)
   done
 
-definition program_result_as_set :: "program_result \<Rightarrow> state_element set"
+definition program_result_as_set :: "constant_ctx \<Rightarrow> program_result \<Rightarrow> state_element set"
   where
-    "program_result_as_set rslt =
+    "program_result_as_set c rslt =
         ( case rslt of
-          ProgramStepRunOut \<Rightarrow> {} (* This needs to return the current contexts *)
+          ProgramStepRunOut v \<Rightarrow> {} (* This needs to return the current contexts *)
         | ProgramInvalid \<Rightarrow> {}
         | ProgramAnnotationFailure \<Rightarrow> {} (* need to assume no annotation failure somewhere *)
         | ProgramInit _ \<Rightarrow> {}
