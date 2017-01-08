@@ -136,7 +136,18 @@ lemma stack_sem :
   apply(drule stack_sound0)
   apply(drule stack_sound1)
   apply(simp)
-done
+  done
+
+definition program_result_as_set :: "program_result \<Rightarrow> state_element set"
+  where
+    "program_result_as_set rslt =
+        ( case rslt of
+          ProgramStepRunOut \<Rightarrow> {} (* This needs to return the current contexts *)
+        | ProgramInvalid \<Rightarrow> {}
+        | ProgramAnnotationFailure \<Rightarrow> {} (* need to assume no annotation failure somewhere *)
+        | ProgramInit _ \<Rightarrow> {}
+        )"
+
 
 (* Some rules about this if-then-else should be derivable. *)
 
