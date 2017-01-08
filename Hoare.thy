@@ -29,8 +29,10 @@ datatype state_element =
   | SentDataElm "nat * byte" (* position, content.  Considering making position an int *)
   | ExtProgramSizeElm "address * int" (* address, size.  Considering making size an int *)
   | ExtProgramElm "address * nat * byte" (* address, position, byte.  Considering making position an int *)
-  | ActionToEnvironmentElm "contract_action option" (* None indicates continued execution *)
+  | ContractActionElm "contract_action option" (* None indicates continued execution *)
 
+definition contract_action_as_set :: "contract_action \<Rightarrow> state_element set"
+  where "contract_action_as_set act == { ContractActionElm (Some act) }"
 
 definition memory_as_set :: "memory \<Rightarrow> state_element set"
   where
@@ -149,7 +151,15 @@ definition program_result_as_set :: "constant_ctx \<Rightarrow> program_result \
   where
     "program_result_as_set c rslt =
         ( case rslt of
-          ProgramStepRunOut v \<Rightarrow> {} (* This needs to return the current contexts *)
+          ProgramStepRunOut v \<Rightarrow> contexts_as_set v c \<union> { ContractActionElm None }
+        | ProgramToEnvironment act st bal _ logs None \<Rightarrow>
+          constant_ctx_as_set c \<union>
+          contract_action_as_set act \<union> storage_as_set st \<union> balance_as_set bal \<union> log_as_set logs
+        | ProgramToEnvironment act st bal _ logs (Some (v, _, _)) \<Rightarrow>
+          (* I'm not sure if this treatment acutally works.  This result initializes some
+           * synchronous external communication.  *)
+          contexts_as_set v c \<union>
+          contract_action_as_set act \<union> storage_as_set st \<union> balance_as_set bal \<union> log_as_set logs
         | ProgramInvalid \<Rightarrow> {}
         | ProgramAnnotationFailure \<Rightarrow> {} (* need to assume no annotation failure somewhere *)
         | ProgramInit _ \<Rightarrow> {}
