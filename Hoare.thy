@@ -98,8 +98,45 @@ definition sep :: "(state_element set \<Rightarrow> bool) \<Rightarrow> (state_e
   where
     "sep p q s == \<exists> u v. p u \<and> q v \<and> u \<union> v = s \<and> u \<inter> v = {} "
 
-notation sep (infixr "*" 60)
+notation sep (infixr "**" 60)
 
+definition emp :: "state_element set \<Rightarrow> bool"
+  where
+    "emp s == (s = {})"
+
+definition pure :: "bool \<Rightarrow> state_element set \<Rightarrow> bool"
+  where
+    "pure b s == emp s \<and> b"
+
+notation pure ("\<langle> _ \<rangle>")
+  
+definition stack_height :: "nat \<Rightarrow> state_element set \<Rightarrow> bool"
+  where
+    "stack_height h s == (s = {StackHeightElm h})"
+
+definition stack :: "nat \<Rightarrow> w256 \<Rightarrow> state_element set \<Rightarrow> bool"
+  where
+    "stack pos v s == (s = {StackElm (pos, v)})"
+
+(* memory8, memory, calldata, and storage should be added here *)
+
+lemma stack_sound0 :
+  "(stack pos w ** p) s \<Longrightarrow> StackElm (pos, w) \<in> s"
+apply(auto simp add: sep_def stack_def)
+done
+
+lemma stack_sound1 :
+  "StackElm (pos, w) \<in> context_as_set var con \<Longrightarrow> vctx_stack var ! pos = w"
+  apply(auto simp add: context_as_set_def stack_as_set_def memory_as_set_def
+      balance_as_set_def storage_as_set_def log_as_set_def program_as_set_def)
+  done
+
+lemma stack_sem :
+  "(stack pos w ** p) (context_as_set var con) \<Longrightarrow> vctx_stack var ! pos = w"
+  apply(drule stack_sound0)
+  apply(drule stack_sound1)
+  apply(simp)
+done
 
 (* Some rules about this if-then-else should be derivable. *)
 
