@@ -29,8 +29,10 @@ datatype state_element =
   | SentDataElm "nat * byte" (* position, content.  Considering making position an int *)
   | ExtProgramSizeElm "address * int" (* address, size.  Considering making size an int *)
   | ExtProgramElm "address * nat * byte" (* address, position, byte.  Considering making position an int *)
-  | ActionToEnvironmentElm "contract_action option" (* None indicates continued execution *)
+  | ContractActionElm "contract_action option" (* None indicates continued execution *)
 
+definition contract_action_as_set :: "contract_action \<Rightarrow> state_element set"
+  where "contract_action_as_set act == { ContractActionElm (Some act) }"
 
 definition memory_as_set :: "memory \<Rightarrow> state_element set"
   where
@@ -74,24 +76,30 @@ definition program_as_set :: "program \<Rightarrow> state_element set"
       { CodeElm (pos, Misc STOP) | pos. program_content prg pos = None }
     "
 
-definition context_as_set :: "variable_ctx \<Rightarrow> constant_ctx \<Rightarrow> state_element set"
+definition constant_ctx_as_set :: "constant_ctx \<Rightarrow> state_element set"
   where
-    "context_as_set v c ==
+    "constant_ctx_as_set c == program_as_set (cctx_program c) \<union> { ThisAccountElm (cctx_this c) }"
+
+definition variable_ctx_as_set :: "variable_ctx \<Rightarrow> state_element set"
+  where
+    "variable_ctx_as_set v ==
        stack_as_set (vctx_stack v)
     \<union> memory_as_set (vctx_memory v)
     \<union> storage_as_set (vctx_storage v)
     \<union> balance_as_set (vctx_balance v)
     \<union> log_as_set (vctx_logs v)
-    \<union> program_as_set (cctx_program c)
     \<union> { MemoryUsageElm (vctx_memory_usage v)
       , CallerElm (vctx_caller v)
       , SentValueElm (vctx_value_sent v)
       , OriginElm (vctx_origin v)
       , BlockInfoElm (vctx_block v)
       , GasElm (vctx_gas v)
-      , ThisAccountElm (cctx_this c)
-      }
-    "
+      }"
+
+definition contexts_as_set :: "variable_ctx \<Rightarrow> constant_ctx \<Rightarrow> state_element set"
+  where
+    "contexts_as_set v c ==
+       constant_ctx_as_set c \<union> variable_ctx_as_set v"
 
 (* From Magnus Myreen's thesis, Section 3.3 *)
 definition sep :: "(state_element set \<Rightarrow> bool) \<Rightarrow> (state_element set \<Rightarrow> bool) \<Rightarrow> state_element set \<Rightarrow> bool"
@@ -126,18 +134,59 @@ apply(auto simp add: sep_def stack_def)
 done
 
 lemma stack_sound1 :
-  "StackElm (pos, w) \<in> context_as_set var con \<Longrightarrow> vctx_stack var ! pos = w"
-  apply(auto simp add: context_as_set_def stack_as_set_def memory_as_set_def
+  "StackElm (pos, w) \<in> contexts_as_set var con \<Longrightarrow> vctx_stack var ! pos = w"
+  apply(simp add: contexts_as_set_def variable_ctx_as_set_def constant_ctx_as_set_def
+      stack_as_set_def memory_as_set_def
       balance_as_set_def storage_as_set_def log_as_set_def program_as_set_def)
   done
 
 lemma stack_sem :
-  "(stack pos w ** p) (context_as_set var con) \<Longrightarrow> vctx_stack var ! pos = w"
+  "(stack pos w ** p) (contexts_as_set var con) \<Longrightarrow> vctx_stack var ! pos = w"
   apply(drule stack_sound0)
   apply(drule stack_sound1)
   apply(simp)
-done
+  done
 
+definition program_result_as_set :: "constant_ctx \<Rightarrow> program_result \<Rightarrow> state_element set"
+  where
+    "program_result_as_set c rslt =
+        ( case rslt of
+          ProgramStepRunOut v \<Rightarrow> contexts_as_set v c \<union> { ContractActionElm None }
+        | ProgramToEnvironment act st bal _ logs None \<Rightarrow>
+          constant_ctx_as_set c \<union>
+          contract_action_as_set act \<union> storage_as_set st \<union> balance_as_set bal \<union> log_as_set logs
+        | ProgramToEnvironment act st bal _ logs (Some (v, _, _)) \<Rightarrow>
+          (* I omit the variable_env.  This result initializes some
+           * synchronous external communication.  Maybe I have to add some special
+           * transformation on the state_element set
+           *)
+          constant_ctx_as_set c \<union>
+          contract_action_as_set act \<union> storage_as_set st \<union> balance_as_set bal \<union> log_as_set logs
+        | ProgramInvalid \<Rightarrow> {}
+        | ProgramAnnotationFailure \<Rightarrow> {} (* need to assume no annotation failure somewhere *)
+        | ProgramInit _ \<Rightarrow> {}
+        )"
+
+definition code :: "(int \<Rightarrow> inst option) \<Rightarrow> state_element set \<Rightarrow> bool"
+  where
+    "code f s == s = { CodeElm(pos, i) | pos i. f pos = Some i }"
+
+definition no_assertion :: "constant_ctx \<Rightarrow> bool"
+  where "no_assertion c == (\<forall> pos. program_annotation (cctx_program c) pos = [])"
+
+definition recent_protocol :: "variable_ctx \<Rightarrow> bool"
+  where "recent_protocol v == block_number (vctx_block v) \<ge> 2463000"
+
+definition triple ::
+ "(state_element set \<Rightarrow> bool) \<Rightarrow> (int \<Rightarrow> inst option) \<Rightarrow> (state_element set \<Rightarrow> bool) \<Rightarrow> bool"
+where
+  "triple pre insts post ==
+    \<forall> va_ctx co_ctx rest. no_assertion co_ctx \<longrightarrow> recent_protocol va_ctx \<longrightarrow>
+       (pre ** code insts ** rest) (contexts_as_set va_ctx co_ctx) \<longrightarrow>
+       (\<exists> k. (post ** code insts ** rest) (program_result_as_set co_ctx (program_sem va_ctx co_ctx k (nat k))))
+"
+
+  
 (* Some rules about this if-then-else should be derivable. *)
 
 definition if_then_else :: "int \<Rightarrow> inst list \<Rightarrow> inst list \<Rightarrow> inst list \<Rightarrow> inst list"
