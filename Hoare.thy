@@ -104,6 +104,13 @@ definition emp :: "state_element set \<Rightarrow> bool"
   where
     "emp s == (s = {})"
 
+definition pure :: "bool \<Rightarrow> state_element set \<Rightarrow> bool"
+  where
+    "pure b s == emp s \<and> b"
+
+notation pure ("\<langle> _ \<rangle>")
+
+  
 
 (* Some rules about this if-then-else should be derivable. *)
 
