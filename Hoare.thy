@@ -156,9 +156,11 @@ definition program_result_as_set :: "constant_ctx \<Rightarrow> program_result \
           constant_ctx_as_set c \<union>
           contract_action_as_set act \<union> storage_as_set st \<union> balance_as_set bal \<union> log_as_set logs
         | ProgramToEnvironment act st bal _ logs (Some (v, _, _)) \<Rightarrow>
-          (* I'm not sure if this treatment actually works.  This result initializes some
-           * synchronous external communication.  *)
-          contexts_as_set v c \<union>
+          (* I omit the variable_env.  This result initializes some
+           * synchronous external communication.  Maybe I have to add some special
+           * transformation on the state_element set
+           *)
+          constant_ctx_as_set c \<union>
           contract_action_as_set act \<union> storage_as_set st \<union> balance_as_set bal \<union> log_as_set logs
         | ProgramInvalid \<Rightarrow> {}
         | ProgramAnnotationFailure \<Rightarrow> {} (* need to assume no annotation failure somewhere *)
