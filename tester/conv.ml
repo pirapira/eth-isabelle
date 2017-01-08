@@ -108,7 +108,7 @@ let format_program_result (r : Evm.program_result) : Easy_format.t =
   let open Evm in
   let open Easy_format in
   match r with
-  | ProgramStepRunOut -> Atom ("ProgramStepRunOut", atom)
+  | ProgramStepRunOut _ -> Atom ("ProgramStepRunOut", atom)
   | ProgramToEnvironment (act, storage, bal, touched, logs, stashed_opt) ->
      Label ((Atom ("ProgramToEnvironment", atom), label),
             List (list_usual, format_quad_as_list act storage bal stashed_opt))

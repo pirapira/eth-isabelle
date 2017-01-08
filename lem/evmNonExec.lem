@@ -14,7 +14,7 @@ let respond_to_call_correctly c a =
          (forall steps. (* and for any number of steps *)
            ( let r = program_sem initial_vctx (build_cctx a) a.account_code.program_length steps in
              (* either more steps are necessary, or *)
-             r = ProgramStepRunOut ||
+             (exists x y. r = ProgramStepRunOut x y) ||
              (* the result matches the specification *)
              (exists pushed_vctx st bal touched logs.
               r = ProgramToEnvironment resulting_action st bal touched logs pushed_vctx &&
@@ -29,7 +29,7 @@ let respond_to_return_correctly r a =
        r rr = (resulting_action, final_state_pred) -->
        (forall steps.
           (let r = program_sem initial_vctx (build_cctx a) a.account_code.program_length steps in
-           r = ProgramStepRunOut ||
+           (exists x y. r = ProgramStepRunOut x y) ||
            (exists pushed_vctx st bal touched logs.
             r = ProgramToEnvironment resulting_action st bal touched logs pushed_vctx &&
             final_state_pred
@@ -43,7 +43,7 @@ let respond_to_fail_correctly f a =
       f = (resulting_action, final_state_pred) -->
       (forall steps.
         ( let r = program_sem initial_vctx (build_cctx a) a.account_code.program_length steps in
-          r = ProgramStepRunOut ||
+          (exists x y. r = ProgramStepRunOut x y) ||
           (exists pushed_vctx st bal touched logs.
              r = ProgramToEnvironment resulting_action st bal touched logs pushed_vctx &&
              final_state_pred (update_account_state (account_state_pop_ongoing_call a) resulting_action st bal pushed_vctx)))))
