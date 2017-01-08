@@ -1902,7 +1902,7 @@ let instruction_sem v c inst =
 (* this and that never happen.'' *)
 
 type program_result =
-| ProgramStepRunOut of variable_ctx * constant_ctx (* the artificial step counter has run out *)
+| ProgramStepRunOut of variable_ctx (* the artificial step counter has run out *)
 | ProgramToEnvironment of contract_action * storage * (address -> w256) * list w256 * list log_entry
    * maybe (variable_ctx * integer * integer)
   (** the program stopped execution because an instruction wants to talk to the environment
@@ -1939,13 +1939,13 @@ val blocked_program_sem : variable_ctx -> constant_ctx -> integer -> nat -> bool
 (* rather than the number of instructions. *)
 
 let rec program_sem v c tiny_step remaining_steps = match remaining_steps with
- | 0 -> ProgramStepRunOut v c
+ | 0 -> ProgramStepRunOut v
  | remaining_steps + 1 ->
    if tiny_step <= 0 then
      ProgramToEnvironment ContractFail v.vctx_storage_at_call v.vctx_balance_at_call [] [] Nothing else
    if not (check_annotations v c) then ProgramAnnotationFailure else
    match vctx_next_instruction v c with
-    | Nothing -> ProgramStepRunOut v c
+    | Nothing -> ProgramToEnvironment ContractFail v.vctx_storage_at_call v.vctx_balance_at_call [] [] Nothing
     | Just i ->
     if check_resources v c (v.vctx_stack) i then
       match instruction_sem v c i with

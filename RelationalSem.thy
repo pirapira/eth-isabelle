@@ -122,7 +122,7 @@ text "Next we specify which program results might see a return."
 
 fun returnable_result :: "program_result \<Rightarrow> bool"
 where
-  "returnable_result (ProgramStepRunOut _ _) = False"
+  "returnable_result (ProgramStepRunOut _) = False"
 | "returnable_result (ProgramToEnvironment (ContractCall _) _ _ _ _ _) = True"
 | "returnable_result (ProgramToEnvironment (ContractDelegateCall _) _ _ _ _ _) = False"
 | "returnable_result (ProgramToEnvironment (ContractCreate _) _ _ _ _ _) = True"
@@ -137,7 +137,7 @@ where
 
 fun returnable_from_delegate_call :: "program_result \<Rightarrow> bool"
 where
-  "returnable_from_delegate_call (ProgramStepRunOut _ _) = False"
+  "returnable_from_delegate_call (ProgramStepRunOut _) = False"
 | "returnable_from_delegate_call (ProgramToEnvironment (ContractCall _) _ _ _ _ _) = False"
 | "returnable_from_delegate_call (ProgramToEnvironment (ContractDelegateCall _) _ _ _ _ _) = True"
 | "returnable_from_delegate_call (ProgramToEnvironment (ContractCreate _) _ _ _ _ _) = False"
