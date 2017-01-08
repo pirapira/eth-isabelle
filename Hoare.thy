@@ -93,6 +93,14 @@ definition context_as_set :: "variable_ctx \<Rightarrow> constant_ctx \<Rightarr
       }
     "
 
+(* From Magnus Myreen's thesis, Section 3.3 *)
+definition sep :: "(state_element set \<Rightarrow> bool) \<Rightarrow> (state_element set \<Rightarrow> bool) \<Rightarrow> state_element set \<Rightarrow> bool"
+  where
+    "sep p q s == \<exists> u v. p u \<and> q v \<and> u \<union> v = s \<and> u \<inter> v = {} "
+
+notation sep (infixr "*" 60)
+
+
 (* Some rules about this if-then-else should be derivable. *)
 
 definition if_then_else :: "int \<Rightarrow> inst list \<Rightarrow> inst list \<Rightarrow> inst list \<Rightarrow> inst list"
