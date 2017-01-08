@@ -217,10 +217,6 @@ declare instruction_sem_def [simp]
 declare check_annotations_def [simp]
 declare program_sem.simps [simp]
 
-text {* The following lemma is just for controlling the Isabelle/HOL simplifier. *}
-lemma unblock_program_sem [simp] : "blocked_program_sem v c l p True = program_sem v c l p"
-apply(simp add: blocked_program_sem.psimps)
-done
 
 declare build_vctx_called.simps [simp]
 

@@ -125,7 +125,7 @@ let test_one_case j : testResult =
     } in
   let () = Conv.print_constant_ctx c in
   let number = Nat_big_num.of_string (Big_int.string_of_big_int test_case.exec.gas) in
-  let ret : program_result = Evm.program_sem v c number (Nat_big_num.to_int number) in
+  let ret : program_result = Evm.program_sem v c (Nat_big_num.to_int number) in
   match ret with
   | ProgramStepRunOut _ ->
      let () = Printf.printf "ProgramStepRunOut\n" in
