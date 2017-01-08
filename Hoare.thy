@@ -100,6 +100,10 @@ definition sep :: "(state_element set \<Rightarrow> bool) \<Rightarrow> (state_e
 
 notation sep (infixr "*" 60)
 
+definition emp :: "state_element set \<Rightarrow> bool"
+  where
+    "emp s == (s = {})"
+
 
 (* Some rules about this if-then-else should be derivable. *)
 
