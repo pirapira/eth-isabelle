@@ -156,7 +156,7 @@ definition program_result_as_set :: "constant_ctx \<Rightarrow> program_result \
           constant_ctx_as_set c \<union>
           contract_action_as_set act \<union> storage_as_set st \<union> balance_as_set bal \<union> log_as_set logs
         | ProgramToEnvironment act st bal _ logs (Some (v, _, _)) \<Rightarrow>
-          (* I'm not sure if this treatment acutally works.  This result initializes some
+          (* I'm not sure if this treatment actually works.  This result initializes some
            * synchronous external communication.  *)
           contexts_as_set v c \<union>
           contract_action_as_set act \<union> storage_as_set st \<union> balance_as_set bal \<union> log_as_set logs
@@ -165,6 +165,17 @@ definition program_result_as_set :: "constant_ctx \<Rightarrow> program_result \
         | ProgramInit _ \<Rightarrow> {}
         )"
 
+definition code :: "(int \<Rightarrow> inst option) \<Rightarrow> state_element set \<Rightarrow> bool"
+  where
+    "code f s == s = { CodeElm(pos, i) | pos i. f pos = Some i }"
+
+definition triple ::
+ "(state_element set \<Rightarrow> bool) \<Rightarrow> (int \<Rightarrow> inst option) \<Rightarrow> (state_element set \<Rightarrow> bool) \<Rightarrow> bool"
+where
+  "triple pre insts post ==
+    \<forall> va_ctx co_ctx rest. (pre ** code insts ** rest) (contexts_as_set va_ctx co_ctx) \<longrightarrow>
+       (\<exists> k. (post ** code insts ** rest) (program_result_as_set co_ctx (program_sem va_ctx co_ctx k (nat k))))
+"
 
 (* Some rules about this if-then-else should be derivable. *)
 
