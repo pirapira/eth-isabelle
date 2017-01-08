@@ -169,14 +169,22 @@ definition code :: "(int \<Rightarrow> inst option) \<Rightarrow> state_element 
   where
     "code f s == s = { CodeElm(pos, i) | pos i. f pos = Some i }"
 
+definition no_assertion :: "constant_ctx \<Rightarrow> bool"
+  where "no_assertion c == (\<forall> pos. program_annotation (cctx_program c) pos = [])"
+
+definition recent_protocol :: "variable_ctx \<Rightarrow> bool"
+  where "recent_protocol v == block_number (vctx_block v) \<ge> 2463000"
+
 definition triple ::
  "(state_element set \<Rightarrow> bool) \<Rightarrow> (int \<Rightarrow> inst option) \<Rightarrow> (state_element set \<Rightarrow> bool) \<Rightarrow> bool"
 where
   "triple pre insts post ==
-    \<forall> va_ctx co_ctx rest. (pre ** code insts ** rest) (contexts_as_set va_ctx co_ctx) \<longrightarrow>
+    \<forall> va_ctx co_ctx rest. no_assertion co_ctx \<longrightarrow> recent_protocol va_ctx \<longrightarrow>
+       (pre ** code insts ** rest) (contexts_as_set va_ctx co_ctx) \<longrightarrow>
        (\<exists> k. (post ** code insts ** rest) (program_result_as_set co_ctx (program_sem va_ctx co_ctx k (nat k))))
 "
 
+  
 (* Some rules about this if-then-else should be derivable. *)
 
 definition if_then_else :: "int \<Rightarrow> inst list \<Rightarrow> inst list \<Rightarrow> inst list \<Rightarrow> inst list"
