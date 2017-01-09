@@ -215,6 +215,7 @@ done
 declare instruction_sem_def [simp]
 
 declare check_annotations_def [simp]
+declare next_state.simps [simp]
 declare program_sem.simps [simp]
 
 
@@ -352,5 +353,34 @@ declare log_inst_code.simps [simp]
 declare misc_inst_code.simps [simp]
 declare inst_code.simps [simp]
 declare inst_size_def [simp]
+
+(*
+| ProgramStepRunOut of variable_ctx (* the artificial step counter has run out *)
+| ProgramToEnvironment of contract_action * storage * (address -> w256) * list w256 * list log_entry
+   * maybe (variable_ctx * integer * integer)
+  (** the program stopped execution because an instruction wants to talk to the environment
+  for example because the execution returned, failed, or called an account.
+  *)
+| ProgramInvalid (* an unknown instruction is found.  Maybe this should just count as
+  a failing execution *)
+
+| ProgramAnnotationFailure (* an annotation turned out to be false.  This does not happen
+  in reality, but this case exists for the sake of the verification. *)
+
+| ProgramInit of call_env
+*)
+
+lemma program_sem_to_environment [simp]: "program_sem con n (ProgramToEnvironment a b c d e f) = ProgramToEnvironment a b c d e f"
+apply(induct_tac n; auto)
+done
+
+lemma program_sem_invalid [simp] : "program_sem con n ProgramInvalid = ProgramInvalid"
+by (induct_tac n; auto)
+
+lemma program_sem_annotation_failure [simp] : "program_sem con n ProgramAnnotationFailure = ProgramAnnotationFailure"
+by (induct_tac n; auto)
+
+lemma program_sem_init [simp] : "program_sem con n (ProgramInit i) = ProgramInit i"
+by (induct_tac n; auto)
 
 end

@@ -53,18 +53,20 @@ lemma problem2 :
 apply(simp add: node_def)
 done
 
-declare program_sem.psimps [simp]
+(* declare program_sem.psimps [simp] *)
 (* declare instruction_sem_def [simp del]*)
 
 lemma check_resources_split [split] :
-"P (if check_resources v con s i then X else ProgramToWorld a b c d e) =
- (\<not> (check_resources v con s i \<and> \<not> P X \<or> \<not> check_resources v con s i \<and> \<not> P (ProgramToWorld a b c d e)))"
+"P (if check_resources v con s i then X else ProgramToEnvironment a b c d e f) =
+ (\<not> (check_resources v con s i \<and> \<not> P X \<or> \<not> check_resources v con s i \<and> \<not> P (ProgramToEnvironment a b c d e f)))"
 apply(simp only: if_splits(2))
 done
 
 declare respond_to_call_correctly_def [simp]
 declare respond_to_return_correctly_def [simp]
 declare respond_to_fail_correctly_def [simp]
+declare inst_stack_numbers.simps [simp]
+declare pc_inst_numbers.simps [simp]
 
 lemma always_fail_correct:
 "
@@ -74,11 +76,8 @@ lemma always_fail_correct:
 "
 apply(rule AccountStep; auto)
 apply(case_tac steps; auto)
- apply(case_tac nata; auto)
 apply(case_tac nata; auto)
-apply(simp add: check_resources_def)
 done
-
 
 declare one_round.simps [simp]
 declare environment_turn.simps [simp]

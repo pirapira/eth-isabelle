@@ -9,7 +9,7 @@ let () =
   let _ : Word256.word256 = Word256.W256 (true, []) in
   let open Big_int in
   let () = Printf.printf "hello %s\n" (string_of_big_int (big_int_of_word256 (word256_of_big_int (BatBig_int.big_int_of_int (333))))) in
-  let (r : program_result) = program_sem dummy_variable_con dummy_constant_ctx 300 in
+  let (r : program_result) = program_sem dummy_constant_ctx 300 (ProgramStepRunOut dummy_variable_con) in
   let f = format_program_result r in
   let () = Easy_format.Pretty.to_stdout f in
   let () = Printf.printf "\ncalled EVM.\n" in

@@ -1927,34 +1927,44 @@ let check_annotations v c =
   let annots : list annotation = c.cctx_program.program_annotation v.vctx_pc in
   List.all (fun annot -> annot (build_aenv v c)) annots
 
-val program_sem : variable_ctx -> constant_ctx -> nat -> program_result
 
+val next_state: constant_ctx -> program_result -> program_result
+let next_state c pr =
+  match pr with
+  | ProgramToEnvironment act st bal touched log stash ->
+    ProgramToEnvironment act st bal touched log stash
+  | ProgramInvalid -> ProgramInvalid
+  | ProgramAnnotationFailure -> ProgramAnnotationFailure
+  | ProgramInit init -> ProgramInit init
+  | ProgramStepRunOut v ->
+     if not (check_annotations v c) then ProgramAnnotationFailure else
+     match vctx_next_instruction v c with
+      | Nothing -> ProgramToEnvironment ContractFail v.vctx_storage_at_call v.vctx_balance_at_call [] [] Nothing
+      | Just i ->
+      if check_resources v c (v.vctx_stack) i then
+        match instruction_sem v c i with
+        | InstructionContinue new_v ->  ProgramStepRunOut new_v
+        | InstructionToEnvironment a st bal touched logs opt_pushed_v ->
+            ProgramToEnvironment a st bal touched logs opt_pushed_v
+        | InstructionAnnotationFailure -> ProgramAnnotationFailure
+        end
+      else
+        ProgramToEnvironment ContractFail v.vctx_storage_at_call v.vctx_balance_at_call [] [] Nothing
+     end
+  end
 
-(* The program execution takes two counters. *)
+(* The program execution takes a counter. *)
 (* One counter is decremented for each instruction. *)
 (* The other counter is decremented when a backward-jump happens. *)
 (* This setup allows an easy termination proof. *)
 (* Also, during the proofs, I can do case analysis on the number of backwad jumps *)
 (* rather than the number of instructions. *)
 
-let rec program_sem v c remaining_steps = match remaining_steps with
- | 0 -> ProgramStepRunOut v
- | remaining_steps + 1 ->
-   if not (check_annotations v c) then ProgramAnnotationFailure else
-   match vctx_next_instruction v c with
-    | Nothing -> ProgramToEnvironment ContractFail v.vctx_storage_at_call v.vctx_balance_at_call [] [] Nothing
-    | Just i ->
-    if check_resources v c (v.vctx_stack) i then
-      match instruction_sem v c i with
-      | InstructionContinue new_v ->
-           (program_sem new_v c remaining_steps)
-      | InstructionToEnvironment a st bal touched logs opt_pushed_v ->
-          ProgramToEnvironment a st bal touched logs opt_pushed_v
-      | InstructionAnnotationFailure -> ProgramAnnotationFailure
-      end
-    else
-      ProgramToEnvironment ContractFail v.vctx_storage_at_call v.vctx_balance_at_call [] [] Nothing
-   end
+val program_sem : constant_ctx -> nat -> program_result -> program_result
+let rec program_sem c remaining_steps pr =
+match remaining_steps with
+ | 0 -> pr
+ | rem_pred + 1 -> program_sem c rem_pred (next_state c pr)
 end
 declare termination_argument program_sem = automatic
 
