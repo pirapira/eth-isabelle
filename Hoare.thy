@@ -200,19 +200,11 @@ done
 definition no_assertion :: "constant_ctx \<Rightarrow> bool"
   where "no_assertion c == (\<forall> pos. program_annotation (cctx_program c) pos = [])"
 
-fun recent_protocol :: "program_result \<Rightarrow> bool"
-where
-  "recent_protocol (ProgramStepRunOut v) = (block_number (vctx_block v) \<ge> 2463000)"
-| "recent_protocol (ProgramToEnvironment _ _ _ _ _ _) = False"
-| "recent_protocol ProgramInvalid = False"
-| "recent_protocol ProgramAnnotationFailure = False"
-| "recent_protocol (ProgramInit i) = False"
-
 definition triple ::
  "(state_element set \<Rightarrow> bool) \<Rightarrow> (int * inst) set \<Rightarrow> (state_element set \<Rightarrow> bool) \<Rightarrow> bool"
 where
   "triple pre insts post ==
-    \<forall> co_ctx presult rest. no_assertion co_ctx \<longrightarrow> recent_protocol presult \<longrightarrow>
+    \<forall> co_ctx presult rest. no_assertion co_ctx \<longrightarrow>
        (pre ** code insts ** rest) (program_result_as_set co_ctx presult) \<longrightarrow>
        (\<exists> k. (post ** code insts ** rest) (program_result_as_set co_ctx (program_sem co_ctx k presult)))"
 
@@ -318,7 +310,7 @@ declare memory_as_set_def [simp]
   balance_as_set_def [simp]
   program_result_as_set_def [simp]
   next_state.simps [simp]
-  
+
  
 (**
  ** Hoare Triple for each instruction
@@ -428,11 +420,28 @@ apply(rule pred_equiv_sep)
 apply(rule pred_equiv_sep_assoc)
 done
 
+lemma recent_protocl_stay [simp] :
+  "recent_protocol (program_sem co_ctx k presult) = recent_protocol presult"
+apply(induct_tac k)
+ apply(simp add: program_sem.simps)
+apply(simp add: program_sem.simps)
+oops
+
+
+
 (* Maybe it's better to organize program_sem as a function from program_result to program_result *)
 lemma triple_continue:
 "triple q c r \<Longrightarrow>
+ no_assertion co_ctx \<Longrightarrow>
+ recent_protocol presult \<Longrightarrow>
  (q ** code c ** rest) (program_result_as_set co_ctx (program_sem co_ctx k presult)) \<Longrightarrow>
  \<exists> l. (r ** code c ** rest) (program_result_as_set co_ctx (program_sem co_ctx (k + l) presult))"
+apply(simp add: triple_def)
+apply(drule_tac x = co_ctx in spec)
+apply(simp)
+apply(drule_tac x = "program_sem co_ctx k presult" in spec)
+(* recent_protocol (program_sem co_ctx k presult) *)
+
 oops
 
 lemma composition : "triple p c_1 q \<Longrightarrow> triple q c_2 r \<Longrightarrow> triple p (c_1 \<union> c_2) r"
