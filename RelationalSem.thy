@@ -224,8 +224,7 @@ where
    build_cctx old_account = cctx \<Longrightarrow>
 
    (* if the program behaves like this, *)
-   program_sem old_vctx cctx 
-      (program_length (cctx_program cctx)) steps
+   program_sem old_vctx cctx steps
       = ProgramToEnvironment act st bal touched logs opt_v \<Longrightarrow>
 
    (* and if the account state is updated from the program's result, *)
@@ -241,8 +240,7 @@ where
    build_cctx old_account = cctx \<Longrightarrow>
    
    (* and if the contract execution results in an annotation failure, *)
-   program_sem old_vctx cctx
-      (program_length (cctx_program cctx)) steps = ProgramAnnotationFailure \<Longrightarrow>
+   program_sem old_vctx cctx steps = ProgramAnnotationFailure \<Longrightarrow>
 
    (* the contract makes a move, indicating the annotation failure. *)
    contract_turn (old_account, old_vctx) (old_account, ProgramAnnotationFailure)"
