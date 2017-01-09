@@ -17,14 +17,12 @@ where
   Stack (PUSH_N [0]) #
   Storage SSTORE #
   Stack (PUSH_N [0]) #
-  (* TODO: change some of these arguments to value, address *)
   Stack (PUSH_N [0]) #
   Stack (PUSH_N [0]) #
   Stack (PUSH_N [0]) #
   Stack (PUSH_N [0]) #
   Stack (PUSH_N [0xabcdef]) #
   Stack (PUSH_N [30000]) #
-(*  Annotation (\<lambda> aenv. length (aenv_stack aenv) = 7) # *)
   Misc CALL #
   Arith ISZERO #
   Stack (PUSH_N [2]) #
@@ -32,7 +30,6 @@ where
   Stack (PUSH_N [0]) #
   Stack (PUSH_N [0]) #
   Storage SSTORE #
-  Annotation (\<lambda> aenv. aenv_storage aenv 0 = 0) #
   Misc STOP # []"
   
 definition fail_on_reentrance_address :: address
@@ -62,36 +59,6 @@ where
 value "program_of_lst fail_on_reentrance_program"     
 
 declare fail_on_reentrance_state.simps [simp]
-
-abbreviation something_to_call :: call_arguments
-where
-"something_to_call ==
- \<lparr> callarg_gas = 0
- , callarg_code = 0
- , callarg_recipient = 0
- , callarg_value = 0
- , callarg_data = cut_memory 0 0 empty_memory
- , callarg_output_begin = 0
- , callarg_output_size = 0
- \<rparr>"
-
-fun fail_on_reentrance_spec :: "nat \<Rightarrow> response_to_environment"
-where
-  "fail_on_reentrance_spec 0 =
-   \<lparr> when_called = \<lambda> _. (ContractCall something_to_call,
-                                        fail_on_reentrance_state 1)
-   , when_returned = \<lambda> _. (ContractFail, fail_on_reentrance_state 0)
-   , when_failed = (ContractFail, fail_on_reentrance_state 0)
-   \<rparr>"
-| "fail_on_reentrance_spec (Suc 0) =
-   \<lparr> when_called = \<lambda> _. (ContractFail, fail_on_reentrance_state 1)
-   , when_returned = \<lambda> _. (ContractReturn [], fail_on_reentrance_state 0)
-   , when_failed = (ContractFail, fail_on_reentrance_state 0)
-   \<rparr>"
-| "fail_on_reentrance_spec (Suc (Suc n)) =
-   \<lparr> when_called = \<lambda> _. (ContractFail, fail_on_reentrance_state (Suc (Suc n)))
-   , when_returned = \<lambda> _. (ContractFail, fail_on_reentrance_state (Suc (Suc n)))
-   , when_failed = (ContractFail, fail_on_reentrance_state (Suc (Suc n))) \<rparr>"
 
 declare eval_annotation_def [simp]
 
@@ -220,5 +187,7 @@ apply(case_tac nata; auto simp add: fail_on_reentrance_invariant.simps)
 apply(case_tac nata; auto simp add: fail_on_reentrance_invariant.simps)
 apply(case_tac nata; auto simp add: fail_on_reentrance_invariant.simps)
 done
+
+
 
 end
