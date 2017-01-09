@@ -401,8 +401,8 @@ apply(simp add: pred_equiv_sep pred_equiv_refl)
 done
 
 lemma code_middle :
-"(p ** code (c_1 \<union> c_2) ** rest) (contexts_as_set va_ctx co_ctx) =
- (p ** (code c_1 ** (code (c_2 - c_1))) ** rest) (contexts_as_set va_ctx co_ctx)"
+"(p ** code (c_1 \<union> c_2) ** rest) s =
+ (p ** (code c_1 ** (code (c_2 - c_1))) ** rest) s"
 apply(rule equiv_middle)
 by (simp add: code_diff_union)
 
@@ -427,28 +427,52 @@ apply(induct_tac k)
 apply(simp add: program_sem.simps)
 oops
 
-
+lemma execution_continue [simp]:
+  "\<forall> presult. (program_sem co_ctx a (program_sem co_ctx b presult) = program_sem co_ctx (b + a) presult)"
+apply(induction b)
+ apply(simp add: program_sem.simps)
+apply(simp add: program_sem.simps)
+done
 
 (* Maybe it's better to organize program_sem as a function from program_result to program_result *)
 lemma triple_continue:
 "triple q c r \<Longrightarrow>
  no_assertion co_ctx \<Longrightarrow>
- recent_protocol presult \<Longrightarrow>
  (q ** code c ** rest) (program_result_as_set co_ctx (program_sem co_ctx k presult)) \<Longrightarrow>
  \<exists> l. (r ** code c ** rest) (program_result_as_set co_ctx (program_sem co_ctx (k + l) presult))"
 apply(simp add: triple_def)
 apply(drule_tac x = co_ctx in spec)
 apply(simp)
 apply(drule_tac x = "program_sem co_ctx k presult" in spec)
-(* recent_protocol (program_sem co_ctx k presult) *)
+apply(drule_tac x = rest in spec)
+apply(simp)
+done
 
-oops
+lemma code_back:
+  "(q ** code c_1 ** code (c_2 - c_1) ** rest) s = (q ** code (c_1 \<union> c_2) ** rest) s"
+apply(simp add: code_middle shuffle3)
+done
+
+lemma code_union_s:
+  "(q ** code (c_2 \<union> c_1) ** rest) s \<Longrightarrow> (q ** code (c_1 \<union> c_2) ** rest) s"
+(* sledgehammer *)
+	by (simp add: sup_commute)
 
 lemma composition : "triple p c_1 q \<Longrightarrow> triple q c_2 r \<Longrightarrow> triple p (c_1 \<union> c_2) r"
 apply(auto simp add: triple_def code_middle shuffle3)
 apply(drule_tac x = "co_ctx" in spec; simp)
-apply(drule_tac x = "ProgramStepRunOut v" in spec)
-oops
+apply(drule_tac x = "presult" in spec)
+apply(drule_tac x = co_ctx in spec; simp)
+apply(drule_tac x = "code (c_2 - c_1) ** rest" in spec; simp)
+apply(erule exE)
+apply(drule_tac x = "program_sem co_ctx k presult" in spec; simp)
+apply(drule_tac x = "code (c_1 - c_2) ** rest" in spec)
+apply(simp add: code_back)
+apply(drule code_union_s; simp)
+apply(erule exE)
+apply(rule_tac x = "k + ka" in exI)
+apply(rule code_union_s; simp)
+done
 
 (** More rules to come **)
 
