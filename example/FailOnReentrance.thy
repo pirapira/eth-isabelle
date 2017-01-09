@@ -34,8 +34,8 @@ where
   Stack (PUSH_N [0]) #
   Stack (PUSH_N [0]) #
   Stack (PUSH_N [0]) #
-  Stack (PUSH_N [0]) #
-  Stack (PUSH_N [0]) #
+  Stack (PUSH_N [0xabcdef]) #
+  Stack (PUSH_N [30000]) #
 (*  Annotation (\<lambda> aenv. length (aenv_stack aenv) = 7) # *)
   Misc CALL #
   after_call"
