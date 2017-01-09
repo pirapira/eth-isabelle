@@ -4,18 +4,6 @@ imports Main "../ContractSem" "../RelationalSem" "../lem/EvmNonExec" "../Program
 
 begin
 
-abbreviation after_call :: "inst list"
-where
-"after_call ==
-  Arith ISZERO #
-  Stack (PUSH_N [2]) #
-  Pc JUMPI #
-  Stack (PUSH_N [0]) #
-  Stack (PUSH_N [0]) #
-  Storage SSTORE #
-  Annotation (\<lambda> aenv. aenv_storage aenv 0 = 0) #
-  Misc STOP # []"
-
 abbreviation fail_on_reentrance_program :: "inst list"
 where
 "fail_on_reentrance_program ==
@@ -38,7 +26,14 @@ where
   Stack (PUSH_N [30000]) #
 (*  Annotation (\<lambda> aenv. length (aenv_stack aenv) = 7) # *)
   Misc CALL #
-  after_call"
+  Arith ISZERO #
+  Stack (PUSH_N [2]) #
+  Pc JUMPI #
+  Stack (PUSH_N [0]) #
+  Stack (PUSH_N [0]) #
+  Storage SSTORE #
+  Annotation (\<lambda> aenv. aenv_storage aenv 0 = 0) #
+  Misc STOP # []"
   
 definition fail_on_reentrance_address :: address
 where
