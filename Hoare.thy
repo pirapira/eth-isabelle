@@ -166,16 +166,7 @@ definition program_result_as_set :: "constant_ctx \<Rightarrow> program_result \
     "program_result_as_set c rslt =
         ( case rslt of
           ProgramStepRunOut v \<Rightarrow> contexts_as_set v c
-        | ProgramToEnvironment act st bal _ logs None \<Rightarrow>
-          constant_ctx_as_set c \<union>
-          contract_action_as_set act \<union> storage_as_set st \<union> balance_as_set bal \<union> log_as_set logs
-        | ProgramToEnvironment act st bal _ logs (Some (v, _, _)) \<Rightarrow>
-          (* I omit the variable_env.  This result initializes some
-           * synchronous external communication.  Maybe I have to add some special
-           * transformation on the state_element set
-           *)
-          constant_ctx_as_set c \<union>
-          contract_action_as_set act \<union> storage_as_set st \<union> balance_as_set bal \<union> log_as_set logs
+        | ProgramToEnvironment act st bal _ logs _ \<Rightarrow> {} (* for now *)
         | ProgramInvalid \<Rightarrow> {}
         | ProgramAnnotationFailure \<Rightarrow> {} (* need to assume no annotation failure somewhere *)
         | ProgramInit _ \<Rightarrow> {}
@@ -188,16 +179,21 @@ definition code :: "(int * inst) set \<Rightarrow> state_element set \<Rightarro
 definition no_assertion :: "constant_ctx \<Rightarrow> bool"
   where "no_assertion c == (\<forall> pos. program_annotation (cctx_program c) pos = [])"
 
-definition recent_protocol :: "variable_ctx \<Rightarrow> bool"
-  where "recent_protocol v == block_number (vctx_block v) \<ge> 2463000"
+fun recent_protocol :: "program_result \<Rightarrow> bool"
+where
+  "recent_protocol (ProgramStepRunOut v) = (block_number (vctx_block v) \<ge> 2463000)"
+| "recent_protocol (ProgramToEnvironment _ _ _ _ _ _) = False"
+| "recent_protocol ProgramInvalid = False"
+| "recent_protocol ProgramAnnotationFailure = False"
+| "recent_protocol (ProgramInit i) = False"
 
 definition triple ::
  "(state_element set \<Rightarrow> bool) \<Rightarrow> (int * inst) set \<Rightarrow> (state_element set \<Rightarrow> bool) \<Rightarrow> bool"
 where
   "triple pre insts post ==
-    \<forall> va_ctx co_ctx rest. no_assertion co_ctx \<longrightarrow> recent_protocol va_ctx \<longrightarrow>
-       (pre ** code insts ** rest) (contexts_as_set va_ctx co_ctx) \<longrightarrow>
-       (\<exists> k. (post ** code insts ** rest) (program_result_as_set co_ctx (program_sem va_ctx co_ctx k)))"
+    \<forall> co_ctx presult rest. no_assertion co_ctx \<longrightarrow> recent_protocol presult \<longrightarrow>
+       (pre ** code insts ** rest) (program_result_as_set co_ctx presult) \<longrightarrow>
+       (\<exists> k. (post ** code insts ** rest) (program_result_as_set co_ctx (program_sem co_ctx k presult)))"
 
 lemma no_assertion_pass [simp] : "no_assertion co_ctx \<Longrightarrow> check_annotations v co_ctx"
 apply(simp add: no_assertion_def check_annotations_def)
@@ -299,6 +295,8 @@ declare memory_as_set_def [simp]
   storage_as_set_def [simp]
   log_as_set_def [simp]
   balance_as_set_def [simp]
+  program_result_as_set_def [simp]
+  next_state.simps [simp]
   
 lemma add_triple : "triple (\<langle> h \<le> 1023 \<and> g \<ge> Gverylow \<rangle> **
                             stack_height (h + 2) **
@@ -315,13 +313,14 @@ lemma add_triple : "triple (\<langle> h \<le> 1023 \<and> g \<ge> Gverylow \<ran
                             )"
 apply(auto simp add: triple_def)
 apply(rule_tac x = "1" in exI)
+apply(case_tac presult; simp)
 apply(simp add: program_sem.simps vctx_next_instruction_def instruction_sem_def check_resources_def
       inst_stack_numbers.simps arith_inst_numbers.simps predict_gas_def C_def Cmem_def
       Gmemory_def new_memory_consumption.simps thirdComponentOfC.simps
       vctx_next_instruction_default_def stack_2_1_op_def)
-apply(case_tac "vctx_stack va_ctx"; simp)
+apply(case_tac "vctx_stack x1"; simp)
 apply(case_tac list; simp)
-apply(auto simp add: subtract_gas.simps strict_if_def program_sem.simps program_result_as_set_def
+apply(auto simp add: subtract_gas.simps strict_if_def program_sem.simps
       vctx_advance_pc_def vctx_next_instruction_def inst_size_def inst_code.simps
       contexts_as_set_def constant_ctx_as_set_def variable_ctx_as_set_def stack_as_set_def
       program_as_set_def)
