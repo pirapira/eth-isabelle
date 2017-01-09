@@ -114,6 +114,22 @@ lemma sep_assoc [simp] : "((p ** q) ** r) s = (p ** q ** r) s"
   apply(rule_tac x = "ua" in exI; auto)
 done
 
+(** equivalence of predicates **)
+
+definition pred_equiv :: "(state_element set \<Rightarrow> bool) \<Rightarrow> (state_element set \<Rightarrow> bool) \<Rightarrow> bool"
+where
+"pred_equiv a b = (\<forall> s. a s = b s)"
+
+(** equivalence is reflexivie **)
+lemma pred_equiv_refl : "pred_equiv a a"
+apply(simp add: pred_equiv_def)
+done
+
+(** congruence of equivalence over sep **)
+lemma pred_equiv_sep : "pred_equiv a b \<Longrightarrow> pred_equiv c d \<Longrightarrow> pred_equiv (a ** c) (b ** d)"
+apply(simp add: pred_equiv_def sep_def)
+done
+
 definition emp :: "state_element set \<Rightarrow> bool"
   where
     "emp s == (s = {})"
@@ -175,6 +191,11 @@ definition program_result_as_set :: "constant_ctx \<Rightarrow> program_result \
 definition code :: "(int * inst) set \<Rightarrow> state_element set \<Rightarrow> bool"
   where
     "code f s == s = { CodeElm(pos, i) | pos i. (pos, i) \<in> f }"
+
+(* code and set separation *)
+lemma code_diff_union : "pred_equiv (code (a \<union> b)) (code a ** (code (b - a)))"
+apply(auto simp add: pred_equiv_def code_def sep_def)
+done
 
 definition no_assertion :: "constant_ctx \<Rightarrow> bool"
   where "no_assertion c == (\<forall> pos. program_annotation (cctx_program c) pos = [])"
@@ -298,6 +319,11 @@ declare memory_as_set_def [simp]
   program_result_as_set_def [simp]
   next_state.simps [simp]
   
+ 
+(**
+ ** Hoare Triple for each instruction
+ **)
+ 
 lemma add_triple : "triple (\<langle> h \<le> 1023 \<and> g \<ge> Gverylow \<rangle> **
                             stack_height (h + 2) **
                             stack (h + 1) v **
@@ -363,6 +389,59 @@ apply(rule Set.equalityI)
 apply(clarify)
 apply(simp)
 done
+
+(**
+ ** Inference rules about Hoare triples
+ ** Following Magnus Myreen's thesis, 3.5
+ **)
+
+(** Frame **)
+
+(** Composition **)
+lemma pred_equiv_sound : "pred_equiv p0 p1 \<Longrightarrow> p0 s = p1 s"
+apply(simp add: pred_equiv_def)
+done
+
+lemma equiv_middle :
+"pred_equiv p0 p1 \<Longrightarrow> (p ** p0 ** rest) s = (p ** p1 ** rest) s"
+apply(rule pred_equiv_sound)
+apply(simp add: pred_equiv_sep pred_equiv_refl)
+done
+
+lemma code_middle :
+"(p ** code (c_1 \<union> c_2) ** rest) (contexts_as_set va_ctx co_ctx) =
+ (p ** (code c_1 ** (code (c_2 - c_1))) ** rest) (contexts_as_set va_ctx co_ctx)"
+apply(rule equiv_middle)
+by (simp add: code_diff_union)
+
+lemma pred_equiv_sep_assoc:
+  "pred_equiv ((a ** b) ** c) (a ** b ** c)"
+apply(simp add: pred_equiv_def)
+done
+
+lemma shuffle3 :
+"(p ** (code c_1 ** code (c_2 - c_1)) ** rest) s =
+ (p ** code c_1 ** (code (c_2 - c_1) ** rest)) s"
+apply(rule pred_equiv_sound)
+apply(rule pred_equiv_sep)
+ apply(rule pred_equiv_refl)
+apply(rule pred_equiv_sep_assoc)
+done
+
+(* Maybe it's better to organize program_sem as a function from program_result to program_result *)
+lemma triple_continue:
+"triple q c r \<Longrightarrow>
+ (q ** code c ** rest) (program_result_as_set co_ctx (program_sem co_ctx k presult)) \<Longrightarrow>
+ \<exists> l. (r ** code c ** rest) (program_result_as_set co_ctx (program_sem co_ctx (k + l) presult))"
+oops
+
+lemma composition : "triple p c_1 q \<Longrightarrow> triple q c_2 r \<Longrightarrow> triple p (c_1 \<union> c_2) r"
+apply(auto simp add: triple_def code_middle shuffle3)
+apply(drule_tac x = "co_ctx" in spec; simp)
+apply(drule_tac x = "ProgramStepRunOut v" in spec)
+oops
+
+(** More rules to come **)
 
 (* Some rules about this if-then-else should be derivable. *)
 
