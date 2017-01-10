@@ -1,4 +1,4 @@
-.PHONY: all all-isabelle deed clean clean-pdf clean-thy clean-ocaml lem-thy lem-pdf lem-ocaml doc
+.PHONY: all all-isabelle light-isabelle deed clean clean-pdf clean-thy clean-ocaml lem-thy lem-pdf lem-ocaml doc
 
 all: all-isabelle deed lem-thy lem-pdf lem-ocaml doc
 
@@ -15,6 +15,9 @@ clean-ocaml:
 
 all-isabelle: attic/Parse.thy ContractSem.thy RelationalSem.thy example/Optimization.thy example/AlwaysFail.thy example/FailOnReentrance.thy example/Deed.thy lem/Block.thy lem/Evm.thy lem/EvmNonExec.thy lem/Keccak.thy lem/Rlp.thy lem/Word160.thy lem/Word256.thy lem/Word8.thy
 	isabelle build -d . all
+
+light-isabelle: attic/Parse.thy ContractSem.thy RelationalSem.thy example/Optimization.thy example/AlwaysFail.thy example/FailOnReentrance.thy lem/Block.thy lem/Evm.thy lem/EvmNonExec.thy lem/Keccak.thy lem/Rlp.thy lem/Word160.thy lem/Word256.thy lem/Word8.thy
+	isabelle build -d . light
 
 doc: deed lem-pdf
 
