@@ -130,6 +130,16 @@ lemma pred_equiv_sep : "pred_equiv a b \<Longrightarrow> pred_equiv c d \<Longri
 apply(simp add: pred_equiv_def sep_def)
 done
 
+lemma pred_equiv_sep_comm : "pred_equiv (a ** b) (b ** a)"
+apply(simp add: pred_equiv_def sep_def)
+by blast
+
+lemma pred_equiv_addL [intro]: "pred_equiv b c \<Longrightarrow> pred_equiv (a ** b) (a ** c)"
+apply(simp add: pred_equiv_def sep_def)
+done
+
+
+
 definition emp :: "state_element set \<Rightarrow> bool"
   where
     "emp s == (s = {})"
@@ -387,10 +397,14 @@ done
  ** Following Magnus Myreen's thesis, 3.5
  **)
 
-(** Frame **)
+
 
 (** Composition **)
 lemma pred_equiv_sound : "pred_equiv p0 p1 \<Longrightarrow> p0 s = p1 s"
+apply(simp add: pred_equiv_def)
+done
+
+lemma pred_equiv_trans : "pred_equiv a b \<Longrightarrow> pred_equiv b c \<Longrightarrow> pred_equiv a c"
 apply(simp add: pred_equiv_def)
 done
 
@@ -466,6 +480,46 @@ apply(erule exE)
 apply(rule_tac x = "k + ka" in exI)
 apply(rule code_union_s; simp)
 done
+
+(** Frame **)
+
+lemma commute_in_four :
+  "(a ** b ** c ** d) s \<Longrightarrow> (a ** c ** b ** d) s"
+proof -
+ have "pred_equiv (b ** c) (c ** b)" by (simp add: pred_equiv_sep_comm)
+ hence "pred_equiv (a ** b ** c) (a ** c ** b)" by(rule  pred_equiv_addL)
+ hence "pred_equiv ((a ** b ** c) ** d) ((a ** c ** b) ** d)"
+	by (simp add: pred_equiv_refl pred_equiv_sep)
+ hence "pred_equiv (a ** ((b ** c) ** d)) ((a ** c ** b) ** d)"
+  (* sledgehammer *)
+	by (meson pred_equiv_sep_assoc pred_equiv_sep_comm pred_equiv_trans)
+ hence "pred_equiv (a ** b ** c ** d) ((a ** c ** b) ** d)"
+	using pred_equiv_def pred_equiv_sep_assoc sep_def by auto
+ hence "pred_equiv (a ** b ** c ** d) (a ** c ** b ** d)"
+	using pred_equiv_def pred_equiv_sep_assoc sep_def by auto
+ thus "(a ** b ** c ** d) s \<Longrightarrow> (a ** c ** b ** d) s"
+  (* sledgehammer *)
+  using pred_equiv_sound by blast
+qed
+
+
+lemma frame : "triple p c q \<Longrightarrow> \<forall> r. triple (p ** r) c (q ** r)"
+apply(simp add: triple_def)
+apply(rule allI)
+apply(rule allI)
+apply(rule impI)
+apply(drule_tac x = co_ctx in spec)
+apply(erule impE)
+ apply(simp)
+apply(rule allI)
+apply(rule allI)
+apply(rule impI)
+apply(drule_tac x = presult in spec)
+apply(drule_tac x = "r ** rest" in spec)
+apply(erule impE)
+ apply(rule commute_in_four; blast)
+apply(erule exE)
+using commute_in_four by blast
 
 (** More rules to come **)
 
