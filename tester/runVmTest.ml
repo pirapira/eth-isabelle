@@ -183,7 +183,7 @@ let test_one_file (path : string) ((num_success : int ref), (num_failure : int r
   let vm_arithmetic_test : json = Yojson.Basic.from_file path in
   let vm_arithmetic_test_assoc : (string * json) list = Util.to_assoc vm_arithmetic_test in
   let () =  List.iter
-     (fun (label, j) ->
+    (fun (label, j) ->
       let hit =
         match case_name with
         | Some search ->
