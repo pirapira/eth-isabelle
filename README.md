@@ -55,6 +55,8 @@ One way is to run the VM Test.
 $ sh compile.sh
 $ ./runVmTest.native
 ```
+(When `./runVmTest.native` takes an argument, it executes only the test cases whose names contain the argument as a substring.)
+
 
 Another way is to run the VM Test and measure the coverage.
 ```
