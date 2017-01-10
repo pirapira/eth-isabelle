@@ -339,7 +339,7 @@ apply(simp add: program_sem.simps vctx_next_instruction_def instruction_sem_def 
 apply(case_tac "vctx_stack x1"; simp)
 apply(case_tac list; simp)
 apply(auto simp add: subtract_gas.simps strict_if_def program_sem.simps
-      vctx_advance_pc_def vctx_next_instruction_def inst_size_def inst_code.simps
+      vctx_advance_pc_def vctx_next_instruction_def inst_size_def inst_code.simps                                                                               
       contexts_as_set_def constant_ctx_as_set_def variable_ctx_as_set_def stack_as_set_def
       program_as_set_def)
 apply(simp add: insert_Diff_if)
@@ -419,13 +419,6 @@ apply(rule pred_equiv_sep)
  apply(rule pred_equiv_refl)
 apply(rule pred_equiv_sep_assoc)
 done
-
-lemma recent_protocl_stay [simp] :
-  "recent_protocol (program_sem co_ctx k presult) = recent_protocol presult"
-apply(induct_tac k)
- apply(simp add: program_sem.simps)
-apply(simp add: program_sem.simps)
-oops
 
 lemma execution_continue [simp]:
   "\<forall> presult. (program_sem co_ctx a (program_sem co_ctx b presult) = program_sem co_ctx (b + a) presult)"
