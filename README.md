@@ -1,5 +1,7 @@
 # Formalization of Ethereum Virtual Machine in Lem
 
+[![Build Status](https://travis-ci.org/pirapira/eth-isabelle.svg?branch=master)](https://travis-ci.org/pirapira/eth-isabelle)
+
 This repository contains
 
 * an EVM implementation in Lem `lem/evm.lem`
