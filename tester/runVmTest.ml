@@ -194,14 +194,13 @@ let test_one_file (path : string) ((num_success : int ref), (num_failure : int r
         | None -> true
       in
       if hit then
-      let () = Printf.printf "===========================test case: %s\n" label in
-      if label = "env1" then () else (* How to get the block hash? *)
-      if label = "callcodeToNameRegistrator0" then () else (* need to implement callcode first *)
-      if label = "callcodeToReturn1" then () else
-      match test_one_case j with
-      | TestSuccess -> num_success := !num_success + 1
-      | TestFailure -> num_failure := !num_failure + 1
-      | TestSkipped -> num_skipped := !num_skipped + 1
+        begin
+          let () = Printf.printf "===========================test case: %s\n" label in
+          match test_one_case j with
+          | TestSuccess -> num_success := !num_success + 1
+          | TestFailure -> num_failure := !num_failure + 1
+          | TestSkipped -> num_skipped := !num_skipped + 1
+        end
     )
     vm_arithmetic_test_assoc in
   ()
