@@ -13,7 +13,7 @@ before_install:
 - cd ..
 - export PATH=./lemdir:$PATH
 - wget https://isabelle.in.tum.de/dist/Isabelle2016-1_app.tar.gz
-- tar xf Isablle2016-1_app.tar.gz
+- tar xf Isabelle2016-1_app.tar.gz
 - export PATH=./Isabelle2016-1/bin:$PATH
 script:
 - make lem-ocaml
