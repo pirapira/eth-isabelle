@@ -37,9 +37,24 @@ session "all" = "HOL" +
     "attic/Parse"
     ContractSem
     RelationalSem
+    Hoare
     "attic/HP"
     "attic/YellowPaper"
     "example/Optimization"
     "example/AlwaysFail"
     "example/FailOnReentrance"
     "example/Deed"
+
+session "light" = "HOL" +
+  theories [document = false]
+    "~~/src/HOL/Word/Word"
+    "~~/src/HOL/Data_Structures/AVL_Map"
+    "attic/Parse"
+    ContractSem
+    RelationalSem
+    Hoare
+    "attic/HP"
+    "attic/YellowPaper"
+    "example/Optimization"
+    "example/AlwaysFail"
+    "example/FailOnReentrance"
