@@ -12,9 +12,13 @@ before_install:
 - make || echo "failure expected"
 - cd ..
 - export PATH=./lemdir:$PATH
+- wget https://isabelle.in.tum.de/dist/Isabelle2016-1_app.tar.gz
+- tar xf Isablle2016-1_app.tar.gz
+- export PATH=./Isabelle2016-1/bin:$PATH
 script:
 - make lem-ocaml
 - make lem-thy
 - cd tester
 - sh compile.sh
 - cd -
+- make light-isabelle
