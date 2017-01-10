@@ -3,6 +3,7 @@ before_install:
 - sudo apt-get -qq update
 - sudo apt-get -qq install libgmp3-dev
 - wget https://raw.github.com/ocaml/opam/master/shell/opam_installer.sh -O - | sudo sh -s /usr/local/bin
+- export OPAMJOBS=2
 - opam init -y --comp=4.02.3
 - eval `opam config env`
 - opam install -y ocamlbuild ocamlfind batteries yojson bignum easy-format bisect_ppx zarith depext
