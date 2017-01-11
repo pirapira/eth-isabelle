@@ -22,6 +22,17 @@ lem/evm.ml
 lem/word8.ml
 lem/word160.ml
 lem/word256.ml
+lem/keccakScript.sml
+lem/evmScript.sml
+lem/word8Script.sml
+lem/word160Script.sml
+lem/word256Script.sml
+lem/blockScript.sml
+lem/evmAuxiliaryScript.sml
+lem/evmNonExecScript.sml
+lem/keccakAuxiliaryScript.sml
+lem/rlpAuxiliaryScript.sml
+lem/rlpScript.sml
 tester/*.native
 tester/_build
 output/

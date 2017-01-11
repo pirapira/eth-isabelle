@@ -18,6 +18,7 @@ before_install:
 script:
 - make lem-ocaml
 - make lem-thy
+- make lem-hol
 - cd tester
 - sh compile.sh
 - cd -

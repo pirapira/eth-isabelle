@@ -1,14 +1,17 @@
-.PHONY: all all-isabelle light-isabelle deed clean clean-pdf clean-thy clean-ocaml lem-thy lem-pdf lem-ocaml doc
+.PHONY: all all-isabelle light-isabelle deed clean clean-pdf clean-thy clean-ocaml clean-hol lem-thy lem-pdf lem-hol lem-ocaml doc
 
-all: all-isabelle deed lem-thy lem-pdf lem-ocaml doc
+all: all-isabelle deed lem-thy lem-pdf lem-ocaml lem-hol doc
 
-clean: clean-pdf clean-thy clean-ocaml
+clean: clean-pdf clean-thy clean-ocaml clean-hol
 
 clean-pdf:
 	rm -rf lem/*.tex lem/*.aux lem/*.log lem/*.toc lem/*.pdf lem/*~
 
 clean-thy:
 	git clean -fx lem/*.thy
+
+clean-hol:
+	git clean -fx lem/*.sml
 
 clean-ocaml:
 	git clean -fx lem/*.ml
@@ -27,6 +30,8 @@ document/output.pdf: ContractSem.thy RelationalSem.thy example/Deed.thy document
 
 lem-thy: lem/Block.thy lem/Evm.thy lem/EvmNonExec.thy lem/Keccak.thy lem/Rlp.thy lem/Word160.thy lem/Word256.thy lem/Word8.thy lem/Keccak.thy
 
+lem-hol: lem/blockScript.sml lem/evmScript.sml lem/evmNonExecScript.sml lem/keccakScript.sml lem/rlpScript.sml lem/word160Script.sml lem/word256Script.sml lem/word8Script.sml lem/keccakScript.sml
+
 lem-pdf: lem/Evm-use_inc.pdf lem/Block-use_inc.pdf lem/EvmNonExec-use_inc.pdf lem/Keccak-use_inc.pdf lem/Rlp-use_inc.pdf
 
 lem-ocaml: lem/evm.ml lem/word256.ml lem/word160.ml lem/word8.ml lem/keccak.ml
@@ -36,6 +41,9 @@ lem/block.lem: lem/evm.lem
 
 lem/Block.thy: lem/block.lem
 	lem -isa lem/block.lem
+
+lem/blockScript.sml: lem/block.lem
+	lem -hol lem/block.lem
 
 lem/Block-use_inc.tex lem/Block-inc.tex: lem/block.lem
 	lem -tex lem/block.lem
@@ -52,20 +60,35 @@ lem/evm.lem: lem/word256.lem lem/word160.lem lem/word8.lem
 lem/Evm.thy: lem/evm.lem
 	lem -isa lem/evm.lem
 
+lem/evmScript.sml: lem/evm.lem
+	lem -hol lem/evm.lem
+
 lem/evm.ml: lem/evm.lem
 	lem -ocaml lem/evm.lem
 
 lem/keccak.ml: lem/keccak.lem
 	lem -ocaml lem/keccak.lem
 
+lem/keccakScript.sml: lem/keccak.lem
+	lem -hol lem/keccak.lem
+
 lem/word256.ml: lem/word256.lem
 	lem -ocaml lem/word256.lem
+
+lem/word256Script.sml: lem/word256.lem
+	lem -hol lem/word256.lem
 
 lem/word160.ml: lem/word160.lem
 	lem -ocaml lem/word160.lem
 
+lem/word160Script.sml: lem/word160.lem
+	lem -hol lem/word160.lem
+
 lem/word8.ml: lem/word8.lem
 	lem -ocaml lem/word8.lem
+
+lem/word8Script.sml: lem/word8.lem
+	lem -hol lem/word8.lem
 
 lem/Evm-use_inc.tex lem/Evm-inc.tex: lem/evm.lem
 	lem -tex lem/evm.lem
@@ -80,6 +103,9 @@ lem/evmNonExec.lem: lem/evm.lem lem/word256.lem lem/word160.lem lem/word8.lem
 
 lem/EvmNonExec.thy: lem/evmNonExec.lem
 	lem -isa lem/evmNonExec.lem
+
+lem/evmNonExecScript.sml: lem/evmNonExec.lem
+	lem -hol lem/evmNonExec.lem
 
 lem/EvmNonExec-use_inc.tex lem/EvmNonExec-inc.tex: lem/evmNonExec.lem
 	lem -tex lem/evmNonExec.lem
@@ -108,6 +134,9 @@ lem/rlp.lem: lem/word256.lem lem/word160.lem lem/word8.lem
 
 lem/Rlp.thy: lem/rlp.lem
 	lem -isa lem/rlp.lem
+
+lem/rlpScript.sml: lem/rlp.lem
+	lem -hol lem/rlp.lem
 
 lem/Rlp-use_inc.tex lem/Rlp-inc.tex: lem/rlp.lem
 	lem -tex lem/rlp.lem
