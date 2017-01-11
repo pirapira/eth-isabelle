@@ -19,7 +19,7 @@ before_install:
 - export PATH=./Isabelle2016-1/bin:$PATH
 - git clone git://github.com/HOL-Theorem-Prover/HOL.git
 - cd HOL
-- echo 'val polymllibdir = "/usr/lib/x86_64-linux-gnu"' > tools-poly/poly-includes.ML
+- echo 'val polymllibdir = "/usr/lib"' > tools-poly/poly-includes.ML
 - poly < tools/smart-configure.sml
 - bin/build -nograph
 - cd -
