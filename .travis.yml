@@ -1,7 +1,7 @@
 sudo: required
 before_install:
 - sudo apt-get -qq update
-- sudo apt-get -qq install libgmp3-dev
+- sudo apt-get -qq install libgmp3-dev polyml libpolyml-dev
 - wget https://raw.github.com/ocaml/opam/master/shell/opam_installer.sh -O - | sudo sh -s /usr/local/bin
 - export OPAMJOBS=2
 - opam init -y --comp=4.02.3
@@ -15,10 +15,18 @@ before_install:
 - wget https://isabelle.in.tum.de/dist/Isabelle2016-1_app.tar.gz
 - tar xf Isabelle2016-1_app.tar.gz
 - export PATH=./Isabelle2016-1/bin:$PATH
+- git clone git://github.com/HOL-Theorem-Prover/HOL.git
+- cd HOL
+- echo 'val polymllibdir = "/usr/lib/x86_64-linux-gnu"' > tools-poly/poly-includes.ML
+- poly < tools/smart-configure.sml
+- cd -
 script:
 - make lem-ocaml
 - make lem-thy
 - make lem-hol
+- cd lem
+- ../HOL/bin/Holmake evmTheory.uo
+- cd -
 - cd tester
 - sh compile.sh
 - cd -

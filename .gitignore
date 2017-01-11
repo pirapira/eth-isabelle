@@ -33,6 +33,12 @@ lem/evmNonExecScript.sml
 lem/keccakAuxiliaryScript.sml
 lem/rlpAuxiliaryScript.sml
 lem/rlpScript.sml
+lem/*Theory.sml
+lem/*Theory.sig
+lem/*Theory.uo
+lem/*Theory.ui
+lem/.HOLMK/
+lem/.hollogs
 tester/*.native
 tester/_build
 output/
