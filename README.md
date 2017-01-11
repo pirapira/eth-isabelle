@@ -70,6 +70,7 @@ $ sh measure_coverage.sh
 * `make deed` produces a verified PDF document for the Deed contract in `output/document.pdf`.  Make sure that `isabelle` points to `Isabelle2016-1/bin/isabelle` (not earlier versions).
 * `make doc` produces `output/document.pdf` as well as `lem/*.pdf`.
 * `make lem-thy` compiles the Lem sources into Isabelle/HOL
+* `make lem-hol` compiles the Lem sources into HOL4
 * `make lem-pdf` compiles some of the Lem sources into PDF through LaTeX
 * `make all-isabelle` checks all Isabelle/HOL sources (but not the ones compiled from Lem)
 * `make` does everything above
