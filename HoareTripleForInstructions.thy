@@ -93,6 +93,11 @@ lemma advance_pc_different [simp] :
   "vctx_pc (vctx_advance_pc co_ctx x1) \<noteq> vctx_pc x1"
 apply(simp add: vctx_advance_pc_def)
 apply(case_tac "vctx_next_instruction x1 co_ctx"; auto)
+apply(case_tac a; auto simp add: inst_size_def inst_code.simps)
+apply(rename_tac si)
+apply(case_tac si; auto simp add: stack_inst_code.simps)
+apply(rename_tac data)
+apply(case_tac data; simp)
 
 
 lemma stack_touching_operations_leaves [simp] :
