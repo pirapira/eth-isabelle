@@ -214,9 +214,9 @@ definition triple ::
  "(state_element set \<Rightarrow> bool) \<Rightarrow> (int * inst) set \<Rightarrow> (state_element set \<Rightarrow> bool) \<Rightarrow> bool"
 where
   "triple pre insts post ==
-    \<forall> co_ctx presult rest. no_assertion co_ctx \<longrightarrow>
+    \<forall> co_ctx presult rest stopper. no_assertion co_ctx \<longrightarrow>
        (pre ** code insts ** rest) (program_result_as_set co_ctx presult) \<longrightarrow>
-       (\<exists> k. (post ** code insts ** rest) (program_result_as_set co_ctx (program_sem co_ctx k presult)))"
+       (\<exists> k. (post ** code insts ** rest) (program_result_as_set co_ctx (program_sem stopper co_ctx k presult)))"
 
 lemma no_assertion_pass [simp] : "no_assertion co_ctx \<Longrightarrow> check_annotations v co_ctx"
 apply(simp add: no_assertion_def check_annotations_def)

@@ -215,7 +215,7 @@ done
 declare instruction_sem_def [simp]
 
 declare check_annotations_def [simp]
-declare next_state.simps [simp]
+declare next_state_def [simp]
 declare program_sem.simps [simp]
 
 
@@ -370,17 +370,17 @@ declare inst_size_def [simp]
 | ProgramInit of call_env
 *)
 
-lemma program_sem_to_environment [simp]: "program_sem con n (ProgramToEnvironment a b c d e f) = ProgramToEnvironment a b c d e f"
+lemma program_sem_to_environment [simp]: "program_sem k con n (ProgramToEnvironment a b c d e f) = ProgramToEnvironment a b c d e f"
 apply(induct_tac n; auto)
 done
 
-lemma program_sem_invalid [simp] : "program_sem con n ProgramInvalid = ProgramInvalid"
+lemma program_sem_invalid [simp] : "program_sem k con n ProgramInvalid = ProgramInvalid"
 by (induct_tac n; auto)
 
-lemma program_sem_annotation_failure [simp] : "program_sem con n ProgramAnnotationFailure = ProgramAnnotationFailure"
+lemma program_sem_annotation_failure [simp] : "program_sem k con n ProgramAnnotationFailure = ProgramAnnotationFailure"
 by (induct_tac n; auto)
 
-lemma program_sem_init [simp] : "program_sem con n (ProgramInit i) = ProgramInit i"
+lemma program_sem_init [simp] : "program_sem k con n (ProgramInit i) = ProgramInit i"
 by (induct_tac n; auto)
 
 end

@@ -1911,14 +1911,14 @@ let check_annotations v c =
   List.all (fun annot -> annot (build_aenv v c)) annots
 
 
-val next_state: constant_ctx -> program_result -> program_result
-let next_state c pr =
+val next_state: (program_result -> unit) -> constant_ctx -> program_result -> program_result
+let next_state stopper c pr =
   match pr with
-  | ProgramToEnvironment act st bal touched logs stash ->
-    ProgramToEnvironment act st bal touched logs stash
-  | ProgramInvalid -> ProgramInvalid
-  | ProgramAnnotationFailure -> ProgramAnnotationFailure
-  | ProgramInit init -> ProgramInit init
+  | ProgramToEnvironment act st bal touched log stash ->
+    let () = stopper pr in pr
+  | ProgramInvalid -> let () = stopper pr in pr
+  | ProgramAnnotationFailure -> let () = stopper pr in pr
+  | ProgramInit init -> let () = stopper pr in pr
   | ProgramStepRunOut v ->
      if not (check_annotations v c) then ProgramAnnotationFailure else
      match vctx_next_instruction v c with
@@ -1943,11 +1943,11 @@ let next_state c pr =
 (* Also, during the proofs, I can do case analysis on the number of backwad jumps *)
 (* rather than the number of instructions. *)
 
-val program_sem : constant_ctx -> nat -> program_result -> program_result
-let rec program_sem c remaining_steps pr =
+val program_sem :  (program_result -> unit) -> constant_ctx -> nat -> program_result -> program_result
+let rec program_sem stopper c remaining_steps pr =
 match remaining_steps with
  | 0 -> pr
- | rem_pred + 1 -> program_sem c rem_pred (next_state c pr)
+ | rem_pred + 1 -> program_sem stopper c rem_pred (next_state stopper c pr)
 end
 declare termination_argument program_sem = automatic
 
