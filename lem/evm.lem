@@ -338,11 +338,11 @@ end
 
 type dup_inst = byte
 
-val dup_inst_code : dup_inst -> maybe byte
+val dup_inst_code : dup_inst -> byte
 let dup_inst_code m =
-   if word8UGT 1 m then Nothing (*-- There is no DUP0 instruction. *)
-   else if word8UGT m 16 then Nothing (* -- There are no DUP16 instruction and on. *)
-   else Just (m + 0X7f)
+   if word8UGT 1 m then 0X80 (*-- This case should not exist *)
+   else if word8UGT m 16 then 0X80 (* -- This case should not exist *)
+   else (m + 0X7f)
 
 val dup_inst_numbers : dup_inst -> stack_numbers
 let dup_inst_numbers m = (word8ToUInt m, word8ToUInt m + 1)
@@ -456,11 +456,11 @@ end
 
 type swap_inst = byte
 
-val swap_inst_code : swap_inst -> maybe byte
+val swap_inst_code : swap_inst -> byte
 let swap_inst_code m =
-  if word8UGT 1 m then Nothing else
-  if word8UGT m 16 then Nothing else
-  Just (m + 0X8f)
+  if word8UGT 1 m  then 0X90 (* this case should not exist *) else
+  if word8UGT m 16 then 0X90 (* this case should not exist *) else
+  (m + 0X8f)
 
 val swap_inst_numbers : swap_inst -> stack_numbers
 let swap_inst_numbers m =
@@ -569,12 +569,12 @@ let inst_code inst = match inst with
 | Sarith s -> [sarith_inst_code s]
 | Arith a -> [arith_inst_code a]
 | Info i -> [info_inst_code i]
-| Dup d -> maybe_to_list (dup_inst_code d)
+| Dup d -> [dup_inst_code d]
 | Memory m -> [memory_inst_code m]
 | Storage s -> [storage_inst_code s]
 | Pc p -> [pc_inst_code p]
 | Stack s -> stack_inst_code s
-| Swap s -> maybe_to_list (swap_inst_code s)
+| Swap s -> [swap_inst_code s]
 | Log l -> [log_inst_code l]
 | Misc m -> [misc_inst_code m]
 end
