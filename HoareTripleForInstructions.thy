@@ -76,47 +76,83 @@ lemma stack_element_means [simp] :
 apply(auto simp add: variable_ctx_as_set_def stack_as_set_def)
 done
 
+lemma stack_element_notin_means [simp] :
+ "(StackElm (p, w) \<notin> variable_ctx_as_set v) =
+  (rev (vctx_stack v) ! p \<noteq> w \<or> p \<ge> length (vctx_stack v))"
+apply(auto simp add: variable_ctx_as_set_def stack_as_set_def)
+done
+
+
 lemma pc_element_means [simp] :
   "(PcElm p \<in> variable_ctx_as_set v) =
    (vctx_pc v = p)"
 apply(auto simp add: variable_ctx_as_set_def stack_as_set_def)
 done
 
+lemma gas_element_means [simp] :
+  "(GasElm g \<in> variable_ctx_as_set v) =
+    (vctx_gas v = g)"
+apply(auto simp add: variable_ctx_as_set_def stack_as_set_def)
+done
+
 lemma inst_size_nonzero [simp] : "inst_size a \<noteq> 0"
 apply(simp add: inst_size_def)
 apply(case_tac a; auto simp add: inst_code.simps dup_inst_code_def)
-(* now it's not nice *)
-oops
-
+apply(rename_tac s)
+apply(case_tac s; simp add: stack_inst_code.simps)
+apply(rename_tac l)
+apply(case_tac l; simp)
+apply(split if_splits; auto)
+done
 
 lemma advance_pc_different [simp] :
   "vctx_pc (vctx_advance_pc co_ctx x1) \<noteq> vctx_pc x1"
 apply(simp add: vctx_advance_pc_def)
 apply(case_tac "vctx_next_instruction x1 co_ctx"; auto)
-apply(case_tac a; auto simp add: inst_size_def inst_code.simps)
-apply(rename_tac si)
-apply(case_tac si; auto simp add: stack_inst_code.simps)
-apply(rename_tac data)
-apply(case_tac data; simp)
+done
 
+lemma small_idx_app:
+  "a < length l \<Longrightarrow> l ! a = (l@l') ! a"
+  by (simp add: nth_append)
+
+
+lemma append_idx_diff [dest]:
+  "l ! a \<noteq> (l @ l') ! a \<Longrightarrow>  a \<ge> length l"
+(* sledgehammer *)
+  by (meson leI small_idx_app)
+
+lemma rev_append_idx_diff [dest]:
+  "rev l ! a \<noteq> (rev l @ l') ! a \<Longrightarrow>  a \<ge> length l"
+apply(drule append_idx_diff; simp)
+done
+
+lemma rev_append_idx [simp]:
+   "a < Suc (length l) \<Longrightarrow>
+    rev l ! a \<noteq> (rev l @ l') ! a \<Longrightarrow>  a = length l"
+apply(drule rev_append_idx_diff; simp)
+done
 
 lemma stack_touching_operations_leaves [simp] :
 "(contexts_as_set
-              (vctx_advance_pc co_ctx x1\<lparr>vctx_stack := (v + w) # ta, vctx_gas := vctx_gas x1 - Gverylow\<rparr>) co_ctx -
-             {StackHeightElm (Suc (length ta))} -
-             {StackElm (length ta, v + w)} -
+              (vctx_advance_pc co_ctx x1\<lparr>vctx_stack := (v + w) # (vctx_stack x1), vctx_gas := vctx_gas x1 - Gverylow\<rparr>) co_ctx -
+             {StackHeightElm (Suc (length (vctx_stack x1)))} -
+             {StackElm (length (vctx_stack x1), v + w)} -
              {PcElm (vctx_pc x1 + 1)} -
              {GasElm (vctx_gas x1 - Gverylow)} -
              {CodeElm (vctx_pc x1, Arith ADD)})
 =
- (contexts_as_set x1 co_ctx - {StackHeightElm (Suc (Suc (length ta)))} - {StackElm (Suc (length ta), v)} -
-             {StackElm (length ta, w)} -
+ (contexts_as_set x1 co_ctx - {StackHeightElm (Suc (Suc (length (vctx_stack x1))))} - {StackElm (Suc (length (vctx_stack x1)), v)} -
+             {StackElm (length (vctx_stack x1), w)} -
              {PcElm (vctx_pc x1)} -
              {GasElm (vctx_gas x1)} -
              {CodeElm (vctx_pc x1, Arith ADD)})
 "
 apply(simp add: contexts_as_set_def Set.Un_Diff)
 apply(auto)
+    apply(case_tac x; auto)
+
+sledgehammer
+
 
 oops
 
