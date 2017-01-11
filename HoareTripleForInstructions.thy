@@ -37,20 +37,82 @@ apply(simp add: vctx_advance_pc_def)
 apply(case_tac "vctx_next_instruction x1 co_ctx"; auto)
 done
 
+lemma constant_diff_stack_height [simp] :
+ "constant_ctx_as_set co_ctx - {StackHeightElm h} = constant_ctx_as_set co_ctx"
+apply(auto simp add: constant_ctx_as_set_def)
+apply(auto simp add: program_as_set_def)
+done
+
+lemma constant_diff_stack [simp] :
+ "constant_ctx_as_set co_ctx - {StackElm s} = constant_ctx_as_set co_ctx"
+apply(auto simp add: constant_ctx_as_set_def)
+apply(auto simp add: program_as_set_def)
+done
+
+lemma constant_diff_pc [simp] :
+ "constant_ctx_as_set co_ctx - {PcElm p} =
+  constant_ctx_as_set co_ctx"
+apply(auto simp add: constant_ctx_as_set_def)
+apply(auto simp add: program_as_set_def)
+done
+
+lemma constant_diff_gas [simp] :
+ "constant_ctx_as_set co_ctx - {GasElm g} =
+  constant_ctx_as_set co_ctx"
+apply(auto simp add: constant_ctx_as_set_def)
+apply(auto simp add: program_as_set_def)
+done
+
+lemma stack_height_element_means [simp] :
+ "(StackHeightElm h \<in> variable_ctx_as_set v) =
+  (length (vctx_stack v) = h)
+ "
+apply(auto simp add: variable_ctx_as_set_def stack_as_set_def)
+done
+
+lemma stack_element_means [simp] :
+ "(StackElm (p, w) \<in> variable_ctx_as_set v) =
+  (rev (vctx_stack v) ! p = w \<and> p < length (vctx_stack v))"
+apply(auto simp add: variable_ctx_as_set_def stack_as_set_def)
+done
+
+lemma pc_element_means [simp] :
+  "(PcElm p \<in> variable_ctx_as_set v) =
+   (vctx_pc v = p)"
+apply(auto simp add: variable_ctx_as_set_def stack_as_set_def)
+done
+
+lemma inst_size_nonzero [simp] : "inst_size a \<noteq> 0"
+apply(simp add: inst_size_def)
+apply(case_tac a; auto simp add: inst_code.simps dup_inst_code_def)
+(* now it's not nice *)
+oops
+
+
+lemma advance_pc_different [simp] :
+  "vctx_pc (vctx_advance_pc co_ctx x1) \<noteq> vctx_pc x1"
+apply(simp add: vctx_advance_pc_def)
+apply(case_tac "vctx_next_instruction x1 co_ctx"; auto)
+
+
 lemma stack_touching_operations_leaves [simp] :
 "(contexts_as_set
               (vctx_advance_pc co_ctx x1\<lparr>vctx_stack := (v + w) # ta, vctx_gas := vctx_gas x1 - Gverylow\<rparr>) co_ctx -
              {StackHeightElm (Suc (length ta))} -
              {StackElm (length ta, v + w)} -
              {PcElm (vctx_pc x1 + 1)} -
-             {GasElm (vctx_gas x1 - Gverylow)}) =
-contexts_as_set
-              (vctx_advance_pc co_ctx x1) co_ctx -
-             {StackHeightElm (Suc (Suc (length ta)))} -
-             {StackElm (length ta, v + w)} -
-             {PcElm (vctx_pc x1 + 1)} -
-             {GasElm (vctx_gas x1 - Gverylow)}
+             {GasElm (vctx_gas x1 - Gverylow)} -
+             {CodeElm (vctx_pc x1, Arith ADD)})
+=
+ (contexts_as_set x1 co_ctx - {StackHeightElm (Suc (Suc (length ta)))} - {StackElm (Suc (length ta), v)} -
+             {StackElm (length ta, w)} -
+             {PcElm (vctx_pc x1)} -
+             {GasElm (vctx_gas x1)} -
+             {CodeElm (vctx_pc x1, Arith ADD)})
 "
+apply(simp add: contexts_as_set_def Set.Un_Diff)
+apply(auto)
+
 oops
 
 
