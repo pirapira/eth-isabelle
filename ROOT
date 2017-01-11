@@ -38,6 +38,7 @@ session "all" = "HOL" +
     ContractSem
     RelationalSem
     Hoare
+    HoareTripleForInstructions
     "attic/HP"
     "attic/YellowPaper"
     "example/Optimization"
@@ -53,6 +54,7 @@ session "light" = "HOL" +
     ContractSem
     RelationalSem
     Hoare
+    HoareTripleForInstructions
     "attic/HP"
     "attic/YellowPaper"
     "example/Optimization"
