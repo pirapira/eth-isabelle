@@ -11,7 +11,6 @@ abbreviation always_fail_code :: "inst list"
 where
 "always_fail_code ==
    Stack (PUSH_N [2])
- # Annotation (\<lambda> aenv. aenv_stack aenv ! 0 = 2)
  # Pc JUMP #
  []"
 
@@ -40,8 +39,6 @@ where
                      \<lambda> a. a = always_fail_account_state initial_balance)
   \<rparr>
 "
-
-declare eval_annotation_def [simp]
 
 lemma problem :
 "node \<langle> x, ll, elm, rr\<rangle> y \<langle>\<rangle> = Node (x + 1) \<langle> x, ll, elm, rr\<rangle> y \<langle>\<rangle> "

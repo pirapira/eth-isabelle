@@ -60,8 +60,6 @@ value "program_of_lst fail_on_reentrance_program"
 
 declare fail_on_reentrance_state.simps [simp]
 
-declare eval_annotation_def [simp]
-
 inductive fail_on_reentrance_invariant :: "account_state \<Rightarrow> bool"
 where
   depth_zero:

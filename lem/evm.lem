@@ -534,13 +534,6 @@ let misc_inst_numbers inst = match inst with
 | SUICIDE      -> (1, 0)
 end
 
-(* subsection {* Annotation Instruction *} *)
-
-(* The annotation instruction is just a predicate over @{typ aenv}. *)
-(* A predicate is modelled as a function returning a boolean. *)
-
-type annotation = aenv -> bool
-
 type inst =
   | Unknown of byte
   | Bits of bits_inst
@@ -555,7 +548,10 @@ type inst =
   | Swap of swap_inst
   | Log of log_inst
   | Misc of misc_inst
-  | Annotation of annotation
+
+(* subsection {* Annotation  *} *)
+
+type annotation = aenv -> bool
 
 (* subsection {* The Whole Instruction Set *} *)
 
@@ -581,7 +577,6 @@ let inst_code inst = match inst with
 | Swap s -> maybe_to_list (swap_inst_code s)
 | Log l -> [log_inst_code l]
 | Misc m -> [misc_inst_code m]
-| Annotation _ -> []
 end
 
 val inst_stack_numbers : inst -> stack_numbers
@@ -599,7 +594,6 @@ let inst_stack_numbers i = match i with
 | Swap s -> swap_inst_numbers s
 | Log l -> log_inst_numbers l
 | Misc m -> misc_inst_numbers m
-| Annotation _ -> (0, 0)
 end
 
 
@@ -854,7 +848,6 @@ let prepend_annotation pos annot orig p = if pos = p then annot :: orig p else o
 val program_annotation_of_lst : int -> list inst -> integer -> list annotation
 let rec program_annotation_of_lst pos lst = match lst with
 | [] -> (fun _ -> [])
-| Annotation annot :: rest -> prepend_annotation (integerFromInt pos) annot (program_annotation_of_lst pos rest)
 | i :: rest -> program_annotation_of_lst (pos + inst_size i) rest
 end
 declare termination_argument program_annotation_of_lst = automatic
@@ -1087,15 +1080,6 @@ let build_aenv v c = <|
   aenv_this = c.cctx_this;
   aenv_origin = v.vctx_origin;
 |>
-
-(* In reality, EVM programs do not contain annotations so annotations never cause failures.*)
-(* However, during the verification, I want to catch annotation failures.  When the annotation *)
-(* evaluates to False, the execution stops and results in @{term InstructionAnnotationFailure}. *)
-
-val eval_annotation : annotation -> variable_ctx -> constant_ctx -> instruction_result
-let eval_annotation anno v c =
-   if anno (build_aenv v c) then InstructionContinue (vctx_advance_pc c v)
-    else InstructionAnnotationFailure
 
 (* The JUMP instruction has the following meaning.  When it cannot find the JUMPDEST instruction *)
 (* at the destination, the execution fails. *)
@@ -1793,7 +1777,6 @@ let instruction_sem v c inst =
   | Info GASLIMIT -> stack_0_1_op v c v.vctx_block.block_gaslimit
   | Arith inst_GT -> stack_2_1_op v c (fun a b -> if word256UGT a b then 1 else 0)
   | Arith inst_EQ -> stack_2_1_op v c (fun a b -> if a = b then 1 else 0)
-  | Annotation a -> eval_annotation a v c
   | Bits inst_AND -> stack_2_1_op v c (fun a b -> a land b)
   | Bits inst_OR -> stack_2_1_op v c (fun a b -> a lor b)
   | Bits inst_XOR -> stack_2_1_op v c (fun a b -> a lxor b)
