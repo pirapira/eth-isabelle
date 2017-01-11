@@ -441,8 +441,8 @@ val stack_inst_code : stack_inst -> list byte
 let stack_inst_code inst = match inst with
 | POP -> [0X50]
 | PUSH_N lst ->
-     if length lst < 1 then []
-     else if length lst > 32 then []
+     if length lst < 1 then [0X60; 0X00] (* this case should not exist *)
+     else if length lst > 32 then [0X60; 0X00] (* this case should not exist *)
      else [byteFromNat (length lst) + 0X5f] ++ lst
 | CALLDATALOAD -> [0X35]
 end
