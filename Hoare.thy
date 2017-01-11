@@ -521,6 +521,57 @@ apply(erule impE)
 apply(erule exE)
 using commute_in_four by blast
 
+lemma imp_sepL :
+  "(\<forall> s. a s \<longrightarrow> b s) \<Longrightarrow>
+   (\<forall> s. (a ** c) s \<longrightarrow> (b ** c) s)"
+apply(auto simp add: sep_def)
+done
+
+
+
+
+lemma postW : "triple p c q \<Longrightarrow> (\<forall> s. q s \<longrightarrow> r s) \<Longrightarrow> triple p c r"
+proof -
+ assume "triple p c q" "\<forall> s. q s \<longrightarrow> r s"
+ then have "(\<forall> co_ctx presult rest. no_assertion co_ctx \<longrightarrow>
+       (p ** code c ** rest) (program_result_as_set co_ctx presult) \<longrightarrow>
+       (\<exists> k. (r ** code c ** rest) (program_result_as_set co_ctx (program_sem co_ctx k presult))))"
+   (is ?longer)
+  proof (clarify)
+   fix co_ctx presult rest
+   assume "triple p c q" "(p ** code c ** rest) (program_result_as_set co_ctx presult)" "no_assertion co_ctx"
+   then have "\<exists>k. (q ** code c ** rest) (program_result_as_set co_ctx (program_sem co_ctx k presult))"
+    by (auto simp add: triple_def)
+   then show "\<exists>k. (r ** code c ** rest) (program_result_as_set co_ctx (program_sem co_ctx k presult))"
+    (* sledghammer *)
+    using \<open>\<forall>s. q s \<longrightarrow> r s\<close> imp_sepL by blast
+  qed
+ moreover have "triple p c r = ?longer"
+  using triple_def by blast
+ ultimately show "triple p c r"
+  by blast
+qed
+
+
+lemma preS : "triple p c q \<Longrightarrow> (\<forall> s. r s \<longrightarrow> p s) \<Longrightarrow> triple r c q"
+proof -
+ assume "triple p c q" "\<forall> s. r s \<longrightarrow> p s"
+ then have "(\<forall> co_ctx presult rest. no_assertion co_ctx \<longrightarrow>
+       (r ** code c ** rest) (program_result_as_set co_ctx presult) \<longrightarrow>
+       (\<exists> k. (q ** code c ** rest) (program_result_as_set co_ctx (program_sem co_ctx k presult))))" (is ?longer)
+  proof(clarify)
+   fix co_ctx presult rest
+   assume "triple p c q" "no_assertion co_ctx" "\<forall> s. r s \<longrightarrow> p s" "(r ** code c ** rest) (program_result_as_set co_ctx presult)"
+   then moreover have "(p ** code c ** rest) (program_result_as_set co_ctx presult)"
+     using sep_def by auto
+   ultimately show "\<exists>k. (q ** code c ** rest) (program_result_as_set co_ctx (program_sem co_ctx k presult))"
+    by(simp add: triple_def)
+  qed
+ moreover have "triple r c q = ?longer"
+  by(simp add: triple_def)
+ ultimately show "triple r c q" by blast
+qed
+
 (** More rules to come **)
 
 (* Some rules about this if-then-else should be derivable. *)
