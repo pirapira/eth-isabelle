@@ -2,16 +2,16 @@ sudo: required
 before_install:
 - sudo apt-get -qq update
 - sudo apt-get -qq install libgmp3-dev
-- git clone https://github.com/polyml/polyml.git
-- cd polyml
-- git checkout v5.6
-- ./configure
-- make
-- make compiler
-- sudo make install
-- cd -
-- sudo updatedb
-- locate libpolymain.a
+# - git clone https://github.com/polyml/polyml.git
+# - cd polyml
+# - git checkout v5.6
+# - ./configure
+# - make
+# - make compiler
+# - sudo make install
+# - cd -
+# - sudo updatedb
+# - locate libpolymain.a
 - wget https://raw.github.com/ocaml/opam/master/shell/opam_installer.sh -O - | sudo sh -s /usr/local/bin
 - export OPAMJOBS=2
 - opam init -y --comp=4.02.3
@@ -25,19 +25,19 @@ before_install:
 - wget https://isabelle.in.tum.de/dist/Isabelle2016-1_app.tar.gz
 - tar xf Isabelle2016-1_app.tar.gz
 - export PATH=./Isabelle2016-1/bin:$PATH
-- git clone git://github.com/HOL-Theorem-Prover/HOL.git
-- cd HOL
-- echo 'val polymllibdir = "/usr/local/lib"' > tools-poly/poly-includes.ML
-- poly < tools/smart-configure.sml
-- bin/build -j 2 -nograph
-- cd -
+# - git clone git://github.com/HOL-Theorem-Prover/HOL.git
+# - cd HOL
+# - echo 'val polymllibdir = "/usr/local/lib"' > tools-poly/poly-includes.ML
+# - poly < tools/smart-configure.sml
+# - bin/build -j 2 -nograph
+# - cd -
 script:
 - make lem-ocaml
 - make lem-thy
 - make lem-hol
-- cd lem
-- ../HOL/bin/Holmake evmTheory.uo
-- cd -
+# - cd lem
+# - ../HOL/bin/Holmake evmTheory.uo
+# - cd -
 - cd tester
 - sh compile.sh
 - cd -
