@@ -1,8 +1,8 @@
 All files except
-* the [.ml] and [.thy] files in [lem] directory and
+* the [.sml], [.ml] and [.thy] files in [lem] directory and
 are distributed under Apache License Version 2.0.
 
-The [.ml] and [.thy] files in [lem] directory are distributed under the terms in [lem/lem-license].
+The [.sml], [.ml] and [.thy] files in [lem] directory are distributed under the terms in [lem/lem-license].
 
 
 
