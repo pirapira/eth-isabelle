@@ -1914,8 +1914,8 @@ let check_annotations v c =
 val next_state: constant_ctx -> program_result -> program_result
 let next_state c pr =
   match pr with
-  | ProgramToEnvironment act st bal touched log stash ->
-    ProgramToEnvironment act st bal touched log stash
+  | ProgramToEnvironment act st bal touched logs stash ->
+    ProgramToEnvironment act st bal touched logs stash
   | ProgramInvalid -> ProgramInvalid
   | ProgramAnnotationFailure -> ProgramAnnotationFailure
   | ProgramInit init -> ProgramInit init
