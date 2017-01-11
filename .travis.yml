@@ -4,8 +4,10 @@ before_install:
 - sudo apt-get -qq install libgmp3-dev
 - git clone https://github.com/polyml/polyml.git
 - cd polyml
+- git checkout v5.6
 - ./configure
 - make
+- make compiler
 - sudo make install
 - cd -
 - sudo updatedb
