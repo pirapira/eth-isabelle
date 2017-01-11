@@ -2,6 +2,8 @@ sudo: required
 before_install:
 - sudo apt-get -qq update
 - sudo apt-get -qq install libgmp3-dev polyml libpolyml-dev
+- sudo updatedb
+- locate libpolymain.a
 - wget https://raw.github.com/ocaml/opam/master/shell/opam_installer.sh -O - | sudo sh -s /usr/local/bin
 - export OPAMJOBS=2
 - opam init -y --comp=4.02.3
