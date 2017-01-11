@@ -54,9 +54,6 @@ where
    (update pos (Stack (PUSH_N bytes))
           (program_avl_of_lst (pos + 1 + (int (length bytes))) rest))"
   -- {* The PUSH instruction is translated together with the immediate value. *}
-| "program_avl_of_lst pos (Annotation _ # rest) =
-    program_avl_of_lst pos rest"
-  -- {* Annotations are skipped because they do not belong in this AVL tree. *}
 | "program_avl_of_lst pos (i # rest) =
    update pos i (program_avl_of_lst (pos + 1) rest)"
   -- {* The other instructions are simply inserted into the AVL tree. *}
