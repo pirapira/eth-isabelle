@@ -435,7 +435,7 @@ apply(rule pred_equiv_sep_assoc)
 done
 
 lemma execution_continue [simp]:
-  "\<forall> presult. (program_sem co_ctx a (program_sem co_ctx b presult) = program_sem co_ctx (b + a) presult)"
+  "\<forall> presult. (program_sem s co_ctx a (program_sem s co_ctx b presult) = program_sem s co_ctx (b + a) presult)"
 apply(induction b)
  apply(simp add: program_sem.simps)
 apply(simp add: program_sem.simps)
@@ -445,13 +445,15 @@ done
 lemma triple_continue:
 "triple q c r \<Longrightarrow>
  no_assertion co_ctx \<Longrightarrow>
- (q ** code c ** rest) (program_result_as_set co_ctx (program_sem co_ctx k presult)) \<Longrightarrow>
- \<exists> l. (r ** code c ** rest) (program_result_as_set co_ctx (program_sem co_ctx (k + l) presult))"
+ (q ** code c ** rest) (program_result_as_set co_ctx (program_sem s co_ctx k presult)) \<Longrightarrow>
+ \<exists> l. (r ** code c ** rest) (program_result_as_set co_ctx (program_sem s co_ctx (k + l) presult))"
 apply(simp add: triple_def)
 apply(drule_tac x = co_ctx in spec)
 apply(simp)
-apply(drule_tac x = "program_sem co_ctx k presult" in spec)
+apply(drule_tac x = "program_sem s co_ctx k presult" in spec)
 apply(drule_tac x = rest in spec)
+apply(simp)
+apply(drule_tac x = s in spec)
 apply(simp)
 done
 
@@ -471,11 +473,13 @@ apply(drule_tac x = "co_ctx" in spec; simp)
 apply(drule_tac x = "presult" in spec)
 apply(drule_tac x = co_ctx in spec; simp)
 apply(drule_tac x = "code (c_2 - c_1) ** rest" in spec; simp)
+apply(drule_tac x = stopper in spec)
 apply(erule exE)
-apply(drule_tac x = "program_sem co_ctx k presult" in spec; simp)
+apply(drule_tac x = "program_sem stopper co_ctx k presult" in spec)
 apply(drule_tac x = "code (c_1 - c_2) ** rest" in spec)
 apply(simp add: code_back)
 apply(drule code_union_s; simp)
+apply(drule_tac x = stopper in spec)
 apply(erule exE)
 apply(rule_tac x = "k + ka" in exI)
 apply(rule code_union_s; simp)
@@ -535,15 +539,15 @@ proof -
  assume "triple p c q" "\<forall> s. q s \<longrightarrow> r s"
  then have "(\<forall> co_ctx presult rest. no_assertion co_ctx \<longrightarrow>
        (p ** code c ** rest) (program_result_as_set co_ctx presult) \<longrightarrow>
-       (\<exists> k. (r ** code c ** rest) (program_result_as_set co_ctx (program_sem co_ctx k presult))))"
+       (\<forall> stopper. (\<exists> k. (r ** code c ** rest) (program_result_as_set co_ctx (program_sem stopper co_ctx k presult)))))"
    (is ?longer)
   proof (clarify)
-   fix co_ctx presult rest
+   fix co_ctx presult rest stopper
    assume "triple p c q" "(p ** code c ** rest) (program_result_as_set co_ctx presult)" "no_assertion co_ctx"
-   then have "\<exists>k. (q ** code c ** rest) (program_result_as_set co_ctx (program_sem co_ctx k presult))"
+   then have "\<exists>k. (q ** code c ** rest) (program_result_as_set co_ctx (program_sem stopper co_ctx k presult))"
     by (auto simp add: triple_def)
-   then show "\<exists>k. (r ** code c ** rest) (program_result_as_set co_ctx (program_sem co_ctx k presult))"
-    (* sledghammer *)
+   then show "\<exists>k. (r ** code c ** rest) (program_result_as_set co_ctx (program_sem stopper co_ctx k presult))"
+    sledghammer
     using \<open>\<forall>s. q s \<longrightarrow> r s\<close> imp_sepL by blast
   qed
  moreover have "triple p c r = ?longer"
