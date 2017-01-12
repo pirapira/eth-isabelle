@@ -66,7 +66,7 @@ definition ext_program_as_set :: "(address \<Rightarrow> program) \<Rightarrow> 
 definition log_as_set :: "log_entry list \<Rightarrow> state_element set"
   where
     "log_as_set logs ==
-      { LogElm (pos, l) | pos l. logs ! pos = l}
+      { LogElm (pos, l) | pos l. logs ! pos = l \<and> pos < length logs}
     "
 
 definition program_as_set :: "program \<Rightarrow> state_element set"
