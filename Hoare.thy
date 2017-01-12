@@ -319,7 +319,7 @@ declare memory_as_set_def [simp]
   log_as_set_def [simp]
   balance_as_set_def [simp]
   program_result_as_set_def [simp]
-  next_state.simps [simp]
+  next_state_def [simp]
 
  
 (**
