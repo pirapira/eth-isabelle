@@ -106,17 +106,16 @@ let format_quad_as_list
 
 let list_usual = ("{", ",", "}", Easy_format.list)
 
-let format_program_result (r : Evm.program_result) : Easy_format.t =
+let format_program_result (r : Evm.instruction_result) : Easy_format.t =
   let open Evm in
   let open Easy_format in
   match r with
-  | ProgramStepRunOut _ -> Atom ("ProgramStepRunOut", atom)
-  | ProgramToEnvironment (act, storage, bal, touched, logs, stashed_opt) ->
+  | InstructionContinue _ -> Atom ("ProgramStepRunOut", atom)
+  | InstructionToEnvironment (act, storage, bal, touched, logs, stashed_opt) ->
      Label ((Atom ("ProgramToEnvironment", atom), label),
             List (list_usual, format_quad_as_list act storage bal stashed_opt))
-  | ProgramInvalid -> Atom ("ProgramInvalid", atom)
-  | ProgramAnnotationFailure -> Atom ("ProgramAnnotationFailure", atom)
-  | ProgramInit cenv ->
+  | InstructionAnnotationFailure -> Atom ("ProgramAnnotationFailure", atom)
+  | InstructionInit cenv ->
      Label ((Atom ("ProgramInit", atom), label),
             List (list_usual, [(* to be filled *)]))
 
@@ -188,7 +187,7 @@ let string_of_int_64list ((n, lst) : (int * Int64.t list)) =
   (string_of_int n)^", "^
   string_of_64list lst
 
-exception ToEnvironment of program_result
+exception ToEnvironment of instruction_result
 
 let the_stopper r = raise (ToEnvironment r)
 

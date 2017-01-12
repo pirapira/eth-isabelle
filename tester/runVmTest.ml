@@ -125,27 +125,27 @@ let test_one_case j : testResult =
     } in
   let () = Conv.print_constant_ctx c in
   let number = Nat_big_num.of_string (Big_int.string_of_big_int test_case.exec.gas) in
-  let ret : program_result = Conv.program_sem_wrapper c (Nat_big_num.to_int number) (ProgramStepRunOut v) in
+  let ret : instruction_result = Conv.program_sem_wrapper c (Nat_big_num.to_int number) (InstructionContinue v) in
   match ret with
-  | ProgramStepRunOut _ ->
-     let () = Printf.printf "ProgramStepRunOut\n" in
+  | InstructionContinue _ ->
+     let () = Printf.printf "InstructionContinue\n" in
      TestFailure
-  | ProgramToEnvironment (ContractCall carg, st, bal, touched, logs, pushed_opt) ->
+  | InstructionToEnvironment (ContractCall carg, st, bal, touched, logs, pushed_opt) ->
      let () = Printf.eprintf "We are not looking whatever happens after the contract calls\n" in
      TestSkipped
-  | ProgramToEnvironment (ContractDelegateCall carg, st, bal, touched, logs, pushed_opt) ->
+  | InstructionToEnvironment (ContractDelegateCall carg, st, bal, touched, logs, pushed_opt) ->
      let () = Printf.eprintf "We are not looking whatever happens after the contract calls\n" in
      TestSkipped
-  | ProgramToEnvironment (ContractCreate carg, st, bal, touched, logs, pushed_opt) ->
+  | InstructionToEnvironment (ContractCreate carg, st, bal, touched, logs, pushed_opt) ->
      let () = Printf.eprintf "We are not looking whatever happens after the contract creates" in
      TestSkipped
-  | ProgramToEnvironment (ContractFail, st, bal, touched, logs, pushed_opt) ->
+  | InstructionToEnvironment (ContractFail, st, bal, touched, logs, pushed_opt) ->
      begin
        match test_case.callcreates, test_case.gas, test_case.logs, test_case.out, test_case.post with
        | [], None, None, None, None -> TestSuccess
        | _ -> failwith "some postconditions are there for a failing case"
      end
-  | ProgramToEnvironment (ContractSuicide, st, bal, touched, logs, pushed_opt) ->
+  | InstructionToEnvironment (ContractSuicide, st, bal, touched, logs, pushed_opt) ->
      begin
        match test_case.callcreates, test_case.gas, test_case.logs, test_case.out, test_case.post with
        | spec_created, Some spec_gas, Some spec_logs, Some spec_out, Some spec_post ->
@@ -153,7 +153,7 @@ let test_one_case j : testResult =
           TestSuccess
        | _ -> failwith "Some post conditions not available"
      end
-  | ProgramToEnvironment (ContractReturn retval, st, bal, touched, logs, None) ->
+  | InstructionToEnvironment (ContractReturn retval, st, bal, touched, logs, None) ->
      begin
        match test_case.callcreates, test_case.gas, test_case.logs, test_case.out, test_case.post with
        | spec_created, Some spec_gas, Some spec_logs, Some spec_out, Some spec_post ->
@@ -166,16 +166,13 @@ let test_one_case j : testResult =
           else TestSuccess
        | _ -> failwith "Some post conditions not available"
      end
-  | ProgramToEnvironment (ContractReturn retval, st, bal, touched, logs, Some _) ->
+  | InstructionToEnvironment (ContractReturn retval, st, bal, touched, logs, Some _) ->
      let () = Printf.printf "unexpected return format\n" in
      TestFailure
-  | ProgramInvalid ->
-     let () = Printf.printf "ProgramInvalid\n" in
-     TestFailure
-  | ProgramAnnotationFailure ->
+  | InstructionAnnotationFailure ->
      let () = Printf.printf "ProgramAnnotationFailure\n" in
      TestFailure
-  | ProgramInit _ ->
+  | InstructionInit _ ->
      let () = Printf.printf "ProgramInit?\n" in
      TestFailure
 

@@ -771,8 +771,8 @@ stays the same or becomes empty.  It also proves that no annotations fail, but
 there are no annotations anyway. *}
 
 lemma check_resources_split [split] :
-"P (if check_resources v con s i then X else ProgramToWorld a b c d) =
- (\<not> (\<not> check_resources v con s i \<and> \<not> P (ProgramToWorld a b c d) \<or> check_resources v con s i \<and> \<not> P X ))"
+"P (if check_resources v con s i then X else something a b c d) =
+ (\<not> (\<not> check_resources v con s i \<and> \<not> P (something a b c d) \<or> check_resources v con s i \<and> \<not> P X ))"
 apply(simp only: if_splits(2))
 apply(auto)
 done

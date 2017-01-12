@@ -187,15 +187,14 @@ lemma stack_sem :
   apply(simp)
   done
 
-definition program_result_as_set :: "constant_ctx \<Rightarrow> program_result \<Rightarrow> state_element set"
+definition instruction_result_as_set :: "constant_ctx \<Rightarrow> instruction_result \<Rightarrow> state_element set"
   where
-    "program_result_as_set c rslt =
+    "instruction_result_as_set c rslt =
         ( case rslt of
-          ProgramStepRunOut v \<Rightarrow> contexts_as_set v c
-        | ProgramToEnvironment act st bal _ logs _ \<Rightarrow> {} (* for now *)
-        | ProgramInvalid \<Rightarrow> {}
-        | ProgramAnnotationFailure \<Rightarrow> {} (* need to assume no annotation failure somewhere *)
-        | ProgramInit _ \<Rightarrow> {}
+          InstructionContinue v \<Rightarrow> contexts_as_set v c
+        | InstructionToEnvironment act st bal _ logs _ \<Rightarrow> {} (* for now *)
+        | InstructionAnnotationFailure \<Rightarrow> {} (* need to assume no annotation failure somewhere *)
+        | InstructionInit _ \<Rightarrow> {}
         )"
 
 definition code :: "(int * inst) set \<Rightarrow> state_element set \<Rightarrow> bool"
@@ -215,8 +214,8 @@ definition triple ::
 where
   "triple pre insts post ==
     \<forall> co_ctx presult rest stopper. no_assertion co_ctx \<longrightarrow>
-       (pre ** code insts ** rest) (program_result_as_set co_ctx presult) \<longrightarrow>
-       (\<exists> k. (post ** code insts ** rest) (program_result_as_set co_ctx (program_sem stopper co_ctx k presult)))"
+       (pre ** code insts ** rest) (instruction_result_as_set co_ctx presult) \<longrightarrow>
+       (\<exists> k. (post ** code insts ** rest) (instruction_result_as_set co_ctx (program_sem stopper co_ctx k presult)))"
 
 lemma no_assertion_pass [simp] : "no_assertion co_ctx \<Longrightarrow> check_annotations v co_ctx"
 apply(simp add: no_assertion_def check_annotations_def)
@@ -318,7 +317,7 @@ declare memory_as_set_def [simp]
   storage_as_set_def [simp]
   log_as_set_def [simp]
   balance_as_set_def [simp]
-  program_result_as_set_def [simp]
+  instruction_result_as_set_def [simp]
   next_state_def [simp]
 
  
@@ -377,8 +376,8 @@ done
 lemma triple_continue:
 "triple q c r \<Longrightarrow>
  no_assertion co_ctx \<Longrightarrow>
- (q ** code c ** rest) (program_result_as_set co_ctx (program_sem s co_ctx k presult)) \<Longrightarrow>
- \<exists> l. (r ** code c ** rest) (program_result_as_set co_ctx (program_sem s co_ctx (k + l) presult))"
+ (q ** code c ** rest) (instruction_result_as_set co_ctx (program_sem s co_ctx k presult)) \<Longrightarrow>
+ \<exists> l. (r ** code c ** rest) (instruction_result_as_set co_ctx (program_sem s co_ctx (k + l) presult))"
 apply(simp add: triple_def)
 apply(drule_tac x = co_ctx in spec)
 apply(simp)
@@ -473,21 +472,21 @@ lemma postW : "triple p c q \<Longrightarrow> (\<forall> s. q s \<longrightarrow
 proof -
  assume "triple p c q" "\<forall> s. q s \<longrightarrow> r s"
  then have "(\<forall> co_ctx presult rest. no_assertion co_ctx \<longrightarrow>
-       (p ** code c ** rest) (program_result_as_set co_ctx presult) \<longrightarrow>
-       (\<forall> stopper. (\<exists> k. (r ** code c ** rest) (program_result_as_set co_ctx (program_sem stopper co_ctx k presult)))))"
+       (p ** code c ** rest) (instruction_result_as_set co_ctx presult) \<longrightarrow>
+       (\<forall> stopper. (\<exists> k. (r ** code c ** rest) (instruction_result_as_set co_ctx (program_sem stopper co_ctx k presult)))))"
    (is ?longer)
   proof -
    assume "triple p c q"
    then have "\<forall>co_ctx presult rest.
        no_assertion co_ctx \<longrightarrow>
-       (p ** code c ** rest) (program_result_as_set co_ctx presult) \<longrightarrow>
-       (\<forall>stopper. \<exists>k. (q ** code c ** rest) (program_result_as_set co_ctx (program_sem stopper co_ctx k presult)))"
+       (p ** code c ** rest) (instruction_result_as_set co_ctx presult) \<longrightarrow>
+       (\<forall>stopper. \<exists>k. (q ** code c ** rest) (instruction_result_as_set co_ctx (program_sem stopper co_ctx k presult)))"
      using triple_def by blast
    moreover assume " \<forall>s. q s \<longrightarrow> r s "
    ultimately show "\<forall>co_ctx presult rest.
        no_assertion co_ctx \<longrightarrow>
-       (p ** code c ** rest) (program_result_as_set co_ctx presult) \<longrightarrow>
-       (\<forall>stopper. \<exists>k. (r ** code c ** rest) (program_result_as_set co_ctx (program_sem stopper co_ctx k presult)))"
+       (p ** code c ** rest) (instruction_result_as_set co_ctx presult) \<longrightarrow>
+       (\<forall>stopper. \<exists>k. (r ** code c ** rest) (instruction_result_as_set co_ctx (program_sem stopper co_ctx k presult)))"
     apply(rule_tac allI)
     apply(rule_tac allI)
     apply(rule_tac allI)
@@ -512,14 +511,14 @@ lemma preS : "triple p c q \<Longrightarrow> (\<forall> s. r s \<longrightarrow>
 proof -
  assume "triple p c q" "\<forall> s. r s \<longrightarrow> p s"
  then have "(\<forall> co_ctx presult rest stopper. no_assertion co_ctx \<longrightarrow>
-       (r ** code c ** rest) (program_result_as_set co_ctx presult) \<longrightarrow>
-       (\<exists> k. (q ** code c ** rest) (program_result_as_set co_ctx (program_sem stopper co_ctx k presult))))" (is ?longer)
+       (r ** code c ** rest) (instruction_result_as_set co_ctx presult) \<longrightarrow>
+       (\<exists> k. (q ** code c ** rest) (instruction_result_as_set co_ctx (program_sem stopper co_ctx k presult))))" (is ?longer)
   proof(clarify)
    fix co_ctx presult rest stopper
-   assume "triple p c q" "no_assertion co_ctx" "\<forall> s. r s \<longrightarrow> p s" "(r ** code c ** rest) (program_result_as_set co_ctx presult)"
-   then moreover have "(p ** code c ** rest) (program_result_as_set co_ctx presult)"
+   assume "triple p c q" "no_assertion co_ctx" "\<forall> s. r s \<longrightarrow> p s" "(r ** code c ** rest) (instruction_result_as_set co_ctx presult)"
+   then moreover have "(p ** code c ** rest) (instruction_result_as_set co_ctx presult)"
      using sep_def by auto
-   ultimately show "\<exists>k. (q ** code c ** rest) (program_result_as_set co_ctx (program_sem stopper co_ctx k presult))"
+   ultimately show "\<exists>k. (q ** code c ** rest) (instruction_result_as_set co_ctx (program_sem stopper co_ctx k presult))"
     by(simp add: triple_def)
   qed
  moreover have "triple r c q = ?longer"

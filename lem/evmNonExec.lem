@@ -12,13 +12,13 @@ let respond_to_call_correctly c a =
          (* The specification says the execution should result in these *)
          c call_env = (resulting_action, final_state_pred) -->
          (forall steps stopper. (* and for any number of steps *)
-           ( let r = program_sem stopper (build_cctx a) steps (ProgramStepRunOut initial_vctx) in
+           ( let r = program_sem stopper (build_cctx a) steps (InstructionContinue initial_vctx) in
              (* either more steps are necessary, or *)
-             (exists x. r = ProgramStepRunOut x) ||
-             (exists x y. r = ProgramToEnvironment ContractFail x y [] [] Nothing) ||
+             (exists x. r = InstructionContinue x) ||
+             (exists x y. r = InstructionToEnvironment ContractFail x y [] [] Nothing) ||
              (* the result matches the specification *)
              (exists pushed_vctx st bal touched logs.
-              r = ProgramToEnvironment resulting_action st bal touched logs pushed_vctx &&
+              r = InstructionToEnvironment resulting_action st bal touched logs pushed_vctx &&
               final_state_pred
                 (update_account_state a resulting_action st bal pushed_vctx))
            )))
@@ -29,11 +29,11 @@ let respond_to_return_correctly r a =
        build_vctx_returned a rr initial_vctx -->
        r rr = (resulting_action, final_state_pred) -->
        (forall steps stopper.
-          (let r = program_sem stopper (build_cctx a) steps (ProgramStepRunOut initial_vctx) in
-           (exists x. r = ProgramStepRunOut x) ||
-           (exists x y. r = ProgramToEnvironment ContractFail x y [] [] Nothing) ||
+          (let r = program_sem stopper (build_cctx a) steps (InstructionContinue initial_vctx) in
+           (exists x. r = InstructionContinue x) ||
+           (exists x y. r = InstructionToEnvironment ContractFail x y [] [] Nothing) ||
            (exists pushed_vctx st bal touched logs.
-            r = ProgramToEnvironment resulting_action st bal touched logs pushed_vctx &&
+            r = InstructionToEnvironment resulting_action st bal touched logs pushed_vctx &&
             final_state_pred
               (update_account_state (account_state_pop_ongoing_call a) resulting_action st bal pushed_vctx))
           )))
@@ -44,11 +44,11 @@ let respond_to_fail_correctly f a =
       Just initial_vctx = build_vctx_failed a -->
       f = (resulting_action, final_state_pred) -->
       (forall steps stopper.
-        ( let r = program_sem stopper (build_cctx a) steps (ProgramStepRunOut initial_vctx) in
-          (exists x. r = ProgramStepRunOut x) ||
-          (exists x y. r = ProgramToEnvironment ContractFail x y [] [] Nothing) ||
+        ( let r = program_sem stopper (build_cctx a) steps (InstructionContinue initial_vctx) in
+          (exists x. r = InstructionContinue x) ||
+          (exists x y. r = InstructionToEnvironment ContractFail x y [] [] Nothing) ||
           (exists pushed_vctx st bal touched logs.
-             r = ProgramToEnvironment resulting_action st bal touched logs pushed_vctx &&
+             r = InstructionToEnvironment resulting_action st bal touched logs pushed_vctx &&
              final_state_pred (update_account_state (account_state_pop_ongoing_call a) resulting_action st bal pushed_vctx)))))
 
 indreln [account_state_responds_to_environment : (account_state -> bool) -> response_to_environment -> bool]
