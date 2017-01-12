@@ -954,6 +954,11 @@ type instruction_result =
   * list w256         (* the list of possibly changed storage indices *)
   * list log_entry    (* logs *)
   * maybe (variable_ctx * integer * integer) (* the variable environment to return to *)
+| InstructionInit of call_env
+  (* This clause does not denote results of program execution. *)
+  (* This denotes a state of the program that expects a particular call. *)
+  (* This artificial state is used to specify that the incoming call does not overflow the balance *)
+  (* of the account.  Probably there is a cleaner approach. *)
 
 (* When the contract fails, the result of the instruction always looks like this: *)
 val instruction_failure_result : variable_ctx -> instruction_result
@@ -1885,25 +1890,6 @@ let instruction_sem v c inst =
 (* about smart contracts, the theorems are of the form ``for any value of the initial step counter, *)
 (* this and that never happen.'' *)
 
-type program_result =
-| ProgramStepRunOut of variable_ctx (* the artificial step counter has run out *)
-| ProgramToEnvironment of contract_action * storage * (address -> w256) * list w256 * list log_entry
-   * maybe (variable_ctx * integer * integer)
-  (** the program stopped execution because an instruction wants to talk to the environment
-  for example because the execution returned, failed, or called an account.
-  *)
-| ProgramInvalid (* an unknown instruction is found.  Maybe this should just count as
-  a failing execution *)
-
-| ProgramAnnotationFailure (* an annotation turned out to be false.  This does not happen
-  in reality, but this case exists for the sake of the verification. *)
-
-| ProgramInit of call_env
-  (* This clause does not denote results of program execution. *)
-  (* This denotes a state of the program that expects a particular call. *)
-  (* This artificial state is used to specify that the incoming call does not overflow the balance *)
-  (* of the account.  Probably there is a cleaner approach. *)
-
 (* Since our program struct contains a list of annotations for each program position, *)
 (* I have a function that checks all annotations at a particular program position: *)
 val check_annotations : variable_ctx -> constant_ctx -> bool
@@ -1912,28 +1898,27 @@ let check_annotations v c =
   List.all (fun annot -> annot (build_aenv v c)) annots
 
 
-val next_state: (program_result -> unit) -> constant_ctx -> program_result -> program_result
+val next_state: (instruction_result -> unit) -> constant_ctx -> instruction_result -> instruction_result
 let next_state stopper c pr =
   match pr with
-  | ProgramToEnvironment act st bal touched log stash ->
+  | InstructionToEnvironment act st bal touched log stash ->
     let () = stopper pr in pr
-  | ProgramInvalid -> let () = stopper pr in pr
-  | ProgramAnnotationFailure -> let () = stopper pr in pr
-  | ProgramInit init -> let () = stopper pr in pr
-  | ProgramStepRunOut v ->
-     if not (check_annotations v c) then ProgramAnnotationFailure else
+  | InstructionAnnotationFailure -> let () = stopper pr in pr
+  | InstructionInit init -> let () = stopper pr in pr
+  | InstructionContinue v ->
+     if not (check_annotations v c) then InstructionAnnotationFailure else
      match vctx_next_instruction v c with
-      | Nothing -> ProgramToEnvironment ContractFail v.vctx_storage_at_call v.vctx_balance_at_call [] [] Nothing
+      | Nothing -> InstructionToEnvironment ContractFail v.vctx_storage_at_call v.vctx_balance_at_call [] [] Nothing
       | Just i ->
       if check_resources v c (v.vctx_stack) i then
         match instruction_sem v c i with
-        | InstructionContinue new_v ->  ProgramStepRunOut new_v
+        | InstructionContinue new_v ->  InstructionContinue new_v
         | InstructionToEnvironment a st bal touched logs opt_pushed_v ->
-            ProgramToEnvironment a st bal touched logs opt_pushed_v
-        | InstructionAnnotationFailure -> ProgramAnnotationFailure
+            InstructionToEnvironment a st bal touched logs opt_pushed_v
+        | InstructionAnnotationFailure -> InstructionAnnotationFailure
         end
       else
-        ProgramToEnvironment ContractFail v.vctx_storage_at_call v.vctx_balance_at_call [] [] Nothing
+        InstructionToEnvironment ContractFail v.vctx_storage_at_call v.vctx_balance_at_call [] [] Nothing
      end
   end
 
@@ -1944,7 +1929,7 @@ let next_state stopper c pr =
 (* Also, during the proofs, I can do case analysis on the number of backwad jumps *)
 (* rather than the number of instructions. *)
 
-val program_sem :  (program_result -> unit) -> constant_ctx -> nat -> program_result -> program_result
+val program_sem :  (instruction_result -> unit) -> constant_ctx -> nat -> instruction_result -> instruction_result
 let rec program_sem stopper c remaining_steps pr =
 match remaining_steps with
  | 0 -> pr

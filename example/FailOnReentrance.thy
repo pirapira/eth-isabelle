@@ -87,8 +87,8 @@ declare environment_turn.simps [simp]
 declare contract_turn.simps [simp]
 
 lemma check_resources_split [split] :
-"P (if check_resources v con s i then X else ProgramToWorld a b c d) =
- (\<not> (\<not> check_resources v con s i \<and> \<not> P (ProgramToWorld a b c d) \<or> check_resources v con s i \<and> \<not> P X ))"
+"P (if check_resources v con s i then X else k) =
+          (\<not> (\<not> check_resources v con s i \<and> \<not> P k \<or> check_resources v con s i \<and> \<not> P X ))"
 apply(simp only: if_splits(2))
 apply(auto)
 done
@@ -185,7 +185,5 @@ apply(case_tac nata; auto simp add: fail_on_reentrance_invariant.simps)
 apply(case_tac nata; auto simp add: fail_on_reentrance_invariant.simps)
 apply(case_tac nata; auto simp add: fail_on_reentrance_invariant.simps)
 done
-
-
 
 end

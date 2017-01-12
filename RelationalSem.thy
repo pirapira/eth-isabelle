@@ -120,35 +120,33 @@ declare account_state_return_change.simps [simp]
 
 text "Next we specify which program results might see a return."
 
-fun returnable_result :: "program_result \<Rightarrow> bool"
+fun returnable_result :: "instruction_result \<Rightarrow> bool"
 where
-  "returnable_result (ProgramStepRunOut _) = False"
-| "returnable_result (ProgramToEnvironment (ContractCall _) _ _ _ _ _) = True"
-| "returnable_result (ProgramToEnvironment (ContractDelegateCall _) _ _ _ _ _) = False"
-| "returnable_result (ProgramToEnvironment (ContractCreate _) _ _ _ _ _) = True"
-| "returnable_result (ProgramToEnvironment ContractSuicide _ _ _ _ _) = False"
-| "returnable_result (ProgramToEnvironment ContractFail _ _ _ _ _) = False"
+  "returnable_result (InstructionContinue _) = False"
+| "returnable_result (InstructionToEnvironment (ContractCall _) _ _ _ _ _) = True"
+| "returnable_result (InstructionToEnvironment (ContractDelegateCall _) _ _ _ _ _) = False"
+| "returnable_result (InstructionToEnvironment (ContractCreate _) _ _ _ _ _) = True"
+| "returnable_result (InstructionToEnvironment ContractSuicide _ _ _ _ _) = False"
+| "returnable_result (InstructionToEnvironment ContractFail _ _ _ _ _) = False"
 -- {* because we are not modeling nested calls here, the effect of the nested calls are modeled in
       account\_state\_return\_change *}
-| "returnable_result (ProgramToEnvironment (ContractReturn _) _ _ _ _ _) = False"
-| "returnable_result (ProgramInit _) = False"
-| "returnable_result ProgramInvalid = False"
-| "returnable_result ProgramAnnotationFailure = False"
+| "returnable_result (InstructionToEnvironment (ContractReturn _) _ _ _ _ _) = False"
+| "returnable_result (InstructionInit _) = False"
+| "returnable_result InstructionAnnotationFailure = False"
 
-fun returnable_from_delegate_call :: "program_result \<Rightarrow> bool"
+fun returnable_from_delegate_call :: "instruction_result \<Rightarrow> bool"
 where
-  "returnable_from_delegate_call (ProgramStepRunOut _) = False"
-| "returnable_from_delegate_call (ProgramToEnvironment (ContractCall _) _ _ _ _ _) = False"
-| "returnable_from_delegate_call (ProgramToEnvironment (ContractDelegateCall _) _ _ _ _ _) = True"
-| "returnable_from_delegate_call (ProgramToEnvironment (ContractCreate _) _ _ _ _ _) = False"
-| "returnable_from_delegate_call (ProgramToEnvironment ContractSuicide _ _ _ _ _) = False"
-| "returnable_from_delegate_call (ProgramToEnvironment ContractFail _ _ _ _ _) = False"
+  "returnable_from_delegate_call (InstructionContinue _) = False"
+| "returnable_from_delegate_call (InstructionToEnvironment (ContractCall _) _ _ _ _ _) = False"
+| "returnable_from_delegate_call (InstructionToEnvironment (ContractDelegateCall _) _ _ _ _ _) = True"
+| "returnable_from_delegate_call (InstructionToEnvironment (ContractCreate _) _ _ _ _ _) = False"
+| "returnable_from_delegate_call (InstructionToEnvironment ContractSuicide _ _ _ _ _) = False"
+| "returnable_from_delegate_call (InstructionToEnvironment ContractFail _ _ _ _ _) = False"
 -- {* because we are not modeling nested calls here, the effect of the nested calls are modeled in
       account\_state\_return\_change *}
-| "returnable_from_delegate_call (ProgramToEnvironment (ContractReturn _) _ _ _ _ _) = False"
-| "returnable_from_delegate_call (ProgramInit _) = False"
-| "returnable_from_delegate_call ProgramInvalid = False"
-| "returnable_from_delegate_call ProgramAnnotationFailure = False"
+| "returnable_from_delegate_call (InstructionToEnvironment (ContractReturn _) _ _ _ _ _) = False"
+| "returnable_from_delegate_call (InstructionInit _) = False"
+| "returnable_from_delegate_call InstructionAnnotationFailure = False"
 
 subsection {* A Round of the Game *}
 
@@ -156,7 +154,7 @@ text {* Now we are ready to specify the environment's turn. *}
 
 inductive environment_turn ::
 "(account_state \<Rightarrow> bool) (* The invariant of our contract*)
-\<Rightarrow> (account_state * program_result)
+\<Rightarrow> (account_state * instruction_result)
    (* the account state before the environment's move
       and the last thing our account did *)
 \<Rightarrow> (account_state * variable_ctx)
@@ -172,7 +170,7 @@ where
    build_vctx_called old_state callargs next_vctx \<Longrightarrow>
    
    (* the environment makes a move, showing the variable environment. *)
-   environment_turn I (old_state, ProgramInit callargs) (old_state, next_vctx)"
+   environment_turn I (old_state, InstructionInit callargs) (old_state, next_vctx)"
 | environment_return: -- {* the environment might return to our contract. *}
   "(* If the account state can be changed during reentrancy,*)
    account_state_return_change I account_state_going_out account_state_back \<Longrightarrow>
@@ -217,15 +215,15 @@ where
 text {* As a reply, our contract might make a move, or report an annotation failure.*}
 
 inductive contract_turn ::
-"(account_state * variable_ctx) \<Rightarrow> (account_state * program_result) \<Rightarrow> bool"
+"(account_state * variable_ctx) \<Rightarrow> (account_state * instruction_result) \<Rightarrow> bool"
 where
   contract_to_environment:
   "(* Under a constant environment built from the old account state, *)
    build_cctx old_account = cctx \<Longrightarrow>
 
    (* if the program behaves like this, *)
-   program_sem k cctx steps (ProgramStepRunOut old_vctx)
-      = ProgramToEnvironment act st bal touched logs opt_v \<Longrightarrow>
+   program_sem k cctx steps (InstructionContinue old_vctx)
+      = InstructionToEnvironment act st bal touched logs opt_v \<Longrightarrow>
 
    (* and if the account state is updated from the program's result, *)
    account_state_going_out
@@ -233,17 +231,17 @@ where
 
    (* the contract makes a move and udates the account state. *)
    contract_turn (old_account, old_vctx)
-      (account_state_going_out, ProgramToEnvironment act st bal touched logs opt_v)"
+      (account_state_going_out, InstructionToEnvironment act st bal touched logs opt_v)"
 
 | contract_annotation_failure:
   "(* If a constant environment is built from the old account state, *)  
    build_cctx old_account = cctx \<Longrightarrow>
    
    (* and if the contract execution results in an annotation failure, *)
-   program_sem k cctx steps (ProgramStepRunOut old_vctx) = ProgramAnnotationFailure \<Longrightarrow>
+   program_sem k cctx steps (InstructionContinue old_vctx) = InstructionAnnotationFailure \<Longrightarrow>
 
    (* the contract makes a move, indicating the annotation failure. *)
-   contract_turn (old_account, old_vctx) (old_account, ProgramAnnotationFailure)"
+   contract_turn (old_account, old_vctx) (old_account, InstructionAnnotationFailure)"
 
 text {* When we combine the environment's turn and the contract's turn, we get one round.
 The round is a binary relation over a single set.
@@ -251,8 +249,8 @@ The round is a binary relation over a single set.
 
 inductive one_round ::
 "(account_state \<Rightarrow> bool) \<Rightarrow> 
-(account_state * program_result) \<Rightarrow> 
-(account_state * program_result) \<Rightarrow> bool"
+(account_state * instruction_result) \<Rightarrow> 
+(account_state * instruction_result) \<Rightarrow> bool"
 where
 round:
 "environment_turn I a b \<Longrightarrow> contract_turn b c \<Longrightarrow> one_round I a c"
@@ -278,8 +276,8 @@ Actually the rounds can go nowhere after this invocation fails.
 *}
 lemma no_entry_fail [dest!]:
 "star (one_round I)
-      (a, ProgramToEnvironment ContractFail st bal touched logs v_opt)
-      (b, c) \<Longrightarrow> b = a \<and> c = ProgramToEnvironment ContractFail st bal touched logs v_opt"
+      (a, InstructionToEnvironment ContractFail st bal touched logs v_opt)
+      (b, c) \<Longrightarrow> b = a \<and> c = InstructionToEnvironment ContractFail st bal touched logs v_opt"
 apply(drule star_case; simp)
 apply(simp add: one_round.simps add: environment_turn.simps)
 done
@@ -287,8 +285,8 @@ done
 text {* Similarly, the rounds can go nowhere after this invocation returns. *}
 lemma no_entry_return [dest!]:
 "star (one_round I)
-      (a, ProgramToEnvironment (ContractReturn data) st bal touched logs v_opt)
-      (b, c) \<Longrightarrow> b = a \<and> c = ProgramToEnvironment (ContractReturn data) st bal touched logs v_opt"
+      (a, InstructionToEnvironment (ContractReturn data) st bal touched logs v_opt)
+      (b, c) \<Longrightarrow> b = a \<and> c = InstructionToEnvironment (ContractReturn data) st bal touched logs v_opt"
 apply(drule star_case; simp)
 apply(simp add: one_round.simps add: environment_turn.simps)
 done
@@ -298,8 +296,8 @@ causes our contract to destroy itself.
 *}
 lemma no_entry_suicide [dest!]:
 "star (one_round I)
-      (a, ProgramToEnvironment ContractSuicide st bal touched logs v_opt)
-      (b, c) \<Longrightarrow> b = a \<and> c = ProgramToEnvironment ContractSuicide st bal touched logs v_opt"
+      (a, InstructionToEnvironment ContractSuicide st bal touched logs v_opt)
+      (b, c) \<Longrightarrow> b = a \<and> c = InstructionToEnvironment ContractSuicide st bal touched logs v_opt"
 apply(drule star_case; simp)
 apply(simp add: one_round.simps add: environment_turn.simps)
 done
@@ -307,8 +305,8 @@ done
 text {* And then the rounds can go nowhere after an annotation failure. *}
 lemma no_entry_annotation_failure [dest!]:
 "star (one_round I)
-      (a, ProgramAnnotationFailure)
-      (b, c) \<Longrightarrow> b = a \<and> c = ProgramAnnotationFailure"
+      (a, InstructionAnnotationFailure)
+      (b, c) \<Longrightarrow> b = a \<and> c = InstructionAnnotationFailure"
 apply(drule star_case; simp)
 apply(simp add: one_round.simps add: environment_turn.simps)
 done
@@ -333,16 +331,16 @@ This doubles the already massive number of subgoals.
 *}
 
 definition no_assertion_failure_post ::
-  "(account_state \<Rightarrow> bool) \<Rightarrow> (account_state \<times> program_result) \<Rightarrow> bool"
+  "(account_state \<Rightarrow> bool) \<Rightarrow> (account_state \<times> instruction_result) \<Rightarrow> bool"
 where
 "no_assertion_failure_post I fin =
  (I (fst fin) \<and> (* The invariant holds. *)
-  snd fin \<noteq> ProgramAnnotationFailure)  (* No annotations have failed. *)
+  snd fin \<noteq> InstructionAnnotationFailure)  (* No annotations have failed. *)
 "
 
 lemma no_assertion_failure_in_fail [simp] :
 "I state \<Longrightarrow>
- no_assertion_failure_post I (state, ProgramToEnvironment ContractFail st bal touched logs v_opt)"
+ no_assertion_failure_post I (state, InstructionToEnvironment ContractFail st bal touched logs v_opt)"
 apply(simp add: no_assertion_failure_post_def)
 done
 
@@ -383,7 +381,7 @@ where
     \<lparr> account_address = addr, account_storage = str, account_code = code,
       account_balance = bal, account_ongoing_calls = ongoing,
       account_killed = killed \<rparr>
-  , ProgramInit callenv) fin \<longrightarrow>
+  , InstructionInit callenv) fin \<longrightarrow>
   no_assertion_failure_post I fin))"
 
 subsection {* How to State a Pre-Post Condition Pair *}
@@ -442,13 +440,13 @@ All these requirements are captured by the transitive closure of @{term one_roun
 
 definition pre_post_conditions ::
 "(account_state \<Rightarrow> bool) \<Rightarrow> (account_state \<Rightarrow> call_env \<Rightarrow> bool) \<Rightarrow>
- (account_state \<Rightarrow> call_env \<Rightarrow> (account_state \<times> program_result) \<Rightarrow> bool) \<Rightarrow> bool"
+ (account_state \<Rightarrow> call_env \<Rightarrow> (account_state \<times> instruction_result) \<Rightarrow> bool) \<Rightarrow> bool"
 where
 "pre_post_conditions
   (I :: account_state \<Rightarrow> bool)
   (precondition :: account_state \<Rightarrow> call_env\<Rightarrow> bool)
   (postcondition :: account_state \<Rightarrow> call_env \<Rightarrow>
-                    (account_state \<times> program_result) \<Rightarrow> bool) \<equiv>
+                    (account_state \<times> instruction_result) \<Rightarrow> bool) \<equiv>
                     
   (* for any initial call and initial account state that satisfy *)
   (* the invariant and the precondition, *)
@@ -456,10 +454,10 @@ where
      precondition initial_account initial_call \<longrightarrow>
      
   (* for any final state that are reachable from these initial conditions, *)
-  (\<forall> fin. star (one_round I) (initial_account, ProgramInit initial_call) fin \<longrightarrow>
+  (\<forall> fin. star (one_round I) (initial_account, InstructionInit initial_call) fin \<longrightarrow>
   
   (* the annotations have not failed *)
-  snd fin \<noteq> ProgramAnnotationFailure \<and>
+  snd fin \<noteq> InstructionAnnotationFailure \<and>
   
   (* and for any observed final state after this final state, *)
   (\<forall> fin_observed. account_state_natural_change (fst fin) fin_observed \<longrightarrow>
