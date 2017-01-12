@@ -19,6 +19,7 @@ open import Word
 open import Word256
 open import Word160
 open import Word8
+open import Word4
 open import Keccak
 
 (* The frequently used machine word types are named here.  For example, address *)
@@ -454,17 +455,17 @@ let stack_inst_numbers inst = match inst with
 | CALLDATALOAD -> (1, 1)
 end
 
-type swap_inst = byte
+type nibble = word4
+
+type swap_inst = nibble
 
 val swap_inst_code : swap_inst -> byte
 let swap_inst_code m =
-  if word8UGT 1 m  then 0X90 (* this case should not exist *) else
-  if word8UGT m 16 then 0X90 (* this case should not exist *) else
-  (m + 0X8f)
+  (word8FromNat (word4ToNat m) + 0X90)
 
 val swap_inst_numbers : swap_inst -> stack_numbers
 let swap_inst_numbers m =
-(word8ToUInt m + 1, word8ToUInt m + 1)
+(word4ToUInt m + 2, word4ToUInt m + 2)
 
 (* subsection {* Logging Instructions *} *)
 
@@ -1468,7 +1469,7 @@ end
 
 (* Using this, I can specify the SWAP operations: *)
 val swap : nat -> variable_ctx -> constant_ctx -> instruction_result
-let swap n v c = match list_swap n v.vctx_stack with
+let swap n v c = match list_swap (n + 1) v.vctx_stack with
  | Nothing -> instruction_failure_result v
  | Just new_stack -> InstructionContinue (vctx_advance_pc c <| v with vctx_stack = new_stack |>)
 end
@@ -1872,7 +1873,7 @@ let instruction_sem v c inst =
   | Log LOG2 -> log 2 v c
   | Log LOG3 -> log 3 v c
   | Log LOG4 -> log 4 v c
-  | Swap n -> swap (word8ToNat n) v c
+  | Swap n -> swap (word4ToNat n) v c
   | Misc CREATE -> create v c
   | Misc CALLCODE -> callcode v c
   | Misc SUICIDE -> suicide v c
