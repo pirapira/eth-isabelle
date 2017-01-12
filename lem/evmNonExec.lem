@@ -11,8 +11,8 @@ let respond_to_call_correctly c a =
      build_vctx_called a call_env initial_vctx -->
          (* The specification says the execution should result in these *)
          c call_env = (resulting_action, final_state_pred) -->
-         (forall steps. (* and for any number of steps *)
-           ( let r = program_sem (build_cctx a) steps (ProgramStepRunOut initial_vctx) in
+         (forall steps stopper. (* and for any number of steps *)
+           ( let r = program_sem stopper (build_cctx a) steps (ProgramStepRunOut initial_vctx) in
              (* either more steps are necessary, or *)
              (exists x. r = ProgramStepRunOut x) ||
              (exists x y. r = ProgramToEnvironment ContractFail x y [] [] Nothing) ||
@@ -28,8 +28,8 @@ let respond_to_return_correctly r a =
    (forall rr initial_vctx final_state_pred resulting_action.
        build_vctx_returned a rr initial_vctx -->
        r rr = (resulting_action, final_state_pred) -->
-       (forall steps.
-          (let r = program_sem (build_cctx a) steps (ProgramStepRunOut initial_vctx) in
+       (forall steps stopper.
+          (let r = program_sem stopper (build_cctx a) steps (ProgramStepRunOut initial_vctx) in
            (exists x. r = ProgramStepRunOut x) ||
            (exists x y. r = ProgramToEnvironment ContractFail x y [] [] Nothing) ||
            (exists pushed_vctx st bal touched logs.
@@ -43,8 +43,8 @@ let respond_to_fail_correctly f a =
    (forall initial_vctx final_state_pred resulting_action.
       Just initial_vctx = build_vctx_failed a -->
       f = (resulting_action, final_state_pred) -->
-      (forall steps.
-        ( let r = program_sem (build_cctx a) steps (ProgramStepRunOut initial_vctx) in
+      (forall steps stopper.
+        ( let r = program_sem stopper (build_cctx a) steps (ProgramStepRunOut initial_vctx) in
           (exists x. r = ProgramStepRunOut x) ||
           (exists x y. r = ProgramToEnvironment ContractFail x y [] [] Nothing) ||
           (exists pushed_vctx st bal touched logs.

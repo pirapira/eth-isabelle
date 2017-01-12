@@ -1,3 +1,5 @@
+open Evm
+
 let pad_left (elm : 'a) (len : int) (orig : 'a list) =
   let remaining = len - List.length orig in
   (*  let () = Printf.printf "padding: remaining: %d\n%!" remaining in *)
@@ -185,3 +187,12 @@ let string_of_64list (lst : Int64.t list) =
 let string_of_int_64list ((n, lst) : (int * Int64.t list)) =
   (string_of_int n)^", "^
   string_of_64list lst
+
+exception ToEnvironment of program_result
+
+let the_stopper r = raise (ToEnvironment r)
+
+let program_sem_wrapper c n r =
+  try
+    program_sem the_stopper c n r
+  with ToEnvironment a -> a
