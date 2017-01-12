@@ -34,7 +34,6 @@ done
 lemma advance_pc_no_gas_change [simp] :
   "vctx_gas (vctx_advance_pc co_ctx x1) = vctx_gas x1"
 apply(simp add: vctx_advance_pc_def)
-apply(case_tac "vctx_next_instruction x1 co_ctx"; auto)
 done
 
 lemma constant_diff_stack_height [simp] :
@@ -119,6 +118,11 @@ apply(simp add: variable_ctx_as_set_def stack_as_set_def)
 apply(case_tac p; auto)
 done
 
+lemma memory_usage_element_means [simp] :
+  "(MemoryUsageElm u \<in> variable_ctx_as_set v) = (vctx_memory_usage v = u)"
+apply(auto simp add: variable_ctx_as_set_def stack_as_set_def)
+done
+
 lemma inst_size_nonzero [simp] : "inst_size a \<noteq> 0"
 apply(simp add: inst_size_def)
 apply(case_tac a; auto simp add: inst_code.simps dup_inst_code_def)
@@ -156,7 +160,16 @@ lemma memory_elm_not_constant [simp] :
 apply(simp add: constant_ctx_as_set_def program_as_set_def)
 done
 
-value "(vctx_pc (vctx_advance_pc co_ctx v))"
+lemma code_elm_not_variable [simp] :
+ "CodeElm c \<notin> variable_ctx_as_set v"
+apply(simp add: variable_ctx_as_set_def stack_as_set_def)
+done
+
+lemma this_account_elm_not_variable [simp] :
+  "ThisAccountElm t
+           \<notin> variable_ctx_as_set v"
+apply(simp add: variable_ctx_as_set_def stack_as_set_def)
+done
 
 lemma fst_pair [simp] : "fst (a, b) = a"
 apply(simp add: fst_def)
@@ -168,51 +181,131 @@ lemma rev_append [simp] :
 apply(simp add: nth_append)
 done
 
+lemma rev_append_inv [simp] :
+  "((rev l @ l') ! a \<noteq> rev l ! a) =
+   ((a \<ge> length l) \<and> (rev l) ! a \<noteq> l' ! (a - length l))"
+apply(auto simp add: nth_append)
+done
+
+lemma rev_rev_append [simp] :
+  "((rev l @ a0) ! idx \<noteq> (rev l @ a1) ! idx)
+   =
+   (idx \<ge> length l \<and> a0 ! (idx - length l) \<noteq> a1 ! (idx - length l))"
+apply(auto simp add: nth_append)
+done
+
 lemma over_one [simp]:
- "length lst = a \<Longrightarrow> (rev lst @ [v]) ! a = v"
+ "length lst = a \<Longrightarrow> (rev lst @ (v # l)) ! a = v"
 apply(simp add: nth_append)
 done
+
+lemma over_one_rev [simp] :
+  "((rev l @ (w # x)) ! idx \<noteq> w) =
+    (idx < (length l) \<and> (rev l) ! idx \<noteq> w ) \<or> ( idx > (length l) \<and> x ! (idx - length l - 1) \<noteq> w)"
+apply(simp add: nth_append)
+by (simp add: nth_Cons')
+
+lemma over_one_rev' [simp] :
+  "((rev l @ [w, v]) ! idx \<noteq> w) =
+    (idx < (length l) \<and> (rev l) ! idx \<noteq> w ) \<or> ( idx > (length l) \<and> [v] ! (idx - length l - 1) \<noteq> w)"
+apply(auto simp add: nth_append nth_Cons')
+done
+
+
+lemma over_two [simp]:
+ "Suc (length lst) = a \<Longrightarrow> (rev lst @ (v # w # l)) ! a = w"
+apply(simp add: nth_append)
+done
+
+lemma over_two_rev [simp] :
+  "((rev l @ (w #  v # x)) ! idx \<noteq> v) =
+    (idx \<le> (length l) \<and> (rev l @ [w]) ! idx \<noteq> v ) \<or> ( idx > Suc (length l) \<and> x ! (idx - length l - 2) \<noteq> v )"
+apply(simp add: nth_append)
+(* sledgehammer *)
+by (metis Suc_diff_Suc diff_self_eq_0 less_antisym linorder_neqE_nat nth_Cons_0 nth_Cons_Suc)
+
 
 lemma advance_pc_preserves_storage [simp] :
  "vctx_storage (vctx_advance_pc co_ctx x1) = vctx_storage x1"
 apply(simp add: vctx_advance_pc_def)
-apply(case_tac "vctx_next_instruction x1 co_ctx"; auto)
 done
 
 lemma advance_pc_preserves_memory [simp] :
   "vctx_memory (vctx_advance_pc co_ctx x1) = vctx_memory x1"
 apply(simp add: vctx_advance_pc_def)
-apply(case_tac "vctx_next_instruction x1 co_ctx"; auto)
 done
 
 lemma advance_pc_preserves_logs [simp] :
   "vctx_logs (vctx_advance_pc co_ctx x1) = vctx_logs x1"
 apply(simp add: vctx_advance_pc_def)
-apply(case_tac "vctx_next_instruction x1 co_ctx"; auto)
 done
 
+lemma advance_pc_preserves_memory_usage [simp] :
+  "vctx_memory_usage x1 = vctx_memory_usage (vctx_advance_pc co_ctx x1)"
+apply(simp add: vctx_advance_pc_def)
+done
 
-lemma stack_touching_operations_leaves [simp] :
-"(contexts_as_set
-              (vctx_advance_pc co_ctx x1\<lparr>vctx_stack := (v + w) # (vctx_stack x1), vctx_gas := vctx_gas x1 - Gverylow\<rparr>) co_ctx -
-             {StackHeightElm (Suc (length (vctx_stack x1)))} -
-             {StackElm (length (vctx_stack x1), v + w)} -
+lemma advance_pc_preserves_balance [simp] :
+   "vctx_balance (vctx_advance_pc co_ctx x1) = vctx_balance x1"
+apply(simp add: vctx_advance_pc_def)
+done
+
+lemma advance_pc_preserves_caller [simp] :
+  "vctx_caller x1 = vctx_caller (vctx_advance_pc co_ctx x1)"
+apply(simp add: vctx_advance_pc_def)
+done
+
+lemma advance_pc_preseerves_caller [simp] :
+  "vctx_value_sent x1 = vctx_value_sent (vctx_advance_pc co_ctx x1)"
+apply(simp add: vctx_advance_pc_def)
+done
+
+lemma advance_pc_preserves_origin [simp] :
+  "vctx_origin x1 = vctx_origin (vctx_advance_pc co_ctx x1)"
+apply(simp add: vctx_advance_pc_def)
+done
+
+lemma advance_pc_preserves_block [simp] :
+  "vctx_block x1 = vctx_block (vctx_advance_pc co_ctx x1)"
+apply(simp add: vctx_advance_pc_def)
+done
+
+lemma balance_elm_means [simp] :
+ "BalanceElm p \<in> variable_ctx_as_set v = (vctx_balance v (fst p) = (snd p))"
+apply(simp add: variable_ctx_as_set_def stack_as_set_def)
+apply(case_tac p; auto)
+done
+
+lemma advance_pc_change [simp] :
+  "vctx_pc x1 \<noteq> vctx_pc (vctx_advance_pc co_ctx x1)"
+	by (metis advance_pc_different)
+
+
+
+
+
+lemma tmp1 [simp]: 
+  "program_content (cctx_program co_ctx) (vctx_pc x1) = Some (Arith ADD) \<Longrightarrow>
+   vctx_stack x1 = v # w # ta \<Longrightarrow>
+   (contexts_as_set (vctx_advance_pc co_ctx x1\<lparr>vctx_stack := (v + w) # ta, vctx_gas := vctx_gas x1 - Gverylow\<rparr>) co_ctx -
+             {StackHeightElm (Suc (length ta))} -
+             {StackElm (length ta, v + w)} -
              {PcElm (vctx_pc x1 + 1)} -
              {GasElm (vctx_gas x1 - Gverylow)} -
-             {CodeElm (vctx_pc x1, Arith ADD)})
-=
- (contexts_as_set x1 co_ctx - {StackHeightElm (Suc (Suc (length (vctx_stack x1))))} - {StackElm (Suc (length (vctx_stack x1)), v)} -
-             {StackElm (length (vctx_stack x1), w)} -
+             {CodeElm (vctx_pc x1, Arith ADD)}) =
+   (contexts_as_set x1 co_ctx - {StackHeightElm (Suc (Suc (length ta)))} - {StackElm (Suc (length ta), v)} -
+             {StackElm (length ta, w)} -
              {PcElm (vctx_pc x1)} -
              {GasElm (vctx_gas x1)} -
-             {CodeElm (vctx_pc x1, Arith ADD)})
-"
+             {CodeElm (vctx_pc x1, Arith ADD)})"
 apply(simp add: contexts_as_set_def Set.Un_Diff)
 apply(auto)
  apply(rename_tac elm)
- apply(case_tac elm; auto)
-
-oops
+ apply(case_tac elm; auto simp add: variable_ctx_as_set_def vctx_advance_pc_def stack_as_set_def vctx_next_instruction_def)
+apply(auto simp add: variable_ctx_as_set_def stack_as_set_def nth_append nth_Cons')
+apply(case_tac "idx < length ta"; auto)
+apply(case_tac "idx = length ta"; auto)
+done
 
 
 lemma add_triple : "triple (\<langle> h \<le> 1023 \<and> g \<ge> Gverylow \<rangle> **
@@ -228,66 +321,16 @@ lemma add_triple : "triple (\<langle> h \<le> 1023 \<and> g \<ge> Gverylow \<ran
                             program_counter (k + 1) **
                             gas_pred (g - Gverylow)
                             )"
-apply(auto simp add: triple_def)
+apply(simp add: triple_def)
+apply(clarify)
 apply(rule_tac x = "1" in exI)
 apply(case_tac presult; simp)
 apply(auto simp add: program_sem.simps vctx_next_instruction_def instruction_sem_def check_resources_def
       inst_stack_numbers.simps arith_inst_numbers.simps predict_gas_def C_def Cmem_def
       Gmemory_def new_memory_consumption.simps thirdComponentOfC.simps
       vctx_next_instruction_default_def stack_2_1_op_def subtract_gas.simps)
-
-
-
-(*
-
-apply(case_tac "vctx_stack x1"; simp)
-apply(case_tac list; simp)
-apply(auto simp add: subtract_gas.simps strict_if_def program_sem.simps
-      vctx_advance_pc_def vctx_next_instruction_def inst_size_def inst_code.simps                                                                               
-      contexts_as_set_def constant_ctx_as_set_def variable_ctx_as_set_def stack_as_set_def
-      program_as_set_def)
-apply(simp add: insert_Diff_if)
-apply(rule pred_functional)
- apply(simp)
-
-apply(rule insert_functional; blast?)
-apply(rule insert_functional; blast?)
-apply(rule insert_functional; blast?)
-apply(rule insert_functional; blast?)
-apply(rule insert_functional; blast?)
-apply(rule insert_functional; blast?)
-apply(rule Set.equalityI)
- apply(clarify)
- apply(simp)
- apply(drule disjE; simp)
- apply(drule disjE; simp?)
-  apply(blast)
- apply(drule disjE; simp?)
-  defer
-  apply(clarify)
-  apply(simp)
-  apply(case_tac "idx \<ge> length lista"; simp)
-  apply(case_tac "idx = Suc (length lista)"; simp)
- apply(clarify)
- apply(simp)
- apply(drule disjE; simp?)
-  apply(drule disjE; simp?)
-   apply(blast)
-  apply(drule disjE; simp?)
-   defer
-   apply(clarify)
-   apply(simp)
-   apply(case_tac "idx = (length lista)"; simp)
-  apply(drule disjE; simp?)
-   apply(blast)
-  apply(drule disjE; simp?)
- apply(clarify)
- apply(simp)
-apply(clarify)
-apply(simp)
 done
 
-*)
 end (* context *)
 
 end
