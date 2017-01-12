@@ -461,7 +461,7 @@ type swap_inst = nibble
 
 val swap_inst_code : swap_inst -> byte
 let swap_inst_code m =
-  (word8FromNat (word4ToNat m) + 0X90)
+  (word8FromInt (word4ToUInt m) + 0X90)
 
 val swap_inst_numbers : swap_inst -> stack_numbers
 let swap_inst_numbers m =
