@@ -1009,10 +1009,11 @@ let vctx_next_instruction v c =
 
 (* Advancing the program counter: *)
 val vctx_advance_pc : constant_ctx -> variable_ctx -> variable_ctx
-let vctx_advance_pc c v = match vctx_next_instruction v c with
- | Nothing -> <| v with vctx_pc = v.vctx_pc + 1 |>
- | Just inst -> <| v with vctx_pc = v.vctx_pc + integerFromInt (inst_size inst) |>
-end
+let vctx_advance_pc c v =
+  <| v with vctx_pc =
+     (match vctx_next_instruction v c with
+     | Nothing -> v.vctx_pc + 1
+     | Just inst -> v.vctx_pc + integerFromInt (inst_size inst) end) |>
 
 (* No-op, which just advances the program counter: *)
 val stack_0_0_op : variable_ctx -> constant_ctx -> instruction_result
