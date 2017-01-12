@@ -16,267 +16,267 @@
 open import Pervasives
 open import Word
 
-type word8 = W8 of bool * list bool
-declare isabelle target_rep type word8 = `word` 8
+type word4 = W4 of bool * list bool
+declare isabelle target_rep type word4 = `word` 4
 
 (* perhaps should truncate here? *)
-val bs_to_w8 : bitSequence -> word8
-let bs_to_w8 seq = match resizeBitSeq (Just 8) seq with
- | BitSeq _ s b -> W8 s b
+val bs_to_w4 : bitSequence -> word4
+let bs_to_w4 seq = match resizeBitSeq (Just 4) seq with
+ | BitSeq _ s b -> W4 s b
 end
-declare isabelle target_rep function bs_to_w8 = (fun w -> `word_of_int` (integerFromBitSeq w))
+declare isabelle target_rep function bs_to_w4 = (fun w -> `word_of_int` (integerFromBitSeq w))
 
-val w8_to_bs : word8 -> bitSequence
-let w8_to_bs (W8 s b) = BitSeq (Just 8) s b
+val w4_to_bs : word4 -> bitSequence
+let w4_to_bs (W4 s b) = BitSeq (Just 4) s b
 
-val word8BinTest : forall 'a. (bitSequence -> bitSequence -> 'a) -> word8 -> word8 -> 'a
-let word8BinTest binop w1 w2 = binop (w8_to_bs w1) (w8_to_bs w2)
+val word4BinTest : forall 'a. (bitSequence -> bitSequence -> 'a) -> word4 -> word4 -> 'a
+let word4BinTest binop w1 w2 = binop (w4_to_bs w1) (w4_to_bs w2)
 
-val word8BinOp : (bitSequence -> bitSequence -> bitSequence) -> word8 -> word8 -> word8
-let word8BinOp binop w1 w2 = bs_to_w8 (binop (w8_to_bs w1) (w8_to_bs w2))
+val word4BinOp : (bitSequence -> bitSequence -> bitSequence) -> word4 -> word4 -> word4
+let word4BinOp binop w1 w2 = bs_to_w4 (binop (w4_to_bs w1) (w4_to_bs w2))
 
-val word8NatOp : (bitSequence -> nat -> bitSequence) -> word8 -> nat -> word8
-let word8NatOp binop w1 n = bs_to_w8 (binop (w8_to_bs w1) n)
+val word4NatOp : (bitSequence -> nat -> bitSequence) -> word4 -> nat -> word4
+let word4NatOp binop w1 n = bs_to_w4 (binop (w4_to_bs w1) n)
 
-val word8UnaryOp : (bitSequence -> bitSequence) -> word8 -> word8
-let word8UnaryOp op w = bs_to_w8 (op (w8_to_bs w))
+val word4UnaryOp : (bitSequence -> bitSequence) -> word4 -> word4
+let word4UnaryOp op w = bs_to_w4 (op (w4_to_bs w))
 
-val word8ToNat : word8 -> nat
-let word8ToNat w = natFromInteger (integerFromBitSeq (w8_to_bs w))
-declare isabelle target_rep function word8ToNat = `unat`
+val word4ToNat : word4 -> nat
+let word4ToNat w = natFromInteger (integerFromBitSeq (w4_to_bs w))
+declare isabelle target_rep function word4ToNat = `unat`
 
-val word8ToInt : word8 -> int
-let word8ToInt w = intFromInteger (integerFromBitSeq (w8_to_bs w))
-declare isabelle target_rep function word8ToInt = `sint`
+val word4ToInt : word4 -> int
+let word4ToInt w = intFromInteger (integerFromBitSeq (w4_to_bs w))
+declare isabelle target_rep function word4ToInt = `sint`
 
-val word8ToUInt : word8 -> int
-let word8ToUInt w = intFromNat (word8ToNat w)
-declare isabelle target_rep function word8ToUInt = `uint`
+val word4ToUInt : word4 -> int
+let word4ToUInt w = intFromNat (word4ToNat w)
+declare isabelle target_rep function word4ToUInt = `uint`
 
-declare isabelle target_rep function w8_to_bs = (fun w -> bitSeqFromInteger (Just 8) (integerFromInt (word8ToInt w)))
+declare isabelle target_rep function w4_to_bs = (fun w -> bitSeqFromInteger (Just 4) (integerFromInt (word4ToInt w)))
 
-val word8FromInteger : integer -> word8
-let word8FromInteger i = bs_to_w8 (bitSeqFromInteger (Just 8) i)
-declare isabelle target_rep function word8FromInteger = (fun i -> `word_of_int` (intFromInteger i))
+val word4FromInteger : integer -> word4
+let word4FromInteger i = bs_to_w4 (bitSeqFromInteger (Just 4) i)
+declare isabelle target_rep function word4FromInteger = (fun i -> `word_of_int` (intFromInteger i))
 
-val word8FromInt : int -> word8
-let word8FromInt i = bs_to_w8 (bitSeqFromInteger (Just 8) (integerFromInt i))
-declare isabelle target_rep function word8FromInt = `word_of_int`
+val word4FromInt : int -> word4
+let word4FromInt i = bs_to_w4 (bitSeqFromInteger (Just 4) (integerFromInt i))
+declare isabelle target_rep function word4FromInt = `word_of_int`
 
-val word8FromNat : nat -> word8
-let word8FromNat i = word8FromInteger (integerFromNat i)
+val word4FromNat : nat -> word4
+let word4FromNat i = word4FromInteger (integerFromNat i)
 
-val word8FromNatural : natural -> word8
-let word8FromNatural i = word8FromInteger (integerFromNatural i)
+val word4FromNatural : natural -> word4
+let word4FromNatural i = word4FromInteger (integerFromNatural i)
 
-val word8FromBoollist : list bool -> word8
-let word8FromBoollist lst = match bitSeqFromBoolList (List.reverse lst) with
- | Nothing -> bs_to_w8 0
- | Just a -> bs_to_w8 a
+val word4FromBoollist : list bool -> word4
+let word4FromBoollist lst = match bitSeqFromBoolList (List.reverse lst) with
+ | Nothing -> bs_to_w4 0
+ | Just a -> bs_to_w4 a
 end
-declare isabelle target_rep function word8FromBoollist = `of_bl`
+declare isabelle target_rep function word4FromBoollist = `of_bl`
 
-val boolListFromWord8 : word8 -> list bool
-let boolListFromWord8 w = List.reverse (boolListFrombitSeq 8 (w8_to_bs w))
-declare isabelle target_rep function boolListFromWord8 = `to_bl`
+val boolListFromWord4 : word4 -> list bool
+let boolListFromWord4 w = List.reverse (boolListFrombitSeq 4 (w4_to_bs w))
+declare isabelle target_rep function boolListFromWord4 = `to_bl`
 
-val word8FromNumeral : numeral -> word8
-let word8FromNumeral w = bs_to_w8 (fromNumeral w)
+val word4FromNumeral : numeral -> word4
+let word4FromNumeral w = bs_to_w4 (fromNumeral w)
 
-instance (Numeral word8)
-  let fromNumeral = word8FromNumeral
-end
-
-val w8Eq : word8 -> word8 -> bool
-let w8Eq = unsafe_structural_equality
-
-val w8Less : word8 -> word8 -> bool
-let w8Less bs1 bs2 = word8BinTest (<) bs1 bs2
-
-val w8LessEqual : word8 -> word8 -> bool
-let w8LessEqual bs1 bs2 = word8BinTest (<=) bs1 bs2
-
-val w8Greater : word8 -> word8 -> bool
-let w8Greater bs1 bs2 = word8BinTest (>) bs1 bs2
-
-val w8GreaterEqual : word8 -> word8 -> bool
-let w8GreaterEqual bs1 bs2 = word8BinTest (>=) bs1 bs2
-
-val w8Compare : word8 -> word8 -> ordering
-let w8Compare bs1 bs2 = word8BinTest compare bs1 bs2
-
-instance (Ord word8)
-  let compare = w8Compare
-  let (<) = w8Less
-  let (<=) = w8LessEqual
-  let (>) = w8Greater
-  let (>=) = w8GreaterEqual
+instance (Numeral word4)
+  let fromNumeral = word4FromNumeral
 end
 
-instance (SetType word8)
-  let setElemCompare = w8Compare
+val w4Eq : word4 -> word4 -> bool
+let w4Eq = unsafe_structural_equality
+
+val w4Less : word4 -> word4 -> bool
+let w4Less bs1 bs2 = word4BinTest (<) bs1 bs2
+
+val w4LessEqual : word4 -> word4 -> bool
+let w4LessEqual bs1 bs2 = word4BinTest (<=) bs1 bs2
+
+val w4Greater : word4 -> word4 -> bool
+let w4Greater bs1 bs2 = word4BinTest (>) bs1 bs2
+
+val w4GreaterEqual : word4 -> word4 -> bool
+let w4GreaterEqual bs1 bs2 = word4BinTest (>=) bs1 bs2
+
+val w4Compare : word4 -> word4 -> ordering
+let w4Compare bs1 bs2 = word4BinTest compare bs1 bs2
+
+instance (Ord word4)
+  let compare = w4Compare
+  let (<) = w4Less
+  let (<=) = w4LessEqual
+  let (>) = w4Greater
+  let (>=) = w4GreaterEqual
 end
 
-val word8Negate : word8 -> word8
-let word8Negate = word8UnaryOp ~
-
-val word8Succ : word8 -> word8
-let word8Succ = word8UnaryOp succ
-
-val word8Pred : word8 -> word8
-let word8Pred = word8UnaryOp pred
-
-val word8Lnot : word8 -> word8
-let word8Lnot = word8UnaryOp lnot
-
-val word8Add : word8 -> word8 -> word8
-let word8Add = word8BinOp (+)
-
-val word8Minus : word8 -> word8 -> word8
-let word8Minus = word8BinOp (-)
-
-val word8Mult : word8 -> word8 -> word8
-let word8Mult = word8BinOp ( * )
-
-val word8IntegerDivision : word8 -> word8 -> word8
-let word8IntegerDivision = word8BinOp (/)
-
-val word8Division : word8 -> word8 -> word8
-let word8Division = word8BinOp (div)
-
-val word8Remainder : word8 -> word8 -> word8
-let word8Remainder = word8BinOp (mod)
-
-val word8Land : word8 -> word8 -> word8
-let word8Land = word8BinOp (land)
-
-val word8Lor : word8 -> word8 -> word8
-let word8Lor = word8BinOp (lor)
-
-val word8Lxor : word8 -> word8 -> word8
-let word8Lxor = word8BinOp (lxor)
-
-val word8Min : word8 -> word8 -> word8
-let word8Min = word8BinOp (min)
-
-val word8Max : word8 -> word8 -> word8
-let word8Max = word8BinOp (max)
-
-val word8Power : word8 -> nat -> word8
-let word8Power = word8NatOp ( ** )
-
-val word8Asr : word8 -> nat -> word8
-let word8Asr = word8NatOp (asr)
-
-val word8Lsr : word8 -> nat -> word8
-let word8Lsr = word8NatOp (lsr)
-
-val word8Lsl : word8 -> nat -> word8
-let word8Lsl = word8NatOp (lsl)
-
-declare isabelle target_rep function word8Lnot w = (`NOT` w)
-declare isabelle target_rep function word8Lor = infix `OR`
-declare isabelle target_rep function word8Lxor = infix `XOR`
-declare isabelle target_rep function word8Land = infix `AND`
-declare isabelle target_rep function word8Lsl = infix `<<`
-declare isabelle target_rep function word8Lsr = infix `>>`
-declare isabelle target_rep function word8Asr = infix `>>>`
-
-
-instance (NumNegate word8)
-  let ~ = word8Negate
+instance (SetType word4)
+  let setElemCompare = w4Compare
 end
 
-instance (NumAdd word8)
-  let (+) = word8Add
+val word4Negate : word4 -> word4
+let word4Negate = word4UnaryOp ~
+
+val word4Succ : word4 -> word4
+let word4Succ = word4UnaryOp succ
+
+val word4Pred : word4 -> word4
+let word4Pred = word4UnaryOp pred
+
+val word4Lnot : word4 -> word4
+let word4Lnot = word4UnaryOp lnot
+
+val word4Add : word4 -> word4 -> word4
+let word4Add = word4BinOp (+)
+
+val word4Minus : word4 -> word4 -> word4
+let word4Minus = word4BinOp (-)
+
+val word4Mult : word4 -> word4 -> word4
+let word4Mult = word4BinOp ( * )
+
+val word4IntegerDivision : word4 -> word4 -> word4
+let word4IntegerDivision = word4BinOp (/)
+
+val word4Division : word4 -> word4 -> word4
+let word4Division = word4BinOp (div)
+
+val word4Remainder : word4 -> word4 -> word4
+let word4Remainder = word4BinOp (mod)
+
+val word4Land : word4 -> word4 -> word4
+let word4Land = word4BinOp (land)
+
+val word4Lor : word4 -> word4 -> word4
+let word4Lor = word4BinOp (lor)
+
+val word4Lxor : word4 -> word4 -> word4
+let word4Lxor = word4BinOp (lxor)
+
+val word4Min : word4 -> word4 -> word4
+let word4Min = word4BinOp (min)
+
+val word4Max : word4 -> word4 -> word4
+let word4Max = word4BinOp (max)
+
+val word4Power : word4 -> nat -> word4
+let word4Power = word4NatOp ( ** )
+
+val word4Asr : word4 -> nat -> word4
+let word4Asr = word4NatOp (asr)
+
+val word4Lsr : word4 -> nat -> word4
+let word4Lsr = word4NatOp (lsr)
+
+val word4Lsl : word4 -> nat -> word4
+let word4Lsl = word4NatOp (lsl)
+
+declare isabelle target_rep function word4Lnot w = (`NOT` w)
+declare isabelle target_rep function word4Lor = infix `OR`
+declare isabelle target_rep function word4Lxor = infix `XOR`
+declare isabelle target_rep function word4Land = infix `AND`
+declare isabelle target_rep function word4Lsl = infix `<<`
+declare isabelle target_rep function word4Lsr = infix `>>`
+declare isabelle target_rep function word4Asr = infix `>>>`
+
+
+instance (NumNegate word4)
+  let ~ = word4Negate
 end
 
-instance (NumMinus word8)
-  let (-) = word8Minus
+instance (NumAdd word4)
+  let (+) = word4Add
 end
 
-instance (NumSucc word8)
-  let succ = word8Succ
+instance (NumMinus word4)
+  let (-) = word4Minus
 end
 
-instance (NumPred word8)
-  let pred = word8Pred
+instance (NumSucc word4)
+  let succ = word4Succ
 end
 
-instance (NumMult word8)
-  let ( * ) = word8Mult
+instance (NumPred word4)
+  let pred = word4Pred
 end
 
-instance (NumPow word8)
-  let ( ** ) = word8Power
+instance (NumMult word4)
+  let ( * ) = word4Mult
 end
 
-instance ( NumIntegerDivision word8) 
-  let (div) = word8IntegerDivision
+instance (NumPow word4)
+  let ( ** ) = word4Power
 end
 
-instance ( NumDivision word8 ) 
-  let (/) = word8Division
+instance ( NumIntegerDivision word4) 
+  let (div) = word4IntegerDivision
 end
 
-instance (NumRemainder word8) 
-  let (mod) = word8Remainder
+instance ( NumDivision word4 ) 
+  let (/) = word4Division
 end
 
-instance (OrdMaxMin word8) 
-  let max = word8Max
-  let min = word8Min
+instance (NumRemainder word4) 
+  let (mod) = word4Remainder
 end
 
-instance (WordNot word8) 
-  let lnot = word8Lnot
+instance (OrdMaxMin word4) 
+  let max = word4Max
+  let min = word4Min
 end
 
-instance (WordAnd word8) 
-  let (land) = word8Land
+instance (WordNot word4) 
+  let lnot = word4Lnot
 end
 
-instance (WordOr word8) 
-  let (lor) = word8Lor
+instance (WordAnd word4) 
+  let (land) = word4Land
 end
 
-instance (WordXor word8) 
-  let (lxor) = word8Lxor
+instance (WordOr word4) 
+  let (lor) = word4Lor
 end
 
-instance (WordLsl word8) 
-  let (lsl) = word8Lsl
+instance (WordXor word4) 
+  let (lxor) = word4Lxor
 end
 
-instance (WordLsr word8)
-  let (lsr) = word8Lsr
+instance (WordLsl word4) 
+  let (lsl) = word4Lsl
 end
 
-instance (WordAsr word8)
-  let (asr) = word8Asr
+instance (WordLsr word4)
+  let (lsr) = word4Lsr
 end
 
-val word8UGT : word8 -> word8 -> bool
-let word8UGT a b = word8ToNat a > word8ToNat b
-declare isabelle target_rep function word8UGT = infix `>`
+instance (WordAsr word4)
+  let (asr) = word4Asr
+end
 
-declare isabelle target_rep function word8FromNumeral n = ((`word_of_int` n) : word8)
-declare isabelle target_rep function w8Less = `word_sless`
-declare isabelle target_rep function w8LessEqual = `word_sle`
-declare isabelle target_rep function w8Greater x y = w8Less y x
-declare isabelle target_rep function w8GreaterEqual x y = w8LessEqual y x
-declare isabelle target_rep function w8Compare = genericCompare w8Less w8Eq
+val word4UGT : word4 -> word4 -> bool
+let word4UGT a b = word4ToNat a > word4ToNat b
+declare isabelle target_rep function word4UGT = infix `>`
 
-declare isabelle target_rep function word8Negate i = `-` i
-declare isabelle target_rep function word8Add = infix `+`
-declare isabelle target_rep function word8Minus = infix `-`
-declare isabelle target_rep function word8Succ n = n + 1
-declare isabelle target_rep function word8Pred n = n - 1
-declare isabelle target_rep function word8Mult = infix `*`
-declare isabelle target_rep function word8Power = infix `^`
-declare isabelle target_rep function word8Division = infix `div`
-declare isabelle target_rep function word8IntegerDivision = infix `div`
-declare isabelle target_rep function word8Remainder = infix `mod`
-declare isabelle target_rep function word8Min = `min`
-declare isabelle target_rep function word8Max = `max`
+declare isabelle target_rep function word4FromNumeral n = ((`word_of_int` n) : word4)
+declare isabelle target_rep function w4Less = `word_sless`
+declare isabelle target_rep function w4LessEqual = `word_sle`
+declare isabelle target_rep function w4Greater x y = w4Less y x
+declare isabelle target_rep function w4GreaterEqual x y = w4LessEqual y x
+declare isabelle target_rep function w4Compare = genericCompare w4Less w4Eq
+
+declare isabelle target_rep function word4Negate i = `-` i
+declare isabelle target_rep function word4Add = infix `+`
+declare isabelle target_rep function word4Minus = infix `-`
+declare isabelle target_rep function word4Succ n = n + 1
+declare isabelle target_rep function word4Pred n = n - 1
+declare isabelle target_rep function word4Mult = infix `*`
+declare isabelle target_rep function word4Power = infix `^`
+declare isabelle target_rep function word4Division = infix `div`
+declare isabelle target_rep function word4IntegerDivision = infix `div`
+declare isabelle target_rep function word4Remainder = infix `mod`
+declare isabelle target_rep function word4Min = `min`
+declare isabelle target_rep function word4Max = `max`
 
