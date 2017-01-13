@@ -1731,6 +1731,7 @@ let subtract_gas consumption orig =
   | InstructionToEnvironment act st bal touched logs Nothing -> InstructionToEnvironment act st bal touched logs Nothing
   | InstructionToEnvironment act st bal touched logs (Just (v, dst, len)) ->
     InstructionToEnvironment act st bal touched logs (Just (<|v with vctx_gas = v.vctx_gas - consumption|>, dst, len))
+  | InstructionInit x -> InstructionInit x
   end
 
 val word_exp : integer -> natural -> integer
@@ -1902,10 +1903,10 @@ let check_annotations v c =
 val next_state: (instruction_result -> unit) -> constant_ctx -> instruction_result -> instruction_result
 let next_state stopper c pr =
   match pr with
-  | InstructionToEnvironment act st bal touched log stash ->
+  | InstructionToEnvironment _ _ _ _ _ _ ->
     let () = stopper pr in pr
   | InstructionAnnotationFailure -> let () = stopper pr in pr
-  | InstructionInit init -> let () = stopper pr in pr
+  | InstructionInit _ -> let () = stopper pr in pr
   | InstructionContinue v ->
      if not (check_annotations v c) then InstructionAnnotationFailure else
      match vctx_next_instruction v c with
@@ -1917,6 +1918,7 @@ let next_state stopper c pr =
         | InstructionToEnvironment a st bal touched logs opt_pushed_v ->
             InstructionToEnvironment a st bal touched logs opt_pushed_v
         | InstructionAnnotationFailure -> InstructionAnnotationFailure
+        | InstructionInit -> InstructionInit
         end
       else
         InstructionToEnvironment ContractFail v.vctx_storage_at_call v.vctx_balance_at_call [] [] Nothing
