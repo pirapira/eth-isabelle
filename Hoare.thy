@@ -577,6 +577,21 @@ done
 
 (** More rules to come **)
 
+lemma triple_tauto: "triple q e q"
+apply(simp add: triple_def; auto)
+apply(rule_tac x = 0 in exI)
+apply(simp add: program_sem.simps)
+done
+
+
+lemma code_extension0: "triple p c_1 q \<Longrightarrow> triple q c_2 q \<Longrightarrow> triple p (c_1 \<union> c_2) q"
+apply(rule composition; auto)
+done
+
+lemma code_extension : "triple p c q \<Longrightarrow> triple p (c \<union> e) q"
+	by (simp add: composition triple_tauto)
+
+
 (* Some rules about this if-then-else should be derivable. *)
 
 definition if_then_else :: "int \<Rightarrow> inst list \<Rightarrow> inst list \<Rightarrow> inst list \<Rightarrow> inst list"
