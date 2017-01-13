@@ -140,7 +140,7 @@ while i + 2 <= input.size
     end
     puts "]) #"
   when "80".."89", "8a".."8f"
-    num = byte[1].hex + 1
+    num = byte[1].hex
     puts "Dup #{num} #"
   when "90".."99", "9a".."9f"
     num = byte[1].hex
