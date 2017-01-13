@@ -42,7 +42,7 @@ val word8UnaryOp : (bitSequence -> bitSequence) -> word8 -> word8
 let word8UnaryOp op w = bs_to_w8 (op (w8_to_bs w))
 
 val word8ToNat : word8 -> nat
-let word8ToNat w = natFromInteger (integerFromBitSeq (w8_to_bs w))
+let word8ToNat w = natFromInt (intFromInteger (integerFromBitSeq (w8_to_bs w)) mod 256)
 declare isabelle target_rep function word8ToNat = `unat`
 
 val word8ToInt : word8 -> int
