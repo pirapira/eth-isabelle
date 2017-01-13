@@ -9,7 +9,7 @@ where
 "fail_on_reentrance_program ==
   Stack (PUSH_N [0]) #
   Storage SLOAD #
-  Dup 1 #
+  Dup 0 #
   Stack (PUSH_N [2]) #
   Pc JUMPI #
   Stack (PUSH_N [1]) #

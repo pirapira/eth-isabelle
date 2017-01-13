@@ -47,41 +47,41 @@ Stack (PUSH_N [0x00]) #
 Stack CALLDATALOAD #
 Arith DIV #
 Stack (PUSH_N [0x05, 0xb3, 0x44, 0x10]) #
-Dup 2 #
+Dup 1 #
 Arith inst_EQ #
 Stack (PUSH_N [0x00, 0x6e]) #
 Pc JUMPI #
-Dup 1 #
+Dup 0 #
 Stack (PUSH_N [0x0b, 0x5a, 0xb3, 0xd5]) #
 Arith inst_EQ #
 Stack (PUSH_N [0x00, 0x7c]) #
 Pc JUMPI #
-Dup 1 #
+Dup 0 #
 Stack (PUSH_N [0x13, 0xaf, 0x40, 0x35]) #
 Arith inst_EQ #
 Stack (PUSH_N [0x00, 0x89]) #
 Pc JUMPI #
-Dup 1 #
+Dup 0 #
 Stack (PUSH_N [0x2b, 0x20, 0xe3, 0x97]) #
 Arith inst_EQ #
 Stack (PUSH_N [0x00, 0xaf]) #
 Pc JUMPI #
-Dup 1 #
+Dup 0 #
 Stack (PUSH_N [0x8d, 0xa5, 0xcb, 0x5b]) #
 Arith inst_EQ #
 Stack (PUSH_N [0x00, 0xc6]) #
 Pc JUMPI #
-Dup 1 #
+Dup 0 #
 Stack (PUSH_N [0xbb, 0xe4, 0x27, 0x71]) #
 Arith inst_EQ #
 Stack (PUSH_N [0x00, 0xdd]) #
 Pc JUMPI #
-Dup 1 #
+Dup 0 #
 Stack (PUSH_N [0xfa, 0xab, 0x9d, 0x39]) #
 Arith inst_EQ #
 Stack (PUSH_N [0x01, 0x03]) #
 Pc JUMPI #
-Dup 1 #
+Dup 0 #
 Stack (PUSH_N [0xfb, 0x16, 0x69, 0xca]) #
 Arith inst_EQ #
 Stack (PUSH_N [0x01, 0x29]) #
@@ -95,7 +95,7 @@ Pc JUMPI #
 Stack (PUSH_N [0x01, 0x4a]) #
 Stack (PUSH_N [0x01]) #
 Storage SLOAD #
-Dup 2 #
+Dup 1 #
 Pc JUMP #
 Pc JUMPDEST #
 Info CALLVALUE #
@@ -120,7 +120,7 @@ Stack (PUSH_N [0x02]) #
 Arith EXP #
 Arith SUB #
 Swap 0 #
-Dup 2 #
+Dup 1 #
 Bits inst_AND #
 Swap 1 #
 Bits inst_AND #
@@ -142,7 +142,7 @@ Stack (PUSH_N [0x02]) #
 Arith EXP #
 Arith SUB #
 Bits inst_AND #
-Dup 2 #
+Dup 1 #
 Pc JUMP #
 Pc JUMPDEST #
 Info CALLVALUE #
@@ -157,7 +157,7 @@ Stack (PUSH_N [0x02]) #
 Arith EXP #
 Arith SUB #
 Bits inst_AND #
-Dup 2 #
+Dup 1 #
 Pc JUMP #
 Pc JUMPDEST #
 Info CALLVALUE #
@@ -175,7 +175,7 @@ Stack (PUSH_N [0x02]) #
 Arith EXP #
 Arith SUB #
 Swap 0 #
-Dup 2 #
+Dup 1 #
 Bits inst_AND #
 Swap 1 #
 Bits inst_AND #
@@ -200,7 +200,7 @@ Stack (PUSH_N [0x02]) #
 Arith EXP #
 Arith SUB #
 Swap 0 #
-Dup 2 #
+Dup 1 #
 Bits inst_AND #
 Swap 1 #
 Bits inst_AND #
@@ -222,7 +222,7 @@ Stack (PUSH_N [0x02]) #
 Arith EXP #
 Arith SUB #
 Swap 0 #
-Dup 2 #
+Dup 1 #
 Bits inst_AND #
 Swap 1 #
 Bits inst_AND #
@@ -233,14 +233,14 @@ Stack (PUSH_N [0x00, 0x02]) #
 Pc JUMP #
 Pc JUMPDEST #
 Stack (PUSH_N [0x40]) #
-Dup 1 #
+Dup 0 #
 Memory MLOAD #
 Swap 1 #
-Dup 3 #
+Dup 2 #
 Memory MSTORE #
 Memory MLOAD #
 Swap 0 #
-Dup 2 #
+Dup 1 #
 Swap 0 #
 Arith SUB #
 Stack (PUSH_N [0x20]) #
@@ -273,7 +273,7 @@ Stack (PUSH_N [0x00, 0x02]) #
 Pc JUMP #
 Pc JUMPDEST #
 Stack (PUSH_N [0x40]) #
-Dup 1 #
+Dup 0 #
 Memory MLOAD #
 Stack (PUSH_N [0x01]) #
 Stack (PUSH_N [0xa0]) #
@@ -284,11 +284,11 @@ Swap 2 #
 Swap 0 #
 Swap 2 #
 Bits inst_AND #
-Dup 3 #
+Dup 2 #
 Memory MSTORE #
 Memory MLOAD #
 Swap 0 #
-Dup 2 #
+Dup 1 #
 Swap 0 #
 Arith SUB #
 Stack (PUSH_N [0x20]) #
@@ -306,7 +306,7 @@ Stack (PUSH_N [0x02]) #
 Arith EXP #
 Arith SUB #
 Swap 0 #
-Dup 2 #
+Dup 1 #
 Bits inst_AND #
 Swap 1 #
 Info ADDRESS #
@@ -314,18 +314,18 @@ Swap 0 #
 Swap 1 #
 Bits inst_AND #
 Info BALANCE #
-Dup 1 #
+Dup 0 #
 Arith ISZERO #
 Stack (PUSH_N [0x08, 0xfc]) #
 Arith MUL #
 Swap 1 #
 Stack (PUSH_N [0x00]) #
-Dup 2 #
-Dup 2 #
-Dup 2 #
-Dup 6 #
-Dup 9 #
-Dup 9 #
+Dup 1 #
+Dup 1 #
+Dup 1 #
+Dup 5 #
+Dup 8 #
+Dup 8 #
 Misc CALL #
 Swap 3 #
 Stack POP #
@@ -342,32 +342,32 @@ Stack (PUSH_N [0x00, 0x02]) #
 Pc JUMP #
 Pc JUMPDEST #
 Stack (PUSH_N [0x02]) #
-Dup 1 #
+Dup 0 #
 Storage SLOAD #
 Stack (PUSH_N [0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff]) #
 Bits inst_NOT #
 Bits inst_AND #
-Dup 3 #
+Dup 2 #
 Bits inst_OR #
 Swap 0 #
 Storage SSTORE #
 Stack (PUSH_N [0x40]) #
-Dup 1 #
+Dup 0 #
 Memory MLOAD #
 Stack (PUSH_N [0x01]) #
 Stack (PUSH_N [0xa0]) #
 Stack (PUSH_N [0x02]) #
 Arith EXP #
 Arith SUB #
-Dup 4 #
+Dup 3 #
 Bits inst_AND #
-Dup 2 #
+Dup 1 #
 Memory MSTORE #
 Swap 0 #
 Memory MLOAD #
 Stack (PUSH_N [0xa2, 0xea, 0x98, 0x83, 0xa3, 0x21, 0xa3, 0xe9, 0x7b, 0x82, 0x66, 0xc2, 0xb0, 0x78, 0xbf, 0xee, 0xc6, 0xd5, 0x0c, 0x71, 0x1e, 0xd7, 0x1f, 0x87, 0x4a, 0x90, 0xd5, 0x00, 0xae, 0x2e, 0xaf, 0x36]) #
 Swap 1 #
-Dup 2 #
+Dup 1 #
 Swap 0 #
 Arith SUB #
 Stack (PUSH_N [0x20]) #
@@ -395,7 +395,7 @@ Stack (PUSH_N [0x00, 0x02]) #
 Pc JUMP #
 Pc JUMPDEST #
 Stack (PUSH_N [0x02]) #
-Dup 1 #
+Dup 0 #
 Storage SLOAD #
 Stack (PUSH_N [0xff, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]) #
 Bits inst_NOT #
@@ -415,23 +415,23 @@ Arith EXP #
 Arith SUB #
 Bits inst_AND #
 Info BALANCE #
-Dup 5 #
-Dup 3 #
+Dup 4 #
+Dup 2 #
 Arith SUB #
 Arith MUL #
 Arith DIV #
-Dup 1 #
+Dup 0 #
 Arith ISZERO #
 Stack (PUSH_N [0x08, 0xfc]) #
 Arith MUL #
 Swap 1 #
 Stack (PUSH_N [0x00]) #
-Dup 2 #
-Dup 2 #
-Dup 2 #
-Dup 6 #
-Dup 9 #
-Dup 9 #
+Dup 1 #
+Dup 1 #
+Dup 1 #
+Dup 5 #
+Dup 8 #
+Dup 8 #
 Misc CALL #
 Swap 3 #
 Stack POP #
@@ -446,12 +446,12 @@ Stack (PUSH_N [0x00, 0x02]) #
 Pc JUMP #
 Pc JUMPDEST #
 Stack (PUSH_N [0x00]) #
-Dup 1 #
+Dup 0 #
 Storage SLOAD #
 Stack (PUSH_N [0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff]) #
 Bits inst_NOT #
 Bits inst_AND #
-Dup 3 #
+Dup 2 #
 Bits inst_OR #
 Swap 0 #
 Storage SSTORE #
@@ -474,7 +474,7 @@ Pc JUMPI #
 Stack (PUSH_N [0x00, 0x02]) #
 Pc JUMP #
 Pc JUMPDEST #
-Dup 1 #
+Dup 0 #
 Info ADDRESS #
 Stack (PUSH_N [0x01]) #
 Stack (PUSH_N [0xa0]) #
@@ -500,27 +500,27 @@ Stack (PUSH_N [0x02]) #
 Arith EXP #
 Arith SUB #
 Swap 1 #
-Dup 3 #
+Dup 2 #
 Bits inst_AND #
 Swap 1 #
 Info ADDRESS #
 Bits inst_AND #
 Info BALANCE #
-Dup 4 #
+Dup 3 #
 Swap 0 #
 Arith SUB #
-Dup 1 #
+Dup 0 #
 Arith ISZERO #
 Stack (PUSH_N [0x08, 0xfc]) #
 Arith MUL #
 Swap 1 #
 Stack (PUSH_N [0x00]) #
-Dup 2 #
-Dup 2 #
-Dup 2 #
-Dup 6 #
-Dup 9 #
-Dup 9 #
+Dup 1 #
+Dup 1 #
+Dup 1 #
+Dup 5 #
+Dup 8 #
+Dup 8 #
 Misc CALL #
 Swap 3 #
 Stack POP #
