@@ -24,7 +24,6 @@ let parse_big_int_from_string str =
       Big_int.big_int_of_string str
     with e ->
       begin
-        (*        let () = Printf.eprintf "parse error %s %d%!\n" str (String.length str) in *)
         raise e
       end
 
@@ -43,12 +42,10 @@ let parse_address_from_field field j =
       Big_int.big_int_of_string str
     with e ->
       begin
-        (*        let () = Printf.eprintf "parse error %s: %s %d%!\n" field str (String.length str) in *)
         raise e
       end
 
 let parse_env (j : json) : env =
-  (*  let () = Printf.eprintf "parse_env\n%!" in *)
   Util.(
     { currentCoinbase =
         parse_address_from_field "currentCoinbase" j
@@ -187,8 +184,6 @@ let construct_block_info (t : test_case) : block_info =
   let block_number = Conv.word256_of_big_int t.env.currentNumber in
   { block_blockhash = (fun num ->
       let num : Big_int.big_int = Conv.big_int_of_word256 num in
-      (*      let () = Printf.printf "the current block is %s.\n" (Big_int.string_of_big_int t.env.currentNumber) in *)
-      (* let () = Printf.printf "the asked block is %s.\n" (Big_int.string_of_big_int num) in *)
       if Big_int.eq_big_int Big_int.zero_big_int num then
         Conv.word256_of_big_int Big_int.zero_big_int
       else if Big_int.lt_big_int num (Big_int.sub_big_int t.env.currentNumber (Big_int.big_int_of_int 256)) then
@@ -201,7 +196,6 @@ let construct_block_info (t : test_case) : block_info =
         let hashed_byte_list = (Conv.string_as_byte_list
                        (Big_int.string_of_big_int num)) in
         let ret = keccak hashed_byte_list in
-        (* let () = Printf.printf "going to return %s.\n" (Big_int.string_of_big_int (Conv.big_int_of_word256 ret)) in *)
         ret
     )
   ; block_coinbase  = Conv.word160_of_big_int t.env.currentCoinbase
@@ -220,7 +214,6 @@ let construct_account_existence (pre_state : (string * account_state) list) (add
   with Not_found -> false
 
 let parse_test_case (j : json) : test_case =
-  let () = Easy_format.Pretty.to_stdout (format_env (parse_env (Util.member "env" j))) in
   Util.(
   { callcreates =
       (try
