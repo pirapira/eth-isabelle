@@ -123,12 +123,6 @@ lemma memory_usage_element_means [simp] :
 apply(auto simp add: variable_ctx_as_set_def stack_as_set_def)
 done
 
-lemma block_info_element_means [simp]:
-  "BlockInfoElm b
-           \<in> variable_ctx_as_set v = (vctx_block v = b)"
-apply(auto simp add: variable_ctx_as_set_def stack_as_set_def)
-done
-
 
 lemma inst_size_nonzero [simp] : "inst_size a \<noteq> 0"
 apply(simp add: inst_size_def)
