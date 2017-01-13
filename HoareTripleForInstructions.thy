@@ -123,6 +123,13 @@ lemma memory_usage_element_means [simp] :
 apply(auto simp add: variable_ctx_as_set_def stack_as_set_def)
 done
 
+lemma block_info_element_means [simp]:
+  "BlockInfoElm b
+           \<in> variable_ctx_as_set v = (vctx_block v = b)"
+apply(auto simp add: variable_ctx_as_set_def stack_as_set_def)
+done
+
+
 lemma inst_size_nonzero [simp] : "inst_size a \<noteq> 0"
 apply(simp add: inst_size_def)
 apply(case_tac a; auto simp add: inst_code.simps dup_inst_code_def)
@@ -140,23 +147,39 @@ apply(case_tac "vctx_next_instruction x1 co_ctx"; auto)
 done
 
 lemma stack_elm_not_program [simp]:
- "StackElm x2 \<notin> program_as_set (cctx_program co_ctx) = True"
+ "StackElm x2 \<notin> program_as_set (cctx_program co_ctx)"
 apply(simp add: program_as_set_def)
 done
 
 lemma stack_elm_not_constant [simp] :
-   "StackElm x2 \<notin> constant_ctx_as_set co_ctx = True"
+   "StackElm x2 \<notin> constant_ctx_as_set co_ctx"
 apply(simp add: constant_ctx_as_set_def)
 done
 
 lemma storage_elm_not_constant [simp] :
-   "StorageElm x \<notin> constant_ctx_as_set c = True"
+   "StorageElm x \<notin> constant_ctx_as_set c"
 apply(simp add: constant_ctx_as_set_def)
 apply(simp add: program_as_set_def)
 done
 
+lemma stack_height_elm_not_constant [simp]:
+  "StackHeightElm h \<notin> constant_ctx_as_set co_ctx"
+apply(simp add: constant_ctx_as_set_def program_as_set_def)
+done
+
+
 lemma memory_elm_not_constant [simp] :
-  "MemoryElm m \<notin> constant_ctx_as_set c = True"
+  "MemoryElm m \<notin> constant_ctx_as_set c"
+apply(simp add: constant_ctx_as_set_def program_as_set_def)
+done
+
+lemma pc_elm_not_constant [simp] :
+"PcElm x \<notin> constant_ctx_as_set co_ctx"
+apply(simp add: constant_ctx_as_set_def program_as_set_def)
+done
+
+lemma gas_elm_not_constant [simp] :
+"GasElm x \<notin> constant_ctx_as_set co_ctx"
 apply(simp add: constant_ctx_as_set_def program_as_set_def)
 done
 
@@ -287,39 +310,50 @@ lemma advance_pc_change [simp] :
 lemma tmp1 [simp]: 
   "program_content (cctx_program co_ctx) (vctx_pc x1) = Some (Arith ADD) \<Longrightarrow>
    vctx_stack x1 = v # w # ta \<Longrightarrow>
-   (contexts_as_set (vctx_advance_pc co_ctx x1\<lparr>vctx_stack := (v + w) # ta, vctx_gas := vctx_gas x1 - Gverylow\<rparr>) co_ctx -
+   (insert (ContinuingElm True)
+              (contexts_as_set
+                (vctx_advance_pc co_ctx x1
+                 \<lparr>vctx_stack := (v + w) # ta, vctx_gas := vctx_gas x1 - Gverylow\<rparr>)
+                co_ctx) -
              {StackHeightElm (Suc (length ta))} -
              {StackElm (length ta, v + w)} -
              {PcElm (vctx_pc x1 + 1)} -
              {GasElm (vctx_gas x1 - Gverylow)} -
+             {ContinuingElm True} -
              {CodeElm (vctx_pc x1, Arith ADD)}) =
-   (contexts_as_set x1 co_ctx - {StackHeightElm (Suc (Suc (length ta)))} - {StackElm (Suc (length ta), v)} -
+  (insert (ContinuingElm True) (contexts_as_set x1 co_ctx) -
+             {StackHeightElm (Suc (Suc (length ta)))} -
+             {StackElm (Suc (length ta), v)} -
              {StackElm (length ta, w)} -
              {PcElm (vctx_pc x1)} -
              {GasElm (vctx_gas x1)} -
+             {ContinuingElm True} -
              {CodeElm (vctx_pc x1, Arith ADD)})"
-apply(simp add: contexts_as_set_def Set.Un_Diff)
-apply(auto)
+apply(auto simp add: contexts_as_set_def Set.Un_Diff)
  apply(rename_tac elm)
- apply(case_tac elm; auto simp add: variable_ctx_as_set_def vctx_advance_pc_def stack_as_set_def vctx_next_instruction_def)
-apply(auto simp add: variable_ctx_as_set_def stack_as_set_def nth_append nth_Cons')
+ apply(case_tac elm; auto simp add: variable_ctx_as_set_def  vctx_advance_pc_def stack_as_set_def vctx_next_instruction_def)
+apply(rename_tac elm)
+apply(case_tac elm; auto simp add: variable_ctx_as_set_def  vctx_advance_pc_def stack_as_set_def vctx_next_instruction_def)
+ apply(case_tac "idx < length ta"; auto)
+ apply(case_tac "idx = length ta"; auto)
 apply(case_tac "idx < length ta"; auto)
 apply(case_tac "idx = length ta"; auto)
 done
-
 
 lemma add_triple : "triple (\<langle> h \<le> 1023 \<and> g \<ge> Gverylow \<rangle> **
                             stack_height (h + 2) **
                             stack (h + 1) v **
                             stack h w **
                             program_counter k **
-                            gas_pred g
+                            gas_pred g **
+                            continuing
                            )
                            {(k, Arith ADD)}
                            (stack_height (h + 1) **
                             stack h (v + w) **
                             program_counter (k + 1) **
-                            gas_pred (g - Gverylow)
+                            gas_pred (g - Gverylow) **
+                            continuing
                             )"
 apply(simp add: triple_def)
 apply(clarify)

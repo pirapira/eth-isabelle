@@ -30,6 +30,7 @@ datatype state_element =
   | ExtProgramSizeElm "address * int" (* address, size.  Considering making size an int *)
   | ExtProgramElm "address * nat * byte" (* address, position, byte.  Considering making position an int *)
   | ContractActionElm "contract_action" (* None indicates continued execution *)
+  | ContinuingElm "bool" (* True if the execution is still continuing *)
 
 definition contract_action_as_set :: "contract_action \<Rightarrow> state_element set"
   where "contract_action_as_set act == { ContractActionElm act }"
@@ -166,6 +167,10 @@ definition gas_pred :: "int \<Rightarrow> state_element set \<Rightarrow> bool"
   where
     "gas_pred g s == s = {GasElm g}"
 
+definition continuing :: "state_element set \<Rightarrow> bool"
+where
+"continuing s == s = { ContinuingElm True }"
+
 (* memory8, memory, calldata, and storage should be added here *)
 
 lemma stack_sound0 :
@@ -191,10 +196,10 @@ definition instruction_result_as_set :: "constant_ctx \<Rightarrow> instruction_
   where
     "instruction_result_as_set c rslt =
         ( case rslt of
-          InstructionContinue v \<Rightarrow> contexts_as_set v c
-        | InstructionToEnvironment act st bal _ logs _ \<Rightarrow> {} (* for now *)
-        | InstructionAnnotationFailure \<Rightarrow> {} (* need to assume no annotation failure somewhere *)
-        | InstructionInit _ \<Rightarrow> {}
+          InstructionContinue v \<Rightarrow> {ContinuingElm True} \<union> contexts_as_set v c
+        | InstructionToEnvironment act st bal _ logs _ \<Rightarrow> {ContinuingElm False} (* for now *)
+        | InstructionAnnotationFailure \<Rightarrow> {ContinuingElm False} (* need to assume no annotation failure somewhere *)
+        | InstructionInit _ \<Rightarrow> {ContinuingElm False}
         )"
 
 definition code :: "(int * inst) set \<Rightarrow> state_element set \<Rightarrow> bool"
@@ -223,6 +228,11 @@ done
     
 lemma pure_sep [simp] : "(\<langle> b \<rangle> ** rest) s = (b \<and> rest s)"
 apply(simp add: sep_def pure_def emp_def)
+done
+
+lemma contiuning_sep [simp] :
+  "(continuing ** rest) s = ((ContinuingElm True) \<in> s \<and> rest (s - {ContinuingElm True}))"
+apply(auto simp add: sep_def continuing_def)
 done
 
 lemma stack_height_sep [simp] : "(stack_height h ** rest) s =
@@ -320,7 +330,6 @@ declare memory_as_set_def [simp]
   instruction_result_as_set_def [simp]
   next_state_def [simp]
 
- 
 
 
 (**
