@@ -130,12 +130,12 @@ let parse_instruction (str : string) : (inst * string) option =
   | "f4" -> Some (Misc DELEGATECALL, rest)
   | "ff" -> Some (Misc SUICIDE, rest)
   | _ ->
-     let () = Printf.printf "parsing 0x%s%!" opcode in
+     (*     let () = Printf.printf "parsing 0x%s%!" opcode in *)
      let opcode_num = int_of_string ("0x"^opcode) in
      if 0x60 <= opcode_num && opcode_num <= 0x7f then
        let l = opcode_num - 0x60 + 1 in
        let (payload, rest) = BatString.(left rest (2 * l), tail rest (2 * l)) in
-       let () = Printf.printf "payload: %s%!\n" payload in
+       (*       let () = Printf.printf "payload: %s%!\n" payload in *)
        let payload =
          if String.length payload < 2 * l then
            string_right_fill '0' (2*l) payload
