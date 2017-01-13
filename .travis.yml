@@ -40,5 +40,6 @@ script:
 # - cd -
 - cd tester
 - sh compile.sh
+- ./runVmTest.native q
 - cd -
 - make light-isabelle
