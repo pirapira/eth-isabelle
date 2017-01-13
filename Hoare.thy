@@ -341,7 +341,6 @@ declare memory_as_set_def [simp]
   storage_as_set_def [simp]
   log_as_set_def [simp]
   balance_as_set_def [simp]
-  instruction_result_as_set_def [simp]
   next_state_def [simp]
 
 
@@ -598,11 +597,38 @@ lemma preE0:
 apply(auto simp add: sep_def)
 	by blast
 
+lemma sep_impL :
+ "\<forall> s. b s \<longrightarrow> a s \<Longrightarrow> 
+ (b ** c ** d) s \<longrightarrow>
+ (a ** c ** d) s"
+  using sep_def by auto
+
+
+lemma pre_imp:
+  "\<forall> s. (b s \<longrightarrow> a s) \<Longrightarrow> triple a c q \<Longrightarrow> triple b c q"
+apply(auto simp add: triple_def)
+apply(drule_tac x = co_ctx in spec)
+apply(auto)
+apply(drule_tac x = presult in spec)
+apply(drule_tac x = rest in spec)
+apply(auto simp add: sep_impL)
+done
+
+lemma preE1 [simp]:
+"((\<lambda>s. \<exists>x. p x s) ** rest) u
+=
+(\<exists> x. (p x ** rest) u)
+"
+apply(auto simp add: sep_def)
+done
+
 
 lemma preE : "triple (\<lambda> s. \<exists> x. p x s) c q = (\<forall> x. triple (p x) c q)"
+apply(auto)
+ apply (metis pre_imp)
 apply(auto simp add: triple_def)
-apply(drule preE0; auto)
 done
+
 
 (** More rules to come **)
 
