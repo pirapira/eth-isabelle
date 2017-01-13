@@ -52,8 +52,15 @@ let byte_of_big_int (b : Big_int.big_int) =
   let (h, tl) = word_of_big_int 8 b in
   Word8.W8 (h, tl)
 
+let nibble_of_big_int (b : Big_int.big_int) =
+  let (h, tl) = word_of_big_int 4 b in
+  Word4.W4 (h, tl)
+
 let byte_of_int (i : int) =
   byte_of_big_int (Big_int.big_int_of_int i)
+
+let nibble_of_int (i : int) =
+  nibble_of_big_int (Big_int.big_int_of_int i)
 
 let big_int_of_bit_list bl =
   let nums : Big_int.big_int list = List.map (fun x -> if x then Big_int.unit_big_int else Big_int.zero_big_int) bl in

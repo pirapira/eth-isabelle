@@ -42,7 +42,7 @@ val word4UnaryOp : (bitSequence -> bitSequence) -> word4 -> word4
 let word4UnaryOp op w = bs_to_w4 (op (w4_to_bs w))
 
 val word4ToNat : word4 -> nat
-let word4ToNat w = natFromInteger (integerFromBitSeq (w4_to_bs w))
+let word4ToNat w = natFromInt (intFromInteger (integerFromBitSeq (w4_to_bs w)) mod 16)
 declare isabelle target_rep function word4ToNat = `unat`
 
 val word4ToInt : word4 -> int
@@ -50,7 +50,7 @@ let word4ToInt w = intFromInteger (integerFromBitSeq (w4_to_bs w))
 declare isabelle target_rep function word4ToInt = `sint`
 
 val word4ToUInt : word4 -> int
-let word4ToUInt w = intFromNat (word4ToNat w)
+let word4ToUInt w = (word4ToInt w) mod 16
 declare isabelle target_rep function word4ToUInt = `uint`
 
 declare isabelle target_rep function w4_to_bs = (fun w -> bitSeqFromInteger (Just 4) (integerFromInt (word4ToInt w)))
