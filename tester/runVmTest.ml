@@ -7,19 +7,17 @@ let spec_includes_actual (spec_storage : list_storage) (touched : Word256.word25
   let () = Printf.printf "sia\n" in
   (* for each touched index, check that the actual storage and the spec storage have the same thing. *)
   let f (idx : Word256.word256) =
-    let () = Printf.printf " idx touched: %s\n" (Big_int.string_of_big_int (Conv.big_int_of_word256 idx)) in
-    let () = Printf.printf " actual word: %s\n" (Conv.string_of_word256 (actual_storage idx)) in
     let actual_value : Big_int.big_int = Conv.big_int_of_word256 (actual_storage idx) in
     let spec_idx : Big_int.big_int = Conv.big_int_of_word256 idx in
     let spec_value = (* This procedure needs to be split away. *)
       try Big_int.big_int_of_string (Conv.bigint_assoc spec_idx spec_storage)
       with Not_found -> Big_int.zero_big_int
     in
-    let () = Printf.printf " comparing idx: %s, actual: %s, spec: %s (by %s)\n"
+(*    let () = Printf.printf " comparing idx: %s, actual: %s, spec: %s (by %s)\n"
                            (BatBig_int.to_string (Conv.big_int_of_word256 idx))
                            (BatBig_int.to_string_in_hexa actual_value)
                            (BatBig_int.to_string_in_hexa spec_value)
-                           (Big_int.string_of_big_int spec_idx) in
+                           (Big_int.string_of_big_int spec_idx) in *)
     let ret = Big_int.eq_big_int actual_value spec_value in
     let () = assert ret in
     ret
@@ -27,13 +25,13 @@ let spec_includes_actual (spec_storage : list_storage) (touched : Word256.word25
   List.for_all f touched
 
 let actual_includes_spec (spec_storage : list_storage) (actual_storage : Word256.word256 -> Word256.word256) : bool =
-  let () = Printf.printf "ais\n" in
+  (*  let () = Printf.printf "ais\n" in *)
   (* for each pair in spec_storage, check the actual_storage *)
   let f ((idx : Big_int.big_int), (v : string)) =
     let spec_value = Big_int.big_int_of_string v in
     let actual_idx = (Conv.word256_of_big_int idx) in
     let actual_value = Conv.big_int_of_word256 (actual_storage actual_idx) in
-    let () = Printf.printf " comparing idx: %s spec: %s, actual: %s (by idx: %s)\n" (BatBig_int.to_string_in_hexa idx) (Big_int.string_of_big_int spec_value) (BatBig_int.to_string_in_hexa actual_value) (Conv.string_of_word256 actual_idx) in
+(*    let () = Printf.printf " comparing idx: %s spec: %s, actual: %s (by idx: %s)\n" (BatBig_int.to_string_in_hexa idx) (Big_int.string_of_big_int spec_value) (BatBig_int.to_string_in_hexa actual_value) (Conv.string_of_word256 actual_idx) in *)
     let ret = Big_int.eq_big_int spec_value actual_value in
     let () = assert ret in
     ret in
@@ -118,12 +116,12 @@ let test_one_case j : testResult =
     ; vctx_touched_storage_index = []
     ; vctx_logs = []
     } in
-  let () = Conv.print_variable_ctx v in
+  (*  let () = Conv.print_variable_ctx v in *)
   let c : constant_ctx =
     { cctx_program = test_case.exec.code
     ; cctx_this = Conv.word160_of_big_int test_case.exec.address
     } in
-  let () = Conv.print_constant_ctx c in
+  (*  let () = Conv.print_constant_ctx c in *)
   let number = Nat_big_num.of_string (Big_int.string_of_big_int test_case.exec.gas) in
   let ret : instruction_result = Conv.program_sem_wrapper c (Nat_big_num.to_int number) (InstructionContinue v) in
   match ret with
@@ -158,7 +156,7 @@ let test_one_case j : testResult =
        match test_case.callcreates, test_case.gas, test_case.logs, test_case.out, test_case.post with
        | spec_created, Some spec_gas, Some spec_logs, Some spec_out, Some spec_post ->
           let got_retval : string = hex_string_of_byte_list "0x" retval in
-          let () = Printf.printf "got_retval: %s spec_out: %s\n%!" got_retval spec_out in
+          (*          let () = Printf.printf "got_retval: %s spec_out: %s\n%!" got_retval spec_out in*)
           if (got_retval <> spec_out) then TestFailure
           else if not (storage_comparison (Conv.word160_of_big_int test_case.exec.address) spec_post touched st) then TestFailure
           else if not (balance_comparison (Conv.word160_of_big_int test_case.exec.address) spec_post bal) then TestFailure
