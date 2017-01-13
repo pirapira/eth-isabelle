@@ -143,7 +143,7 @@ let parse_instruction (str : string) : (inst * string) option =
            payload in
        Some (Stack (PUSH_N (Conv.byte_list_of_hex_string payload)), rest)
      else if 0x80 <= opcode_num && opcode_num <= 0x8f then
-       Some (Dup (Conv.byte_of_int (opcode_num - 0x80 + 1)), rest)
+       Some (Dup (Conv.nibble_of_int (opcode_num - 0x80)), rest)
      else if 0x90 <= opcode_num && opcode_num <= 0x9f then
        Some (Swap (Conv.nibble_of_int (opcode_num - 0x90)), rest)
      else if String.length opcode = 2 then

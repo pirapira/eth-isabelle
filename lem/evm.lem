@@ -337,16 +337,16 @@ end
 (* There are sixteen instructions for duplicating a stack element.  These instructions take *)
 (* a stack element and duplicate it on top of the stack. *)
 
-type dup_inst = byte
+type nibble = word4
+
+type dup_inst = nibble
 
 val dup_inst_code : dup_inst -> byte
 let dup_inst_code m =
-   if word8UGT 1 m then 0X80 (*-- This case should not exist *)
-   else if word8UGT m 16 then 0X80 (* -- This case should not exist *)
-   else (m + 0X7f)
+  (word8FromInt (word4ToUInt m) + 0X80)
 
 val dup_inst_numbers : dup_inst -> stack_numbers
-let dup_inst_numbers m = (word8ToUInt m, word8ToUInt m + 1)
+let dup_inst_numbers m = (word4ToUInt m + 1, word4ToUInt m + 2)
 
 (* subsection {* Memory Operations *} *)
 
@@ -454,8 +454,6 @@ let stack_inst_numbers inst = match inst with
 | PUSH_N _ -> (0, 1)
 | CALLDATALOAD -> (1, 1)
 end
-
-type nibble = word4
 
 type swap_inst = nibble
 
@@ -1326,8 +1324,8 @@ let pop v c = match v.vctx_stack with
 end
 
 (* The DUP instructions: *)
-val general_dup : byte -> variable_ctx -> constant_ctx -> instruction_result
-let general_dup n v c = match List.index v.vctx_stack ((word8ToNat n) - 1) with
+val general_dup : nibble -> variable_ctx -> constant_ctx -> instruction_result
+let general_dup n v c = match List.index v.vctx_stack (word4ToNat n) with
   | Nothing -> instruction_failure_result v
   | Just duplicated -> InstructionContinue (vctx_advance_pc c <| v with vctx_stack = duplicated :: v.vctx_stack |>)
 end
