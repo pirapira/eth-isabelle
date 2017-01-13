@@ -21,7 +21,6 @@ datatype state_element =
   | CodeElm "int * inst" (* a position containing an instruction *)
   | ThisAccountElm "address" (* The address of this account *)
   | BalanceElm "address * w256" (* address, amount *)
-  | BlockInfoElm "block_info" (* the current block.  This might be broken down to more elements. *)
   | CallerElm "address"
   | OriginElm "address"
   | SentValueElm "w256"
@@ -31,6 +30,21 @@ datatype state_element =
   | ExtProgramElm "address * nat * byte" (* address, position, byte.  Considering making position an int *)
   | ContractActionElm "contract_action" (* None indicates continued execution *)
   | ContinuingElm "bool" (* True if the execution is still continuing *)
+  | BlockhashElm "w256 * w256"
+  | CoinbaseElm "address"
+  | TimestampElm "w256"
+  | DifficultyElm "w256"
+  | GaslimitElm "w256"
+  | GaspriceElm "w256"
+
+abbreviation blockhash_as_elm :: "(w256 \<Rightarrow> w256) \<Rightarrow> state_element set"
+where "blockhash_as_elm f == { BlockhashElm (n, h) | n h. f n = h}"
+
+abbreviation block_info_as_set :: "block_info \<Rightarrow> state_element set"
+where "block_info_as_set b ==
+  blockhash_as_elm (block_blockhash b) \<union> { CoinbaseElm (block_coinbase b),
+  TimestampElm (block_timestamp b), DifficultyElm (block_difficulty b),
+  GaslimitElm (block_gaslimit b), GaspriceElm (block_gasprice b) }"
 
 definition contract_action_as_set :: "contract_action \<Rightarrow> state_element set"
   where "contract_action_as_set act == { ContractActionElm act }"
@@ -89,11 +103,11 @@ definition variable_ctx_as_set :: "variable_ctx \<Rightarrow> state_element set"
     \<union> storage_as_set (vctx_storage v)
     \<union> balance_as_set (vctx_balance v)
     \<union> log_as_set (vctx_logs v)
+    \<union> block_info_as_set (vctx_block v)
     \<union> { MemoryUsageElm (vctx_memory_usage v)
       , CallerElm (vctx_caller v)
       , SentValueElm (vctx_value_sent v)
       , OriginElm (vctx_origin v)
-      , BlockInfoElm (vctx_block v)
       , GasElm (vctx_gas v)
       , PcElm (vctx_pc v)
       }"
