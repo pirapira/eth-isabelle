@@ -2,7 +2,6 @@ open Evm
 
 let pad_left (elm : 'a) (len : int) (orig : 'a list) =
   let remaining = len - List.length orig in
-  (*  let () = Printf.printf "padding: remaining: %d\n%!" remaining in *)
   let padding = BatList.make remaining elm in
   let ret = padding @ orig in
   let () = assert (List.length ret = len) in
@@ -10,7 +9,6 @@ let pad_left (elm : 'a) (len : int) (orig : 'a list) =
 
 let pad_right (elm : 'a) (len : int) (orig : 'a list) =
   let remaining = len - List.length orig in
-  (*   let () = Printf.printf "padding: remaining: %d\n%!" remaining in *)
   let padding = BatList.make remaining elm in
   let ret = orig @ padding in
   let () = assert (List.length ret = len) in
@@ -33,11 +31,8 @@ let word_of_big_int (target_len : int) (b : Big_int.big_int) =
         | _ -> failwith "neither 0 or 1"
       ) (List.rev (BatString.to_list binary))
     in
-    (*  let () = Printf.printf "current len bl :%d\n" (List.length bl) in *)
   let bl = pad_right false target_len bl in
-  (*   let () = Printf.printf "intermediate 1 : %s\n" (String.concat "," (List.map string_of_bool bl)) in*)
   let Lem_word.BitSeq(_, h, tl) = Lem_word.(resizeBitSeq (Some target_len) (BitSeq (Some target_len, List.nth bl (target_len - 1), BatList.take (target_len - 1) bl))) in
-  (*   let () = Printf.printf "intermediate 2 : %s\n" (String.concat "," (List.map string_of_bool (h :: tl))) in*)
   (h, tl)
 
 let word256_of_big_int (b : Big_int.big_int) =
@@ -87,7 +82,6 @@ let rec byte_list_of_hex_string (s : string) =
   else if String.length s < 2 then []
   else
     let first_string = "0x"^(BatString.left s 2) in
-    (*    let () = Printf.printf "parsing (byte_list_of_hex_string): %s\n%!" first_string in *)
     let first_byte = int_of_string first_string in
     let rest = BatString.tail s 2 in
     byte_of_int first_byte :: byte_list_of_hex_string rest
@@ -156,7 +150,6 @@ let rec bigint_assoc (key : Big_int.big_int) (lst : (Big_int.big_int * 'a) list)
   match lst with
   | [] -> raise Not_found
   | (hk, hv) :: t ->
-     (*     let () = Printf.printf "bigint_assoc: comparing %s and %s\n" (Big_int.string_of_big_int key) (Big_int.string_of_big_int hk) in *)
      if Big_int.eq_big_int key hk then hv
      else bigint_assoc key t
 
