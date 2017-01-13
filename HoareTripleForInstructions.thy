@@ -123,6 +123,14 @@ lemma memory_usage_element_means [simp] :
 apply(auto simp add: variable_ctx_as_set_def stack_as_set_def)
 done
 
+lemma code_element_means [simp] :
+  "(CodeElm (x, y) \<in> constant_ctx_as_set c) = 
+   (program_content (cctx_program c) x = Some y \<or>
+    program_content (cctx_program c) x = None \<and>
+    y = Misc STOP)"
+apply(auto simp add: constant_ctx_as_set_def program_as_set_def)
+done
+
 
 lemma inst_size_nonzero [simp] : "inst_size a \<noteq> 0"
 apply(simp add: inst_size_def)
@@ -258,7 +266,7 @@ apply(simp add: vctx_advance_pc_def)
 done
 
 lemma advance_pc_preserves_memory_usage [simp] :
-  "vctx_memory_usage x1 = vctx_memory_usage (vctx_advance_pc co_ctx x1)"
+  "vctx_memory_usage (vctx_advance_pc co_ctx x1) = vctx_memory_usage x1"
 apply(simp add: vctx_advance_pc_def)
 done
 
@@ -268,22 +276,22 @@ apply(simp add: vctx_advance_pc_def)
 done
 
 lemma advance_pc_preserves_caller [simp] :
-  "vctx_caller x1 = vctx_caller (vctx_advance_pc co_ctx x1)"
+  "vctx_caller (vctx_advance_pc co_ctx x1) = vctx_caller x1"
 apply(simp add: vctx_advance_pc_def)
 done
 
 lemma advance_pc_preseerves_caller [simp] :
-  "vctx_value_sent x1 = vctx_value_sent (vctx_advance_pc co_ctx x1)"
+  "vctx_value_sent (vctx_advance_pc co_ctx x1) = vctx_value_sent x1"
 apply(simp add: vctx_advance_pc_def)
 done
 
 lemma advance_pc_preserves_origin [simp] :
-  "vctx_origin x1 = vctx_origin (vctx_advance_pc co_ctx x1)"
+  " vctx_origin (vctx_advance_pc co_ctx x1) = vctx_origin x1"
 apply(simp add: vctx_advance_pc_def)
 done
 
 lemma advance_pc_preserves_block [simp] :
-  "vctx_block x1 = vctx_block (vctx_advance_pc co_ctx x1)"
+  " vctx_block (vctx_advance_pc co_ctx x1) = vctx_block x1"
 apply(simp add: vctx_advance_pc_def)
 done
 
@@ -291,6 +299,11 @@ lemma balance_elm_means [simp] :
  "BalanceElm p \<in> variable_ctx_as_set v = (vctx_balance v (fst p) = (snd p))"
 apply(simp add: variable_ctx_as_set_def stack_as_set_def)
 apply(case_tac p; auto)
+done
+
+lemma advance_pc_keeps_stack [simp] :
+  "(vctx_stack (vctx_advance_pc co_ctx v)) = vctx_stack v"
+apply(simp add: vctx_advance_pc_def)
 done
 
 lemma advance_pc_change [simp] :
@@ -357,6 +370,111 @@ apply(auto simp add: program_sem.simps vctx_next_instruction_def instruction_sem
       inst_stack_numbers.simps arith_inst_numbers.simps predict_gas_def C_def Cmem_def
       Gmemory_def new_memory_consumption.simps thirdComponentOfC.simps
       vctx_next_instruction_default_def stack_2_1_op_def subtract_gas.simps)
+done
+
+lemma saying_zero [simp] :
+  "(x - Suc 0 < x) = (x \<noteq> 0)"
+apply(case_tac x; auto)
+done
+
+lemma inst_size_pop [simp] :
+  "inst_size (Stack POP) = 1"
+apply(simp add: inst_code.simps inst_size_def stack_inst_code.simps)
+done
+
+lemma pop_advance [simp] :
+  "program_content (cctx_program co_ctx) (vctx_pc x1) = Some (Stack POP) \<Longrightarrow>
+   vctx_pc (vctx_advance_pc co_ctx x1) = vctx_pc x1 + 1"
+apply(simp add: vctx_advance_pc_def vctx_next_instruction_def)
+done
+
+
+lemma advance_pc_as_set [simp] :
+  "program_content (cctx_program co_ctx) (vctx_pc v) = Some (Stack POP) \<Longrightarrow>
+   (contexts_as_set (vctx_advance_pc co_ctx v) co_ctx) =
+   (contexts_as_set v co_ctx) \<union> {PcElm (vctx_pc v + 1)} - {PcElm (vctx_pc v)}"
+apply(auto simp add: contexts_as_set_def variable_ctx_as_set_def stack_as_set_def
+      vctx_advance_pc_def vctx_next_instruction_def)
+done
+
+
+
+lemma gas_change_as_set [simp] :
+  "(contexts_as_set (x1\<lparr>vctx_gas := new_gas\<rparr>) co_ctx) 
+    = ((contexts_as_set x1 co_ctx  - {GasElm (vctx_gas x1) }) \<union> { GasElm new_gas } )"
+apply(auto simp add: contexts_as_set_def variable_ctx_as_set_def stack_as_set_def)
+done
+
+lemma stack_change_as_set [simp] :
+   "(contexts_as_set (v\<lparr>vctx_stack := t\<rparr>) co_ctx) =
+     (contexts_as_set v co_ctx - stack_as_set (vctx_stack v)) \<union> stack_as_set t 
+    "
+apply(auto simp add: contexts_as_set_def variable_ctx_as_set_def stack_as_set_def)
+done
+
+lemma stack_height_in [simp] :
+  "StackHeightElm (length t) \<in> stack_as_set t"
+apply(simp add: stack_as_set_def)
+done
+
+lemma pc_not_stack [simp] :
+ "PcElm k \<notin> stack_as_set s"
+apply(simp add: stack_as_set_def)
+done 
+
+lemma code_not_stack [simp] :
+  "CodeElm p \<notin> stack_as_set s"
+apply(simp add: stack_as_set_def)
+done
+
+lemma pop1 [simp] :
+"
+vctx_stack x1 = v # t \<Longrightarrow>
+(insert (GasElm (vctx_gas x1 - Gbase))
+              (insert (ContinuingElm True)
+                (insert (StackHeightElm (length t))
+                  (insert (PcElm (vctx_pc x1 + 1)) (contexts_as_set x1 co_ctx) - {PcElm (vctx_pc x1)} -
+                   insert (StackHeightElm (Suc (length t))) {StackElm (idx, (rev t @ [v]) ! idx) |idx. idx < Suc (length t)} \<union>
+                   {StackElm (idx, rev t ! idx) |idx. idx < length t}) -
+                 {GasElm (vctx_gas x1)})) -
+             {StackHeightElm (length t)} -
+             {PcElm (vctx_pc x1 + 1)} -
+             {GasElm (vctx_gas x1 - Gbase)} -
+             {ContinuingElm True} -
+             {CodeElm (vctx_pc x1, Stack POP)}) =
+ (insert (ContinuingElm True) (contexts_as_set x1 co_ctx) - {StackHeightElm (Suc (length t))} -
+             {StackElm (length t, v)} -
+             {PcElm (vctx_pc x1)} -
+             {GasElm (vctx_gas x1)} -
+             {ContinuingElm True} -
+             {CodeElm (vctx_pc x1, Stack POP)})
+"
+apply(auto)
+done
+
+lemma pop_triple : "triple (\<langle> h \<le> 1024 \<and> g \<ge> Gbase \<rangle> **
+                            stack_height (h + 1) **
+                            stack h v **
+                            program_counter k **
+                            gas_pred g **
+                            continuing
+                           )
+                           {(k, Stack POP)}
+                           (stack_height h **
+                            program_counter (k + 1) **
+                            gas_pred (g - Gbase) **
+                            continuing
+                            )"
+apply(simp add: triple_def)
+apply(clarify)
+apply(rule_tac x = "1" in exI)
+apply(case_tac presult; simp)
+apply(auto simp add: program_sem.simps vctx_next_instruction_def instruction_sem_def check_resources_def
+      inst_stack_numbers.simps arith_inst_numbers.simps predict_gas_def C_def Cmem_def
+      Gmemory_def new_memory_consumption.simps thirdComponentOfC.simps
+      vctx_next_instruction_default_def pop_def subtract_gas.simps stack_inst_numbers.simps
+      )
+apply(auto simp add: stack_as_set_def)
 done
 
 end (* context *)
