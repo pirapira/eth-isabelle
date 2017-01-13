@@ -549,6 +549,32 @@ proof -
  ultimately show "triple r c q" by blast
 qed
 
+
+lemma remove_true:
+ "(p ** \<langle> True \<rangle> ** rest) s = (p ** rest) s"
+apply(simp add: sep_def pure_def emp_def)
+done
+
+lemma move_pure0 :
+  "triple (p ** \<langle> True \<rangle>) c q \<Longrightarrow> b \<Longrightarrow> triple p c q"
+apply(simp add: triple_def remove_true)
+done
+
+lemma false_triple :
+  "triple (p ** \<langle> False \<rangle>) c q"
+apply(simp add: triple_def sep_def pure_def)
+done
+
+lemma get_pure [simp]:
+  "((p ** \<langle> b \<rangle> ** rest) s) = (b \<and> (p ** rest) s)"
+apply(auto simp add: sep_def pure_def emp_def)
+done
+
+lemma move_pure : "triple (p ** \<langle> b \<rangle>) c q = (b \<longrightarrow> triple p c q)"
+apply(auto simp add: move_pure0 false_triple)
+apply(auto simp add: triple_def pure_def)
+done
+
 (** More rules to come **)
 
 (* Some rules about this if-then-else should be derivable. *)
