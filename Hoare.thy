@@ -341,7 +341,6 @@ declare memory_as_set_def [simp]
   storage_as_set_def [simp]
   log_as_set_def [simp]
   balance_as_set_def [simp]
-  instruction_result_as_set_def [simp]
   next_state_def [simp]
 
 
@@ -549,7 +548,6 @@ proof -
  ultimately show "triple r c q" by blast
 qed
 
-
 lemma remove_true:
  "(p ** \<langle> True \<rangle> ** rest) s = (p ** rest) s"
 apply(simp add: sep_def pure_def emp_def)
@@ -574,6 +572,61 @@ lemma move_pure : "triple (p ** \<langle> b \<rangle>) c q = (b \<longrightarrow
 apply(auto simp add: move_pure0 false_triple)
 apply(auto simp add: triple_def pure_def)
 done
+
+lemma tmp01 [simp]:
+    "(p x ** code c ** rest) (case presult of InstructionContinue v \<Rightarrow> contexts_as_set v co_ctx | _ \<Rightarrow> {}) \<Longrightarrow>
+    ((\<lambda>s. \<exists>x. p x s) ** code c ** rest) (case presult of InstructionContinue v \<Rightarrow> contexts_as_set v co_ctx | _ \<Rightarrow> {})"
+	using sep_def by auto
+
+lemma tmp0:
+       "\<forall>co_ctx. no_assertion co_ctx \<longrightarrow>
+                (\<forall>presult rest.
+                    ((\<lambda>s. \<exists>x. p x s) ** code c ** rest) (case presult of InstructionContinue v \<Rightarrow> contexts_as_set v co_ctx | _ \<Rightarrow> {}) \<longrightarrow>
+                    (\<forall>stopper. \<exists>k. (q ** code c ** rest) (case program_sem stopper co_ctx k presult of InstructionContinue v \<Rightarrow> contexts_as_set v co_ctx | _ \<Rightarrow> {}))) \<Longrightarrow>
+       no_assertion co_ctx \<Longrightarrow>
+       (p x ** code c ** rest) (case presult of InstructionContinue v \<Rightarrow> contexts_as_set v co_ctx | _ \<Rightarrow> {}) \<Longrightarrow>
+       \<exists>k. (q ** code c ** rest) (case program_sem stopper co_ctx k presult of InstructionContinue v \<Rightarrow> contexts_as_set v co_ctx | _ \<Rightarrow> {})"
+apply(drule_tac x = co_ctx in spec; auto)
+done
+
+lemma preE0:
+  "((\<lambda>s. \<exists>x. p x s) ** code c ** rest) s \<Longrightarrow>
+   \<exists> x. (p x ** code c ** rest) s"
+apply(auto simp add: sep_def)
+	by blast
+
+lemma sep_impL :
+ "\<forall> s. b s \<longrightarrow> a s \<Longrightarrow> 
+ (b ** c ** d) s \<longrightarrow>
+ (a ** c ** d) s"
+  using sep_def by auto
+
+
+lemma pre_imp:
+  "\<forall> s. (b s \<longrightarrow> a s) \<Longrightarrow> triple a c q \<Longrightarrow> triple b c q"
+apply(auto simp add: triple_def)
+apply(drule_tac x = co_ctx in spec)
+apply(auto)
+apply(drule_tac x = presult in spec)
+apply(drule_tac x = rest in spec)
+apply(auto simp add: sep_impL)
+done
+
+lemma preE1 [simp]:
+"((\<lambda>s. \<exists>x. p x s) ** rest) u
+=
+(\<exists> x. (p x ** rest) u)
+"
+apply(auto simp add: sep_def)
+done
+
+
+lemma preE : "triple (\<lambda> s. \<exists> x. p x s) c q = (\<forall> x. triple (p x) c q)"
+apply(auto)
+ apply (metis pre_imp)
+apply(auto simp add: triple_def)
+done
+
 
 (** More rules to come **)
 
