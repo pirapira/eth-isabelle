@@ -347,7 +347,7 @@ apply(case_tac "idx < length ta"; auto)
 apply(case_tac "idx = length ta"; auto)
 done
 
-lemma add_triple : "triple (\<langle> h \<le> 1023 \<and> g \<ge> Gverylow \<rangle> **
+lemma add_triple : "triple {} (\<langle> h \<le> 1023 \<and> g \<ge> Gverylow \<rangle> **
                             stack_height (h + 2) **
                             stack (h + 1) v **
                             stack h w **
@@ -452,7 +452,7 @@ vctx_stack x1 = v # t \<Longrightarrow>
 apply(auto)
 done
 
-lemma pop_triple : "triple (\<langle> h \<le> 1024 \<and> g \<ge> Gbase \<rangle> **
+lemma pop_triple : "triple {} (\<langle> h \<le> 1024 \<and> g \<ge> Gbase \<rangle> **
                             stack_height (h + 1) **
                             stack h v **
                             program_counter k **
