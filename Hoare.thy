@@ -228,18 +228,27 @@ done
 definition no_assertion :: "constant_ctx \<Rightarrow> bool"
   where "no_assertion c == (\<forall> pos. program_annotation (cctx_program c) pos = [])"
 
-definition triple ::
- "(state_element set \<Rightarrow> bool) \<Rightarrow> (int * inst) set \<Rightarrow> (state_element set \<Rightarrow> bool) \<Rightarrow> bool"
+definition failed_for_reasons :: "failure_reason set \<Rightarrow> instruction_result \<Rightarrow> bool"
 where
-  "triple pre insts post ==
+"failed_for_reasons allowed r =
+ (\<exists> reasons a b c d e. 
+              r = InstructionToEnvironment (ContractFail reasons) a b c d e
+              \<and> set reasons \<subseteq> allowed)"
+
+definition triple ::
+ "failure_reason set \<Rightarrow> (state_element set \<Rightarrow> bool) \<Rightarrow> (int * inst) set \<Rightarrow> (state_element set \<Rightarrow> bool) \<Rightarrow> bool"
+where
+  "triple allowed_failures pre insts post ==
     \<forall> co_ctx presult rest stopper. no_assertion co_ctx \<longrightarrow>
        (pre ** code insts ** rest) (instruction_result_as_set co_ctx presult) \<longrightarrow>
-       (\<exists> k. (post ** code insts ** rest) (instruction_result_as_set co_ctx (program_sem stopper co_ctx k presult)))"
+       (\<exists> k. 
+         ((post ** code insts ** rest) (instruction_result_as_set co_ctx (program_sem stopper co_ctx k presult)))
+         \<or> failed_for_reasons allowed_failures (program_sem stopper co_ctx k presult))"
 
 lemma no_assertion_pass [simp] : "no_assertion co_ctx \<Longrightarrow> check_annotations v co_ctx"
 apply(simp add: no_assertion_def check_annotations_def)
 done
-    
+
 lemma pure_sep [simp] : "(\<langle> b \<rangle> ** rest) s = (b \<and> rest s)"
 apply(simp add: sep_def pure_def emp_def)
 done
@@ -396,10 +405,11 @@ done
 
 (* Maybe it's better to organize program_sem as a function from program_result to program_result *)
 lemma triple_continue:
-"triple q c r \<Longrightarrow>
+"triple allowed q c r \<Longrightarrow>
  no_assertion co_ctx \<Longrightarrow>
  (q ** code c ** rest) (instruction_result_as_set co_ctx (program_sem s co_ctx k presult)) \<Longrightarrow>
- \<exists> l. (r ** code c ** rest) (instruction_result_as_set co_ctx (program_sem s co_ctx (k + l) presult))"
+ \<exists> l. ((r ** code c ** rest) (instruction_result_as_set co_ctx (program_sem s co_ctx (k + l) presult))
+      \<or> failed_for_reasons allowed (program_sem s co_ctx (k + l) presult))"
 apply(simp add: triple_def)
 apply(drule_tac x = co_ctx in spec)
 apply(simp)
@@ -420,7 +430,7 @@ lemma code_union_s:
 (* sledgehammer *)
 	by (simp add: sup_commute)
 
-lemma composition : "triple p c_1 q \<Longrightarrow> triple q c_2 r \<Longrightarrow> triple p (c_1 \<union> c_2) r"
+lemma composition : "triple allowed p c_1 q \<Longrightarrow> triple allowed q c_2 r \<Longrightarrow> triple allowed p (c_1 \<union> c_2) r"
 apply(auto simp add: triple_def code_middle shuffle3)
 apply(drule_tac x = "co_ctx" in spec; simp)
 apply(drule_tac x = "presult" in spec)
@@ -428,13 +438,14 @@ apply(drule_tac x = co_ctx in spec; simp)
 apply(drule_tac x = "code (c_2 - c_1) ** rest" in spec; simp)
 apply(drule_tac x = stopper in spec)
 apply(erule exE)
+apply(auto)
 apply(drule_tac x = "program_sem stopper co_ctx k presult" in spec)
 apply(drule_tac x = "code (c_1 - c_2) ** rest" in spec)
 apply(simp add: code_back)
 apply(drule code_union_s; simp)
 apply(drule_tac x = stopper in spec)
 apply(erule exE)
-apply(rule_tac x = "k + ka" in exI)
+apply(rule_tac x = "k + ka" in exI; auto)
 apply(rule code_union_s; simp)
 done
 
@@ -460,7 +471,7 @@ proof -
 qed
 
 
-lemma frame : "triple p c q \<Longrightarrow> \<forall> r. triple (p ** r) c (q ** r)"
+lemma frame : "triple failures p c q \<Longrightarrow> \<forall> r. triple failures (p ** r) c (q ** r)"
 apply(simp add: triple_def)
 apply(rule allI)
 apply(rule allI)
@@ -490,25 +501,28 @@ done
 
 
 
-lemma postW : "triple p c q \<Longrightarrow> (\<forall> s. q s \<longrightarrow> r s) \<Longrightarrow> triple p c r"
+lemma postW : "triple failures p c q \<Longrightarrow> (\<forall> s. q s \<longrightarrow> r s) \<Longrightarrow> triple failures p c r"
 proof -
- assume "triple p c q" "\<forall> s. q s \<longrightarrow> r s"
+ assume "triple failures p c q" "\<forall> s. q s \<longrightarrow> r s"
  then have "(\<forall> co_ctx presult rest. no_assertion co_ctx \<longrightarrow>
        (p ** code c ** rest) (instruction_result_as_set co_ctx presult) \<longrightarrow>
-       (\<forall> stopper. (\<exists> k. (r ** code c ** rest) (instruction_result_as_set co_ctx (program_sem stopper co_ctx k presult)))))"
+       (\<forall> stopper. (\<exists> k. ((r ** code c ** rest) (instruction_result_as_set co_ctx (program_sem stopper co_ctx k presult)))
+                          \<or> failed_for_reasons failures (program_sem stopper co_ctx k presult))))"
    (is ?longer)
   proof -
-   assume "triple p c q"
+   assume "triple failures p c q"
    then have "\<forall>co_ctx presult rest.
        no_assertion co_ctx \<longrightarrow>
        (p ** code c ** rest) (instruction_result_as_set co_ctx presult) \<longrightarrow>
-       (\<forall>stopper. \<exists>k. (q ** code c ** rest) (instruction_result_as_set co_ctx (program_sem stopper co_ctx k presult)))"
+       (\<forall>stopper. \<exists>k. ((q ** code c ** rest) (instruction_result_as_set co_ctx (program_sem stopper co_ctx k presult))
+                       \<or> failed_for_reasons failures (program_sem stopper co_ctx k presult)))"
      using triple_def by blast
    moreover assume " \<forall>s. q s \<longrightarrow> r s "
    ultimately show "\<forall>co_ctx presult rest.
        no_assertion co_ctx \<longrightarrow>
        (p ** code c ** rest) (instruction_result_as_set co_ctx presult) \<longrightarrow>
-       (\<forall>stopper. \<exists>k. (r ** code c ** rest) (instruction_result_as_set co_ctx (program_sem stopper co_ctx k presult)))"
+       (\<forall>stopper. \<exists>k. ((r ** code c ** rest) (instruction_result_as_set co_ctx (program_sem stopper co_ctx k presult))
+                      \<or> failed_for_reasons failures (program_sem stopper co_ctx k presult)))"
     apply(rule_tac allI)
     apply(rule_tac allI)
     apply(rule_tac allI)
@@ -522,30 +536,33 @@ proof -
     apply(drule_tac x = stopper in spec)
     using imp_sepL by blast
   qed
- moreover have "triple p c r = ?longer"
+ moreover have "triple failures p c r = ?longer"
   using triple_def by blast
- ultimately show "triple p c r"
+ ultimately show "triple failures p c r"
   by blast
 qed
 
 
-lemma preS : "triple p c q \<Longrightarrow> (\<forall> s. r s \<longrightarrow> p s) \<Longrightarrow> triple r c q"
+lemma preS : "triple reasons p c q \<Longrightarrow> (\<forall> s. r s \<longrightarrow> p s) \<Longrightarrow> triple reasons r c q"
 proof -
- assume "triple p c q" "\<forall> s. r s \<longrightarrow> p s"
+ assume "triple reasons p c q" "\<forall> s. r s \<longrightarrow> p s"
  then have "(\<forall> co_ctx presult rest stopper. no_assertion co_ctx \<longrightarrow>
        (r ** code c ** rest) (instruction_result_as_set co_ctx presult) \<longrightarrow>
-       (\<exists> k. (q ** code c ** rest) (instruction_result_as_set co_ctx (program_sem stopper co_ctx k presult))))" (is ?longer)
+       (\<exists> k. ((q ** code c ** rest) (instruction_result_as_set co_ctx (program_sem stopper co_ctx k presult)))
+             \<or> failed_for_reasons reasons (program_sem stopper co_ctx k presult)))" (is ?longer)
   proof(clarify)
    fix co_ctx presult rest stopper
-   assume "triple p c q" "no_assertion co_ctx" "\<forall> s. r s \<longrightarrow> p s" "(r ** code c ** rest) (instruction_result_as_set co_ctx presult)"
+   assume "triple reasons p c q" "no_assertion co_ctx" "\<forall> s. r s \<longrightarrow> p s"
+          "(r ** code c ** rest) (instruction_result_as_set co_ctx presult)"
    then moreover have "(p ** code c ** rest) (instruction_result_as_set co_ctx presult)"
      using sep_def by auto
-   ultimately show "\<exists>k. (q ** code c ** rest) (instruction_result_as_set co_ctx (program_sem stopper co_ctx k presult))"
+   ultimately show "\<exists>k. ((q ** code c ** rest) (instruction_result_as_set co_ctx (program_sem stopper co_ctx k presult))
+                         \<or> failed_for_reasons reasons (program_sem stopper co_ctx k presult) )"
     by(simp add: triple_def)
   qed
- moreover have "triple r c q = ?longer"
+ moreover have "triple reasons r c q = ?longer"
   by(simp add: triple_def)
- ultimately show "triple r c q" by blast
+ ultimately show "triple reasons r c q" by blast
 qed
 
 lemma remove_true:
@@ -554,12 +571,12 @@ apply(simp add: sep_def pure_def emp_def)
 done
 
 lemma move_pure0 :
-  "triple (p ** \<langle> True \<rangle>) c q \<Longrightarrow> b \<Longrightarrow> triple p c q"
+  "triple reasons (p ** \<langle> True \<rangle>) c q \<Longrightarrow> b \<Longrightarrow> triple reasons p c q"
 apply(simp add: triple_def remove_true)
 done
 
 lemma false_triple :
-  "triple (p ** \<langle> False \<rangle>) c q"
+  "triple reasons (p ** \<langle> False \<rangle>) c q"
 apply(simp add: triple_def sep_def pure_def)
 done
 
@@ -568,7 +585,7 @@ lemma get_pure [simp]:
 apply(auto simp add: sep_def pure_def emp_def)
 done
 
-lemma move_pure : "triple (p ** \<langle> b \<rangle>) c q = (b \<longrightarrow> triple p c q)"
+lemma move_pure : "triple reaons (p ** \<langle> b \<rangle>) c q = (b \<longrightarrow> triple reaons p c q)"
 apply(auto simp add: move_pure0 false_triple)
 apply(auto simp add: triple_def pure_def)
 done
@@ -603,7 +620,7 @@ lemma sep_impL :
 
 
 lemma pre_imp:
-  "\<forall> s. (b s \<longrightarrow> a s) \<Longrightarrow> triple a c q \<Longrightarrow> triple b c q"
+  "\<forall> s. (b s \<longrightarrow> a s) \<Longrightarrow> triple reasons a c q \<Longrightarrow> triple reasons b c q"
 apply(auto simp add: triple_def)
 apply(drule_tac x = co_ctx in spec)
 apply(auto)
@@ -621,27 +638,27 @@ apply(auto simp add: sep_def)
 done
 
 
-lemma preE : "triple (\<lambda> s. \<exists> x. p x s) c q = (\<forall> x. triple (p x) c q)"
-apply(auto)
- apply (metis pre_imp)
+lemma preE : "triple reasons (\<lambda> s. \<exists> x. p x s) c q = (\<forall> x. triple reasons (p x) c q)"
 apply(auto simp add: triple_def)
+apply(drule_tac x = co_ctx in spec)
+apply(auto)
 done
 
 
 (** More rules to come **)
 
-lemma triple_tauto: "triple q e q"
+lemma triple_tauto: "triple failures q e q"
 apply(simp add: triple_def; auto)
 apply(rule_tac x = 0 in exI)
 apply(simp add: program_sem.simps)
 done
 
 
-lemma code_extension0: "triple p c_1 q \<Longrightarrow> triple q c_2 q \<Longrightarrow> triple p (c_1 \<union> c_2) q"
+lemma code_extension0: "triple failures p c_1 q \<Longrightarrow> triple failures q c_2 q \<Longrightarrow> triple failures p (c_1 \<union> c_2) q"
 apply(rule composition; auto)
 done
 
-lemma code_extension : "triple p c q \<Longrightarrow> triple p (c \<union> e) q"
+lemma code_extension : "triple failures p c q \<Longrightarrow> triple failures p (c \<union> e) q"
 	by (simp add: composition triple_tauto)
 
 
