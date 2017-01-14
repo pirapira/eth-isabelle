@@ -188,21 +188,6 @@ done
 
 declare swap_def [simp]
 
-definition sha3 :: "variable_ctx \<Rightarrow> constant_ctx \<Rightarrow> instruction_result"
-where
-"sha3 v c \<equiv>
-  (case vctx_stack v of
-    start # len # rest \<Rightarrow>
-      InstructionContinue (
-        vctx_advance_pc c v\<lparr> vctx_stack := keccak
-                                         (cut_memory start (unat len) (vctx_memory v))
-                                        # rest
-                        , vctx_memory_usage := M (vctx_memory_usage v) start len
-                        \<rparr>)
-  | _ \<Rightarrow> instruction_failure_result v)"
-
-declare sha3_def [simp]
-
 declare general_dup_def [simp]
 declare suicide_def [simp]
 
@@ -241,7 +226,7 @@ lemma update_account_state_None [simp] :
    (prev \<lparr>
      account_storage := st,
      account_balance :=
-       (case act of ContractFail \<Rightarrow> account_balance prev
+       (case act of ContractFail _ \<Rightarrow> account_balance prev
                  |  _ \<Rightarrow> bal (account_address prev)),
      account_ongoing_calls := account_ongoing_calls prev,
      account_killed :=
@@ -255,7 +240,7 @@ lemma update_account_state_Some [simp] :
    (prev \<lparr>
      account_storage := st,
      account_balance :=
-       (case act of ContractFail \<Rightarrow> account_balance prev
+       (case act of ContractFail _ \<Rightarrow> account_balance prev
                   |  _ \<Rightarrow> bal (account_address prev)),
      account_ongoing_calls := pushed # account_ongoing_calls prev,
      account_killed :=

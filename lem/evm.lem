@@ -800,11 +800,18 @@ type create_arguments = <|
   createarg_code : list byte; (* The code that deploys the runtime code. *)
 |>
 
+type failure_reason =
+| OutOfGas
+| TooLongStack
+| TooShortStack
+| InvalidJumpDestination
+| ShouldNotHappen
+
 type contract_action =
 | ContractCall of call_arguments (* calling an account *)
 | ContractDelegateCall of call_arguments (* calling some code to run on behalf of the contract *)
 | ContractCreate of create_arguments (* deploying a smart contract *)
-| ContractFail (* failing back to the caller *)
+| ContractFail of list failure_reason (* failing back to the caller *)
 | ContractSuicide (* destroying itself and returning back to the caller *)
 | ContractReturn of list byte (* normally returning back to the caller *)
 
@@ -960,9 +967,9 @@ type instruction_result =
   (* of the account.  Probably there is a cleaner approach. *)
 
 (* When the contract fails, the result of the instruction always looks like this: *)
-val instruction_failure_result : variable_ctx -> instruction_result
-let instruction_failure_result v =
-  InstructionToEnvironment ContractFail v.vctx_storage_at_call v.vctx_balance_at_call [] [] Nothing
+val instruction_failure_result : variable_ctx -> list failure_reason -> instruction_result
+let instruction_failure_result v reasons =
+  InstructionToEnvironment (ContractFail reasons) v.vctx_storage_at_call v.vctx_balance_at_call [] [] Nothing
 
 (* When the contract returns, the result of the instruction always looks like this: *)
 val instruction_return_result : list byte -> variable_ctx -> instruction_result
@@ -1032,7 +1039,7 @@ let stack_0_1_op v c w =
 (* A general pattern of operations that transforms the topmost element of the stack: *)
 val stack_1_1_op : variable_ctx -> constant_ctx -> (w256 -> w256) -> instruction_result
 let stack_1_1_op v c f = match v.vctx_stack with
-  | [] -> instruction_failure_result v
+  | [] -> instruction_failure_result v [TooShortStack]
   | h :: t -> InstructionContinue (vctx_advance_pc c <| v with vctx_stack = f h :: t |>)
 end
 
@@ -1042,7 +1049,7 @@ let stack_2_1_op v c f = match v.vctx_stack with
  | operand0 :: operand1 :: rest ->
        InstructionContinue
          (vctx_advance_pc c <| v with vctx_stack = f operand0 operand1 :: rest |>)
-  | _ -> instruction_failure_result v
+  | _ -> instruction_failure_result v [TooShortStack]
 end
 
 (* A general pattern of operations that take three words and produce one word: *)
@@ -1051,7 +1058,7 @@ let stack_3_1_op v c f = match v.vctx_stack with
  | operand0 :: operand1 :: operand2 :: rest ->
        InstructionContinue
          (vctx_advance_pc c <| v with vctx_stack = f operand0 operand1 operand2 :: rest |>)
- | _ -> instruction_failure_result v
+ | _ -> instruction_failure_result v [TooShortStack]
 end
 
 (* subsection {* Definition of EVM Operations *} *)
@@ -1064,7 +1071,7 @@ let sstore v c = match v.vctx_stack with
       InstructionContinue (vctx_advance_pc c
         (vctx_update_storage addr vl
            <| v with vctx_stack = stack_tail; vctx_touched_storage_index = addr :: v.vctx_touched_storage_index |>))
- | _ -> instruction_failure_result v
+ | _ -> instruction_failure_result v [TooShortStack]
 end
 
 (* For interpreting the annotations, I first need to construct the annotation environment *)
@@ -1091,12 +1098,12 @@ let build_aenv v c = <|
 
 val jump : variable_ctx -> constant_ctx -> instruction_result
 let jump v c = match v.vctx_stack with
- | [] -> instruction_failure_result v
+ | [] -> instruction_failure_result v [TooShortStack]
  | pos :: tl ->
      let v_new = <| v with vctx_stack = tl; vctx_pc = uint pos |> in
      match vctx_next_instruction v_new c with
       | Just (Pc JUMPDEST) -> InstructionContinue v_new
-      | _ -> instruction_failure_result v
+      | _ -> instruction_failure_result v [InvalidJumpDestination]
      end
 end
 
@@ -1124,7 +1131,7 @@ let jumpi v c = match v.vctx_stack with
     strict_if (cond = 0)
            (blockedInstructionContinue (vctx_advance_pc c (vctx_pop_stack 2 v)))
            (blocked_jump new_env c)
- | _ -> instruction_failure_result v
+ | _ -> instruction_failure_result v [TooShortStack]
 end
 
 (* Looking up the call data size takes this work: *)
@@ -1196,7 +1203,7 @@ let call v c = match v.vctx_stack with
            vctx_stack = rest;
            vctx_balance = update_balance c.cctx_this (fun orig -> orig - e2) v.vctx_balance;
            vctx_memory_usage = M (M v.vctx_memory_usage e3 e4) e5 e6 |>, uint e5, uint e6)))
-  | _ -> instruction_failure_result v
+  | _ -> instruction_failure_result v [TooShortStack]
 end
 
 (* DELEGATECALL is slightly different. *)
@@ -1226,7 +1233,7 @@ let delegatecall v c = match v.vctx_stack with
           (Just (* save the variable environment for returns *)
             (<| (vctx_advance_pc c v) with
                  vctx_stack = rest; vctx_memory_usage = M (M v.vctx_memory_usage e3 e4) e5 e6 |>, uint e5, uint e6))
-  | _ -> instruction_failure_result v
+  | _ -> instruction_failure_result v [TooShortStack]
 end
 
 (* CALLCODE is another variant. *)
@@ -1259,7 +1266,7 @@ let callcode v c = match v.vctx_stack with
                   vctx_stack = rest;
                   vctx_memory_usage = M (M v.vctx_memory_usage e3 e4) e5 e6;
                   vctx_balance = update_balance c.cctx_this (fun orig -> orig - e2) v.vctx_balance |>, uint e5, uint e6))
-  | _ -> instruction_failure_result v
+  | _ -> instruction_failure_result v [TooShortStack]
 end
 
 (* CREATE is also similar because the instruction causes execution on another account. *)
@@ -1286,7 +1293,7 @@ let create v c = match v.vctx_stack with
               (<| (vctx_advance_pc c v) with vctx_stack = rest;
                  vctx_balance = new_balance;
                  vctx_memory_usage = M v.vctx_memory_usage code_start code_len |>, 0, 0))
-  | _ -> instruction_failure_result v
+  | _ -> instruction_failure_result v [TooShortStack]
 end
 
 (* For implementing RETURN, I need to cut a region from the memory
@@ -1307,7 +1314,7 @@ let ret v _ =  match v.vctx_stack with
                            v.vctx_touched_storage_index
                            v.vctx_logs
                            Nothing (* No possibility of ever returning to this invocation. *)
- | _ -> instruction_failure_result v
+ | _ -> instruction_failure_result v [TooShortStack]
 end
 
 (* STOP is simpler than RETURN: *)
@@ -1320,13 +1327,13 @@ let stop v _ =
 val pop : variable_ctx -> constant_ctx -> instruction_result
 let pop v c = match v.vctx_stack with
  | _ :: tl -> InstructionContinue (vctx_advance_pc c <| v with vctx_stack = tl |>)
- | [] -> instruction_failure_result v
+ | [] -> instruction_failure_result v [TooShortStack]
 end
 
 (* The DUP instructions: *)
 val general_dup : nibble -> variable_ctx -> constant_ctx -> instruction_result
 let general_dup n v c = match List.index v.vctx_stack (word4ToNat n) with
-  | Nothing -> instruction_failure_result v
+  | Nothing -> instruction_failure_result v [TooShortStack]
   | Just duplicated -> InstructionContinue (vctx_advance_pc c <| v with vctx_stack = duplicated :: v.vctx_stack |>)
 end
 
@@ -1352,7 +1359,7 @@ let mstore v c = match v.vctx_stack with
          <| v with vctx_stack = rest; vctx_memory = new_memory;
            vctx_memory_usage = M v.vctx_memory_usage pos 32
           |>)
-  | _ -> instruction_failure_result v
+  | _ -> instruction_failure_result v [TooShortStack]
 end
 
 (* MLOAD reads one word from the memory: *)
@@ -1362,7 +1369,7 @@ let mload v c = match v.vctx_stack with
       let value = read_word_from_bytes 0 (cut_memory pos 32 v.vctx_memory) in
       InstructionContinue
         (vctx_advance_pc c <| v with vctx_stack = value :: rest; vctx_memory_usage = M v.vctx_memory_usage pos 32 |>)
- | _ -> instruction_failure_result v
+ | _ -> instruction_failure_result v [TooShortStack]
 end
 
 (* MSTORE8 writes one byte to the memory: *)
@@ -1373,7 +1380,7 @@ let mstore8 v c = match v.vctx_stack with
    InstructionContinue (vctx_advance_pc c
           <| v with vctx_stack = rest; vctx_memory_usage = M v.vctx_memory_usage pos 8;
                     vctx_memory = new_memory |>)
- | _ -> instruction_failure_result v
+ | _ -> instruction_failure_result v [TooShortStack]
 end
 
 (* For CALLDATACOPY, I need to look at the caller's data as memory. *)
@@ -1397,7 +1404,7 @@ let calldatacopy v c = match v.vctx_stack with
        InstructionContinue (vctx_advance_pc c
          <| v with vctx_stack = rest; vctx_memory = new_memory;
             vctx_memory_usage = M v.vctx_memory_usage dst_start len |>)
- | _ -> instruction_failure_result v
+ | _ -> instruction_failure_result v [TooShortStack]
 end
 
 (* CODECOPY copies a region of the currently running code to the memory: *)
@@ -1410,7 +1417,7 @@ let codecopy v c = match v.vctx_stack with
      InstructionContinue (vctx_advance_pc c
        <| v with vctx_stack = rest; vctx_memory = new_memory;
                  vctx_memory_usage = M v.vctx_memory_usage dst_start len |>)
- | _ -> instruction_failure_result v
+ | _ -> instruction_failure_result v [TooShortStack]
 end
 
 (* EXTCODECOPY copies a region of the code of an arbitrary account.: *)
@@ -1424,7 +1431,7 @@ let extcodecopy v c = match v.vctx_stack with
      InstructionContinue (vctx_advance_pc c
        <| v with vctx_stack = rest; vctx_memory = new_memory;
                  vctx_memory_usage = M v.vctx_memory_usage dst_start len |>)
- | _ -> instruction_failure_result v
+ | _ -> instruction_failure_result v [TooShortStack]
 end
 
 (* PC instruction could be implemented by @{term stack_0_1_op}: *)
@@ -1468,7 +1475,7 @@ end
 (* Using this, I can specify the SWAP operations: *)
 val swap : nat -> variable_ctx -> constant_ctx -> instruction_result
 let swap n v c = match list_swap (n + 1) v.vctx_stack with
- | Nothing -> instruction_failure_result v
+ | Nothing -> instruction_failure_result v [TooShortStack]
  | Just new_stack -> InstructionContinue (vctx_advance_pc c <| v with vctx_stack = new_stack |>)
 end
 
@@ -1480,7 +1487,7 @@ let sha3 v c = match v.vctx_stack with
         vctx_advance_pc c
            <| v with vctx_stack = keccak (cut_memory start (word256ToNatural len) v.vctx_memory) :: rest;
                      vctx_memory_usage = M v.vctx_memory_usage start len |>)
- | _ -> instruction_failure_result v
+ | _ -> instruction_failure_result v [TooShortStack]
 end
 
 (* The SUICIDE instruction involves value transfer. *)
@@ -1493,7 +1500,7 @@ let suicide v c = match v.vctx_stack with
         v.vctx_balance addr in
      InstructionToEnvironment ContractSuicide v.vctx_storage new_balance v.vctx_touched_storage_index
         v.vctx_logs Nothing
- | _ -> instruction_failure_result v
+ | _ -> instruction_failure_result v [TooShortStack]
 end
 
 
@@ -1717,8 +1724,9 @@ let check_resources v c s i =
   match inst_stack_numbers i with
   | (consumed, produced) ->
     (intFromNat (length s) + produced - consumed <= 1024) &&
-    predict_gas i v c <= v.vctx_gas
+    (predict_gas i v c <= v.vctx_gas)
   end
+
 
 val subtract_gas : integer -> instruction_result -> instruction_result
 let subtract_gas consumption orig =
@@ -1763,7 +1771,7 @@ let instruction_sem v c inst =
   subtract_gas (predict_gas inst v c)
   (match inst with
   | Stack (PUSH_N lst) -> stack_0_1_op v c (word_of_bytes (constant_mark lst))
-  | Unknown _ -> instruction_failure_result v
+  | Unknown _ -> instruction_failure_result v [ShouldNotHappen]
   | Storage SLOAD -> stack_1_1_op v c v.vctx_storage
   | Storage SSTORE -> sstore v c
   | Pc JUMPI -> jumpi v c
@@ -1908,18 +1916,19 @@ let next_state stopper c pr =
   | InstructionContinue v ->
      if not (check_annotations v c) then InstructionAnnotationFailure else
      match vctx_next_instruction v c with
-      | Nothing -> InstructionToEnvironment ContractFail v.vctx_storage_at_call v.vctx_balance_at_call [] [] Nothing
+      | Nothing -> InstructionToEnvironment (ContractFail [ShouldNotHappen]) v.vctx_storage_at_call v.vctx_balance_at_call [] [] Nothing
       | Just i ->
-      if check_resources v c (v.vctx_stack) i then
-        match instruction_sem v c i with
-        | InstructionContinue new_v ->  InstructionContinue new_v
-        | InstructionToEnvironment a st bal touched logs opt_pushed_v ->
-            InstructionToEnvironment a st bal touched logs opt_pushed_v
-        | InstructionAnnotationFailure -> InstructionAnnotationFailure
-        | InstructionInit -> InstructionInit
-        end
-      else
-        InstructionToEnvironment ContractFail v.vctx_storage_at_call v.vctx_balance_at_call [] [] Nothing
+        if check_resources v c (v.vctx_stack) i then
+          instruction_sem v c i
+        else
+          InstructionToEnvironment (ContractFail
+              (match inst_stack_numbers i with
+               | (consumed, produced) ->
+                 (if (intFromNat (length (v.vctx_stack)) + produced - consumed <= 1024) then [] else [TooLongStack])
+                  ++ (if predict_gas i v c <= v.vctx_gas then [] else [OutOfGas])
+               end
+              ))
+              v.vctx_storage_at_call v.vctx_balance_at_call [] [] Nothing
      end
   end
 
@@ -2016,7 +2025,7 @@ val update_account_state :
 let update_account_state prev act st bal v_opt =
    <| prev with
      account_storage = st;
-     account_balance = (match act with ContractFail -> prev.account_balance
+     account_balance = (match act with ContractFail _ -> prev.account_balance
                                    |  _ -> bal prev.account_address end);
      account_ongoing_calls =
                         (match v_opt with Nothing -> prev.account_ongoing_calls

@@ -28,18 +28,6 @@ where
    , account_killed = False
    \<rparr>"
 
-abbreviation always_fail_spec :: "w256 \<Rightarrow> response_to_environment"
-where
-" always_fail_spec initial_balance ==
-  \<lparr> when_called = \<lambda> _. (ContractFail,
-                        \<lambda> a. a = always_fail_account_state initial_balance)
-  , when_returned = \<lambda> _. (ContractFail, 
-                           \<lambda> a. a = always_fail_account_state initial_balance)
-  , when_failed = (ContractFail,
-                     \<lambda> a. a = always_fail_account_state initial_balance)
-  \<rparr>
-"
-
 lemma problem :
 "node \<langle> x, ll, elm, rr\<rangle> y \<langle>\<rangle> = Node (x + 1) \<langle> x, ll, elm, rr\<rangle> y \<langle>\<rangle> "
 apply(simp add: node_def)
@@ -65,16 +53,6 @@ declare respond_to_fail_correctly_def [simp]
 declare inst_stack_numbers.simps [simp]
 declare pc_inst_numbers.simps [simp]
 
-lemma always_fail_correct:
-"
-  account_state_responds_to_environment
-  (\<lambda> a. a = always_fail_account_state initial_balance)
-  (always_fail_spec initial_balance)
-"
-apply(rule AccountStep; auto)
-apply(case_tac steps; auto)
-apply(case_tac nata; auto)
-done
 
 declare one_round.simps [simp]
 declare environment_turn.simps [simp]

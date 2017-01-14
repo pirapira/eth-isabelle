@@ -124,7 +124,7 @@ let test_one_case j : testResult =
   | InstructionToEnvironment (ContractCreate carg, st, bal, touched, logs, pushed_opt) ->
      let () = Printf.eprintf "We are not looking whatever happens after the contract creates" in
      TestSkipped
-  | InstructionToEnvironment (ContractFail, st, bal, touched, logs, pushed_opt) ->
+  | InstructionToEnvironment (ContractFail _, st, bal, touched, logs, pushed_opt) ->
      begin
        match test_case.callcreates, test_case.gas, test_case.logs, test_case.out, test_case.post with
        | [], None, None, None, None -> TestSuccess

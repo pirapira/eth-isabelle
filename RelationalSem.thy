@@ -127,7 +127,7 @@ where
 | "returnable_result (InstructionToEnvironment (ContractDelegateCall _) _ _ _ _ _) = False"
 | "returnable_result (InstructionToEnvironment (ContractCreate _) _ _ _ _ _) = True"
 | "returnable_result (InstructionToEnvironment ContractSuicide _ _ _ _ _) = False"
-| "returnable_result (InstructionToEnvironment ContractFail _ _ _ _ _) = False"
+| "returnable_result (InstructionToEnvironment (ContractFail _) _ _ _ _ _) = False"
 -- {* because we are not modeling nested calls here, the effect of the nested calls are modeled in
       account\_state\_return\_change *}
 | "returnable_result (InstructionToEnvironment (ContractReturn _) _ _ _ _ _) = False"
@@ -141,7 +141,7 @@ where
 | "returnable_from_delegate_call (InstructionToEnvironment (ContractDelegateCall _) _ _ _ _ _) = True"
 | "returnable_from_delegate_call (InstructionToEnvironment (ContractCreate _) _ _ _ _ _) = False"
 | "returnable_from_delegate_call (InstructionToEnvironment ContractSuicide _ _ _ _ _) = False"
-| "returnable_from_delegate_call (InstructionToEnvironment ContractFail _ _ _ _ _) = False"
+| "returnable_from_delegate_call (InstructionToEnvironment (ContractFail _) _ _ _ _ _) = False"
 -- {* because we are not modeling nested calls here, the effect of the nested calls are modeled in
       account\_state\_return\_change *}
 | "returnable_from_delegate_call (InstructionToEnvironment (ContractReturn _) _ _ _ _ _) = False"
@@ -276,8 +276,8 @@ Actually the rounds can go nowhere after this invocation fails.
 *}
 lemma no_entry_fail [dest!]:
 "star (one_round I)
-      (a, InstructionToEnvironment ContractFail st bal touched logs v_opt)
-      (b, c) \<Longrightarrow> b = a \<and> c = InstructionToEnvironment ContractFail st bal touched logs v_opt"
+      (a, InstructionToEnvironment (ContractFail x) st bal touched logs v_opt)
+      (b, c) \<Longrightarrow> b = a \<and> c = InstructionToEnvironment (ContractFail x) st bal touched logs v_opt"
 apply(drule star_case; simp)
 apply(simp add: one_round.simps add: environment_turn.simps)
 done
@@ -340,7 +340,7 @@ where
 
 lemma no_assertion_failure_in_fail [simp] :
 "I state \<Longrightarrow>
- no_assertion_failure_post I (state, InstructionToEnvironment ContractFail st bal touched logs v_opt)"
+ no_assertion_failure_post I (state, InstructionToEnvironment (ContractFail x) st bal touched logs v_opt)"
 apply(simp add: no_assertion_failure_post_def)
 done
 
