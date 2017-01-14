@@ -369,7 +369,7 @@ apply(case_tac presult; simp)
 apply(auto simp add: program_sem.simps vctx_next_instruction_def instruction_sem_def check_resources_def
       inst_stack_numbers.simps arith_inst_numbers.simps predict_gas_def C_def Cmem_def
       Gmemory_def new_memory_consumption.simps thirdComponentOfC.simps
-      vctx_next_instruction_default_def stack_2_1_op_def subtract_gas.simps)
+      vctx_next_instruction_default_def stack_2_1_op_def subtract_gas.simps instruction_result_as_set_def)
 done
 
 lemma saying_zero [simp] :
@@ -473,6 +473,7 @@ apply(auto simp add: program_sem.simps vctx_next_instruction_def instruction_sem
       inst_stack_numbers.simps arith_inst_numbers.simps predict_gas_def C_def Cmem_def
       Gmemory_def new_memory_consumption.simps thirdComponentOfC.simps
       vctx_next_instruction_default_def pop_def subtract_gas.simps stack_inst_numbers.simps
+      instruction_result_as_set_def
       )
 apply(auto simp add: stack_as_set_def)
 done
