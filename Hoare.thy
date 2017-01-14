@@ -548,8 +548,6 @@ proof -
  ultimately show "triple r c q" by blast
 qed
 
-<<<<<<< HEAD
-
 lemma remove_true:
  "(p ** \<langle> True \<rangle> ** rest) s = (p ** rest) s"
 apply(simp add: sep_def pure_def emp_def)
