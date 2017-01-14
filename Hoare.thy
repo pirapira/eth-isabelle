@@ -213,7 +213,6 @@ definition instruction_result_as_set :: "constant_ctx \<Rightarrow> instruction_
           InstructionContinue v \<Rightarrow> {ContinuingElm True} \<union> contexts_as_set v c
         | InstructionToEnvironment act st bal _ logs _ \<Rightarrow> {ContinuingElm False} (* for now *)
         | InstructionAnnotationFailure \<Rightarrow> {ContinuingElm False} (* need to assume no annotation failure somewhere *)
-        | InstructionInit _ \<Rightarrow> {ContinuingElm False}
         )"
 
 definition code :: "(int * inst) set \<Rightarrow> state_element set \<Rightarrow> bool"

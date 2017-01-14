@@ -156,9 +156,6 @@ let test_one_case j : testResult =
   | InstructionAnnotationFailure ->
      let () = Printf.printf "ProgramAnnotationFailure\n" in
      TestFailure
-  | InstructionInit _ ->
-     let () = Printf.printf "ProgramInit?\n" in
-     TestFailure
 
 let test_one_file (path : string) ((num_success : int ref), (num_failure : int ref), (num_skipped : int ref)) (case_name : string option) : unit =
   let vm_arithmetic_test : json = Yojson.Basic.from_file path in
