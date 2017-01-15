@@ -1933,10 +1933,10 @@ let next_state stopper c pr =
 (* rather than the number of instructions. *)
 
 val program_sem :  (instruction_result -> unit) -> constant_ctx -> nat -> instruction_result -> instruction_result
-let rec program_sem stopper c remaining_steps pr =
-match remaining_steps with
+let rec program_sem stopper c fuel pr =
+match fuel with
  | 0 -> pr
- | rem_pred + 1 -> program_sem stopper c rem_pred (next_state stopper c pr)
+ | fuel_pred + 1 -> program_sem stopper c fuel_pred (next_state stopper c pr)
 end
 declare termination_argument program_sem = automatic
 
