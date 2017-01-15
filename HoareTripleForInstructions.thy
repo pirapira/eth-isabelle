@@ -20,6 +20,15 @@ lemma arith_inst_size_one [simp]:
 apply(simp add: inst_size_def inst_code.simps)
 done
 
+declare data_sent_as_set_def [simp]
+
+lemma caller_elm_means [simp] : "
+ (CallerElm x12
+           \<in> variable_ctx_as_set v) =
+ (x12 = vctx_caller v)"
+apply(simp add: variable_ctx_as_set_def stack_as_set_def)
+done
+
 lemma lst_longer [dest!]:
   "length l = Suc h \<Longrightarrow> \<exists> a t. l = a # t \<and> length t = h"
 	by (simp add: length_Suc_conv)
@@ -129,6 +138,30 @@ lemma code_element_means [simp] :
     program_content (cctx_program c) x = None \<and>
     y = Misc STOP)"
 apply(auto simp add: constant_ctx_as_set_def program_as_set_def)
+done
+
+lemma origin_element_means [simp] :
+  "(OriginElm orig \<in> variable_ctx_as_set v) = (orig = vctx_origin v)"
+apply(simp add: variable_ctx_as_set_def stack_as_set_def)
+done
+
+lemma sent_value_means [simp] :
+  "SentValueElm x14 \<in> variable_ctx_as_set x1 = (x14 = vctx_value_sent x1)"
+apply(simp add: variable_ctx_as_set_def stack_as_set_def)
+done
+
+lemma sent_data_means [simp] :
+"SentDataElm p \<in> variable_ctx_as_set x1 = 
+ (vctx_data_sent x1 ! (fst p) = (snd p) \<and> (fst p) < (length (vctx_data_sent x1)))"
+apply(auto simp add: variable_ctx_as_set_def stack_as_set_def)
+apply(rule_tac x = "fst p" in exI; simp)
+done
+
+
+
+lemma sent_data_length_means [simp] :
+  "SentDataLengthElm x15 \<in> variable_ctx_as_set x1 = (x15 = length (vctx_data_sent x1))"
+apply(simp add: variable_ctx_as_set_def stack_as_set_def)
 done
 
 
@@ -312,6 +345,70 @@ lemma advance_pc_change [simp] :
 
 
 
+(****** specifying each instruction *******)
+
+declare predict_gas_def [simp]
+        C_def [simp] Cmem_def [simp]
+        Gmemory_def [simp]
+        new_memory_consumption.simps [simp]
+        thirdComponentOfC.simps [simp]
+        subtract_gas.simps [simp]
+        vctx_next_instruction_default_def [simp]
+        stack_2_1_op_def [simp]
+        inst_stack_numbers.simps [simp]
+        arith_inst_numbers.simps [simp]
+
+lemma eq0 [simp]: "
+       vctx_stack x1 = v # w # ta \<Longrightarrow>
+program_content (cctx_program co_ctx) (vctx_pc x1) = Some (Arith inst_EQ) \<Longrightarrow>
+(insert (ContinuingElm True)
+              (contexts_as_set (vctx_advance_pc co_ctx x1\<lparr>vctx_stack := r # ta, vctx_gas := vctx_gas x1 - Gverylow\<rparr>) co_ctx) -
+             {StackHeightElm (Suc (length ta))} -
+             {StackElm (length ta, r)} -
+             {PcElm (vctx_pc x1 + 1)} -
+             {GasElm (vctx_gas x1 - Gverylow)} -
+             {ContinuingElm True} -
+             {CodeElm (vctx_pc x1, Arith inst_EQ)}) =
+(insert (ContinuingElm True) (contexts_as_set x1 co_ctx) - {StackHeightElm (Suc (Suc (length ta)))} -
+             {StackElm (Suc (length ta), v)} -
+             {StackElm (length ta, w)} -
+             {PcElm (vctx_pc x1)} -
+             {GasElm (vctx_gas x1)} -
+             {ContinuingElm True} -
+             {CodeElm (vctx_pc x1, Arith inst_EQ)})
+"
+apply(auto simp add: contexts_as_set_def vctx_advance_pc_def vctx_next_instruction_def)
+ apply(rename_tac elm)
+ apply(case_tac elm; auto)
+ apply(auto simp add: variable_ctx_as_set_def stack_as_set_def) (* takes too much time *)
+ apply(case_tac "idx = Suc (length ta)"; simp)
+apply(case_tac "idx = length ta"; simp)
+done
+
+lemma eq_gas_triple :
+  "triple {OutOfGas}  ( \<langle> h \<le> 1023 \<rangle> **
+                        stack_height (h + 2) **
+                        stack (h + 1) v **
+                        stack h w **
+                        program_counter k **
+                        gas_pred g **
+                        continuing
+                      )
+                      {(k, Arith inst_EQ)}
+                      ( stack_height (h + 1) **
+                        stack h (if v = w then((word_of_int 1) ::  256 word) else((word_of_int 0) ::  256 word)) **
+                        program_counter (k + 1) **
+                        gas_pred (g - Gverylow) **
+                        continuing )"
+apply(auto simp add: triple_def)
+ apply(rule_tac x = 1 in exI)
+ apply(case_tac presult; auto simp add: program_sem.simps failed_for_reasons_def vctx_next_instruction_def
+       instruction_result_as_set_def instruction_sem_def) (* takes too much time *)
+apply(rule_tac x = 1 in exI)
+apply(case_tac presult; auto simp add: program_sem.simps failed_for_reasons_def vctx_next_instruction_def
+      instruction_result_as_set_def instruction_sem_def)
+done
+
 
 
 lemma tmp1 [simp]: 
@@ -365,11 +462,8 @@ lemma add_triple : "triple {} (\<langle> h \<le> 1023 \<and> g \<ge> Gverylow \<
 apply(simp add: triple_def)
 apply(clarify)
 apply(rule_tac x = "1" in exI)
-apply(case_tac presult; simp)
-apply(auto simp add: program_sem.simps vctx_next_instruction_def instruction_sem_def check_resources_def
-      inst_stack_numbers.simps arith_inst_numbers.simps predict_gas_def C_def Cmem_def
-      Gmemory_def new_memory_consumption.simps thirdComponentOfC.simps
-      vctx_next_instruction_default_def stack_2_1_op_def subtract_gas.simps instruction_result_as_set_def)
+apply(case_tac presult; auto simp add: program_sem.simps vctx_next_instruction_def instruction_sem_def check_resources_def
+      instruction_result_as_set_def)
 done
 
 lemma saying_zero [simp] :
