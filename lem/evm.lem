@@ -960,11 +960,6 @@ type instruction_result =
   * list w256         (* the list of possibly changed storage indices *)
   * list log_entry    (* logs *)
   * maybe (variable_ctx * integer * integer) (* the variable environment to return to *)
-| InstructionInit of call_env
-  (* This clause does not denote results of program execution. *)
-  (* This denotes a state of the program that expects a particular call. *)
-  (* This artificial state is used to specify that the incoming call does not overflow the balance *)
-  (* of the account.  Probably there is a cleaner approach. *)
 
 (* When the contract fails, the result of the instruction always looks like this: *)
 val instruction_failure_result : variable_ctx -> list failure_reason -> instruction_result
@@ -1737,7 +1732,6 @@ let subtract_gas consumption orig =
   | InstructionToEnvironment act st bal touched logs Nothing -> InstructionToEnvironment act st bal touched logs Nothing
   | InstructionToEnvironment act st bal touched logs (Just (v, dst, len)) ->
     InstructionToEnvironment act st bal touched logs (Just (<|v with vctx_gas = v.vctx_gas - consumption|>, dst, len))
-  | InstructionInit x -> InstructionInit x
   end
 
 val word_exp : integer -> natural -> integer
@@ -1912,7 +1906,6 @@ let next_state stopper c pr =
   | InstructionToEnvironment _ _ _ _ _ _ ->
     let () = stopper pr in pr
   | InstructionAnnotationFailure -> let () = stopper pr in pr
-  | InstructionInit _ -> let () = stopper pr in pr
   | InstructionContinue v ->
      if not (check_annotations v c) then InstructionAnnotationFailure else
      match vctx_next_instruction v c with

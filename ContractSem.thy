@@ -362,7 +362,4 @@ done
 lemma program_sem_annotation_failure [simp] : "program_sem k con n InstructionAnnotationFailure = InstructionAnnotationFailure"
 by (induct_tac n; auto)
 
-lemma program_sem_init [simp] : "program_sem k con n (InstructionInit i) = InstructionInit i"
-by (induct_tac n; auto)
-
 end
