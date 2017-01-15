@@ -431,17 +431,17 @@ lemma code_union_s:
 (* sledgehammer *)
 	by (simp add: sup_commute)
 
-lemma composition : "triple allowed p c_1 q \<Longrightarrow> triple allowed q c_2 r \<Longrightarrow> triple allowed p (c_1 \<union> c_2) r"
+lemma composition : "c = cL \<union> cR \<Longrightarrow> triple allowed p cL q \<Longrightarrow> triple allowed q cR r \<Longrightarrow> triple allowed p c r"
 apply(auto simp add: triple_def code_middle shuffle3)
 apply(drule_tac x = "co_ctx" in spec; simp)
 apply(drule_tac x = "presult" in spec)
 apply(drule_tac x = co_ctx in spec; simp)
-apply(drule_tac x = "code (c_2 - c_1) ** rest" in spec; simp)
+apply(drule_tac x = "code (cR - cL) ** rest" in spec; simp)
 apply(drule_tac x = stopper in spec)
 apply(erule exE)
 apply(auto)
 apply(drule_tac x = "program_sem stopper co_ctx k presult" in spec)
-apply(drule_tac x = "code (c_1 - c_2) ** rest" in spec)
+apply(drule_tac x = "code (cL - cR) ** rest" in spec)
 apply(simp add: code_back)
 apply(drule code_union_s; simp)
 apply(drule_tac x = stopper in spec)
@@ -472,9 +472,8 @@ proof -
 qed
 
 
-lemma frame : "triple failures p c q \<Longrightarrow> \<forall> r. triple failures (p ** r) c (q ** r)"
+lemma frame : "triple failures p c q \<Longrightarrow> triple failures (p ** r) c (q ** r)"
 apply(simp add: triple_def)
-apply(rule allI)
 apply(rule allI)
 apply(rule impI)
 apply(drule_tac x = co_ctx in spec)
@@ -586,7 +585,12 @@ lemma get_pure [simp]:
 apply(auto simp add: sep_def pure_def emp_def)
 done
 
-lemma move_pure : "triple reaons (p ** \<langle> b \<rangle>) c q = (b \<longrightarrow> triple reaons p c q)"
+lemma move_pure [simp]: "triple reaons (p ** \<langle> b \<rangle>) c q = (b \<longrightarrow> triple reaons p c q)"
+apply(auto simp add: move_pure0 false_triple)
+apply(auto simp add: triple_def pure_def)
+done
+
+lemma move_pureL [simp]: "triple reaons (\<langle> b \<rangle> ** p) c q = (b \<longrightarrow> triple reaons p c q)"
 apply(auto simp add: move_pure0 false_triple)
 apply(auto simp add: triple_def pure_def)
 done
@@ -656,7 +660,7 @@ done
 
 
 lemma code_extension0: "triple failures p c_1 q \<Longrightarrow> triple failures q c_2 q \<Longrightarrow> triple failures p (c_1 \<union> c_2) q"
-apply(rule composition; auto)
+apply(rule_tac cL = c_1 and cR = c_2 in composition; auto)
 done
 
 lemma code_extension : "triple failures p c q \<Longrightarrow> triple failures p (c \<union> e) q"
