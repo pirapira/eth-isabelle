@@ -69,7 +69,7 @@ definition stack_as_set :: "w256 list \<Rightarrow> state_element set"
 definition data_sent_as_set :: "byte list \<Rightarrow> state_element set"
   where
     "data_sent_as_set lst == { SentDataLengthElm (length lst) } \<union>
-                             { SentDataElm (idx, v) | idx v. lst ! idx = v }"
+                             { SentDataElm (idx, v) | idx v. idx < length lst \<and> lst ! idx = v }"
 
 definition ext_program_as_set :: "(address \<Rightarrow> program) \<Rightarrow> state_element set"
   where
@@ -104,12 +104,14 @@ definition variable_ctx_as_set :: "variable_ctx \<Rightarrow> state_element set"
     \<union> balance_as_set (vctx_balance v)
     \<union> log_as_set (vctx_logs v)
     \<union> block_info_as_set (vctx_block v)
+    \<union> data_sent_as_set (vctx_data_sent v)
     \<union> { MemoryUsageElm (vctx_memory_usage v)
       , CallerElm (vctx_caller v)
       , SentValueElm (vctx_value_sent v)
       , OriginElm (vctx_origin v)
       , GasElm (vctx_gas v)
       , PcElm (vctx_pc v)
+      , SentDataLengthElm (length (vctx_data_sent v))
       }"
 
 definition contexts_as_set :: "variable_ctx \<Rightarrow> constant_ctx \<Rightarrow> state_element set"
@@ -196,7 +198,7 @@ lemma stack_sound1 :
   "StackElm (pos, w) \<in> contexts_as_set var con \<Longrightarrow> rev (vctx_stack var) ! pos = w"
   apply(simp add: contexts_as_set_def variable_ctx_as_set_def constant_ctx_as_set_def
       stack_as_set_def memory_as_set_def
-      balance_as_set_def storage_as_set_def log_as_set_def program_as_set_def)
+      balance_as_set_def storage_as_set_def log_as_set_def program_as_set_def data_sent_as_set_def)
   done
 
 lemma stack_sem :
@@ -288,28 +290,28 @@ lemma stackHeightElmEquiv [simp] : "StackHeightElm h \<in> contexts_as_set v c =
   "
 apply(auto simp add: contexts_as_set_def constant_ctx_as_set_def variable_ctx_as_set_def
       program_as_set_def stack_as_set_def memory_as_set_def storage_as_set_def
-      balance_as_set_def log_as_set_def)
+      balance_as_set_def log_as_set_def data_sent_as_set_def)
   done
 
 lemma stackElmEquiv [simp] : "StackElm (pos, w) \<in> contexts_as_set v c =
   (pos < length (vctx_stack v) \<and> rev (vctx_stack v) ! pos = w)"
 apply(auto simp add: contexts_as_set_def constant_ctx_as_set_def variable_ctx_as_set_def
       program_as_set_def stack_as_set_def memory_as_set_def storage_as_set_def
-      balance_as_set_def log_as_set_def)
+      balance_as_set_def log_as_set_def data_sent_as_set_def)
 done
 
 lemma pcElmEquiv [simp] : "PcElm k \<in> contexts_as_set va_ctx co_ctx =
   (vctx_pc va_ctx = k)"
 apply(auto simp add: contexts_as_set_def constant_ctx_as_set_def variable_ctx_as_set_def
       program_as_set_def stack_as_set_def memory_as_set_def storage_as_set_def
-      balance_as_set_def log_as_set_def)
+      balance_as_set_def log_as_set_def data_sent_as_set_def)
 done
 
 lemma gasElmEquiv [simp] : "GasElm g \<in> contexts_as_set va_ctx co_ctx =
   (vctx_gas va_ctx = g)"
 apply(auto simp add: contexts_as_set_def constant_ctx_as_set_def variable_ctx_as_set_def
       program_as_set_def stack_as_set_def memory_as_set_def storage_as_set_def
-      balance_as_set_def log_as_set_def)
+      balance_as_set_def log_as_set_def data_sent_as_set_def)
 done
 
 lemma codeElmEquiv [simp] :
@@ -318,7 +320,7 @@ lemma codeElmEquiv [simp] :
    (program_content (cctx_program co_ctx) pos = None) \<and> i = Misc STOP)"
 apply(auto simp add: contexts_as_set_def constant_ctx_as_set_def variable_ctx_as_set_def
       program_as_set_def stack_as_set_def memory_as_set_def storage_as_set_def
-      balance_as_set_def log_as_set_def)
+      balance_as_set_def log_as_set_def data_sent_as_set_def)
 done
 
 lemma insert_minus : "a \<noteq> b \<Longrightarrow> insert a s - { b } = insert a (s - {b})"
