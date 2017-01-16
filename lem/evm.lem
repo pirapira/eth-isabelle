@@ -959,17 +959,18 @@ type instruction_result =
   * (address -> w256) (* the new balance of all accounts *)
   * list w256         (* the list of possibly changed storage indices *)
   * list log_entry    (* logs *)
-  * maybe (variable_ctx * integer * integer) (* the variable environment to return to *)
+  * variable_ctx      (* the last venv *)
+  * maybe (integer * integer) (* the variable environment to return to *)
 
 (* When the contract fails, the result of the instruction always looks like this: *)
 val instruction_failure_result : variable_ctx -> list failure_reason -> instruction_result
 let instruction_failure_result v reasons =
-  InstructionToEnvironment (ContractFail reasons) v.vctx_storage_at_call v.vctx_balance_at_call [] [] Nothing
+  InstructionToEnvironment (ContractFail reasons) v.vctx_storage_at_call v.vctx_balance_at_call [] [] v Nothing
 
 (* When the contract returns, the result of the instruction always looks like this: *)
 val instruction_return_result : list byte -> variable_ctx -> instruction_result
 let instruction_return_result x v =
-  InstructionToEnvironment (ContractReturn x) v.vctx_storage v.vctx_balance v.vctx_touched_storage_index v.vctx_logs Nothing
+  InstructionToEnvironment (ContractReturn x) v.vctx_storage v.vctx_balance v.vctx_touched_storage_index v.vctx_logs v Nothing
 
 (* subsection {* Useful Functions for Defining EVM Operations *} *)
 
@@ -1193,11 +1194,12 @@ let call v c = match v.vctx_stack with
         (update_balance c.cctx_this (fun orig -> orig - e2) v.vctx_balance)
         v.vctx_touched_storage_index
         v.vctx_logs
-        (Just (* saving the variable environment for timing *)
-          (<| (vctx_advance_pc c v) with
+        (<| (vctx_advance_pc c v) with
            vctx_stack = rest;
            vctx_balance = update_balance c.cctx_this (fun orig -> orig - e2) v.vctx_balance;
-           vctx_memory_usage = M (M v.vctx_memory_usage e3 e4) e5 e6 |>, uint e5, uint e6)))
+           vctx_memory_usage = M (M v.vctx_memory_usage e3 e4) e5 e6 |>)
+        (Just (* saving the variable environment for timing *)
+           (uint e5, uint e6)))
   | _ -> instruction_failure_result v [TooShortStack]
 end
 
@@ -1225,9 +1227,10 @@ let delegatecall v c = match v.vctx_stack with
           v.vctx_storage v.vctx_balance
           v.vctx_touched_storage_index
           v.vctx_logs
+          (<| (vctx_advance_pc c v) with
+                 vctx_stack = rest; vctx_memory_usage = M (M v.vctx_memory_usage e3 e4) e5 e6 |>)
           (Just (* save the variable environment for returns *)
-            (<| (vctx_advance_pc c v) with
-                 vctx_stack = rest; vctx_memory_usage = M (M v.vctx_memory_usage e3 e4) e5 e6 |>, uint e5, uint e6))
+            (uint e5, uint e6))
   | _ -> instruction_failure_result v [TooShortStack]
 end
 
@@ -1256,11 +1259,11 @@ let callcode v c = match v.vctx_stack with
           (update_balance c.cctx_this (fun orig -> orig - e2) v.vctx_balance)
           v.vctx_touched_storage_index
           v.vctx_logs
-          (Just (* saving the variable environment *)
-            (<| (vctx_advance_pc c v) with
+          (<| (vctx_advance_pc c v) with
                   vctx_stack = rest;
                   vctx_memory_usage = M (M v.vctx_memory_usage e3 e4) e5 e6;
-                  vctx_balance = update_balance c.cctx_this (fun orig -> orig - e2) v.vctx_balance |>, uint e5, uint e6))
+                  vctx_balance = update_balance c.cctx_this (fun orig -> orig - e2) v.vctx_balance |>)
+          (Just (* saving the variable environment *) (uint e5, uint e6))
   | _ -> instruction_failure_result v [TooShortStack]
 end
 
@@ -1284,10 +1287,11 @@ let create v c = match v.vctx_stack with
             v.vctx_storage new_balance
             v.vctx_touched_storage_index
             v.vctx_logs
-            (Just (* when returning to this invocation, use the following variable environment *)
-              (<| (vctx_advance_pc c v) with vctx_stack = rest;
+            (<| (vctx_advance_pc c v) with vctx_stack = rest;
                  vctx_balance = new_balance;
-                 vctx_memory_usage = M v.vctx_memory_usage code_start code_len |>, 0, 0))
+                 vctx_memory_usage = M v.vctx_memory_usage code_start code_len |>)
+            (Just (* when returning to this invocation, use the following variable environment *)
+              (0, 0))
   | _ -> instruction_failure_result v [TooShortStack]
 end
 
@@ -1308,6 +1312,7 @@ let ret v _ =  match v.vctx_stack with
                            v.vctx_storage v.vctx_balance
                            v.vctx_touched_storage_index
                            v.vctx_logs
+                           v
                            Nothing (* No possibility of ever returning to this invocation. *)
  | _ -> instruction_failure_result v [TooShortStack]
 end
@@ -1316,7 +1321,7 @@ end
 val stop : variable_ctx -> constant_ctx -> instruction_result
 let stop v _ =
     InstructionToEnvironment (ContractReturn []) v.vctx_storage v.vctx_balance v.vctx_touched_storage_index
-      v.vctx_logs Nothing
+      v.vctx_logs v Nothing
 
 (* POP removes the topmost element of the stack: *)
 val pop : variable_ctx -> constant_ctx -> instruction_result
@@ -1494,7 +1499,7 @@ let suicide v c = match v.vctx_stack with
         if addr = w256_to_address dst then v.vctx_balance c.cctx_this + v.vctx_balance addr else
         v.vctx_balance addr in
      InstructionToEnvironment ContractSuicide v.vctx_storage new_balance v.vctx_touched_storage_index
-        v.vctx_logs Nothing
+        v.vctx_logs v Nothing
  | _ -> instruction_failure_result v [TooShortStack]
 end
 
@@ -1729,9 +1734,8 @@ let subtract_gas consumption orig =
   | InstructionContinue v ->
     InstructionContinue (<| v with vctx_gas = v.vctx_gas - consumption |>)
   | InstructionAnnotationFailure -> InstructionAnnotationFailure
-  | InstructionToEnvironment act st bal touched logs Nothing -> InstructionToEnvironment act st bal touched logs Nothing
-  | InstructionToEnvironment act st bal touched logs (Just (v, dst, len)) ->
-    InstructionToEnvironment act st bal touched logs (Just (<|v with vctx_gas = v.vctx_gas - consumption|>, dst, len))
+  | InstructionToEnvironment act st bal touched logs v opt ->
+    InstructionToEnvironment act st bal touched logs (<|v with vctx_gas = v.vctx_gas - consumption|>) opt
   end
 
 val word_exp : integer -> natural -> integer
@@ -1903,13 +1907,13 @@ let check_annotations v c =
 val next_state: (instruction_result -> unit) -> constant_ctx -> instruction_result -> instruction_result
 let next_state stopper c pr =
   match pr with
-  | InstructionToEnvironment _ _ _ _ _ _ ->
+  | InstructionToEnvironment _ _ _ _ _ _ _ ->
     let () = stopper pr in pr
   | InstructionAnnotationFailure -> let () = stopper pr in pr
   | InstructionContinue v ->
      if not (check_annotations v c) then InstructionAnnotationFailure else
      match vctx_next_instruction v c with
-      | Nothing -> InstructionToEnvironment (ContractFail [ShouldNotHappen]) v.vctx_storage_at_call v.vctx_balance_at_call [] [] Nothing
+      | Nothing -> InstructionToEnvironment (ContractFail [ShouldNotHappen]) v.vctx_storage_at_call v.vctx_balance_at_call [] [] v Nothing
       | Just i ->
         if check_resources v c (v.vctx_stack) i then
           instruction_sem v c i
@@ -1921,7 +1925,7 @@ let next_state stopper c pr =
                   ++ (if predict_gas i v c <= v.vctx_gas then [] else [OutOfGas])
                end
               ))
-              v.vctx_storage_at_call v.vctx_balance_at_call [] [] Nothing
+              v.vctx_storage_at_call v.vctx_balance_at_call [] [] v Nothing
      end
   end
 
@@ -2014,15 +2018,15 @@ let empty_account addr =
 (* And after our contract makes a move, the account state is updated as follows. *)
 
 val update_account_state :
-  account_state -> contract_action -> storage -> (address -> w256) -> maybe (variable_ctx * integer * integer) -> account_state
-let update_account_state prev act st bal v_opt =
+  account_state -> contract_action -> storage -> (address -> w256) -> variable_ctx -> maybe (integer * integer) -> account_state
+let update_account_state prev act st bal v v_opt =
    <| prev with
      account_storage = st;
      account_balance = (match act with ContractFail _ -> prev.account_balance
                                    |  _ -> bal prev.account_address end);
      account_ongoing_calls =
                         (match v_opt with Nothing -> prev.account_ongoing_calls
-                                     | Just pushed -> pushed :: prev.account_ongoing_calls end);
+                                     | Just (i, s) -> (v, i, s) :: prev.account_ongoing_calls end);
      account_killed =
        (match act with ContractSuicide -> true
                   | _ -> prev.account_killed end)
