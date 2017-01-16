@@ -498,8 +498,8 @@ lemma imp_sepL :
 apply(auto simp add: sep_def)
 done
 
-
-
+lemma frame_backward : "triple failures p c q \<Longrightarrow> p' = p ** r \<Longrightarrow> q' = q ** r \<Longrightarrow> triple failures p' c q'"
+using frame by blast
 
 lemma postW : "triple failures p c q \<Longrightarrow> (\<forall> s. q s \<longrightarrow> r s) \<Longrightarrow> triple failures p c r"
 proof -
