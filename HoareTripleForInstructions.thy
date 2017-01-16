@@ -442,26 +442,55 @@ apply(case_tac "idx < length ta"; auto)
 apply(case_tac "idx = length ta"; auto)
 done
 
-lemma add_triple : "triple {} (\<langle> h \<le> 1023 \<and> g \<ge> Gverylow \<rangle> **
-                            stack_height (h + 2) **
-                            stack (h + 1) v **
-                            stack h w **
-                            program_counter k **
-                            gas_pred g **
-                            continuing
-                           )
-                           {(k, Arith ADD)}
-                           (stack_height (h + 1) **
-                            stack h (v + w) **
-                            program_counter (k + 1) **
-                            gas_pred (g - Gverylow) **
-                            continuing
-                            )"
+lemma add_triple :
+   "triple {}
+           (\<langle> h \<le> 1023 \<and> g \<ge> Gverylow \<rangle> **
+            stack_height (h + 2) **
+            stack (h + 1) v **
+            stack h w **
+            program_counter k **
+            gas_pred g **
+            continuing
+           )
+           {(k, Arith ADD)}
+           (stack_height (h + 1) **
+            stack h (v + w) **
+            program_counter (k + 1) **
+            gas_pred (g - Gverylow) **
+            continuing
+           )"
 apply(simp add: triple_def)
 apply(clarify)
 apply(rule_tac x = "1" in exI)
 apply(case_tac presult; auto simp add: program_sem.simps vctx_next_instruction_def instruction_sem_def check_resources_def
       instruction_result_as_set_def)
+done
+
+lemma add_gas_triple : 
+   "triple {OutOfGas} 
+      (\<langle> h \<le> 1023\<rangle> **
+       stack_height (h + 2) **
+       stack (h + 1) v **
+       stack h w **
+       program_counter k **
+       gas_pred g **
+       continuing
+      )
+
+      {(k, Arith ADD)}
+
+      (stack_height (h + 1) **
+       stack h (v + w) **
+       program_counter (k + 1) **
+       gas_pred (g - Gverylow) **
+       continuing
+      )"
+apply(simp add: triple_def)
+apply(clarify)
+apply(rule_tac x = "1" in exI)
+apply(case_tac presult; auto simp add: program_sem.simps vctx_next_instruction_def instruction_sem_def check_resources_def
+      instruction_result_as_set_def)
+apply(simp add: failed_for_reasons_def)
 done
 
 
@@ -541,22 +570,23 @@ apply(simp add: pred_equiv_def)
 	by (simp add: pred_equiv_sep_comm pred_equiv_sound)
 
 
-lemma addadd_triple : "triple {} (\<langle> h \<le> 1022 \<and> g \<ge> 2 * Gverylow \<rangle> **
-                            stack_height (Suc (Suc (Suc h))) **
-                            stack (h + 2) x **
-                            stack (h + 1) v **
-                            stack h w **
-                            program_counter k **
-                            gas_pred g **
-                            continuing
-                           )
-                           ({(k, Arith ADD)} \<union> {(k + 1, Arith ADD)})
-                           (stack_height (h + 1) **
-                            stack h (x + v + w) **
-                            program_counter (2 + k) **
-                            gas_pred (g - 2 * Gverylow) **
-                            continuing
-                            )"
+lemma addadd_triple :
+  "triple {} (\<langle> h \<le> 1022 \<and> g \<ge> 2 * Gverylow \<rangle> **
+              stack_height (Suc (Suc (Suc h))) **
+              stack (h + 2) x **
+              stack (h + 1) v **
+              stack h w **
+              program_counter k **
+              gas_pred g **
+              continuing
+             )
+             ({(k, Arith ADD)} \<union> {(k + 1, Arith ADD)})
+             (stack_height (h + 1) **
+              stack h (x + v + w) **
+              program_counter (2 + k) **
+              gas_pred (g - 2 * Gverylow) **
+              continuing
+             )"
 (* here the pure condition should be moved out *)
 apply(auto)
 apply(rule_tac cL = "{(k, Arith ADD)}" and cR = "{(k + 1, Arith ADD)}" in composition)
