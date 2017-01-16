@@ -138,7 +138,11 @@ where
 "pred_equiv a b = (\<forall> s. a s = b s)"
 
 (** equivalence is reflexivie **)
-lemma pred_equiv_refl : "pred_equiv a a"
+lemma pred_equiv_refl [simp] : "pred_equiv a a"
+apply(simp add: pred_equiv_def)
+done
+
+lemma pred_equiv_symm : "pred_equiv a b \<Longrightarrow> pred_equiv b a"
 apply(simp add: pred_equiv_def)
 done
 
@@ -151,7 +155,7 @@ lemma pred_equiv_sep_comm : "pred_equiv (a ** b) (b ** a)"
 apply(simp add: pred_equiv_def sep_def)
 by blast
 
-lemma pred_equiv_addL [intro]: "pred_equiv b c \<Longrightarrow> pred_equiv (a ** b) (a ** c)"
+lemma pred_equiv_addL [intro!]: "pred_equiv b c \<Longrightarrow> pred_equiv (a ** b) (a ** c)"
 apply(simp add: pred_equiv_def sep_def)
 done
 
@@ -371,6 +375,11 @@ lemma pred_equiv_trans : "pred_equiv a b \<Longrightarrow> pred_equiv b c \<Long
 apply(simp add: pred_equiv_def)
 done
 
+lemma pred_equiv_trans_other : "pred_equiv b c \<Longrightarrow> pred_equiv a b \<Longrightarrow> pred_equiv a c"
+apply(simp add: pred_equiv_def)
+done
+
+
 lemma equiv_middle :
 "pred_equiv p0 p1 \<Longrightarrow> (p ** p0 ** rest) s = (p ** p1 ** rest) s"
 apply(rule pred_equiv_sound)
@@ -499,8 +508,6 @@ apply(auto simp add: sep_def)
 done
 
 
-
-
 lemma postW : "triple failures p c q \<Longrightarrow> (\<forall> s. q s \<longrightarrow> r s) \<Longrightarrow> triple failures p c r"
 proof -
  assume "triple failures p c q" "\<forall> s. q s \<longrightarrow> r s"
@@ -564,6 +571,36 @@ proof -
   by(simp add: triple_def)
  ultimately show "triple reasons r c q" by blast
 qed
+
+lemma pred_equiv_triple :
+  "pred_equiv a b \<Longrightarrow> triple failures b c d \<Longrightarrow> triple failures a c d"
+apply(rule preS)
+ apply(simp)
+apply(simp add: pred_equiv_def)
+done
+
+lemma triple_pred_equiv :
+  "pred_equiv d b \<Longrightarrow> triple failures a c b \<Longrightarrow> triple failures a c d"
+apply(rule postW)
+ apply(simp)
+apply(simp add: pred_equiv_def)
+done
+
+lemma frame_backward : "triple failures p c q \<Longrightarrow> 
+                        pred_equiv p' (p ** r) \<Longrightarrow> pred_equiv q' (q ** r) \<Longrightarrow> triple failures p' c q'"
+proof -
+ assume "triple failures p c q"
+ have "triple failures (p ** r) c (q ** r)"
+  (* sledgehammer *)
+  by (simp add: \<open>triple failures p c q\<close> frame)
+ moreover assume "pred_equiv p' (p ** r)"
+ ultimately have "triple failures p' c (q ** r)"
+  using pred_equiv_triple by blast
+ moreover assume "pred_equiv q' (q ** r)"
+ ultimately show "triple failures p' c q'"
+  using triple_pred_equiv by blast
+qed
+
 
 lemma remove_true:
  "(p ** \<langle> True \<rangle> ** rest) s = (p ** rest) s"
