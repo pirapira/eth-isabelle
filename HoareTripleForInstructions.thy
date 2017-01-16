@@ -505,6 +505,7 @@ apply(rule frame)
 apply(rule add_instance)
 done
 
+
 lemma addadd_triple : "triple {} (\<langle> h \<le> 1022 \<and> g \<ge> 2 * Gverylow \<rangle> **
                             stack_height (h + 3) **
                             stack (h + 2) x **
@@ -525,10 +526,14 @@ lemma addadd_triple : "triple {} (\<langle> h \<le> 1022 \<and> g \<ge> 2 * Gver
 apply(auto)
 apply(rule_tac cL = "{(k, Arith ADD)}" and cR = "{(k + 1, Arith ADD)}" in composition)
   apply(simp)
-(* apply(rule_tac r = "stack h w" in frame) (* this should work *)
+  apply(rule_tac r = "stack h w" in frame_backward)
+   apply(rule_tac h = "h + 1" and g = g and v = x and w = v in add_triple)
+  apply(simp)
+  
+
  apply(rule_tac preS)
   apply(rule_tac h = "h+ 1" and g = g and v = x and w = v in add_triple)
- apply(simp) *)
+ apply(simp)
 oops
 
 
