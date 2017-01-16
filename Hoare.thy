@@ -138,7 +138,7 @@ where
 "pred_equiv a b = (\<forall> s. a s = b s)"
 
 (** equivalence is reflexivie **)
-lemma pred_equiv_refl : "pred_equiv a a"
+lemma pred_equiv_refl [simp] : "pred_equiv a a"
 apply(simp add: pred_equiv_def)
 done
 
@@ -155,7 +155,7 @@ lemma pred_equiv_sep_comm : "pred_equiv (a ** b) (b ** a)"
 apply(simp add: pred_equiv_def sep_def)
 by blast
 
-lemma pred_equiv_addL [intro]: "pred_equiv b c \<Longrightarrow> pred_equiv (a ** b) (a ** c)"
+lemma pred_equiv_addL [intro!]: "pred_equiv b c \<Longrightarrow> pred_equiv (a ** b) (a ** c)"
 apply(simp add: pred_equiv_def sep_def)
 done
 

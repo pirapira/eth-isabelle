@@ -566,26 +566,14 @@ apply(rule_tac cL = "{(k, Arith ADD)}" and cR = "{(k + 1, Arith ADD)}" in compos
   apply(simp)
   apply(rule pred_equiv_R_pure)
    apply (simp add: Gverylow_def)
-  apply(simp)
-  apply(rule pred_equiv_addL)
-  apply(simp)
-  apply(rule pred_equiv_addL)
-  apply(simp)
-  apply(rule pred_equiv_addL)
-  apply(rule pred_equiv_R_comm)
-  apply(rule pred_equiv_refl)
+  using pred_equiv_sep_comm pred_equiv_R_assoc apply blast
  defer
  apply(rule postW)
  apply(rule_tac h = h and v = "x + v" and w = w and k = "k + 1" and g = "g - Gverylow" in add_triple)
  apply(auto)
 apply(rule pred_equiv_L_pure)
  apply(simp)
-apply(rule pred_equiv_addL)
-apply(simp)
-apply(rule pred_equiv_addL)
-apply(rule pred_equiv_R_comm)
-apply(rule pred_equiv_refl)
-done
+using pred_equiv_sep_comm pred_equiv_R_assoc by blast
 
 
 lemma saying_zero [simp] :
