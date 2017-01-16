@@ -142,6 +142,10 @@ lemma pred_equiv_refl : "pred_equiv a a"
 apply(simp add: pred_equiv_def)
 done
 
+lemma pred_equiv_symm : "pred_equiv a b \<Longrightarrow> pred_equiv b a"
+apply(simp add: pred_equiv_def)
+done
+
 (** congruence of equivalence over sep **)
 lemma pred_equiv_sep : "pred_equiv a b \<Longrightarrow> pred_equiv c d \<Longrightarrow> pred_equiv (a ** c) (b ** d)"
 apply(simp add: pred_equiv_def sep_def)
@@ -370,6 +374,11 @@ done
 lemma pred_equiv_trans : "pred_equiv a b \<Longrightarrow> pred_equiv b c \<Longrightarrow> pred_equiv a c"
 apply(simp add: pred_equiv_def)
 done
+
+lemma pred_equiv_trans_other : "pred_equiv b c \<Longrightarrow> pred_equiv a b \<Longrightarrow> pred_equiv a c"
+apply(simp add: pred_equiv_def)
+done
+
 
 lemma equiv_middle :
 "pred_equiv p0 p1 \<Longrightarrow> (p ** p0 ** rest) s = (p ** p1 ** rest) s"

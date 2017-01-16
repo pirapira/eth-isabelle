@@ -505,9 +505,44 @@ apply(rule frame)
 apply(rule add_instance)
 done
 
+lemma pred_equiv_R_assoc [simp] :
+  "pred_equiv a ((b ** c) ** d) = pred_equiv a (b ** c ** d)"
+apply(auto)
+ apply(rule pred_equiv_trans_other)
+  apply(rule pred_equiv_sep_assoc)
+ apply(simp)
+apply(rule pred_equiv_trans_other)
+ apply(rule pred_equiv_symm)
+ apply(rule pred_equiv_sep_assoc)
+apply(simp)
+done
+
+lemma Gverylow_positive [simp]:
+  "Gverylow > 0"
+apply(simp add: Gverylow_def)
+done
+
+
+lemma pred_equiv_R_pure :
+  "b \<Longrightarrow> pred_equiv a c \<Longrightarrow> pred_equiv a (\<langle> b \<rangle> ** c)"
+apply(simp add: pred_equiv_def)
+done
+
+lemma pred_equiv_L_pure :
+  "b \<Longrightarrow> pred_equiv a c \<Longrightarrow> pred_equiv (\<langle> b \<rangle> ** a) c"
+apply(simp add: pred_equiv_def)
+done
+
+
+lemma pred_equiv_R_comm :
+  "pred_equiv a (c ** d) \<Longrightarrow> pred_equiv a (d ** c)"
+apply(simp add: pred_equiv_def)
+(* sledgehammer *)
+	by (simp add: pred_equiv_sep_comm pred_equiv_sound)
+
 
 lemma addadd_triple : "triple {} (\<langle> h \<le> 1022 \<and> g \<ge> 2 * Gverylow \<rangle> **
-                            stack_height (h + 3) **
+                            stack_height (Suc (Suc (Suc h))) **
                             stack (h + 2) x **
                             stack (h + 1) v **
                             stack h w **
@@ -518,7 +553,7 @@ lemma addadd_triple : "triple {} (\<langle> h \<le> 1022 \<and> g \<ge> 2 * Gver
                            ({(k, Arith ADD)} \<union> {(k + 1, Arith ADD)})
                            (stack_height (h + 1) **
                             stack h (x + v + w) **
-                            program_counter (k + 1) **
+                            program_counter (2 + k) **
                             gas_pred (g - 2 * Gverylow) **
                             continuing
                             )"
@@ -527,14 +562,30 @@ apply(auto)
 apply(rule_tac cL = "{(k, Arith ADD)}" and cR = "{(k + 1, Arith ADD)}" in composition)
   apply(simp)
   apply(rule_tac r = "stack h w" in frame_backward)
-   apply(rule_tac h = "h + 1" and g = g and v = x and w = v in add_triple)
+   apply(rule_tac h = "h + 1" and g = g and v = x and w = v and k = k in add_triple)
   apply(simp)
-  
-
- apply(rule_tac preS)
-  apply(rule_tac h = "h+ 1" and g = g and v = x and w = v in add_triple)
+  apply(rule pred_equiv_R_pure)
+   apply (simp add: Gverylow_def)
+  apply(simp)
+  apply(rule pred_equiv_addL)
+  apply(simp)
+  apply(rule pred_equiv_addL)
+  apply(simp)
+  apply(rule pred_equiv_addL)
+  apply(rule pred_equiv_R_comm)
+  apply(rule pred_equiv_refl)
+ defer
+ apply(rule postW)
+ apply(rule_tac h = h and v = "x + v" and w = w and k = "k + 1" and g = "g - Gverylow" in add_triple)
+ apply(auto)
+apply(rule pred_equiv_L_pure)
  apply(simp)
-oops
+apply(rule pred_equiv_addL)
+apply(simp)
+apply(rule pred_equiv_addL)
+apply(rule pred_equiv_R_comm)
+apply(rule pred_equiv_refl)
+done
 
 
 lemma saying_zero [simp] :
