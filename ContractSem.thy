@@ -359,7 +359,7 @@ declare inst_size_def [simp]
 | ProgramInit of call_env
 *)
 
-lemma program_sem_to_environment [simp]: "program_sem k con n (InstructionToEnvironment a b c d) = InstructionToEnvironment a b c d"
+lemma program_sem_to_environment [simp]: "program_sem k con n (InstructionToEnvironment a b c) = InstructionToEnvironment a b c"
 apply(induct_tac n; auto)
 done
 

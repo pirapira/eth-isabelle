@@ -112,7 +112,7 @@ let format_program_result (r : Evm.instruction_result) : Easy_format.t =
   let open Easy_format in
   match r with
   | InstructionContinue _ -> Atom ("ProgramStepRunOut", atom)
-  | InstructionToEnvironment (act, touched, v, stashed_opt) ->
+  | InstructionToEnvironment (act, touched, stashed_opt) ->
      Label ((Atom ("ProgramToEnvironment", atom), label),
             List (list_usual, format_quad_as_list act stashed_opt))
   | InstructionAnnotationFailure -> Atom ("ProgramAnnotationFailure", atom)
