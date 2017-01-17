@@ -217,7 +217,7 @@ definition instruction_result_as_set :: "constant_ctx \<Rightarrow> instruction_
     "instruction_result_as_set c rslt =
         ( case rslt of
           InstructionContinue v \<Rightarrow> {ContinuingElm True} \<union> contexts_as_set v c
-        | InstructionToEnvironment act st bal _ logs _ _ \<Rightarrow> {ContinuingElm False} (* for now *)
+        | InstructionToEnvironment act st bal _ _ _ \<Rightarrow> {ContinuingElm False} (* for now *)
         | InstructionAnnotationFailure \<Rightarrow> {ContinuingElm False} (* need to assume no annotation failure somewhere *)
         )"
 
@@ -236,8 +236,8 @@ definition no_assertion :: "constant_ctx \<Rightarrow> bool"
 definition failed_for_reasons :: "failure_reason set \<Rightarrow> instruction_result \<Rightarrow> bool"
 where
 "failed_for_reasons allowed r =
- (\<exists> reasons a b c d e f. 
-              r = InstructionToEnvironment (ContractFail reasons) a b c d e f
+ (\<exists> reasons a b c d e. 
+              r = InstructionToEnvironment (ContractFail reasons) a b c d e
               \<and> set reasons \<subseteq> allowed)"
 
 definition triple ::
@@ -383,7 +383,7 @@ done
 lemma equiv_middle :
 "pred_equiv p0 p1 \<Longrightarrow> (p ** p0 ** rest) s = (p ** p1 ** rest) s"
 apply(rule pred_equiv_sound)
-apply(simp add: pred_equiv_sep pred_equiv_refl)
+apply(simp add: pred_equiv_sep)
 done
 
 lemma code_middle :
@@ -467,7 +467,7 @@ proof -
  have "pred_equiv (b ** c) (c ** b)" by (simp add: pred_equiv_sep_comm)
  hence "pred_equiv (a ** b ** c) (a ** c ** b)" by(rule  pred_equiv_addL)
  hence "pred_equiv ((a ** b ** c) ** d) ((a ** c ** b) ** d)"
-	by (simp add: pred_equiv_refl pred_equiv_sep)
+	by (simp add: pred_equiv_sep)
  hence "pred_equiv (a ** ((b ** c) ** d)) ((a ** c ** b) ** d)"
   (* sledgehammer *)
 	by (meson pred_equiv_sep_assoc pred_equiv_sep_comm pred_equiv_trans)
