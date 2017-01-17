@@ -2011,7 +2011,7 @@ let empty_account addr =
 val update_account_state :
   account_state -> contract_action -> (address -> w256) -> variable_ctx -> maybe (integer * integer) -> account_state
 let update_account_state prev act bal v v_opt =
-   let st = (match act with ContractReturn _ -> v.vctx_storage | _ -> v.vctx_storage_at_call end) in
+   let st = (match act with ContractFail _ -> v.vctx_storage_at_call | _ -> v.vctx_storage end) in
    <| prev with
      account_storage = st;
      account_balance = (match act with ContractFail _ -> prev.account_balance
