@@ -42,8 +42,8 @@ done
 (* declare instruction_sem_def [simp del]*)
 
 lemma check_resources_split [split] :
-"P (if check_resources v con s i then X else InstructionToEnvironment a b c d e) =
- (\<not> (check_resources v con s i \<and> \<not> P X \<or> \<not> check_resources v con s i \<and> \<not> P (InstructionToEnvironment a b c d e)))"
+"P (if check_resources v con s i then X else InstructionToEnvironment a b c d) =
+ (\<not> (check_resources v con s i \<and> \<not> P X \<or> \<not> check_resources v con s i \<and> \<not> P (InstructionToEnvironment a b c d)))"
 apply(simp only: if_splits(2))
 done
 
