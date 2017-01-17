@@ -223,7 +223,7 @@ update\_account\_state is only sometimes expanded.  *}
 
 lemma update_account_state_None [simp] :
 "update_account_state prev act bal v None =
-   (let st = ((case  act of ContractReturn _ =>(vctx_storage v) | _ =>(vctx_storage_at_call v) )) in
+   (let st = ((case  act of ContractFail _ =>(vctx_storage_at_call v) | _ =>(vctx_storage v) )) in
    (prev \<lparr>
      account_storage := st,
      account_balance :=
@@ -238,7 +238,7 @@ done
 
 lemma update_account_state_Some [simp] :
 "update_account_state prev act bal v (Some pushed) =
-   (let st = ((case  act of ContractReturn _ =>(vctx_storage v) | _ =>(vctx_storage_at_call v) )) in
+   (let st = ((case  act of ContractFail _ =>(vctx_storage_at_call v) | _ =>(vctx_storage v) )) in
    (prev \<lparr>
      account_storage := st,
      account_balance :=
