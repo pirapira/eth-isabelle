@@ -97,7 +97,7 @@ let hex_string_of_byte_list (prefix : string) (bs : Word8.word8 list) : string =
 
 let format_quad_as_list
       (act : Evm.contract_action) (storage : Evm.storage)
-      (bal : Evm.address -> Keccak.w256) (stashed_opt : (Evm.variable_ctx * Nat_big_num.num * Nat_big_num.num) option) : Easy_format.t list =
+      (bal : Evm.address -> Keccak.w256) (stashed_opt : (Nat_big_num.num * Nat_big_num.num) option) : Easy_format.t list =
   let open Easy_format in
   [ Label ((Atom ("Action", atom), label), Atom ("to be printed", atom))
   ; Atom ("storage to be printed", atom)
@@ -112,7 +112,7 @@ let format_program_result (r : Evm.instruction_result) : Easy_format.t =
   let open Easy_format in
   match r with
   | InstructionContinue _ -> Atom ("ProgramStepRunOut", atom)
-  | InstructionToEnvironment (act, storage, bal, touched, logs, stashed_opt) ->
+  | InstructionToEnvironment (act, storage, bal, touched, logs, v, stashed_opt) ->
      Label ((Atom ("ProgramToEnvironment", atom), label),
             List (list_usual, format_quad_as_list act storage bal stashed_opt))
   | InstructionAnnotationFailure -> Atom ("ProgramAnnotationFailure", atom)

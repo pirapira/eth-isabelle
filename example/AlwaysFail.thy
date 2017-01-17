@@ -1,6 +1,6 @@
 theory AlwaysFail
 
-imports Main "../ContractSem" "../RelationalSem" "../lem/EvmNonExec" "../ProgramInAvl"
+imports Main "../ContractSem" "../RelationalSem" "../ProgramInAvl"
 
 begin
 
@@ -42,14 +42,11 @@ done
 (* declare instruction_sem_def [simp del]*)
 
 lemma check_resources_split [split] :
-"P (if check_resources v con s i then X else InstructionToEnvironment a b c d e f) =
- (\<not> (check_resources v con s i \<and> \<not> P X \<or> \<not> check_resources v con s i \<and> \<not> P (InstructionToEnvironment a b c d e f)))"
+"P (if check_resources v con s i then X else InstructionToEnvironment a b c d e f g) =
+ (\<not> (check_resources v con s i \<and> \<not> P X \<or> \<not> check_resources v con s i \<and> \<not> P (InstructionToEnvironment a b c d e f g)))"
 apply(simp only: if_splits(2))
 done
 
-declare respond_to_call_correctly_def [simp]
-declare respond_to_return_correctly_def [simp]
-declare respond_to_fail_correctly_def [simp]
 declare inst_stack_numbers.simps [simp]
 declare pc_inst_numbers.simps [simp]
 

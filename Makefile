@@ -16,10 +16,10 @@ clean-hol:
 clean-ocaml:
 	git clean -fx lem/*.ml
 
-all-isabelle: attic/Parse.thy ContractSem.thy RelationalSem.thy example/Optimization.thy example/AlwaysFail.thy example/FailOnReentrance.thy example/Deed.thy lem/Block.thy lem/Evm.thy lem/EvmNonExec.thy lem/Keccak.thy lem/Rlp.thy lem/Word160.thy lem/Word256.thy lem/Word8.thy lem/Word4.thy
+all-isabelle: attic/Parse.thy ContractSem.thy RelationalSem.thy example/Optimization.thy example/AlwaysFail.thy example/FailOnReentrance.thy example/Deed.thy lem/Block.thy lem/Evm.thy lem/Keccak.thy lem/Rlp.thy lem/Word160.thy lem/Word256.thy lem/Word8.thy lem/Word4.thy
 	isabelle build -j 2 -d . all
 
-light-isabelle: attic/Parse.thy ContractSem.thy RelationalSem.thy example/Optimization.thy example/AlwaysFail.thy example/FailOnReentrance.thy lem/Block.thy lem/Evm.thy lem/EvmNonExec.thy lem/Keccak.thy lem/Rlp.thy lem/Word160.thy lem/Word256.thy lem/Word8.thy lem/Word4.thy
+light-isabelle: attic/Parse.thy ContractSem.thy RelationalSem.thy example/Optimization.thy example/AlwaysFail.thy example/FailOnReentrance.thy lem/Block.thy lem/Evm.thy lem/Keccak.thy lem/Rlp.thy lem/Word160.thy lem/Word256.thy lem/Word8.thy lem/Word4.thy
 	isabelle build -j 2 -v -d . light
 
 doc: deed lem-pdf
@@ -28,11 +28,11 @@ deed: document/output.pdf
 document/output.pdf: ContractSem.thy RelationalSem.thy example/Deed.thy document/root.tex lem/Evm.thy lem/Word256.thy lem/Word160.thy lem/Word8.thy lem/Keccak.thy
 	sh document_generation.sh
 
-lem-thy: lem/Block.thy lem/Evm.thy lem/EvmNonExec.thy lem/Keccak.thy lem/Rlp.thy lem/Word160.thy lem/Word256.thy lem/Word8.thy lem/Keccak.thy lem/Word4.thy
+lem-thy: lem/Block.thy lem/Evm.thy lem/Keccak.thy lem/Rlp.thy lem/Word160.thy lem/Word256.thy lem/Word8.thy lem/Keccak.thy lem/Word4.thy
 
-lem-hol: lem/blockScript.sml lem/evmScript.sml lem/evmNonExecScript.sml lem/keccakScript.sml lem/rlpScript.sml lem/word160Script.sml lem/word256Script.sml lem/word8Script.sml lem/keccakScript.sml lem/word4Script.sml
+lem-hol: lem/blockScript.sml lem/evmScript.sml lem/keccakScript.sml lem/rlpScript.sml lem/word160Script.sml lem/word256Script.sml lem/word8Script.sml lem/keccakScript.sml lem/word4Script.sml
 
-lem-pdf: lem/Evm-use_inc.pdf lem/Block-use_inc.pdf lem/EvmNonExec-use_inc.pdf lem/Keccak-use_inc.pdf lem/Rlp-use_inc.pdf
+lem-pdf: lem/Evm-use_inc.pdf lem/Block-use_inc.pdf lem/Keccak-use_inc.pdf lem/Rlp-use_inc.pdf
 
 lem-ocaml: lem/evm.ml lem/word256.ml lem/word160.ml lem/word8.ml lem/keccak.ml lem/word4.ml
 
@@ -103,23 +103,6 @@ lem/Evm-use_inc.tex lem/Evm-inc.tex: lem/evm.lem
 
 lem/Evm-use_inc.pdf: lem/Evm-use_inc.tex lem/Evm-inc.tex
 	cd lem; pdflatex Evm-use_inc.tex; pdflatex Evm-use_inc.tex
-
-lem/evmNonExec.lem: lem/evm.lem lem/word256.lem lem/word160.lem lem/word8.lem lem/word4.lem
-	touch lem/evmNonExec.lem
-
-lem/EvmNonExec.thy: lem/evmNonExec.lem
-	lem -isa lem/evmNonExec.lem
-
-lem/evmNonExecScript.sml: lem/evmNonExec.lem
-	lem -hol lem/evmNonExec.lem
-
-lem/EvmNonExec-use_inc.tex lem/EvmNonExec-inc.tex: lem/evmNonExec.lem
-	lem -tex lem/evmNonExec.lem
-	sed 's/default/defWithComment/g' lem/EvmNonExec-inc.tex > lem/tmp.txt
-	mv lem/tmp.txt lem/EvmNonExec-inc.tex
-
-lem/EvmNonExec-use_inc.pdf: lem/EvmNonExec-use_inc.tex lem/EvmNonExec-inc.tex
-	cd lem; pdflatex EvmNonExec-use_inc.tex; pdflatex EvmNonExec-use_inc.tex
 
 lem/keccak.lem: lem/word8.lem lem/evm.lem
 	touch lem/keccak.lem

@@ -222,7 +222,7 @@ text {* The following lemmata regulates the Isabelle simplifier so that the defi
 update\_account\_state is only sometimes expanded.  *}
 
 lemma update_account_state_None [simp] :
-"update_account_state prev act st bal None =
+"update_account_state prev act st bal v None =
    (prev \<lparr>
      account_storage := st,
      account_balance :=
@@ -236,13 +236,13 @@ apply(case_tac act; simp add: update_account_state_def)
 done
 
 lemma update_account_state_Some [simp] :
-"update_account_state prev act st bal (Some pushed) =
+"update_account_state prev act st bal v (Some pushed) =
    (prev \<lparr>
      account_storage := st,
      account_balance :=
        (case act of ContractFail _ \<Rightarrow> account_balance prev
                   |  _ \<Rightarrow> bal (account_address prev)),
-     account_ongoing_calls := pushed # account_ongoing_calls prev,
+     account_ongoing_calls := (v, pushed) # account_ongoing_calls prev,
      account_killed :=
        (case act of ContractSuicide \<Rightarrow> True
                   | _ \<Rightarrow> account_killed prev)\<rparr>)"
@@ -355,7 +355,7 @@ declare inst_size_def [simp]
 | ProgramInit of call_env
 *)
 
-lemma program_sem_to_environment [simp]: "program_sem k con n (InstructionToEnvironment a b c d e f) = InstructionToEnvironment a b c d e f"
+lemma program_sem_to_environment [simp]: "program_sem k con n (InstructionToEnvironment a b c d e f g) = InstructionToEnvironment a b c d e f g"
 apply(induct_tac n; auto)
 done
 
