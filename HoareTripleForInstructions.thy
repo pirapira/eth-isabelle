@@ -15,6 +15,12 @@ begin
  
 declare insert_functional [intro]
 
+lemma continuing_not_context [simp]:
+  "ContinuingElm b \<notin> contexts_as_set x32 co_ctx"
+apply(simp add: contexts_as_set_def constant_ctx_as_set_def variable_ctx_as_set_def program_as_set_def stack_as_set_def
+data_sent_as_set_def)
+done
+
 lemma arith_inst_size_one [simp]:
   "inst_size (Arith a) = 1"
 apply(simp add: inst_size_def inst_code.simps)
@@ -709,6 +715,48 @@ apply(auto simp add: program_sem.simps vctx_next_instruction_def instruction_sem
       instruction_result_as_set_def
       )
 apply(auto simp add: stack_as_set_def)
+done
+
+lemma action_not_context [simp]:
+  "ContractActionElm a \<notin> contexts_as_set x1 co_ctx"
+apply(simp add: contexts_as_set_def constant_ctx_as_set_def variable_ctx_as_set_def stack_as_set_def program_as_set_def)
+done
+
+lemma failed_is_failed [simp]:
+   "failed_for_reasons {OutOfGas} (InstructionToEnvironment (ContractFail [OutOfGas]) a b)"
+apply(simp add: failed_for_reasons_def)
+done
+
+lemma stop_gas_triple:
+  "triple {OutOfGas}
+          (\<langle> h \<le> 1024 \<rangle> ** stack_height h ** program_counter k ** continuing)
+          {(k, Misc STOP)}
+          (stack_height h ** program_counter k ** not_continuing ** action (ContractReturn []))"
+apply(simp add: triple_def)
+apply(clarify)
+apply(rule_tac x = "1" in exI)
+apply(case_tac presult; simp)
+apply(auto simp add: program_sem.simps vctx_next_instruction_def instruction_sem_def check_resources_def
+      stack_inst_numbers.simps
+      pop_def stop_def Gzero_def not_continuing_def action_def
+      instruction_result_as_set_def misc_inst_numbers.simps
+      stack_as_set_def)
+ apply(auto simp add: sep_def not_continuing_def action_def)
+ apply(rule_tac x = "(insert (ContractActionElm (ContractReturn [])) (contexts_as_set x1 co_ctx)) -
+           {StackHeightElm (length (vctx_stack x1))} -
+           {PcElm (vctx_pc x1)}" in exI)
+ apply(auto)
+ apply(rule_tac x = "(contexts_as_set x1 co_ctx) - {StackHeightElm (length (vctx_stack x1))} -
+           {PcElm (vctx_pc x1)}" in exI)
+ apply(auto simp add: code_def)
+apply(rule_tac x = "(insert (ContractActionElm (ContractReturn [])) (contexts_as_set x1 co_ctx)) -
+           {StackHeightElm (length (vctx_stack x1))} -
+           {PcElm (vctx_pc x1)}" in exI)
+apply(auto simp add: failed_for_reasons_def)
+apply(rule_tac x = "(contexts_as_set x1 co_ctx) -
+           {StackHeightElm (length (vctx_stack x1))} -
+           {PcElm (vctx_pc x1)}" in exI)
+apply(auto)
 done
 
 end (* context *)

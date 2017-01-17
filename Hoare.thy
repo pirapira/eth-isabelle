@@ -191,6 +191,14 @@ definition continuing :: "state_element set \<Rightarrow> bool"
 where
 "continuing s == s = { ContinuingElm True }"
 
+definition not_continuing :: "state_element set \<Rightarrow> bool"
+where
+"not_continuing s == s = {ContinuingElm False}"
+
+definition action :: "contract_action \<Rightarrow> state_element set \<Rightarrow> bool"
+where
+"action act s == s = {ContractActionElm act}"
+
 (* memory8, memory, calldata, and storage should be added here *)
 
 lemma stack_sound0 :
@@ -217,7 +225,7 @@ definition instruction_result_as_set :: "constant_ctx \<Rightarrow> instruction_
     "instruction_result_as_set c rslt =
         ( case rslt of
           InstructionContinue v \<Rightarrow> {ContinuingElm True} \<union> contexts_as_set v c
-        | InstructionToEnvironment act _ _ \<Rightarrow> {ContinuingElm False} (* for now *)
+        | InstructionToEnvironment act v _ \<Rightarrow> {ContinuingElm False, ContractActionElm act} \<union> contexts_as_set v c
         | InstructionAnnotationFailure \<Rightarrow> {ContinuingElm False} (* need to assume no annotation failure somewhere *)
         )"
 
@@ -246,7 +254,7 @@ where
   "triple allowed_failures pre insts post ==
     \<forall> co_ctx presult rest stopper. no_assertion co_ctx \<longrightarrow>
        (pre ** code insts ** rest) (instruction_result_as_set co_ctx presult) \<longrightarrow>
-       (\<exists> k. 
+       (\<exists> k.
          ((post ** code insts ** rest) (instruction_result_as_set co_ctx (program_sem stopper co_ctx k presult)))
          \<or> failed_for_reasons allowed_failures (program_sem stopper co_ctx k presult))"
 
