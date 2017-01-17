@@ -36,6 +36,7 @@ datatype state_element =
   | DifficultyElm "w256"
   | GaslimitElm "w256"
   | GaspriceElm "w256"
+  | ActionElm "contract_action"
 
 abbreviation blockhash_as_elm :: "(w256 \<Rightarrow> w256) \<Rightarrow> state_element set"
 where "blockhash_as_elm f == { BlockhashElm (n, h) | n h. f n = h}"
@@ -217,7 +218,7 @@ definition instruction_result_as_set :: "constant_ctx \<Rightarrow> instruction_
     "instruction_result_as_set c rslt =
         ( case rslt of
           InstructionContinue v \<Rightarrow> {ContinuingElm True} \<union> contexts_as_set v c
-        | InstructionToEnvironment act _ _ \<Rightarrow> {ContinuingElm False} (* for now *)
+        | InstructionToEnvironment act v _ \<Rightarrow> {ContinuingElm False, ActionElm act} \<union> contexts_as_set v c
         | InstructionAnnotationFailure \<Rightarrow> {ContinuingElm False} (* need to assume no annotation failure somewhere *)
         )"
 

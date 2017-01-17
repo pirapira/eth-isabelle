@@ -15,6 +15,12 @@ begin
  
 declare insert_functional [intro]
 
+lemma continuing_not_context [simp]:
+  "ContinuingElm b \<notin> contexts_as_set x32 co_ctx"
+apply(simp add: contexts_as_set_def constant_ctx_as_set_def variable_ctx_as_set_def program_as_set_def stack_as_set_def
+data_sent_as_set_def)
+done
+
 lemma arith_inst_size_one [simp]:
   "inst_size (Arith a) = 1"
 apply(simp add: inst_size_def inst_code.simps)
