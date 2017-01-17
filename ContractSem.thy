@@ -222,7 +222,8 @@ text {* The following lemmata regulates the Isabelle simplifier so that the defi
 update\_account\_state is only sometimes expanded.  *}
 
 lemma update_account_state_None [simp] :
-"update_account_state prev act st bal v None =
+"update_account_state prev act bal v None =
+   (let st = ((case  act of ContractFail _ =>(vctx_storage_at_call v) | _ =>(vctx_storage v) )) in
    (prev \<lparr>
      account_storage := st,
      account_balance :=
@@ -231,12 +232,13 @@ lemma update_account_state_None [simp] :
      account_ongoing_calls := account_ongoing_calls prev,
      account_killed :=
        (case act of ContractSuicide \<Rightarrow> True
-                  | _ \<Rightarrow> account_killed prev) \<rparr>)"
+                  | _ \<Rightarrow> account_killed prev) \<rparr>))"
 apply(case_tac act; simp add: update_account_state_def)
 done
 
 lemma update_account_state_Some [simp] :
-"update_account_state prev act st bal v (Some pushed) =
+"update_account_state prev act bal v (Some pushed) =
+   (let st = ((case  act of ContractFail _ =>(vctx_storage_at_call v) | _ =>(vctx_storage v) )) in
    (prev \<lparr>
      account_storage := st,
      account_balance :=
@@ -245,7 +247,7 @@ lemma update_account_state_Some [simp] :
      account_ongoing_calls := (v, pushed) # account_ongoing_calls prev,
      account_killed :=
        (case act of ContractSuicide \<Rightarrow> True
-                  | _ \<Rightarrow> account_killed prev)\<rparr>)"
+                  | _ \<Rightarrow> account_killed prev)\<rparr>))"
 apply(case_tac act; simp add: update_account_state_def)
 done
 
@@ -355,7 +357,7 @@ declare inst_size_def [simp]
 | ProgramInit of call_env
 *)
 
-lemma program_sem_to_environment [simp]: "program_sem k con n (InstructionToEnvironment a b c d e f) = InstructionToEnvironment a b c d e f"
+lemma program_sem_to_environment [simp]: "program_sem k con n (InstructionToEnvironment a b c d e) = InstructionToEnvironment a b c d e"
 apply(induct_tac n; auto)
 done
 

@@ -115,22 +115,22 @@ let test_one_case j : testResult =
   | InstructionContinue _ ->
      let () = Printf.printf "InstructionContinue\n" in
      TestFailure
-  | InstructionToEnvironment (ContractCall carg, st, bal, touched, v, pushed_opt) ->
+  | InstructionToEnvironment (ContractCall carg, bal, touched, v, pushed_opt) ->
      let () = Printf.eprintf "We are not looking whatever happens after the contract calls\n" in
      TestSkipped
-  | InstructionToEnvironment (ContractDelegateCall carg, st, bal, touched, v, pushed_opt) ->
+  | InstructionToEnvironment (ContractDelegateCall carg, bal, touched, v, pushed_opt) ->
      let () = Printf.eprintf "We are not looking whatever happens after the contract calls\n" in
      TestSkipped
-  | InstructionToEnvironment (ContractCreate carg, st, bal, touched, v, pushed_opt) ->
+  | InstructionToEnvironment (ContractCreate carg, bal, touched, v, pushed_opt) ->
      let () = Printf.eprintf "We are not looking whatever happens after the contract creates" in
      TestSkipped
-  | InstructionToEnvironment (ContractFail _, st, bal, touched, v, pushed_opt) ->
+  | InstructionToEnvironment (ContractFail _, bal, touched, v, pushed_opt) ->
      begin
        match test_case.callcreates, test_case.gas, test_case.logs, test_case.out, test_case.post with
        | [], None, None, None, None -> TestSuccess
        | _ -> failwith "some postconditions are there for a failing case"
      end
-  | InstructionToEnvironment (ContractSuicide, st, bal, touched, v, pushed_opt) ->
+  | InstructionToEnvironment (ContractSuicide, bal, touched, v, pushed_opt) ->
      begin
        match test_case.callcreates, test_case.gas, test_case.logs, test_case.out, test_case.post with
        | spec_created, Some spec_gas, Some spec_logs, Some spec_out, Some spec_post ->
@@ -138,19 +138,19 @@ let test_one_case j : testResult =
           TestSuccess
        | _ -> failwith "Some post conditions not available"
      end
-  | InstructionToEnvironment (ContractReturn retval, st, bal, touched, v, None) ->
+  | InstructionToEnvironment (ContractReturn retval, bal, touched, v, None) ->
      begin
        match test_case.callcreates, test_case.gas, test_case.logs, test_case.out, test_case.post with
        | spec_created, Some spec_gas, Some spec_logs, Some spec_out, Some spec_post ->
           let got_retval : string = hex_string_of_byte_list "0x" retval in
           if (got_retval <> spec_out) then TestFailure
-          else if not (storage_comparison (Conv.word160_of_big_int test_case.exec.address) spec_post touched st) then TestFailure
+          else if not (storage_comparison (Conv.word160_of_big_int test_case.exec.address) spec_post touched v.vctx_storage) then TestFailure
           else if not (balance_comparison (Conv.word160_of_big_int test_case.exec.address) spec_post bal) then TestFailure
           else if not (log_comparison v.vctx_logs spec_logs) then TestFailure
           else TestSuccess
        | _ -> failwith "Some post conditions not available"
      end
-  | InstructionToEnvironment (ContractReturn retval, st, bal, touched, v, Some _) ->
+  | InstructionToEnvironment (ContractReturn retval, bal, touched, v, Some _) ->
      let () = Printf.printf "unexpected return format\n" in
      TestFailure
   | InstructionAnnotationFailure ->

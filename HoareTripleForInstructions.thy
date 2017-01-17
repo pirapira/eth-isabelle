@@ -704,9 +704,8 @@ apply(clarify)
 apply(rule_tac x = "1" in exI)
 apply(case_tac presult; simp)
 apply(auto simp add: program_sem.simps vctx_next_instruction_def instruction_sem_def check_resources_def
-      inst_stack_numbers.simps arith_inst_numbers.simps predict_gas_def C_def Cmem_def
-      Gmemory_def new_memory_consumption.simps thirdComponentOfC.simps
-      vctx_next_instruction_default_def pop_def subtract_gas.simps stack_inst_numbers.simps
+      stack_inst_numbers.simps
+      pop_def
       instruction_result_as_set_def
       )
 apply(auto simp add: stack_as_set_def)
