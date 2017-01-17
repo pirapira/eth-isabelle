@@ -217,7 +217,7 @@ definition instruction_result_as_set :: "constant_ctx \<Rightarrow> instruction_
     "instruction_result_as_set c rslt =
         ( case rslt of
           InstructionContinue v \<Rightarrow> {ContinuingElm True} \<union> contexts_as_set v c
-        | InstructionToEnvironment act _ _ _ \<Rightarrow> {ContinuingElm False} (* for now *)
+        | InstructionToEnvironment act _ _ \<Rightarrow> {ContinuingElm False} (* for now *)
         | InstructionAnnotationFailure \<Rightarrow> {ContinuingElm False} (* need to assume no annotation failure somewhere *)
         )"
 
@@ -236,8 +236,8 @@ definition no_assertion :: "constant_ctx \<Rightarrow> bool"
 definition failed_for_reasons :: "failure_reason set \<Rightarrow> instruction_result \<Rightarrow> bool"
 where
 "failed_for_reasons allowed r =
- (\<exists> reasons a b c. 
-              r = InstructionToEnvironment (ContractFail reasons) a b c
+ (\<exists> reasons a b. 
+              r = InstructionToEnvironment (ContractFail reasons) a b
               \<and> set reasons \<subseteq> allowed)"
 
 definition triple ::
