@@ -123,27 +123,27 @@ text "Next we specify which program results might see a return."
 fun returnable_result :: "instruction_result \<Rightarrow> bool"
 where
   "returnable_result (InstructionContinue _) = False"
-| "returnable_result (InstructionToEnvironment (ContractCall _) _ _ _ _ _ _) = True"
-| "returnable_result (InstructionToEnvironment (ContractDelegateCall _) _ _ _ _ _ _) = False"
-| "returnable_result (InstructionToEnvironment (ContractCreate _) _ _ _ _ _ _) = True"
-| "returnable_result (InstructionToEnvironment ContractSuicide _ _ _ _ _ _) = False"
-| "returnable_result (InstructionToEnvironment (ContractFail _) _ _ _ _ _ _) = False"
+| "returnable_result (InstructionToEnvironment (ContractCall _) _ _ _ _ _) = True"
+| "returnable_result (InstructionToEnvironment (ContractDelegateCall _) _ _ _ _ _) = False"
+| "returnable_result (InstructionToEnvironment (ContractCreate _) _ _ _ _ _) = True"
+| "returnable_result (InstructionToEnvironment ContractSuicide _ _ _ _ _) = False"
+| "returnable_result (InstructionToEnvironment (ContractFail _) _ _ _ _ _) = False"
 -- {* because we are not modeling nested calls here, the effect of the nested calls are modeled in
       account\_state\_return\_change *}
-| "returnable_result (InstructionToEnvironment (ContractReturn _) _ _ _ _ _ _) = False"
+| "returnable_result (InstructionToEnvironment (ContractReturn _) _ _ _ _ _) = False"
 | "returnable_result InstructionAnnotationFailure = False"
 
 fun returnable_from_delegate_call :: "instruction_result \<Rightarrow> bool"
 where
   "returnable_from_delegate_call (InstructionContinue _) = False"
-| "returnable_from_delegate_call (InstructionToEnvironment (ContractCall _) _ _ _ _ _ _) = False"
-| "returnable_from_delegate_call (InstructionToEnvironment (ContractDelegateCall _) _ _ _ _ _ _) = True"
-| "returnable_from_delegate_call (InstructionToEnvironment (ContractCreate _) _ _ _ _ _ _) = False"
-| "returnable_from_delegate_call (InstructionToEnvironment ContractSuicide _ _ _ _ _ _) = False"
-| "returnable_from_delegate_call (InstructionToEnvironment (ContractFail _) _ _ _ _ _ _) = False"
+| "returnable_from_delegate_call (InstructionToEnvironment (ContractCall _) _ _ _ _ _) = False"
+| "returnable_from_delegate_call (InstructionToEnvironment (ContractDelegateCall _) _ _ _ _ _) = True"
+| "returnable_from_delegate_call (InstructionToEnvironment (ContractCreate _) _ _ _ _ _) = False"
+| "returnable_from_delegate_call (InstructionToEnvironment ContractSuicide _ _ _ _ _) = False"
+| "returnable_from_delegate_call (InstructionToEnvironment (ContractFail _) _ _ _ _ _) = False"
 -- {* because we are not modeling nested calls here, the effect of the nested calls are modeled in
       account\_state\_return\_change *}
-| "returnable_from_delegate_call (InstructionToEnvironment (ContractReturn _) _ _ _ _ _ _) = False"
+| "returnable_from_delegate_call (InstructionToEnvironment (ContractReturn _) _ _ _ _ _) = False"
 | "returnable_from_delegate_call InstructionAnnotationFailure = False"
 
 subsection {* A Round of the Game *}
@@ -226,7 +226,7 @@ where
 
    (* if the program behaves like this, *)
    program_sem k cctx steps (InstructionContinue old_vctx)
-      = InstructionToEnvironment act st bal touched logs v opt_v \<Longrightarrow>
+      = InstructionToEnvironment act st bal touched v opt_v \<Longrightarrow>
 
    (* and if the account state is updated from the program's result, *)
    account_state_going_out
@@ -234,7 +234,7 @@ where
 
    (* the contract makes a move and udates the account state. *)
    contract_turn (old_account, old_vctx)
-      (account_state_going_out, Execution (InstructionToEnvironment act st bal touched logs v opt_v))"
+      (account_state_going_out, Execution (InstructionToEnvironment act st bal touched v opt_v))"
 
 | contract_annotation_failure:
   "(* If a constant environment is built from the old account state, *)  
@@ -279,8 +279,8 @@ Actually the rounds can go nowhere after this invocation fails.
 *}
 lemma no_entry_fail [dest!]:
 "star (one_round I)
-      (a, Execution (InstructionToEnvironment (ContractFail x) st bal touched logs v v_opt))
-      (b, c) \<Longrightarrow> b = a \<and> c = Execution (InstructionToEnvironment (ContractFail x) st bal touched logs v v_opt)"
+      (a, Execution (InstructionToEnvironment (ContractFail x) st bal touched v v_opt))
+      (b, c) \<Longrightarrow> b = a \<and> c = Execution (InstructionToEnvironment (ContractFail x) st bal touched v v_opt)"
 apply(drule star_case; simp)
 apply(simp add: one_round.simps add: environment_turn.simps)
 done
@@ -288,8 +288,8 @@ done
 text {* Similarly, the rounds can go nowhere after this invocation returns. *}
 lemma no_entry_return [dest!]:
 "star (one_round I)
-      (a, Execution (InstructionToEnvironment (ContractReturn data) st bal touched logs v v_opt))
-      (b, c) \<Longrightarrow> b = a \<and> c = Execution (InstructionToEnvironment (ContractReturn data) st bal touched logs v v_opt)"
+      (a, Execution (InstructionToEnvironment (ContractReturn data) st bal touched v v_opt))
+      (b, c) \<Longrightarrow> b = a \<and> c = Execution (InstructionToEnvironment (ContractReturn data) st bal touched v v_opt)"
 apply(drule star_case; simp)
 apply(simp add: one_round.simps add: environment_turn.simps)
 done
@@ -299,8 +299,8 @@ causes our contract to destroy itself.
 *}
 lemma no_entry_suicide [dest!]:
 "star (one_round I)
-      (a, Execution (InstructionToEnvironment ContractSuicide st bal touched logs v v_opt))
-      (b, c) \<Longrightarrow> b = a \<and> c = Execution (InstructionToEnvironment ContractSuicide st bal touched logs v v_opt)"
+      (a, Execution (InstructionToEnvironment ContractSuicide st bal touched v v_opt))
+      (b, c) \<Longrightarrow> b = a \<and> c = Execution (InstructionToEnvironment ContractSuicide st bal touched v v_opt)"
 apply(drule star_case; simp)
 apply(simp add: one_round.simps add: environment_turn.simps)
 done
@@ -343,7 +343,7 @@ where
 
 lemma no_assertion_failure_in_fail [simp] :
 "I state \<Longrightarrow>
- no_assertion_failure_post I (state, Execution (InstructionToEnvironment (ContractFail x) st bal touched logs v v_opt))"
+ no_assertion_failure_post I (state, Execution (InstructionToEnvironment (ContractFail x) st bal touched v v_opt))"
 apply(simp add: no_assertion_failure_post_def)
 done
 
