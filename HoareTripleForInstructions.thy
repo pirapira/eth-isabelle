@@ -139,11 +139,11 @@ apply(auto simp add: variable_ctx_as_set_def stack_as_set_def ext_program_as_set
 done
 
 lemma code_element_means [simp] :
-  "(CodeElm (x, y) \<in> constant_ctx_as_set c) = 
-   (program_content (cctx_program c) x = Some y \<or>
-    program_content (cctx_program c) x = None \<and>
-    y = Misc STOP)"
-apply(auto simp add: constant_ctx_as_set_def program_as_set_def)
+  "(CodeElm xy \<in> constant_ctx_as_set c) = 
+   (program_content (cctx_program c) (fst xy) = Some (snd xy) \<or>
+    program_content (cctx_program c) (fst xy) = None \<and>
+    (snd xy) = Misc STOP)"
+apply(case_tac xy; auto simp add: constant_ctx_as_set_def program_as_set_def)
 done
 
 lemma origin_element_means [simp] :
@@ -355,194 +355,10 @@ lemma caller_sep [simp]:
 apply(auto simp add: caller_def sep_def)
 done
 
-
-(****** specifying each instruction *******)
-
-declare predict_gas_def [simp]
-        C_def [simp] Cmem_def [simp]
-        Gmemory_def [simp]
-        new_memory_consumption.simps [simp]
-        thirdComponentOfC.simps [simp]
-        subtract_gas.simps [simp]
-        vctx_next_instruction_default_def [simp]
-        stack_2_1_op_def [simp]
-        inst_stack_numbers.simps [simp]
-        arith_inst_numbers.simps [simp]
-
-lemma eq0 [simp]: "
-       vctx_stack x1 = v # w # ta \<Longrightarrow>
-program_content (cctx_program co_ctx) (vctx_pc x1) = Some (Arith inst_EQ) \<Longrightarrow>
-(insert (ContinuingElm True)
-              (contexts_as_set (vctx_advance_pc co_ctx x1\<lparr>vctx_stack := r # ta, vctx_gas := vctx_gas x1 - Gverylow\<rparr>) co_ctx) -
-             {StackHeightElm (Suc (length ta))} -
-             {StackElm (length ta, r)} -
-             {PcElm (vctx_pc x1 + 1)} -
-             {GasElm (vctx_gas x1 - Gverylow)} -
-             {ContinuingElm True} -
-             {CodeElm (vctx_pc x1, Arith inst_EQ)}) =
-(insert (ContinuingElm True) (contexts_as_set x1 co_ctx) - {StackHeightElm (Suc (Suc (length ta)))} -
-             {StackElm (Suc (length ta), v)} -
-             {StackElm (length ta, w)} -
-             {PcElm (vctx_pc x1)} -
-             {GasElm (vctx_gas x1)} -
-             {ContinuingElm True} -
-             {CodeElm (vctx_pc x1, Arith inst_EQ)})
-"
-apply(auto simp add: contexts_as_set_def vctx_advance_pc_def vctx_next_instruction_def)
- apply(rename_tac elm)
- apply(case_tac elm; auto)
- apply(auto simp add: variable_ctx_as_set_def stack_as_set_def) (* takes too much time *)
- apply(case_tac "idx = Suc (length ta)"; simp)
-apply(case_tac "idx = length ta"; simp)
-done
-
-lemma eq_gas_triple :
-  "triple {OutOfGas}  ( \<langle> h \<le> 1023 \<rangle> **
-                        stack_height (h + 2) **
-                        stack (h + 1) v **
-                        stack h w **
-                        program_counter k **
-                        gas_pred g **
-                        continuing
-                      )
-                      {(k, Arith inst_EQ)}
-                      ( stack_height (h + 1) **
-                        stack h (if v = w then((word_of_int 1) ::  256 word) else((word_of_int 0) ::  256 word)) **
-                        program_counter (k + 1) **
-                        gas_pred (g - Gverylow) **
-                        continuing )"
-apply(auto simp add: triple_def)
- apply(rule_tac x = 1 in exI)
- apply(case_tac presult; auto simp add: program_sem.simps failed_for_reasons_def vctx_next_instruction_def
-       instruction_result_as_set_def instruction_sem_def) (* takes too much time *)
-apply(rule_tac x = 1 in exI)
-apply(case_tac presult; auto simp add: program_sem.simps failed_for_reasons_def vctx_next_instruction_def
-      instruction_result_as_set_def instruction_sem_def)
-done
-
-lemma tmp1 [simp]: 
-  "program_content (cctx_program co_ctx) (vctx_pc x1) = Some (Arith ADD) \<Longrightarrow>
-   vctx_stack x1 = v # w # ta \<Longrightarrow>
-   (insert (ContinuingElm True)
-              (contexts_as_set
-                (vctx_advance_pc co_ctx x1
-                 \<lparr>vctx_stack := (v + w) # ta, vctx_gas := vctx_gas x1 - Gverylow\<rparr>)
-                co_ctx) -
-             {StackHeightElm (Suc (length ta))} -
-             {StackElm (length ta, v + w)} -
-             {PcElm (vctx_pc x1 + 1)} -
-             {GasElm (vctx_gas x1 - Gverylow)} -
-             {ContinuingElm True} -
-             {CodeElm (vctx_pc x1, Arith ADD)}) =
-  (insert (ContinuingElm True) (contexts_as_set x1 co_ctx) -
-             {StackHeightElm (Suc (Suc (length ta)))} -
-             {StackElm (Suc (length ta), v)} -
-             {StackElm (length ta, w)} -
-             {PcElm (vctx_pc x1)} -
-             {GasElm (vctx_gas x1)} -
-             {ContinuingElm True} -
-             {CodeElm (vctx_pc x1, Arith ADD)})"
-apply(auto simp add: contexts_as_set_def Set.Un_Diff)
- apply(rename_tac elm)
- apply(case_tac elm; auto simp add: variable_ctx_as_set_def  vctx_advance_pc_def stack_as_set_def vctx_next_instruction_def)
-apply(rename_tac elm)
-apply(case_tac elm; auto simp add: variable_ctx_as_set_def  vctx_advance_pc_def stack_as_set_def vctx_next_instruction_def)
- apply(case_tac "idx < length ta"; auto)
- apply(case_tac "idx = length ta"; auto)
-apply(case_tac "idx < length ta"; auto)
-apply(case_tac "idx = length ta"; auto)
-done
-
-lemma add_triple :
-   "triple {}
-           (\<langle> h \<le> 1023 \<and> g \<ge> Gverylow \<rangle> **
-            stack_height (h + 2) **
-            stack (h + 1) v **
-            stack h w **
-            program_counter k **
-            gas_pred g **
-            continuing
-           )
-           {(k, Arith ADD)}
-           (stack_height (h + 1) **
-            stack h (v + w) **
-            program_counter (k + 1) **
-            gas_pred (g - Gverylow) **
-            continuing
-           )"
-apply(simp add: triple_def)
-apply(clarify)
-apply(rule_tac x = "1" in exI)
-apply(case_tac presult; auto simp add: program_sem.simps vctx_next_instruction_def instruction_sem_def check_resources_def
-      instruction_result_as_set_def)
-done
-
-lemma add_gas_triple : 
-   "triple {OutOfGas} 
-      (\<langle> h \<le> 1023\<rangle> **
-       stack_height (h + 2) **
-       stack (h + 1) v **
-       stack h w **
-       program_counter k **
-       gas_pred g **
-       continuing
-      )
-
-      {(k, Arith ADD)}
-
-      (stack_height (h + 1) **
-       stack h (v + w) **
-       program_counter (k + 1) **
-       gas_pred (g - Gverylow) **
-       continuing
-      )"
-apply(simp add: triple_def)
-apply(clarify)
-apply(rule_tac x = "1" in exI)
-apply(case_tac presult; auto simp add: program_sem.simps vctx_next_instruction_def instruction_sem_def check_resources_def
-      instruction_result_as_set_def)
-apply(simp add: failed_for_reasons_def)
-done
-
-
-
-lemma add_instance : "triple {} (\<langle> (h + 1) \<le> 1023 \<and> g \<ge> Gverylow \<rangle> **
-                            stack_height ((h + 1) + 2) **
-                            stack ((h + 1) + 1) x **
-                            stack (h + 1) v **
-                            program_counter k **
-                            gas_pred g **
-                            continuing
-                           )
-                           ({(k, Arith ADD)})
-                           (stack_height ((h + 1) + 1) **
-                            stack (h + 1) (x + v) **
-                            program_counter (k + 1) **
-                            gas_pred (g - Gverylow) **
-                            continuing
-                            )"
-apply(rule add_triple)
-done
-
-lemma add_extended : "triple {} ((\<langle> (h + 1) \<le> 1023 \<and> g \<ge> Gverylow \<rangle> **
-                            stack_height ((h + 1) + 2) **
-                            stack ((h + 1) + 1) x **
-                            stack (h + 1) v **
-                            program_counter k **
-                            gas_pred g **
-                            continuing)
-                            ** stack h w
-                           )
-                           ({(k, Arith ADD)})
-                           ((stack_height ((h + 1) + 1) **
-                            stack (h + 1) (x + v) **
-                            program_counter (k + 1) **
-                            gas_pred (g - Gverylow) **
-                            continuing)
-                            ** stack h w
-                            )"
-apply(rule frame)
-apply(rule add_instance)
+lemma balance_sep [simp] :
+  "(balance a b ** rest) s =
+   (BalanceElm (a, b) \<in> s \<and> rest (s - {BalanceElm (a, b)}))"
+apply(auto simp add: balance_def sep_def)
 done
 
 lemma pred_equiv_R_assoc [simp] :
@@ -579,42 +395,6 @@ lemma pred_equiv_R_comm :
 apply(simp add: pred_equiv_def)
 (* sledgehammer *)
 	by (simp add: pred_equiv_sep_comm pred_equiv_sound)
-
-
-lemma addadd_triple :
-  "triple {} (\<langle> h \<le> 1022 \<and> g \<ge> 2 * Gverylow \<rangle> **
-              stack_height (Suc (Suc (Suc h))) **
-              stack (h + 2) x **
-              stack (h + 1) v **
-              stack h w **
-              program_counter k **
-              gas_pred g **
-              continuing
-             )
-             ({(k, Arith ADD)} \<union> {(k + 1, Arith ADD)})
-             (stack_height (h + 1) **
-              stack h (x + v + w) **
-              program_counter (2 + k) **
-              gas_pred (g - 2 * Gverylow) **
-              continuing
-             )"
-(* here the pure condition should be moved out *)
-apply(auto)
-apply(rule_tac cL = "{(k, Arith ADD)}" and cR = "{(k + 1, Arith ADD)}" in composition)
-  apply(simp)
-  apply(rule_tac r = "stack h w" in frame_backward)
-   apply(rule_tac h = "h + 1" and g = g and v = x and w = v and k = k in add_triple)
-  apply(simp)
-  apply(rule pred_equiv_R_pure)
-   apply (simp add: Gverylow_def)
-  using pred_equiv_sep_comm pred_equiv_R_assoc apply blast
- defer
- apply(rule postW)
- apply(rule_tac h = h and v = "x + v" and w = w and k = "k + 1" and g = "g - Gverylow" in add_triple)
- apply(auto)
-apply(rule pred_equiv_L_pure)
- apply(simp)
-using pred_equiv_sep_comm pred_equiv_R_assoc by blast
 
 
 lemma saying_zero [simp] :
@@ -672,56 +452,6 @@ lemma code_not_stack [simp] :
 apply(simp add: stack_as_set_def)
 done
 
-lemma pop1 [simp] :
-"
-vctx_stack x1 = v # t \<Longrightarrow>
-(insert (GasElm (vctx_gas x1 - Gbase))
-              (insert (ContinuingElm True)
-                (insert (StackHeightElm (length t))
-                  (insert (PcElm (vctx_pc x1 + 1)) (contexts_as_set x1 co_ctx) - {PcElm (vctx_pc x1)} -
-                   insert (StackHeightElm (Suc (length t))) {StackElm (idx, (rev t @ [v]) ! idx) |idx. idx < Suc (length t)} \<union>
-                   {StackElm (idx, rev t ! idx) |idx. idx < length t}) -
-                 {GasElm (vctx_gas x1)})) -
-             {StackHeightElm (length t)} -
-             {PcElm (vctx_pc x1 + 1)} -
-             {GasElm (vctx_gas x1 - Gbase)} -
-             {ContinuingElm True} -
-             {CodeElm (vctx_pc x1, Stack POP)}) =
- (insert (ContinuingElm True) (contexts_as_set x1 co_ctx) - {StackHeightElm (Suc (length t))} -
-             {StackElm (length t, v)} -
-             {PcElm (vctx_pc x1)} -
-             {GasElm (vctx_gas x1)} -
-             {ContinuingElm True} -
-             {CodeElm (vctx_pc x1, Stack POP)})
-"
-apply(auto)
-done
-
-lemma pop_triple : "triple {} (\<langle> h \<le> 1024 \<and> g \<ge> Gbase \<rangle> **
-                            stack_height (h + 1) **
-                            stack h v **
-                            program_counter k **
-                            gas_pred g **
-                            continuing
-                           )
-                           {(k, Stack POP)}
-                           (stack_height h **
-                            program_counter (k + 1) **
-                            gas_pred (g - Gbase) **
-                            continuing
-                            )"
-apply(simp add: triple_def)
-apply(clarify)
-apply(rule_tac x = "1" in exI)
-apply(case_tac presult; simp)
-apply(auto simp add: program_sem.simps vctx_next_instruction_def instruction_sem_def check_resources_def
-      stack_inst_numbers.simps
-      pop_def
-      instruction_result_as_set_def
-      )
-apply(auto simp add: stack_as_set_def)
-done
-
 lemma action_not_context [simp]:
   "ContractActionElm a \<notin> contexts_as_set x1 co_ctx"
 apply(simp add: contexts_as_set_def constant_ctx_as_set_def variable_ctx_as_set_def stack_as_set_def
@@ -731,38 +461,6 @@ done
 lemma failed_is_failed [simp]:
    "failed_for_reasons {OutOfGas} (InstructionToEnvironment (ContractFail [OutOfGas]) a b)"
 apply(simp add: failed_for_reasons_def)
-done
-
-lemma stop_gas_triple:
-  "triple {OutOfGas}
-          (\<langle> h \<le> 1024 \<rangle> ** stack_height h ** program_counter k ** continuing)
-          {(k, Misc STOP)}
-          (stack_height h ** program_counter k ** not_continuing ** action (ContractReturn []))"
-apply(simp add: triple_def)
-apply(clarify)
-apply(rule_tac x = "1" in exI)
-apply(case_tac presult; simp)
-apply(auto simp add: program_sem.simps vctx_next_instruction_def instruction_sem_def check_resources_def
-      stack_inst_numbers.simps
-      pop_def stop_def Gzero_def not_continuing_def action_def
-      instruction_result_as_set_def misc_inst_numbers.simps
-      stack_as_set_def ext_program_as_set_def)
- apply(auto simp add: sep_def not_continuing_def action_def ext_program_as_set_def)
- apply(rule_tac x = "(insert (ContractActionElm (ContractReturn [])) (contexts_as_set x1 co_ctx)) -
-           {StackHeightElm (length (vctx_stack x1))} -
-           {PcElm (vctx_pc x1)}" in exI)
- apply(auto)
- apply(rule_tac x = "(contexts_as_set x1 co_ctx) - {StackHeightElm (length (vctx_stack x1))} -
-           {PcElm (vctx_pc x1)}" in exI)
- apply(auto simp add: code_def ext_program_as_set_def)
-apply(rule_tac x = "(insert (ContractActionElm (ContractReturn [])) (contexts_as_set x1 co_ctx)) -
-           {StackHeightElm (length (vctx_stack x1))} -
-           {PcElm (vctx_pc x1)}" in exI)
-apply(auto simp add: failed_for_reasons_def)
-apply(rule_tac x = "(contexts_as_set x1 co_ctx) -
-           {StackHeightElm (length (vctx_stack x1))} -
-           {PcElm (vctx_pc x1)}" in exI)
-apply(auto)
 done
 
 lemma stack_height_increment [simp]:
@@ -1069,6 +767,529 @@ lemma balance_not_stack [simp]:
 apply(simp add: stack_as_set_def)
 done
 
+lemma code_elm_means [simp]:
+  "CodeElm xy \<in> instruction_result_as_set c (InstructionContinue x1) =
+(program_content (cctx_program c) (fst xy) = Some (snd xy) \<or>
+    program_content (cctx_program c) (fst xy) = None \<and>
+    (snd xy) = Misc STOP)
+"
+apply(auto simp add: instruction_result_as_set_def contexts_as_set_def)
+done
+
+lemma pc_elm_means [simp]:
+   "PcElm k \<in> instruction_result_as_set co_ctx (InstructionContinue x1) =
+    (k = vctx_pc x1)"
+apply(auto simp add: instruction_result_as_set_def)
+done
+
+lemma block_number_pred_sep [simp] :
+  "(block_number_pred bn ** rest) s =
+   ((BlockNumberElm bn \<in> s) \<and> rest (s - {BlockNumberElm bn}))"
+apply(auto simp add: sep_def block_number_pred_def)
+done
+
+lemma block_number_elm_not_constant [simp] :
+  "BlockNumberElm bn \<notin> constant_ctx_as_set co_ctx"
+apply(simp add: constant_ctx_as_set_def program_as_set_def)
+done
+
+lemma block_number_elm_in_v_means [simp] :
+  "BlockNumberElm bn \<in> variable_ctx_as_set v
+   = ( bn = block_number (vctx_block v) )"
+apply(simp add: variable_ctx_as_set_def stack_as_set_def ext_program_as_set_def)
+done
+
+lemma block_number_elm_means [simp] :
+  "BlockNumberElm bn \<in> instruction_result_as_set co_ctx (InstructionContinue v)
+   = ( bn = block_number (vctx_block v) )"
+apply(simp add: instruction_result_as_set_def contexts_as_set_def)
+done
+
+lemma stack_heigh_elm_means [simp] :
+  "StackHeightElm h \<in> instruction_result_as_set co_ctx (InstructionContinue x1)
+  = (length (vctx_stack x1) = h)"
+apply(auto simp add: instruction_result_as_set_def)
+done
+
+lemma stack_elm_means [simp] :
+  "StackElm ha \<in> instruction_result_as_set co_ctx (InstructionContinue v) =
+  (fst ha < length (vctx_stack v) \<and> rev (vctx_stack v) ! fst ha = snd ha)"
+apply(auto simp add: instruction_result_as_set_def contexts_as_set_def)
+done
+
+lemma balance_not_constant [simp] :
+  "BalanceElm ab \<notin> constant_ctx_as_set co_ctx"
+apply(simp add: constant_ctx_as_set_def program_as_set_def)
+done
+
+lemma balance_elm_i_means [simp] :
+  "BalanceElm ab \<in> instruction_result_as_set co_ctx (InstructionContinue x1) =
+     (vctx_balance x1 (fst ab) = (snd ab))
+  "
+apply(simp add: instruction_result_as_set_def contexts_as_set_def)
+done
+
+lemma gas_elm_i_means [simp] :
+  "GasElm g \<in> instruction_result_as_set co_ctx (InstructionContinue x1) =
+  (vctx_gas x1 = g)"
+apply(simp add: instruction_result_as_set_def)
+done
+
+lemma continuing_continuing [simp] :
+  "ContinuingElm True \<in> instruction_result_as_set co_ctx (InstructionContinue x1)"
+apply(simp add: instruction_result_as_set_def)
+done
+
+lemma origin_not_stack [simp] :
+   "OriginElm x13 \<notin> stack_as_set lst"
+apply(simp add: stack_as_set_def)
+done
+
+lemma sent_value_not_stack [simp] :
+ "SentValueElm x14 \<notin> stack_as_set lst"
+apply(simp add: stack_as_set_def)
+done
+
+lemma sent_data_length_not_stack [simp] :
+  "SentDataLengthElm x15 \<notin> stack_as_set lst"
+apply(simp add: stack_as_set_def)
+done
+
+lemma ext_program_not_stack [simp] :
+  "ExtProgramElm a \<notin> stack_as_set lst"
+apply(simp add: stack_as_set_def)
+done
+
+lemma sent_data_not_stack [simp] :
+"SentDataElm ab \<notin> stack_as_set lst"
+apply(simp add: stack_as_set_def)
+done
+
+lemma contract_action_elm_not_stack [simp] :
+ "ContractActionElm x19 \<notin> stack_as_set lst"
+apply(simp add: stack_as_set_def)
+done
+
+lemma block_number_elm_c_means [simp] :
+"BlockNumberElm x22 \<in> contexts_as_set x1 co_ctx =
+ (x22 = block_number (vctx_block x1))"
+apply(simp add: contexts_as_set_def)
+done
+
+
+lemma balance0 [simp] :
+"length list = h \<Longrightarrow>
+vctx_stack x1 = a # list \<Longrightarrow>
+vctx_gas x1 = g \<Longrightarrow>
+program_content (cctx_program co_ctx) (vctx_pc x1) = Some (Info BALANCE) \<Longrightarrow>
+(instruction_result_as_set co_ctx
+              (InstructionContinue (vctx_advance_pc co_ctx x1\<lparr>vctx_stack := b # list, vctx_gas := g - 400\<rparr>)) -
+             {BlockNumberElm (block_number (vctx_block x1))} -
+             {StackHeightElm (Suc h)} -
+             {StackElm (h, b)} -
+             {PcElm (vctx_pc x1 + 1)} -
+             {BalanceElm (ucast a, b)} -
+             {GasElm (g - 400)} -
+             {ContinuingElm True} -
+             {CodeElm (vctx_pc x1, Info BALANCE)})
+=
+(instruction_result_as_set co_ctx (InstructionContinue x1) - {BlockNumberElm (block_number (vctx_block x1))} -
+             {StackHeightElm (Suc h)} -
+             {StackElm (h, a)} -
+             {PcElm (vctx_pc x1)} -
+             {BalanceElm (ucast a, b)} -
+             {GasElm g} -
+             {ContinuingElm True} -
+             {CodeElm (vctx_pc x1, Info BALANCE)})"
+apply(auto)
+ apply(rename_tac elm; case_tac elm; auto simp add: instruction_result_as_set_def stack_as_set_def)
+apply(rename_tac elm; case_tac elm; auto simp add: instruction_result_as_set_def stack_as_set_def)
+done
+
+lemma ext_program_size_elm_not_stack [simp] :
+"ExtProgramSizeElm ab \<notin> stack_as_set (1 # ta)"
+apply(simp add: stack_as_set_def)
+done
+
+lemma continuing_not_stack [simp] :
+"ContinuingElm b \<notin> stack_as_set lst"
+apply(simp add: stack_as_set_def)
+done
+
+lemma block_hash_not_stack [simp] :
+"BlockhashElm ab \<notin> stack_as_set s"
+apply(simp add: stack_as_set_def)
+done
+
+lemma block_number_not_stack [simp] :
+"BlockNumberElm x22 \<notin> stack_as_set s"
+apply(simp add: stack_as_set_def)
+done
+
+lemma coinbase_not_stack [simp] :
+ "CoinbaseElm x23 \<notin> stack_as_set s"
+apply(simp add: stack_as_set_def)
+done
+
+lemma timestamp_not_stack [simp] :
+  "TimestampElm x24 \<notin> stack_as_set s"
+apply(simp add: stack_as_set_def)
+done
+
+lemma difficulty_not_stack [simp] :
+ "DifficultyElm k \<notin> stack_as_set s"
+apply(simp add: stack_as_set_def)
+done
+
+lemma gaslimit_not_stack [simp] :
+ "GaslimitElm x26 \<notin> stack_as_set s"
+apply(simp add: stack_as_set_def)
+done
+
+lemma gasprice_not_stack [simp] :
+"GaspriceElm a \<notin> stack_as_set s"
+apply(simp add: stack_as_set_def)
+done
+
+lemma ext_program_size_not_stack [simp] :
+ "ExtProgramSizeElm p \<notin> stack_as_set lst"
+apply(simp add: stack_as_set_def)
+done
+
+(****** specifying each instruction *******)
+
+declare predict_gas_def [simp]
+        C_def [simp] Cmem_def [simp]
+        Gmemory_def [simp]
+        new_memory_consumption.simps [simp]
+        thirdComponentOfC.simps [simp]
+        subtract_gas.simps [simp]
+        vctx_next_instruction_default_def [simp]
+        stack_2_1_op_def [simp]
+        stack_1_1_op_def [simp]
+        inst_stack_numbers.simps [simp]
+        arith_inst_numbers.simps [simp]
+        program_sem.simps [simp]
+        vctx_next_instruction_def [simp]
+        instruction_sem_def [simp]
+        check_resources_def [simp]
+        info_inst_numbers.simps [simp]
+        Gbalance_def [simp]
+
+lemma balance_gas_triple :
+  "triple {OutOfGas}
+          (\<langle> h \<le> 1023 \<and> unat bn \<ge> 2463000\<rangle>
+           ** block_number_pred bn ** stack_height (h + 1) ** stack h a
+           ** program_counter k ** balance (ucast a) b ** gas_pred g ** continuing)
+          {(k, Info BALANCE)}
+          (block_number_pred bn ** stack_height (h + 1) ** stack h b
+           ** program_counter (k + 1) ** balance (ucast a) b ** gas_pred (g - 400) ** continuing )"
+apply(auto simp add: triple_def)
+apply(rule_tac x = 1 in exI)
+apply(simp)
+apply(case_tac presult)
+  apply(simp)
+  apply(case_tac "vctx_stack x1"; simp)
+ apply(simp add: instruction_result_as_set_def)
+apply(simp add: instruction_result_as_set_def)
+done
+
+
+lemma eq0 [simp]: "
+       vctx_stack x1 = v # w # ta \<Longrightarrow>
+program_content (cctx_program co_ctx) (vctx_pc x1) = Some (Arith inst_EQ) \<Longrightarrow>
+ (insert (GasElm (vctx_gas x1 - Gverylow))
+              (insert (ContinuingElm True)
+                (contexts_as_set (vctx_advance_pc co_ctx x1) co_ctx - stack_as_set (v # w # ta) \<union> stack_as_set (r # ta) -
+                 {GasElm (vctx_gas x1)})) -
+             {StackHeightElm (Suc (length ta))} -
+             {StackElm (length ta, r)} -
+             {PcElm (vctx_pc x1 + 1)} -
+             {GasElm (vctx_gas x1 - Gverylow)} -
+             {ContinuingElm True} -
+             {CodeElm (vctx_pc x1, Arith inst_EQ)}) =
+ (insert (ContinuingElm True) (contexts_as_set x1 co_ctx) - {StackHeightElm (Suc (Suc (length ta)))} -
+             {StackElm (Suc (length ta), v)} -
+             {StackElm (length ta, w)} -
+             {PcElm (vctx_pc x1)} -
+             {GasElm (vctx_gas x1)} -
+             {ContinuingElm True} -
+             {CodeElm (vctx_pc x1, Arith inst_EQ)})
+"
+apply(auto)
+   apply(rename_tac elm; case_tac elm; auto)
+  apply(rename_tac elm; case_tac elm; auto)
+ apply(rename_tac elm; case_tac elm; auto)
+apply(rename_tac elm; case_tac elm; auto)
+ apply(case_tac "a = Suc (length ta)"; simp)
+apply(case_tac "a = length ta"; simp)
+done
+
+lemma eq_gas_triple :
+  "triple {OutOfGas}  ( \<langle> h \<le> 1023 \<rangle> **
+                        stack_height (h + 2) **
+                        stack (h + 1) v **
+                        stack h w **
+                        program_counter k **
+                        gas_pred g **
+                        continuing
+                      )
+                      {(k, Arith inst_EQ)}
+                      ( stack_height (h + 1) **
+                        stack h (if v = w then((word_of_int 1) ::  256 word) else((word_of_int 0) ::  256 word)) **
+                        program_counter (k + 1) **
+                        gas_pred (g - Gverylow) **
+                        continuing )"
+apply(auto simp add: triple_def)
+ apply(rule_tac x = 1 in exI)
+ apply(case_tac presult; auto simp add: failed_for_reasons_def
+       instruction_result_as_set_def) (* takes too much time *)
+apply(rule_tac x = 1 in exI)
+apply(case_tac presult; auto simp add: failed_for_reasons_def
+      instruction_result_as_set_def)
+done
+
+lemma tmp1 [simp]:
+  "program_content (cctx_program co_ctx) (vctx_pc x1) = Some (Arith ADD) \<Longrightarrow>
+   vctx_stack x1 = v # w # ta \<Longrightarrow>
+   (insert (GasElm (vctx_gas x1 - Gverylow))
+              (insert (ContinuingElm True)
+                (contexts_as_set (vctx_advance_pc co_ctx x1) co_ctx - stack_as_set (v # w # ta) \<union> stack_as_set ((v + w) # ta) -
+                 {GasElm (vctx_gas x1)})) -
+             {StackHeightElm (Suc (length ta))} -
+             {StackElm (length ta, v + w)} -
+             {PcElm (vctx_pc x1 + 1)} -
+             {GasElm (vctx_gas x1 - Gverylow)} -
+             {ContinuingElm True} -
+             {CodeElm (vctx_pc x1, Arith ADD)}) =
+  (insert (ContinuingElm True) (contexts_as_set x1 co_ctx) - {StackHeightElm (Suc (Suc (length ta)))} -
+             {StackElm (Suc (length ta), v)} -
+             {StackElm (length ta, w)} -
+             {PcElm (vctx_pc x1)} -
+             {GasElm (vctx_gas x1)} -
+             {ContinuingElm True} -
+             {CodeElm (vctx_pc x1, Arith ADD)})"
+apply(auto)
+   apply(rename_tac elm; case_tac elm; auto)
+  apply(rename_tac elm; case_tac elm; auto)
+ apply(rename_tac elm; case_tac elm; auto)
+apply(rename_tac elm; case_tac elm; auto)
+ apply(rename_tac l)
+ apply(case_tac "l = length ta"; auto)
+apply(rename_tac l)
+apply(case_tac "l = length ta"; auto)
+done
+
+lemma add_triple :
+   "triple {}
+           (\<langle> h \<le> 1023 \<and> g \<ge> Gverylow \<rangle> **
+            stack_height (h + 2) **
+            stack (h + 1) v **
+            stack h w **
+            program_counter k **
+            gas_pred g **
+            continuing
+           )
+           {(k, Arith ADD)}
+           (stack_height (h + 1) **
+            stack h (v + w) **
+            program_counter (k + 1) **
+            gas_pred (g - Gverylow) **
+            continuing
+           )"
+apply(simp add: triple_def)
+apply(clarify)
+apply(rule_tac x = "1" in exI)
+apply(case_tac presult; auto simp add: instruction_result_as_set_def)
+done
+
+lemma add_gas_triple : 
+   "triple {OutOfGas} 
+      (\<langle> h \<le> 1023\<rangle> **
+       stack_height (h + 2) **
+       stack (h + 1) v **
+       stack h w **
+       program_counter k **
+       gas_pred g **
+       continuing
+      )
+
+      {(k, Arith ADD)}
+
+      (stack_height (h + 1) **
+       stack h (v + w) **
+       program_counter (k + 1) **
+       gas_pred (g - Gverylow) **
+       continuing
+      )"
+apply(simp add: triple_def)
+apply(clarify)
+apply(rule_tac x = "1" in exI)
+apply(case_tac presult; auto simp add: instruction_result_as_set_def)
+done
+
+
+
+lemma add_instance : "triple {} (\<langle> (h + 1) \<le> 1023 \<and> g \<ge> Gverylow \<rangle> **
+                            stack_height ((h + 1) + 2) **
+                            stack ((h + 1) + 1) x **
+                            stack (h + 1) v **
+                            program_counter k **
+                            gas_pred g **
+                            continuing
+                           )
+                           ({(k, Arith ADD)})
+                           (stack_height ((h + 1) + 1) **
+                            stack (h + 1) (x + v) **
+                            program_counter (k + 1) **
+                            gas_pred (g - Gverylow) **
+                            continuing
+                            )"
+apply(rule add_triple)
+done
+
+lemma add_extended : "triple {} ((\<langle> (h + 1) \<le> 1023 \<and> g \<ge> Gverylow \<rangle> **
+                            stack_height ((h + 1) + 2) **
+                            stack ((h + 1) + 1) x **
+                            stack (h + 1) v **
+                            program_counter k **
+                            gas_pred g **
+                            continuing)
+                            ** stack h w
+                           )
+                           ({(k, Arith ADD)})
+                           ((stack_height ((h + 1) + 1) **
+                            stack (h + 1) (x + v) **
+                            program_counter (k + 1) **
+                            gas_pred (g - Gverylow) **
+                            continuing)
+                            ** stack h w
+                            )"
+apply(rule frame)
+apply(rule add_instance)
+done
+
+
+lemma addadd_triple :
+  "triple {} (\<langle> h \<le> 1022 \<and> g \<ge> 2 * Gverylow \<rangle> **
+              stack_height (Suc (Suc (Suc h))) **
+              stack (h + 2) x **
+              stack (h + 1) v **
+              stack h w **
+              program_counter k **
+              gas_pred g **
+              continuing
+             )
+             ({(k, Arith ADD)} \<union> {(k + 1, Arith ADD)})
+             (stack_height (h + 1) **
+              stack h (x + v + w) **
+              program_counter (2 + k) **
+              gas_pred (g - 2 * Gverylow) **
+              continuing
+             )"
+(* here the pure condition should be moved out *)
+apply(auto)
+apply(rule_tac cL = "{(k, Arith ADD)}" and cR = "{(k + 1, Arith ADD)}" in composition)
+  apply(simp)
+  apply(rule_tac r = "stack h w" in frame_backward)
+   apply(rule_tac h = "h + 1" and g = g and v = x and w = v and k = k in add_triple)
+  apply(simp)
+  apply(rule pred_equiv_R_pure)
+   apply (simp add: Gverylow_def)
+  using pred_equiv_sep_comm pred_equiv_R_assoc apply blast
+ defer
+ apply(rule postW)
+ apply(rule_tac h = h and v = "x + v" and w = w and k = "k + 1" and g = "g - Gverylow" in add_triple)
+ apply(auto)
+apply(rule pred_equiv_L_pure)
+ apply(simp)
+using pred_equiv_sep_comm pred_equiv_R_assoc by blast
+
+
+lemma pop1 [simp] :
+"
+vctx_stack x1 = v # t \<Longrightarrow>
+(insert (GasElm (vctx_gas x1 - Gbase))
+              (insert (ContinuingElm True)
+                (insert (StackHeightElm (length t))
+                  (insert (PcElm (vctx_pc x1 + 1)) (contexts_as_set x1 co_ctx) - {PcElm (vctx_pc x1)} -
+                   insert (StackHeightElm (Suc (length t))) {StackElm (idx, (rev t @ [v]) ! idx) |idx. idx < Suc (length t)} \<union>
+                   {StackElm (idx, rev t ! idx) |idx. idx < length t}) -
+                 {GasElm (vctx_gas x1)})) -
+             {StackHeightElm (length t)} -
+             {PcElm (vctx_pc x1 + 1)} -
+             {GasElm (vctx_gas x1 - Gbase)} -
+             {ContinuingElm True} -
+             {CodeElm (vctx_pc x1, Stack POP)}) =
+ (insert (ContinuingElm True) (contexts_as_set x1 co_ctx) - {StackHeightElm (Suc (length t))} -
+             {StackElm (length t, v)} -
+             {PcElm (vctx_pc x1)} -
+             {GasElm (vctx_gas x1)} -
+             {ContinuingElm True} -
+             {CodeElm (vctx_pc x1, Stack POP)})
+"
+apply(auto)
+done
+
+lemma pop_triple : "triple {} (\<langle> h \<le> 1024 \<and> g \<ge> Gbase \<rangle> **
+                            stack_height (h + 1) **
+                            stack h v **
+                            program_counter k **
+                            gas_pred g **
+                            continuing
+                           )
+                           {(k, Stack POP)}
+                           (stack_height h **
+                            program_counter (k + 1) **
+                            gas_pred (g - Gbase) **
+                            continuing
+                            )"
+apply(simp add: triple_def)
+apply(clarify)
+apply(rule_tac x = "1" in exI)
+apply(case_tac presult; simp)
+apply(auto simp add:
+      stack_inst_numbers.simps
+      pop_def
+      instruction_result_as_set_def
+      )
+apply(auto simp add: stack_as_set_def)
+done
+
+
+lemma stop_gas_triple:
+  "triple {OutOfGas}
+          (\<langle> h \<le> 1024 \<rangle> ** stack_height h ** program_counter k ** continuing)
+          {(k, Misc STOP)}
+          (stack_height h ** program_counter k ** not_continuing ** action (ContractReturn []))"
+apply(simp add: triple_def)
+apply(clarify)
+apply(rule_tac x = "1" in exI)
+apply(case_tac presult; simp)
+apply(auto simp add: program_sem.simps vctx_next_instruction_def instruction_sem_def check_resources_def
+      stack_inst_numbers.simps
+      pop_def stop_def Gzero_def not_continuing_def action_def
+      instruction_result_as_set_def misc_inst_numbers.simps
+      stack_as_set_def ext_program_as_set_def)
+ apply(auto simp add: sep_def not_continuing_def action_def ext_program_as_set_def)
+ apply(rule_tac x = "(insert (ContractActionElm (ContractReturn [])) (contexts_as_set x1 co_ctx)) -
+           {StackHeightElm (length (vctx_stack x1))} -
+           {PcElm (vctx_pc x1)}" in exI)
+ apply(auto)
+ apply(rule_tac x = "(contexts_as_set x1 co_ctx) - {StackHeightElm (length (vctx_stack x1))} -
+           {PcElm (vctx_pc x1)}" in exI)
+ apply(auto simp add: code_def ext_program_as_set_def)
+apply(rule_tac x = "(insert (ContractActionElm (ContractReturn [])) (contexts_as_set x1 co_ctx)) -
+           {StackHeightElm (length (vctx_stack x1))} -
+           {PcElm (vctx_pc x1)}" in exI)
+apply(auto simp add: failed_for_reasons_def)
+apply(rule_tac x = "(contexts_as_set x1 co_ctx) -
+           {StackHeightElm (length (vctx_stack x1))} -
+           {PcElm (vctx_pc x1)}" in exI)
+apply(auto)
+done
+
+
 lemma caller0 [simp] :
 " program_content (cctx_program co_ctx) (vctx_pc x1) = Some (Info CALLER) \<Longrightarrow>
   (insert (GasElm (vctx_gas x1 - Gbase))
@@ -1105,11 +1326,9 @@ lemma caller_gas_triple :
            ** program_counter (k + 1) ** caller c ** gas_pred (g - Gbase) ** continuing )"
 apply(auto simp add: triple_def)
 apply(rule_tac x = 1 in exI)
-apply(case_tac presult;
-      auto simp add: program_sem.simps instruction_result_as_set_def
-           vctx_next_instruction_def instruction_sem_def stack_0_1_op_def info_inst_numbers.simps)
-apply(simp add: check_resources_def info_inst_numbers.simps vctx_next_instruction_def)
+apply(case_tac presult; auto simp add: stack_0_1_op_def instruction_result_as_set_def)
 done
+
 
 end (* context *)
 
