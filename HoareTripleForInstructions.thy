@@ -811,10 +811,90 @@ lemma stack_heigh_elm_means [simp] :
 apply(auto simp add: instruction_result_as_set_def)
 done
 
-lemma blocknum_comp [simp] :
-  "2463000 \<le> unat i = (2463000 \<le> i)"
-sledgehammer
+lemma stack_elm_means [simp] :
+  "StackElm ha \<in> instruction_result_as_set co_ctx (InstructionContinue v) =
+  (fst ha < length (vctx_stack v) \<and> rev (vctx_stack v) ! fst ha = snd ha)"
+apply(auto simp add: instruction_result_as_set_def contexts_as_set_def)
+done
 
+lemma balance_not_constant [simp] :
+  "BalanceElm ab \<notin> constant_ctx_as_set co_ctx"
+apply(simp add: constant_ctx_as_set_def program_as_set_def)
+done
+
+lemma balance_elm_i_means [simp] :
+  "BalanceElm ab \<in> instruction_result_as_set co_ctx (InstructionContinue x1) =
+     (vctx_balance x1 (fst ab) = (snd ab))
+  "
+apply(simp add: instruction_result_as_set_def contexts_as_set_def)
+done
+
+lemma gas_elm_i_means [simp] :
+  "GasElm g \<in> instruction_result_as_set co_ctx (InstructionContinue x1) =
+  (vctx_gas x1 = g)"
+apply(simp add: instruction_result_as_set_def)
+done
+
+lemma continuing_continuing [simp] :
+  "ContinuingElm True \<in> instruction_result_as_set co_ctx (InstructionContinue x1)"
+apply(simp add: instruction_result_as_set_def)
+done
+
+lemma origin_not_stack [simp] :
+   "OriginElm x13 \<notin> stack_as_set lst"
+apply(simp add: stack_as_set_def)
+done
+
+lemma sent_value_not_stack [simp] :
+ "SentValueElm x14 \<notin> stack_as_set lst"
+apply(simp add: stack_as_set_def)
+done
+
+lemma sent_data_length_not_stack [simp] :
+  "SentDataLengthElm x15 \<notin> stack_as_set lst"
+apply(simp add: stack_as_set_def)
+done
+
+lemma sent_data_not_stack [simp] :
+"SentDataElm ab \<notin> stack_as_set lst"
+apply(simp add: stack_as_set_def)
+done
+
+lemma block_number_elm_c_means [simp] :
+"BlockNumberElm x22 \<in> contexts_as_set x1 co_ctx =
+ (x22 = block_number (vctx_block x1))"
+apply(simp add: contexts_as_set_def)
+done
+
+
+lemma balance0 [simp] :
+"length list = h \<Longrightarrow>
+vctx_stack x1 = a # list \<Longrightarrow>
+vctx_gas x1 = g \<Longrightarrow>
+program_content (cctx_program co_ctx) (vctx_pc x1) = Some (Info BALANCE) \<Longrightarrow>
+(instruction_result_as_set co_ctx
+              (InstructionContinue (vctx_advance_pc co_ctx x1\<lparr>vctx_stack := b # list, vctx_gas := g - 400\<rparr>)) -
+             {BlockNumberElm (block_number (vctx_block x1))} -
+             {StackHeightElm (Suc h)} -
+             {StackElm (h, b)} -
+             {PcElm (vctx_pc x1 + 1)} -
+             {BalanceElm (ucast a, b)} -
+             {GasElm (g - 400)} -
+             {ContinuingElm True} -
+             {CodeElm (vctx_pc x1, Info BALANCE)})
+=
+(instruction_result_as_set co_ctx (InstructionContinue x1) - {BlockNumberElm (block_number (vctx_block x1))} -
+             {StackHeightElm (Suc h)} -
+             {StackElm (h, a)} -
+             {PcElm (vctx_pc x1)} -
+             {BalanceElm (ucast a, b)} -
+             {GasElm g} -
+             {ContinuingElm True} -
+             {CodeElm (vctx_pc x1, Info BALANCE)})"
+apply(auto)
+ apply(rename_tac elm; case_tac elm; auto simp add: instruction_result_as_set_def stack_as_set_def)
+apply(rename_tac elm; case_tac elm; auto simp add: instruction_result_as_set_def stack_as_set_def)
+done
 
 (****** specifying each instruction *******)
 
@@ -826,6 +906,7 @@ declare predict_gas_def [simp]
         subtract_gas.simps [simp]
         vctx_next_instruction_default_def [simp]
         stack_2_1_op_def [simp]
+        stack_1_1_op_def [simp]
         inst_stack_numbers.simps [simp]
         arith_inst_numbers.simps [simp]
         program_sem.simps [simp]
@@ -837,18 +918,21 @@ declare predict_gas_def [simp]
 
 lemma balance_gas_triple :
   "triple {OutOfGas}
-          (\<langle> h \<le> 1023 \<and> bn \<ge> 2463000\<rangle> ** block_number_pred bn ** stack_height (h + 1) ** stack h a ** program_counter k ** balance (ucast a) b ** gas_pred g ** continuing)
+          (\<langle> h \<le> 1023 \<and> unat bn \<ge> 2463000\<rangle>
+           ** block_number_pred bn ** stack_height (h + 1) ** stack h a
+           ** program_counter k ** balance (ucast a) b ** gas_pred g ** continuing)
           {(k, Info BALANCE)}
           (block_number_pred bn ** stack_height (h + 1) ** stack h b
-           ** program_counter (k + 1) ** balance (ucast a) b ** gas_pred (g - Gbase) ** continuing )"
+           ** program_counter (k + 1) ** balance (ucast a) b ** gas_pred (g - 400) ** continuing )"
 apply(auto simp add: triple_def)
 apply(rule_tac x = 1 in exI)
 apply(simp)
 apply(case_tac presult)
-  apply(clarify)
   apply(simp)
-  
-
+  apply(case_tac "vctx_stack x1"; simp)
+ apply(simp add: instruction_result_as_set_def)
+apply(simp add: instruction_result_as_set_def)
+done
 
 
 lemma eq0 [simp]: "
