@@ -31,6 +31,7 @@ datatype state_element =
   | ContractActionElm "contract_action" (* None indicates continued execution *)
   | ContinuingElm "bool" (* True if the execution is still continuing *)
   | BlockhashElm "w256 * w256"
+  | BlockNumberElm w256
   | CoinbaseElm "address"
   | TimestampElm "w256"
   | DifficultyElm "w256"
@@ -44,7 +45,7 @@ abbreviation block_info_as_set :: "block_info \<Rightarrow> state_element set"
 where "block_info_as_set b ==
   blockhash_as_elm (block_blockhash b) \<union> { CoinbaseElm (block_coinbase b),
   TimestampElm (block_timestamp b), DifficultyElm (block_difficulty b),
-  GaslimitElm (block_gaslimit b), GaspriceElm (block_gasprice b) }"
+  GaslimitElm (block_gaslimit b), GaspriceElm (block_gasprice b), BlockNumberElm (block_number b) }"
 
 definition contract_action_as_set :: "contract_action \<Rightarrow> state_element set"
   where "contract_action_as_set act == { ContractActionElm act }"
@@ -191,6 +192,14 @@ definition gas_pred :: "int \<Rightarrow> state_element set \<Rightarrow> bool"
 definition caller :: "address \<Rightarrow> state_element set \<Rightarrow> bool"
 where
 "caller c s == s = {CallerElm c}"
+
+definition balance :: "address \<Rightarrow> w256 \<Rightarrow> state_element set \<Rightarrow> bool"
+where
+"balance adr v s == s = {BalanceElm (adr, v)}"
+
+definition block_number_pred :: "w256 \<Rightarrow> state_element set \<Rightarrow> bool"
+where
+"block_number_pred w s == s = {BlockNumberElm w}"
 
 definition continuing :: "state_element set \<Rightarrow> bool"
 where

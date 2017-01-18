@@ -139,11 +139,11 @@ apply(auto simp add: variable_ctx_as_set_def stack_as_set_def ext_program_as_set
 done
 
 lemma code_element_means [simp] :
-  "(CodeElm (x, y) \<in> constant_ctx_as_set c) = 
-   (program_content (cctx_program c) x = Some y \<or>
-    program_content (cctx_program c) x = None \<and>
-    y = Misc STOP)"
-apply(auto simp add: constant_ctx_as_set_def program_as_set_def)
+  "(CodeElm xy \<in> constant_ctx_as_set c) = 
+   (program_content (cctx_program c) (fst xy) = Some (snd xy) \<or>
+    program_content (cctx_program c) (fst xy) = None \<and>
+    (snd xy) = Misc STOP)"
+apply(case_tac xy; auto simp add: constant_ctx_as_set_def program_as_set_def)
 done
 
 lemma origin_element_means [simp] :
@@ -353,6 +353,12 @@ lemma caller_sep [simp]:
   "(caller c ** rest) s =
    (CallerElm c \<in> s \<and> rest (s - {CallerElm c}))"
 apply(auto simp add: caller_def sep_def)
+done
+
+lemma balance_sep [simp] :
+  "(balance a b ** rest) s =
+   (BalanceElm (a, b) \<in> s \<and> rest (s - {BalanceElm (a, b)}))"
+apply(auto simp add: balance_def sep_def)
 done
 
 lemma pred_equiv_R_assoc [simp] :
@@ -761,6 +767,55 @@ lemma balance_not_stack [simp]:
 apply(simp add: stack_as_set_def)
 done
 
+lemma code_elm_means [simp]:
+  "CodeElm xy \<in> instruction_result_as_set c (InstructionContinue x1) =
+(program_content (cctx_program c) (fst xy) = Some (snd xy) \<or>
+    program_content (cctx_program c) (fst xy) = None \<and>
+    (snd xy) = Misc STOP)
+"
+apply(auto simp add: instruction_result_as_set_def contexts_as_set_def)
+done
+
+lemma pc_elm_means [simp]:
+   "PcElm k \<in> instruction_result_as_set co_ctx (InstructionContinue x1) =
+    (k = vctx_pc x1)"
+apply(auto simp add: instruction_result_as_set_def)
+done
+
+lemma block_number_pred_sep [simp] :
+  "(block_number_pred bn ** rest) s =
+   ((BlockNumberElm bn \<in> s) \<and> rest (s - {BlockNumberElm bn}))"
+apply(auto simp add: sep_def block_number_pred_def)
+done
+
+lemma block_number_elm_not_constant [simp] :
+  "BlockNumberElm bn \<notin> constant_ctx_as_set co_ctx"
+apply(simp add: constant_ctx_as_set_def program_as_set_def)
+done
+
+lemma block_number_elm_in_v_means [simp] :
+  "BlockNumberElm bn \<in> variable_ctx_as_set v
+   = ( bn = block_number (vctx_block v) )"
+apply(simp add: variable_ctx_as_set_def stack_as_set_def ext_program_as_set_def)
+done
+
+lemma block_number_elm_means [simp] :
+  "BlockNumberElm bn \<in> instruction_result_as_set co_ctx (InstructionContinue v)
+   = ( bn = block_number (vctx_block v) )"
+apply(simp add: instruction_result_as_set_def contexts_as_set_def)
+done
+
+lemma stack_heigh_elm_means [simp] :
+  "StackHeightElm h \<in> instruction_result_as_set co_ctx (InstructionContinue x1)
+  = (length (vctx_stack x1) = h)"
+apply(auto simp add: instruction_result_as_set_def)
+done
+
+lemma blocknum_comp [simp] :
+  "2463000 \<le> unat i = (2463000 \<le> i)"
+sledgehammer
+
+
 (****** specifying each instruction *******)
 
 declare predict_gas_def [simp]
@@ -773,6 +828,28 @@ declare predict_gas_def [simp]
         stack_2_1_op_def [simp]
         inst_stack_numbers.simps [simp]
         arith_inst_numbers.simps [simp]
+        program_sem.simps [simp]
+        vctx_next_instruction_def [simp]
+        instruction_sem_def [simp]
+        check_resources_def [simp]
+        info_inst_numbers.simps [simp]
+        Gbalance_def [simp]
+
+lemma balance_gas_triple :
+  "triple {OutOfGas}
+          (\<langle> h \<le> 1023 \<and> bn \<ge> 2463000\<rangle> ** block_number_pred bn ** stack_height (h + 1) ** stack h a ** program_counter k ** balance (ucast a) b ** gas_pred g ** continuing)
+          {(k, Info BALANCE)}
+          (block_number_pred bn ** stack_height (h + 1) ** stack h b
+           ** program_counter (k + 1) ** balance (ucast a) b ** gas_pred (g - Gbase) ** continuing )"
+apply(auto simp add: triple_def)
+apply(rule_tac x = 1 in exI)
+apply(simp)
+apply(case_tac presult)
+  apply(clarify)
+  apply(simp)
+  
+
+
 
 lemma eq0 [simp]: "
        vctx_stack x1 = v # w # ta \<Longrightarrow>
@@ -1112,14 +1189,6 @@ apply(case_tac presult;
            vctx_next_instruction_def instruction_sem_def stack_0_1_op_def info_inst_numbers.simps)
 apply(simp add: check_resources_def info_inst_numbers.simps vctx_next_instruction_def)
 done
-
-lemma balance_gas_triple :
-  "triple {OutOfGas}
-          (\<langle> h \<le> 1023 \<rangle> ** stack_height (h + 1) ** stack h a ** program_counter k ** balance (ucast a) b ** gas_pred g ** continuing)
-          {(k, Info BALANCE)}
-          (stack_height (h + 1) ** stack h b
-           ** program_counter (k + 1) ** balance (ucast a) b ** gas_pred (g - Gbase) ** continuing )"
-
 
 
 end (* context *)
