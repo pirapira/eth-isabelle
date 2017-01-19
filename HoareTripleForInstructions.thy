@@ -956,6 +956,18 @@ lemma ext_program_size_not_stack [simp] :
 apply(simp add: stack_as_set_def)
 done
 
+lemma advance_keeps_stack_elm [simp] :
+  "StackElm x2 \<in> contexts_as_set (vctx_advance_pc co_ctx v) co_ctx =
+  (StackElm x2 \<in> contexts_as_set v co_ctx)"
+apply(simp add: contexts_as_set_def)
+done
+
+lemma advance_keeps_code_elm [simp] :
+  "CodeElm x9 \<in> contexts_as_set (vctx_advance_pc co_ctx x1) co_ctx =
+  (CodeElm x9 \<in> contexts_as_set x1 co_ctx)"
+apply(simp add: contexts_as_set_def)
+done
+
 (****** specifying each instruction *******)
 
 declare predict_gas_def [simp]
@@ -967,6 +979,7 @@ declare predict_gas_def [simp]
         vctx_next_instruction_default_def [simp]
         stack_2_1_op_def [simp]
         stack_1_1_op_def [simp]
+        stack_0_0_op_def [simp]
         inst_stack_numbers.simps [simp]
         arith_inst_numbers.simps [simp]
         program_sem.simps [simp]
@@ -975,6 +988,76 @@ declare predict_gas_def [simp]
         check_resources_def [simp]
         info_inst_numbers.simps [simp]
         Gbalance_def [simp]
+        stack_inst_numbers.simps [simp]
+        pc_inst_numbers.simps [simp]
+        pop_def [simp]
+
+lemma leibniz :
+  "r (s :: state_element set) \<Longrightarrow> s = t \<Longrightarrow> r t"
+apply(auto)
+done
+
+lemma jumpdest_advance [simp] :
+  "k = vctx_pc x1 \<Longrightarrow>
+   program_content (cctx_program co_ctx) (vctx_pc x1) = Some (Pc JUMPDEST) \<Longrightarrow>
+   vctx_pc x1 + 1 = vctx_pc (vctx_advance_pc co_ctx x1)"
+apply(simp add: vctx_advance_pc_def inst_size_def inst_code.simps)
+done
+
+lemma jumpdest_gas_triple :
+   "triple {OutOfGas} (\<langle> h \<le> 1024 \<rangle> **
+                       stack_height h **
+                       program_counter k **
+                       gas_pred g **
+                       continuing
+                      )
+                      {(k, Pc JUMPDEST)}
+                      (stack_height h **
+                       program_counter (k + 1) **
+                       gas_pred (g - Gjumpsdest) **
+                       continuing
+                      )"
+apply(auto simp add: triple_def)
+apply(rule_tac x = 1 in exI)
+apply(case_tac presult; simp)
+  apply(rule leibniz)
+   apply blast
+  apply(rule Set.equalityI) (* why is the following so complicated? *)
+   apply(simp add: Set.subset_eq)
+   apply(clarify)
+   apply(rename_tac elm)
+   apply(case_tac elm; simp add: instruction_result_as_set_def)
+  apply(simp add: Set.subset_eq)
+  apply(simp add: instruction_result_as_set_def)
+  apply(clarify)
+  apply(rename_tac elm)
+  apply(case_tac elm; clarify?; simp?)
+ apply(simp add: instruction_result_as_set_def)
+apply(simp add: instruction_result_as_set_def)
+done
+
+lemma pop_gas_triple : "triple {OutOfGas} (\<langle> h \<le> 1024 \<rangle> **
+                            stack_height (h + 1) **
+                            stack h v **
+                            program_counter k **
+                            gas_pred g **
+                            continuing
+                           )
+                           {(k, Stack POP)}
+                           (stack_height h **
+                            program_counter (k + 1) **
+                            gas_pred (g - Gbase) **
+                            continuing
+                            )"
+apply(auto simp add: triple_def)
+apply(rule_tac x = 1 in exI)
+apply(case_tac presult; simp)
+  apply(case_tac "vctx_stack x1"; simp)
+  apply(rule leibniz)
+   apply blast
+  apply(auto simp add: instruction_result_as_set_def)
+ apply(auto simp add: stack_as_set_def)
+done
 
 lemma balance_gas_triple :
   "triple {OutOfGas}
