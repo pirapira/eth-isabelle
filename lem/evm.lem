@@ -634,8 +634,8 @@ val Gsload : natural -> integer
 let Gsload blocknumber =
   if blocknumber >= 2463000 then 200 else 50
 
-val Gjumpsdest : integer
-let Gjumpsdest = 1
+val Gjumpdest : integer
+let Gjumpdest = 1
 
 val Gsset : integer
 let Gsset = 20000
@@ -1574,7 +1574,7 @@ let thirdComponentOfC i s0 s1 s2 s3 recipient_empty orig_val new_val remaining_g
   | Misc SUICIDE -> Csuicide recipient_empty blocknumber
   | Misc CREATE -> Gcreate
   | Arith SHA3 -> Gsha3 + Gsha3word * ((uint s1 + 31) / 32)
-  | Pc JUMPDEST -> Gjumpsdest
+  | Pc JUMPDEST -> Gjumpdest
   | Storage SLOAD -> Gsload blocknumber
   | Misc STOP -> Gzero
   | Misc RETURN -> Gzero
