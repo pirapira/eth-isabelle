@@ -1014,7 +1014,7 @@ lemma jumpdest_gas_triple :
                       {(k, Pc JUMPDEST)}
                       (stack_height h **
                        program_counter (k + 1) **
-                       gas_pred (g - Gjumpsdest) **
+                       gas_pred (g - Gjumpdest) **
                        continuing
                       )"
 apply(auto simp add: triple_def)
