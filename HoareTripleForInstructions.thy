@@ -975,6 +975,36 @@ declare predict_gas_def [simp]
         check_resources_def [simp]
         info_inst_numbers.simps [simp]
         Gbalance_def [simp]
+        stack_inst_numbers.simps [simp]
+        pop_def [simp]
+
+lemma leibniz :
+  "r (s :: state_element set) \<Longrightarrow> s = t \<Longrightarrow> r t"
+apply(auto)
+done
+
+lemma pop_triple : "triple {OutOfGas} (\<langle> h \<le> 1024 \<rangle> **
+                            stack_height (h + 1) **
+                            stack h v **
+                            program_counter k **
+                            gas_pred g **
+                            continuing
+                           )
+                           {(k, Stack POP)}
+                           (stack_height h **
+                            program_counter (k + 1) **
+                            gas_pred (g - Gbase) **
+                            continuing
+                            )"
+apply(auto simp add: triple_def)
+apply(rule_tac x = 1 in exI)
+apply(case_tac presult; simp)
+  apply(case_tac "vctx_stack x1"; simp)
+  apply(rule leibniz)
+   apply blast
+  apply(auto simp add: instruction_result_as_set_def)
+ apply(auto simp add: stack_as_set_def)
+done
 
 lemma balance_gas_triple :
   "triple {OutOfGas}
