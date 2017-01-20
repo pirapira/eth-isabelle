@@ -1568,6 +1568,8 @@ apply(auto simp add:
 apply(auto simp add: stack_as_set_def)
 done
 
+declare misc_inst_numbers.simps [simp]
+Gzero_def [simp]
 
 lemma stop_gas_triple:
   "triple {OutOfGas}
@@ -1577,27 +1579,16 @@ lemma stop_gas_triple:
 apply(simp add: triple_def)
 apply(clarify)
 apply(rule_tac x = "1" in exI)
-apply(case_tac presult; simp)
-apply(auto simp add: program_sem.simps vctx_next_instruction_def instruction_sem_def check_resources_def
-      stack_inst_numbers.simps
-      pop_def stop_def Gzero_def not_continuing_def action_def
-      instruction_result_as_set_def misc_inst_numbers.simps
-      stack_as_set_def ext_program_as_set_def)
- apply(auto simp add: sep_def not_continuing_def action_def ext_program_as_set_def)
- apply(rule_tac x = "(insert (ContractActionElm (ContractReturn [])) (contexts_as_set x1 co_ctx)) -
-           {StackHeightElm (length (vctx_stack x1))} -
-           {PcElm (vctx_pc x1)}" in exI)
- apply(auto)
- apply(rule_tac x = "(contexts_as_set x1 co_ctx) - {StackHeightElm (length (vctx_stack x1))} -
-           {PcElm (vctx_pc x1)}" in exI)
- apply(auto simp add: code_def ext_program_as_set_def)
-apply(rule_tac x = "(insert (ContractActionElm (ContractReturn [])) (contexts_as_set x1 co_ctx)) -
-           {StackHeightElm (length (vctx_stack x1))} -
-           {PcElm (vctx_pc x1)}" in exI)
-apply(auto simp add: failed_for_reasons_def)
-apply(rule_tac x = "(contexts_as_set x1 co_ctx) -
-           {StackHeightElm (length (vctx_stack x1))} -
-           {PcElm (vctx_pc x1)}" in exI)
+apply(clarify)
+apply(case_tac presult; auto simp add: stop_def not_continuing_def action_def
+      instruction_result_as_set_def stack_as_set_def ext_program_as_set_def)
+   apply(split if_splits; auto)
+  apply(rule leibniz)
+   apply blast
+  apply(auto)
+ apply(split if_splits; auto)
+apply(rule leibniz)
+ apply blast
 apply(auto)
 done
 
