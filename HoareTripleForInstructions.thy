@@ -1117,6 +1117,7 @@ declare predict_gas_def [simp]
         pc_inst_numbers.simps [simp]
         pop_def [simp]
         jump_def [simp]
+        instruction_failure_result_def [simp]
 
 lemma leibniz :
   "r (s :: state_element set) \<Longrightarrow> s = t \<Longrightarrow> r t"
@@ -1164,7 +1165,66 @@ apply(auto)
 apply(rename_tac elm; case_tac elm; auto simp add: instruction_result_as_set_def)
 done
 
+declare jump_def [simp del]
 
+lemma invalid_jump [simp] :
+      "program_content (cctx_program co_ctx) (uint d) = Some i \<Longrightarrow>
+       i \<noteq> Pc JUMPDEST \<Longrightarrow>
+       g = vctx_gas v \<Longrightarrow>
+       vctx_stack v = d # t \<Longrightarrow>
+       jump v co_ctx = instruction_failure_result v [InvalidJumpDestination]"
+apply(simp add: jump_def)
+apply(case_tac i; simp)
+apply(rename_tac j; case_tac j; simp)
+done
+
+lemma invalid_jump2 [simp] :
+      "program_content (cctx_program co_ctx) (uint d) = None \<Longrightarrow>
+       g = vctx_gas v \<Longrightarrow>
+       vctx_stack v = d # t \<Longrightarrow>
+       jump v co_ctx = instruction_failure_result v [InvalidJumpDestination]"
+apply(simp add: jump_def)
+done
+
+
+lemma not_continuing_sep [simp] :
+  "(not_continuing ** rest) s =
+   (ContinuingElm False \<in> s \<and> rest (s - {ContinuingElm False}))"
+apply(auto simp add: sep_def not_continuing_def)
+done
+
+lemma action_sep [simp] :
+  "(action a ** rest) s =
+   (ContractActionElm a \<in> s \<and> rest (s - {ContractActionElm a}))"
+apply(auto simp add: action_def sep_def)
+done
+
+lemma invalid_jump_gas_triple :
+   "triple {OutOfGas} (\<langle> h \<le> 1023 \<and> i \<noteq> Pc JUMPDEST\<rangle> **
+                       stack_height (h + 1) **
+                       stack h d **
+                       program_counter k **
+                       gas_pred g **
+                       continuing
+                      )
+                      {(k, Pc JUMP), ((uint d), i)}
+                      (stack_height (h + 1) **
+                       stack h d **
+                       program_counter k **
+                       gas_pred (g - Gmid) **
+                       not_continuing **
+                       action (ContractFail [InvalidJumpDestination])
+                      )"
+apply(auto simp add: triple_def)
+apply(rule_tac x = 1 in exI)
+apply(case_tac presult; auto simp add: instruction_result_as_set_def)
+ apply(rule leibniz)
+  apply blast
+ apply(auto)
+apply(rule leibniz)
+ apply blast
+apply auto
+done
 
 lemma jumpdest_advance [simp] :
   "k = vctx_pc x1 \<Longrightarrow>
