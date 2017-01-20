@@ -47,4 +47,4 @@ script:
 - sh compile.sh
 - ./runVmTest.native 89
 - cd -
-- travis_wait 50 make light-isabelle
+- make light-isabelle
