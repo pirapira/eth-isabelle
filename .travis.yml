@@ -1,3 +1,7 @@
+cache:
+  directories:
+  - $HOME/.isabelle
+  - $HOME/.opam
 sudo: required
 before_install:
 - sudo apt-get -qq update
@@ -16,6 +20,7 @@ before_install:
 - export OPAMJOBS=2
 - opam init -y --comp=4.02.3
 - eval `opam config env`
+- opam update
 - opam install -y ocamlbuild ocamlfind batteries yojson bignum easy-format bisect_ppx zarith depext
 - git clone https://bitbucket.org/Peter_Sewell/lem.git lemdir
 - cd lemdir
