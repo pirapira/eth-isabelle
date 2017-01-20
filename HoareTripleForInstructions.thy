@@ -1092,6 +1092,23 @@ lemma short_rev_append [simp]:
  "a < length t \<Longrightarrow> (rev t @ lst) ! a = rev t ! a"
 	by (simp add: nth_append)
 
+lemma memory_usage_not_constant [simp] :
+"MemoryUsageElm x8 \<notin> constant_ctx_as_set co_ctx"
+apply(simp add: constant_ctx_as_set_def program_as_set_def)
+done
+
+lemma code_elms [simp] :
+ "{CodeElm (pos, i) |pos i. P pos i \<or> Q pos i} \<subseteq> S =
+ ({CodeElm (pos, i) | pos i. P pos i} \<subseteq> S \<and> {CodeElm (pos, i) | pos i. Q pos i} \<subseteq> S)"
+apply(auto)
+done
+
+lemma memory_usage_elm_means [simp] :
+  "MemoryUsageElm x8 \<in> contexts_as_set x1 co_ctx =
+   (vctx_memory_usage x1 = x8)"
+apply(simp add: contexts_as_set_def)
+done
+
 
 (****** specifying each instruction *******)
 
@@ -1124,22 +1141,6 @@ lemma leibniz :
 apply(auto)
 done
 
-lemma memory_usage_not_constant [simp] :
-"MemoryUsageElm x8 \<notin> constant_ctx_as_set co_ctx"
-apply(simp add: constant_ctx_as_set_def program_as_set_def)
-done
-
-lemma code_elms [simp] :
- "{CodeElm (pos, i) |pos i. P pos i \<or> Q pos i} \<subseteq> S =
- ({CodeElm (pos, i) | pos i. P pos i} \<subseteq> S \<and> {CodeElm (pos, i) | pos i. Q pos i} \<subseteq> S)"
-apply(auto)
-done
-
-lemma memory_usage_elm_means [simp] :
-  "MemoryUsageElm x8 \<in> contexts_as_set x1 co_ctx =
-   (vctx_memory_usage x1 = x8)"
-apply(simp add: contexts_as_set_def)
-done
 
 lemma jump_gas_triple :
    "triple {OutOfGas} (\<langle> h \<le> 1023 \<rangle> **
