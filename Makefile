@@ -20,7 +20,7 @@ all-isabelle: attic/Parse.thy ContractSem.thy RelationalSem.thy example/Optimiza
 	isabelle build -j 2 -d . all
 
 light-isabelle: attic/Parse.thy ContractSem.thy RelationalSem.thy example/Optimization.thy example/AlwaysFail.thy example/FailOnReentrance.thy lem/Block.thy lem/Evm.thy lem/Keccak.thy lem/Rlp.thy lem/Word160.thy lem/Word256.thy lem/Word8.thy lem/Word4.thy HoareTripleForInstructions.thy HoareTripleForInstructions2.thy
-	isabelle build -j 2 -v -d . light
+	isabelle build -b -j 2 -v -d . light
 
 doc: deed lem-pdf
 

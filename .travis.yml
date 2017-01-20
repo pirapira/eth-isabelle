@@ -1,3 +1,6 @@
+cache:
+  directories:
+  - $HOME/.isabelle
 sudo: required
 before_install:
 - sudo apt-get -qq update
