@@ -1134,11 +1134,43 @@ declare predict_gas_def [simp]
         pc_inst_numbers.simps [simp]
         pop_def [simp]
         jump_def [simp]
+        jumpi_def [simp]
         instruction_failure_result_def [simp]
+        strict_if_def [simp]
+        blocked_jump_def [simp]
 
 lemma leibniz :
   "r (s :: state_element set) \<Longrightarrow> s = t \<Longrightarrow> r t"
 apply(auto)
+done
+
+lemma jumpi_true_gas_triple :
+   "triple {OutOfGas} (\<langle> h \<le> 1022 \<and> cond \<noteq> 0 \<rangle> **
+                       stack_height (h + 2) **
+                       stack (h + 1) d **
+                       stack h cond **
+                       program_counter k **
+                       gas_pred g **
+                       continuing
+                      )
+                      {(k, Pc JUMPI), ((uint d), Pc JUMPDEST)}
+                      (stack_height h **
+                       program_counter (uint d) **
+                       gas_pred (g - Ghigh) **
+                       continuing
+                      )"
+apply(auto simp add: triple_def)
+apply(rule_tac x = 1 in exI)
+apply(case_tac presult; auto simp add: instruction_result_as_set_def)
+apply(rule leibniz)
+ apply blast
+apply(auto)
+ apply(rename_tac elm; case_tac elm; auto simp add: instruction_result_as_set_def)
+    apply(case_tac "a = Suc (length ta)"; simp)
+   apply(case_tac "a = Suc (length ta)"; simp)
+  apply(case_tac "a = Suc (length ta)"; simp)
+ apply(case_tac "a = Suc (length ta)"; simp)
+apply(rename_tac elm; case_tac elm; auto simp add: instruction_result_as_set_def)
 done
 
 
