@@ -1267,6 +1267,47 @@ lemma action_sep [simp] :
 apply(auto simp add: action_def sep_def)
 done
 
+lemma invalid_jumpi_gas_triple :
+   "triple {OutOfGas} (\<langle> h \<le> 1022 \<and> cond \<noteq> 0 \<and> i \<noteq> Pc JUMPDEST \<rangle> **
+                       stack_height (h + 2) **
+                       stack (h + 1) d **
+                       stack h cond **
+                       program_counter k **
+                       gas_pred g **
+                       continuing
+                      )
+                      {(k, Pc JUMPI), ((uint d), i)}
+                      (stack_height (h + 1) **
+                       stack h d **
+                       program_counter k **
+                       gas_pred (g - Ghigh) **
+                       not_continuing **
+                       action (ContractFail [InvalidJumpDestination])
+                      )"
+apply(auto simp add: triple_def)
+apply(rule_tac x = 1 in exI)
+apply(case_tac presult; auto simp add: instruction_result_as_set_def)
+ apply(rule leibniz)
+  apply blast
+ apply(auto)
+  apply(simp add: stack_as_set_def)
+  apply(clarify)
+  apply(case_tac "idx = Suc (length ta)"; auto)
+ apply(simp add: stack_as_set_def)
+ apply(clarify)
+ apply(case_tac "idx = Suc (length ta)"; auto)
+apply(rule leibniz)
+ apply blast
+apply(auto)
+ apply(simp add: stack_as_set_def)
+ apply(clarify)
+ apply(case_tac "idx = Suc (length ta)"; simp)
+apply(simp add: stack_as_set_def)
+apply(clarify)
+apply(case_tac "idx = Suc (length ta)"; simp)
+done
+
+
 lemma invalid_jump_gas_triple :
    "triple {OutOfGas} (\<langle> h \<le> 1023 \<and> i \<noteq> Pc JUMPDEST\<rangle> **
                        stack_height (h + 1) **
