@@ -1,6 +1,7 @@
 cache:
   directories:
   - $HOME/.isabelle
+  - $HOME/.opam
 sudo: required
 before_install:
 - sudo apt-get -qq update
