@@ -39,6 +39,7 @@ session "all" = "HOL" +
     RelationalSem
     Hoare
     HoareTripleForInstructions
+    HoareTripleForInstructions2
     "attic/HP"
     "attic/YellowPaper"
     "example/Optimization"
@@ -55,8 +56,8 @@ session "light" = "HOL" +
     RelationalSem
     Hoare
     HoareTripleForInstructions
+    HoareTripleForInstructions2
     "attic/HP"
     "attic/YellowPaper"
     "example/Optimization"
-    "example/AlwaysFail"
     "example/FailOnReentrance"
