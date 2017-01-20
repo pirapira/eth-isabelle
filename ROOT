@@ -30,6 +30,7 @@ session "deed" = "HOL" +
   document_files
     "root.tex"
 
+
 session "all" = "HOL" +
   theories [document = false]
     "~~/src/HOL/Word/Word"
