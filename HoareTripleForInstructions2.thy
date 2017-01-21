@@ -23,17 +23,23 @@ lemma invalid_jump2 [simp] :
 apply(simp add: jump_def)
 done
 
+lemma notin_diff [simp] :
+  "x \<notin> A - B =
+   (x \<notin> A \<or> x \<in> B)"
+  by blast
 
-lemma not_continuing_sep [simp] :
-  "(not_continuing ** rest) s =
-   (ContinuingElm False \<in> s \<and> rest (s - {ContinuingElm False}))"
-apply(auto simp add: sep_def not_continuing_def)
+lemma stack_elm_append [dest] :
+  "x = StackElm (idx, lst ! idx) \<Longrightarrow>
+   x \<in> contexts_as_set x1 co_ctx \<Longrightarrow>
+   (idx < length (vctx_stack x1) \<and> rev (vctx_stack x1) ! idx = lst ! idx)"
+apply(simp add: contexts_as_set_def)
 done
 
-lemma action_sep [simp] :
-  "(action a ** rest) s =
-   (ContractActionElm a \<in> s \<and> rest (s - {ContractActionElm a}))"
-apply(auto simp add: action_def sep_def)
+lemma not_appended [dest] :
+  "(rev ta @ [cond, d]) ! aa \<noteq> cond \<Longrightarrow>
+   aa \<noteq> length ta
+  "
+apply(auto)
 done
 
 lemma invalid_jumpi_gas_triple :
@@ -59,21 +65,15 @@ apply(case_tac presult; auto simp add: instruction_result_as_set_def)
  apply(rule leibniz)
   apply blast
  apply(auto)
-  apply(simp add: stack_as_set_def)
-  apply(clarify)
-  apply(case_tac "idx = Suc (length ta)"; auto)
- apply(simp add: stack_as_set_def)
- apply(clarify)
- apply(case_tac "idx = Suc (length ta)"; auto)
+ apply(auto simp add: stack_as_set_def)
 apply(rule leibniz)
  apply blast
-apply(auto)
- apply(simp add: stack_as_set_def)
+apply(rule Set.equalityI)
  apply(clarify)
- apply(case_tac "idx = Suc (length ta)"; simp)
-apply(simp add: stack_as_set_def)
-apply(clarify)
-apply(case_tac "idx = Suc (length ta)"; simp)
+ apply(simp)
+ apply(rename_tac elm; case_tac elm; simp)
+ apply(rename_tac pair; case_tac pair; simp)
+ apply(auto)
 done
 
 
@@ -207,12 +207,9 @@ program_content (cctx_program co_ctx) (vctx_pc x1) = Some (Arith inst_EQ) \<Long
              {CodeElm (vctx_pc x1, Arith inst_EQ)})
 "
 apply(auto)
-   apply(rename_tac elm; case_tac elm; auto)
   apply(rename_tac elm; case_tac elm; auto)
  apply(rename_tac elm; case_tac elm; auto)
 apply(rename_tac elm; case_tac elm; auto)
- apply(case_tac "a = Suc (length ta)"; simp)
-apply(case_tac "a = length ta"; simp)
 done
 
 lemma eq_gas_triple :
@@ -232,6 +229,7 @@ lemma eq_gas_triple :
                         continuing )"
 apply(auto simp add: triple_def)
  apply(rule_tac x = 1 in exI)
+ apply(simp add: instruction_result_as_set_def)
  apply(case_tac presult; auto simp add: failed_for_reasons_def
        instruction_result_as_set_def) (* takes too much time *)
 apply(rule_tac x = 1 in exI)
@@ -260,14 +258,9 @@ lemma tmp1 [simp]:
              {ContinuingElm True} -
              {CodeElm (vctx_pc x1, Arith ADD)})"
 apply(auto)
-   apply(rename_tac elm; case_tac elm; auto)
   apply(rename_tac elm; case_tac elm; auto)
  apply(rename_tac elm; case_tac elm; auto)
 apply(rename_tac elm; case_tac elm; auto)
- apply(rename_tac l)
- apply(case_tac "l = length ta"; auto)
-apply(rename_tac l)
-apply(case_tac "l = length ta"; auto)
 done
 
 lemma add_triple :
@@ -494,7 +487,6 @@ lemma caller0 [simp] :
              {CodeElm (vctx_pc x1, Info CALLER)})
 "
 apply(auto)
-    apply(rename_tac elm; case_tac elm; auto simp add: stack_as_set_def)
   apply(rename_tac elm; case_tac elm; auto simp add: stack_as_set_def)
  apply(rename_tac elm; case_tac elm; auto simp add: stack_as_set_def)
 apply(rename_tac elm; case_tac elm; auto simp add: stack_as_set_def)

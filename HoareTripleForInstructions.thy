@@ -1105,6 +1105,39 @@ lemma memory_usage_elm_means [simp] :
 apply(simp add: contexts_as_set_def)
 done
 
+lemma pc_update_v [simp] :
+  "x \<in> variable_ctx_as_set (x1\<lparr>vctx_pc := p\<rparr>) =
+  (x = PcElm p \<or> x \<in> variable_ctx_as_set x1 - {PcElm (vctx_pc x1)})"
+apply(auto simp add: variable_ctx_as_set_def ext_program_as_set_def)
+done
+
+lemma pc_update [simp] :
+  "x \<in> contexts_as_set (x1\<lparr>vctx_pc := p\<rparr>) co_ctx =
+  (x = PcElm p \<or> x \<in> contexts_as_set x1 co_ctx - {PcElm (vctx_pc x1)})"
+apply(auto simp add: contexts_as_set_def)
+done
+
+lemma stack_as_set_cons [simp] :
+  "x \<in> stack_as_set (w # lst) =
+   (x = StackHeightElm (Suc (length lst)) \<or>
+   x = StackElm (length lst, w) \<or>
+   x \<in> stack_as_set lst - {StackHeightElm (length lst)})"
+apply(auto simp add: stack_as_set_def)
+done
+
+
+lemma not_continuing_sep [simp] :
+  "(not_continuing ** rest) s =
+   (ContinuingElm False \<in> s \<and> rest (s - {ContinuingElm False}))"
+apply(auto simp add: sep_def not_continuing_def)
+done
+
+lemma action_sep [simp] :
+  "(action a ** rest) s =
+   (ContractActionElm a \<in> s \<and> rest (s - {ContractActionElm a}))"
+apply(auto simp add: action_def sep_def)
+done
+
 
 (****** specifying each instruction *******)
 
@@ -1163,16 +1196,12 @@ lemma jumpi_false_gas_triple :
                        continuing)"
 apply(auto simp add: triple_def)
 apply(rule_tac x = 1 in exI)
+apply(simp add: instruction_result_as_set_def)
 apply(case_tac presult; auto simp add: instruction_result_as_set_def vctx_advance_pc_def)
 apply(rule leibniz)
  apply blast
 apply(auto)
- apply(rename_tac elm; case_tac elm; auto simp add: instruction_result_as_set_def)
-    apply(case_tac "a = Suc (length ta)"; simp)
-   apply(case_tac "a = Suc (length ta)"; simp)
-  apply(case_tac "a = Suc (length ta)"; simp)
- apply(case_tac "a = Suc (length ta)"; simp)
-apply(rename_tac elm; case_tac elm; auto simp add: instruction_result_as_set_def)
+apply(auto simp add: stack_as_set_def)
 done
 
 lemma jumpi_true_gas_triple :
@@ -1192,16 +1221,12 @@ lemma jumpi_true_gas_triple :
                       )"
 apply(auto simp add: triple_def)
 apply(rule_tac x = 1 in exI)
+apply(simp add: instruction_result_as_set_def)
 apply(case_tac presult; auto simp add: instruction_result_as_set_def)
 apply(rule leibniz)
  apply blast
 apply(auto)
- apply(rename_tac elm; case_tac elm; auto simp add: instruction_result_as_set_def)
-    apply(case_tac "a = Suc (length ta)"; simp)
-   apply(case_tac "a = Suc (length ta)"; simp)
-  apply(case_tac "a = Suc (length ta)"; simp)
- apply(case_tac "a = Suc (length ta)"; simp)
-apply(rename_tac elm; case_tac elm; auto simp add: instruction_result_as_set_def)
+apply(auto simp add: stack_as_set_def)
 done
 
 
@@ -1225,8 +1250,7 @@ apply(case_tac presult; auto simp add: instruction_result_as_set_def)
 apply(rule leibniz)
  apply blast
 apply(auto)
- apply(rename_tac elm; case_tac elm; auto simp add: instruction_result_as_set_def)
-apply(rename_tac elm; case_tac elm; auto simp add: instruction_result_as_set_def)
+apply(auto simp add: stack_as_set_def)
 done
 
 declare jump_def [simp del]
