@@ -193,6 +193,11 @@ definition caller :: "address \<Rightarrow> state_element set \<Rightarrow> bool
 where
 "caller c s == s = {CallerElm c}"
 
+definition storage :: "w256 \<Rightarrow> w256 \<Rightarrow> state_element set \<Rightarrow> bool"
+where
+"storage idx w s == s = {StorageElm (idx, w)}"
+
+
 definition this_account :: "address \<Rightarrow> state_element set \<Rightarrow> bool"
 where
 "this_account t s == s = {ThisAccountElm t}"
@@ -288,6 +293,12 @@ done
 lemma contiuning_sep [simp] :
   "(continuing ** rest) s = ((ContinuingElm True) \<in> s \<and> rest (s - {ContinuingElm True}))"
 apply(auto simp add: sep_def continuing_def)
+done
+
+lemma storage_sep [simp] :
+  "(storage idx w ** rest) s =
+   (StorageElm (idx, w) \<in> s \<and> rest (s - {StorageElm (idx, w)}))"
+apply(auto simp add: sep_def storage_def)
 done
 
 lemma stack_height_sep [simp] : "(stack_height h ** rest) s =
