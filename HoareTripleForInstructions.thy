@@ -1132,6 +1132,12 @@ lemma not_continuing_sep [simp] :
 apply(auto simp add: sep_def not_continuing_def)
 done
 
+lemma this_account_sep [simp] :
+  "(this_account t ** rest) s =
+   (ThisAccountElm t \<in> s \<and> rest (s - {ThisAccountElm t}))"
+apply(auto simp add: this_account_def sep_def)
+done
+
 lemma action_sep [simp] :
   "(action a ** rest) s =
    (ContractActionElm a \<in> s \<and> rest (s - {ContractActionElm a}))"
@@ -1171,6 +1177,30 @@ blockedInstructionContinue_def [simp]
 vctx_pop_stack_def [simp]
 stack_0_1_op_def [simp]
 
+lemma leibniz :
+  "r (s :: state_element set) \<Longrightarrow> s = t \<Longrightarrow> r t"
+apply(auto)
+done
+
+lemma address_gas_triple :
+  "triple {OutOfGas}
+          (\<langle> h \<le> 1023 \<rangle> ** stack_height h ** program_counter k ** this_account t ** gas_pred g ** continuing)
+          {(k, Info ADDRESS)}
+          (stack_height (h + 1) ** stack h (ucast t)
+           ** program_counter (k + 1) ** this_account t ** gas_pred (g - Gbase) ** continuing )"
+apply(auto simp add: triple_def)
+apply(rule_tac x = 1 in exI)
+apply(case_tac presult; simp add: instruction_result_as_set_def)
+apply(rule leibniz)
+ apply blast
+apply(auto)
+  apply(rename_tac elm; case_tac elm; auto)
+ apply(rename_tac elm; case_tac elm; auto)
+apply(rename_tac elm; case_tac elm; auto)
+
+done
+
+
 lemma push_advance [simp] :
 "      vctx_pc x1 = k \<Longrightarrow>
        lst \<noteq> [] \<Longrightarrow>
@@ -1180,10 +1210,7 @@ lemma push_advance [simp] :
 apply(simp add: vctx_advance_pc_def inst_size_def inst_code.simps stack_inst_code.simps)
 done
 
-lemma leibniz :
-  "r (s :: state_element set) \<Longrightarrow> s = t \<Longrightarrow> r t"
-apply(auto)
-done
+
 
 lemma push_gas_triple :
    "triple {OutOfGas} (\<langle> h \<le> 1023 \<and> length lst > 0 \<and> 32 \<ge> length lst\<rangle> **
