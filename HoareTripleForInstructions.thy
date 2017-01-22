@@ -1178,10 +1178,46 @@ vctx_pop_stack_def [simp]
 stack_0_1_op_def [simp]
 general_dup_def [simp]
 dup_inst_numbers_def [simp]
+storage_inst_numbers.simps [simp]
 
 lemma leibniz :
   "r (s :: state_element set) \<Longrightarrow> s = t \<Longrightarrow> r t"
 apply(auto)
+done
+
+lemma sload_advance [simp] :
+"       program_content (cctx_program co_ctx) (vctx_pc x1) = Some (Storage SLOAD) \<Longrightarrow>
+       k = vctx_pc x1 \<Longrightarrow>
+       vctx_pc (vctx_advance_pc co_ctx x1) = vctx_pc x1 + 1"
+apply(simp add: vctx_advance_pc_def inst_size_def inst_code.simps)
+done
+
+
+lemma sload_gas_triple :
+  "triple {OutOfGas}
+          (\<langle> h \<le> 1023 \<and> unat bn \<ge> 2463000\<rangle>
+           ** block_number_pred bn ** stack_height (h + 1)
+           ** stack h idx
+           ** program_counter k ** storage idx w ** gas_pred g ** continuing)
+          {(k, Storage SLOAD)}
+          (block_number_pred bn ** stack_height (h + 1) ** stack h w
+           ** program_counter (k + 1) ** storage idx w ** gas_pred (g - Gsload (unat bn)) ** continuing )"
+apply(auto simp add: triple_def)
+apply(rule_tac x = 1 in exI)
+apply(case_tac presult; auto simp add: instruction_result_as_set_def)
+apply(rule leibniz)
+ apply blast
+apply(rule  Set.equalityI; clarify)
+ apply(simp)
+ apply(rename_tac elm)
+ apply(case_tac elm; simp)
+ apply(rename_tac pair)
+ apply(case_tac pair; auto)
+apply(simp)
+apply(rename_tac elm)
+apply(case_tac elm; simp)
+apply(rename_tac pair)
+apply(case_tac pair; auto)
 done
 
 lemma "reverse_lookup" [simp] :
