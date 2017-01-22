@@ -1250,6 +1250,38 @@ lemma leibniz :
 apply(auto)
 done
 
+lemma call_gas_triple:
+  "triple {OutOfGas}
+          (\<langle> h \<le> 1024 \<and> fund \<ge> v \<rangle> ** 
+           stack_height (h + 7) **
+           stack (h + 6) g ** 
+           stack (h + 5) r **
+           stack (h + 4) v **
+           stack (h + 3) in_begin **
+           stack (h + 2) in_size**
+           stack (h + 1) out_begin **
+           stack h out_size **
+           gas_pred own_gas **
+           memory_range in_begin in_size input **
+           this_account this **
+           balance this fund **
+           program_counter k ** continuing)
+          {(k, Misc CALL)}
+          (stack_height h ** 
+           memory_range in_begin in_size input **
+           balance this fund **
+           program_counter k ** 
+           gas_pred (own_gas - X)
+           not_continuing **
+           action (ContractCall \<lparr> callarg_gas = g
+                                , callarg_code = ucast r
+                                , callarg_recipient = ucast r
+                                , callarg_value = v
+                                , callarg_data = input
+                                , callarg_output_begin = out_begin
+                                , callarg_output_size = out_size \<rparr>))"
+
+
 lemma gas_gas_triple :
   "triple {OutOfGas}
           (\<langle> h \<le> 1023 \<rangle> ** stack_height h ** program_counter k ** gas_pred g ** continuing)
