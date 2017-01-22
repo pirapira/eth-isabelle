@@ -4,6 +4,87 @@ imports Main "./HoareTripleForInstructions"
 
 begin
 
+lemma jumpi_size [simp] :
+  "inst_size (Pc JUMPI) = 1"
+apply(simp add: inst_size_def inst_code.simps)
+done
+
+lemma jumpi_false_gas_triple :
+   "triple {OutOfGas} (\<langle> h \<le> 1022 \<rangle> **
+                       stack_height (h + 2) **
+                       stack (h + 1) d **
+                       stack h 0 **
+                       program_counter k **
+                       gas_pred g **
+                       continuing
+                      )
+                      {(k, Pc JUMPI)}
+                      (stack_height h **
+                       program_counter (k + 1) **
+                       gas_pred (g - Ghigh) **
+                       continuing)"
+apply(auto simp add: triple_def)
+apply(rule_tac x = 1 in exI)
+apply(simp add: instruction_result_as_set_def)
+apply(case_tac presult; auto simp add: instruction_result_as_set_def vctx_advance_pc_def)
+apply(rule leibniz)
+ apply blast
+apply(auto)
+apply(auto simp add: stack_as_set_def)
+done
+
+lemma jumpi_true_gas_triple :
+   "triple {OutOfGas} (\<langle> h \<le> 1022 \<and> cond \<noteq> 0 \<rangle> **
+                       stack_height (h + 2) **
+                       stack (h + 1) d **
+                       stack h cond **
+                       program_counter k **
+                       gas_pred g **
+                       continuing
+                      )
+                      {(k, Pc JUMPI), ((uint d), Pc JUMPDEST)}
+                      (stack_height h **
+                       program_counter (uint d) **
+                       gas_pred (g - Ghigh) **
+                       continuing
+                      )"
+apply(auto simp add: triple_def)
+apply(rule_tac x = 1 in exI)
+apply(simp add: instruction_result_as_set_def)
+apply(case_tac presult; auto simp add: instruction_result_as_set_def)
+apply(rule leibniz)
+ apply blast
+apply(auto)
+apply(auto simp add: stack_as_set_def)
+done
+
+
+lemma jump_gas_triple :
+   "triple {OutOfGas} (\<langle> h \<le> 1023 \<rangle> **
+                       stack_height (h + 1) **
+                       stack h d **
+                       program_counter k **
+                       gas_pred g **
+                       continuing
+                      )
+                      {(k, Pc JUMP), ((uint d), Pc JUMPDEST)}
+                      (stack_height h **
+                       program_counter (uint d) **
+                       gas_pred (g - Gmid) **
+                       continuing
+                      )"
+apply(auto simp add: triple_def)
+apply(rule_tac x = 1 in exI)
+apply(case_tac presult; auto simp add: instruction_result_as_set_def)
+apply(rule leibniz)
+ apply blast
+apply(auto)
+apply(auto simp add: stack_as_set_def)
+done
+
+declare jump_def [simp del]
+
+
 lemma invalid_jump [simp] :
       "program_content (cctx_program co_ctx) (uint d) = Some i \<Longrightarrow>
        i \<noteq> Pc JUMPDEST \<Longrightarrow>
