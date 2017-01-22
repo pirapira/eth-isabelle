@@ -1169,11 +1169,45 @@ declare predict_gas_def [simp]
         blocked_jump_def [simp]
 blockedInstructionContinue_def [simp]
 vctx_pop_stack_def [simp]
+stack_0_1_op_def [simp]
+
+lemma push_advance [simp] :
+"      vctx_pc x1 = k \<Longrightarrow>
+       lst \<noteq> [] \<Longrightarrow>
+       length lst \<le> 32 \<Longrightarrow>
+       program_content (cctx_program co_ctx) k = Some (Stack (PUSH_N lst)) \<Longrightarrow>
+       vctx_pc (vctx_advance_pc co_ctx x1) = k + 1 + (int (length lst))"
+apply(simp add: vctx_advance_pc_def inst_size_def inst_code.simps stack_inst_code.simps)
+done
 
 lemma leibniz :
   "r (s :: state_element set) \<Longrightarrow> s = t \<Longrightarrow> r t"
 apply(auto)
 done
 
+lemma push_gas_triple :
+   "triple {OutOfGas} (\<langle> h \<le> 1023 \<and> length lst > 0 \<and> 32 \<ge> length lst\<rangle> **
+                       stack_height h **
+                       program_counter k **
+                       gas_pred g **
+                       continuing
+                      )
+                      {(k, Stack (PUSH_N lst))}
+                      (stack_height (h + 1) **
+                       stack h (word_rcat lst) **
+                       program_counter (k + 1 + (int (length lst))) **
+                       gas_pred (g - Gverylow) **
+                       continuing
+                      )"
+apply(auto simp add: triple_def)
+apply(rule_tac x = 1 in exI)
+apply(case_tac presult; simp add: instruction_result_as_set_def constant_mark_def)
+apply(rule leibniz)
+ apply blast
+apply(auto)
+  apply(rename_tac elm; case_tac elm; auto)
+ apply(rename_tac elm; case_tac elm; auto)
+apply(rename_tac elm; case_tac elm; auto)
+done
 
 end
