@@ -1179,11 +1179,36 @@ stack_0_1_op_def [simp]
 general_dup_def [simp]
 dup_inst_numbers_def [simp]
 storage_inst_numbers.simps [simp]
+Gbase_def [simp]
 
 lemma leibniz :
   "r (s :: state_element set) \<Longrightarrow> s = t \<Longrightarrow> r t"
 apply(auto)
 done
+
+lemma gas_gas_triple :
+  "triple {OutOfGas}
+          (\<langle> h \<le> 1023 \<rangle> ** stack_height h ** program_counter k ** gas_pred g ** continuing)
+          {(k, Info GAS)}
+          (stack_height (h + 1) ** stack h (word_of_int (g - 2))
+           ** program_counter (k + 1) ** gas_pred (g - 2) ** continuing )"
+apply(auto simp add: triple_def)
+apply(rule_tac x = 1 in exI)
+apply(case_tac presult; auto simp add: instruction_result_as_set_def)
+ apply(simp add: gas_def  Word.wi_hom_syms(2))
+apply(rule leibniz)
+ apply blast
+apply(rule  Set.equalityI; clarify)
+ apply(simp)
+ apply(rename_tac elm)
+ apply(case_tac elm; simp)
+ apply(rename_tac pair)
+ apply(case_tac pair; auto)
+apply(simp)
+apply(rename_tac elm)
+apply(case_tac elm; auto simp add: gas_def Word.wi_hom_syms(2))
+done
+
 
 lemma sload_advance [simp] :
 "       program_content (cctx_program co_ctx) (vctx_pc x1) = Some (Storage SLOAD) \<Longrightarrow>
