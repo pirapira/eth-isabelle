@@ -1176,11 +1176,62 @@ declare predict_gas_def [simp]
 blockedInstructionContinue_def [simp]
 vctx_pop_stack_def [simp]
 stack_0_1_op_def [simp]
+general_dup_def [simp]
+dup_inst_numbers_def [simp]
 
 lemma leibniz :
   "r (s :: state_element set) \<Longrightarrow> s = t \<Longrightarrow> r t"
 apply(auto)
 done
+
+lemma "reverse_lookup" [simp] :
+  "n < length lst \<Longrightarrow>
+   rev lst ! (length lst - Suc n) = lst ! n
+  "
+  using nth_rev_alt by fastforce
+
+lemma deep_lookup [simp] :
+  "w = rev (vctx_stack x1) ! (length (vctx_stack x1) - Suc (unat n)) \<Longrightarrow>
+   unat n < length (vctx_stack x1) \<Longrightarrow>
+   index (vctx_stack x1) (unat n) = Some w"
+apply(simp)
+done
+
+lemma dup_advance [simp] :
+"      program_content (cctx_program co_ctx) (vctx_pc x1) = Some (Dup n) \<Longrightarrow>
+       k = vctx_pc x1 \<Longrightarrow>
+       vctx_pc (vctx_advance_pc co_ctx x1) = vctx_pc x1 + 1
+"
+apply(simp add: vctx_advance_pc_def inst_size_def inst_code.simps)
+done
+
+lemma dup_gas_triple :
+   "triple {OutOfGas} (\<langle> h \<le> 1023 \<and> unat n < h \<rangle> **
+                       stack_height h **
+                       stack (h - (unat n) - 1) w **
+                       program_counter k **
+                       gas_pred g **
+                       continuing
+                      )
+                      {(k, Dup n)}
+                      (stack_height (h + 1) **
+                       stack (h - (unat n) - 1) w **
+                       stack h w **
+                       program_counter (k + 1) **
+                       gas_pred (g - Gverylow) **
+                       continuing
+                      )"
+apply(auto simp add: triple_def)
+apply(rule_tac x = 1 in exI)
+apply(case_tac presult; auto simp add: instruction_result_as_set_def)
+apply(rule leibniz)
+ apply blast
+apply(auto)
+  apply(rename_tac elm; case_tac elm; auto)
+ apply(rename_tac elm; case_tac elm; auto)
+apply(rename_tac elm; case_tac elm; auto)
+done
+
 
 lemma address_gas_triple :
   "triple {OutOfGas}
