@@ -193,6 +193,10 @@ definition caller :: "address \<Rightarrow> state_element set \<Rightarrow> bool
 where
 "caller c s == s = {CallerElm c}"
 
+definition this_account :: "address \<Rightarrow> state_element set \<Rightarrow> bool"
+where
+"this_account t s == s = {ThisAccountElm t}"
+
 definition balance :: "address \<Rightarrow> w256 \<Rightarrow> state_element set \<Rightarrow> bool"
 where
 "balance adr v s == s = {BalanceElm (adr, v)}"
