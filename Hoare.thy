@@ -228,8 +228,7 @@ definition memory_range :: "w256 \<Rightarrow> nat \<Rightarrow> byte list \<Rig
 where
 "memory_range (begin :: w256) (len :: nat) (lst :: byte list) (s :: state_element set) =
  (length lst = len \<and>
-  s = {MemoryElm (idx, v) | idx v. begin \<le> idx \<and> 
-                            idx < begin + word_of_int (int len) \<and> (v = lst ! unat (idx - begin))})"
+  s = {MemoryElm (idx, v) | idx v. \<exists> pos. pos = unat (idx - begin) \<and> pos < len \<and> v = lst ! pos})"
 
 
 lemma stack_sound0 :
