@@ -224,6 +224,14 @@ where
 
 (* memory8, memory, calldata, and storage should be added here *)
 
+definition memory_range :: "w256 \<Rightarrow> nat \<Rightarrow> byte list \<Rightarrow> state_element set \<Rightarrow> bool"
+where
+"memory_range (begin :: w256) (len :: nat) (lst :: byte list) (s :: state_element set) =
+ (length lst = len \<and>
+  s = {MemoryElm (idx, v) | idx v. begin \<le> idx \<and> 
+                            idx < begin + word_of_int (int len) \<and> (v = lst ! unat (idx - begin))})"
+
+
 lemma stack_sound0 :
   "(stack pos w ** p) s \<Longrightarrow> StackElm (pos, w) \<in> s"
 apply(auto simp add: sep_def stack_def)
@@ -271,6 +279,7 @@ where
  (\<exists> reasons a b. 
               r = InstructionToEnvironment (ContractFail reasons) a b
               \<and> set reasons \<subseteq> allowed)"
+
 
 definition triple ::
  "failure_reason set \<Rightarrow> (state_element set \<Rightarrow> bool) \<Rightarrow> (int * inst) set \<Rightarrow> (state_element set \<Rightarrow> bool) \<Rightarrow> bool"

@@ -1144,6 +1144,11 @@ lemma action_sep [simp] :
 apply(auto simp add: action_def sep_def)
 done
 
+lemma cut_memory_memory_range [simp] :
+  "(memory_range b l lst ** rest) (instruction_result_as_set c (InstructionContinue v)) \<Longrightarrow>
+   cut_memory b l (vctx_memory v) = lst"
+oops
+
 
 (****** specifying each instruction *******)
 
