@@ -1144,26 +1144,12 @@ lemma action_sep [simp] :
 apply(auto simp add: action_def sep_def)
 done
 
-lemma memory_range_suc_decompose:
-  "pred_equiv
-   (memory_range b (Suc l) (h # t))
-   (memory_range b 1 [h] ** memory_range (b + 1) l t)"
-apply(auto simp add: pred_equiv_def sep_def memory_range_def)
-(* wow, this might not be valid, because when the list is too long, what can I do about it.
- * it cannot go like this.
- *)
-
-lemma memory_range_suc:
-  "(memory_range b (Suc l) (h # t) ** rest) s =
-   (memory_range b 1 [h] ** memory_range (b + 1) l t ** rest ) s"
-oops
-
 lemma cut_memory_memory_range [simp] :
-  "\<forall> rest. ((memory_range b l lst ** rest) (instruction_result_as_set c (InstructionContinue v)) \<longrightarrow>
-   cut_memory b l (vctx_memory v) = lst)"
-apply(induction l)
- apply(simp add: sep_def memory_range_def cut_memory.simps)
-apply(rule allI)
+  "\<forall> rest. ((memory_range b lst ** rest) (instruction_result_as_set c (InstructionContinue v)) \<longrightarrow>
+   cut_memory b (length lst) (vctx_memory v) = lst)"
+apply(induction lst)
+ apply(simp add: sep_def cut_memory.simps)
+apply(auto)
 
 
 oops

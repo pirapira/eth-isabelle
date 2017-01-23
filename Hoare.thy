@@ -224,12 +224,14 @@ where
 
 (* memory8, memory, calldata, and storage should be added here *)
 
-definition memory_range :: "w256 \<Rightarrow> nat \<Rightarrow> byte list \<Rightarrow> state_element set \<Rightarrow> bool"
+definition memory8 :: "w256 \<Rightarrow> byte \<Rightarrow> state_element set \<Rightarrow> bool"
 where
-"memory_range (begin :: w256) (len :: nat) (lst :: byte list) (s :: state_element set) =
- (length lst = len \<and>
-  s = {MemoryElm (idx, v) | idx v. \<exists> pos. pos = unat (idx - begin) \<and> pos < len \<and> v = lst ! pos})"
+"memory8 idx v s == s = {MemoryElm (idx ,v)}"
 
+fun memory_range :: "w256 \<Rightarrow> byte list \<Rightarrow> state_element set \<Rightarrow> bool"
+where
+  "memory_range begin [] = emp"
+| "memory_range begin (h # t) = memory8 begin h ** memory_range (begin + 1) t"
 
 lemma stack_sound0 :
   "(stack pos w ** p) s \<Longrightarrow> StackElm (pos, w) \<in> s"
