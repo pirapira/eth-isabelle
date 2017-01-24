@@ -1144,11 +1144,6 @@ lemma action_sep [simp] :
 apply(auto simp add: action_def sep_def)
 done
 
-lemma memory_range_not_zero [simp] :
-  "(memory_range b 0 (a # lst) ** rest) s = False"
-apply(simp add: memory_range_def sep_def)
-done
-
 lemma cut_memory_cons [simp] :
   "(cut_memory b (Suc n) m = a # lst) =
    (m b = a \<and> cut_memory (b + 1) n m = lst)"
