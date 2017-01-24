@@ -1144,16 +1144,66 @@ lemma action_sep [simp] :
 apply(auto simp add: action_def sep_def)
 done
 
+lemma memory_range_not_zero [simp] :
+  "(memory_range b 0 (a # lst) ** rest) s = False"
+apply(simp add: memory_range_def sep_def)
+done
+
+lemma cut_memory_cons [simp] :
+  "(cut_memory b (Suc n) m = a # lst) =
+   (m b = a \<and> cut_memory (b + 1) n m = lst)"
+apply(simp add: cut_memory.simps)
+done
+
+lemma memory_range_cons [simp] :
+  "pred_equiv (memory_range b (a # lst))
+     (memory8 b a ** memory_range (b + 1) lst)"
+apply(simp add: pred_equiv_def sep_def)
+done
+
+lemma memory8_sep :
+  "(memory8 b a ** rest) s ==
+   MemoryElm (b, a) \<in> s \<and> rest (s - {MemoryElm (b,a)})"
+apply(simp add: memory8_def sep_def)
+by (smt DiffE Diff_insert_absorb insertI1 insert_Diff)
+
+lemma memory8_short [simp]
+ :"      (memory8 b a ** rest)
+        (instruction_result_as_set c (InstructionContinue v)) \<Longrightarrow>
+       vctx_memory v b = a"
+apply(simp add: memory8_sep)
+apply(simp add: instruction_result_as_set_def)
+done
+
+lemma sep_ac:
+"(a ** b ** c) s \<Longrightarrow> (b ** a ** c) s"
+  by (smt imp_sepL pred_equiv_sep_comm pred_equiv_sound sep_assoc)
+
+
 lemma cut_memory_memory_range [simp] :
-  "\<forall> rest. ((memory_range b lst ** rest) (instruction_result_as_set c (InstructionContinue v)) \<longrightarrow>
-   cut_memory b (length lst) (vctx_memory v) = lst)"
+  "\<forall> rest b. 
+   (memory_range b lst ** rest) (instruction_result_as_set c (InstructionContinue v))
+   \<longrightarrow> cut_memory b (length lst) (vctx_memory v) = lst"
 apply(induction lst)
- apply(simp add: sep_def cut_memory.simps)
+ apply(simp add: cut_memory.simps sep_def)
 apply(auto)
+apply(drule_tac x = "memory8 b a ** rest" in spec)
+apply(drule_tac x = "b + 1" in spec)
+apply(drule sep_ac)
+apply(auto)
+done
 
+(*
+  need to get information about a from:
 
-oops
+  {MemoryElm (idx, (a # lst) ! unat (idx - b)) |idx.
+        b \<le> idx \<and> idx < b + word_of_int (1 + int (length lst))} \<union>
+       va =
+       instruction_result_as_set c (InstructionContinue v)
+>>>>>>> Stashed changes
 
+Maybe I've decomposed too much definitions.
+ *)
 
 (****** specifying each instruction *******)
 
