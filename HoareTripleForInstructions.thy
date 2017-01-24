@@ -1252,7 +1252,7 @@ done
 
 lemma call_gas_triple:
   "triple {OutOfGas}
-          (\<langle> h \<le> 1024 \<and> fund \<ge> v \<rangle> ** 
+          (\<langle> h \<le> 1024 \<and> fund \<ge> v \<and> length input = unat in_size \<rangle> ** 
            stack_height (h + 7) **
            stack (h + 6) g ** 
            stack (h + 5) r **
@@ -1262,16 +1262,16 @@ lemma call_gas_triple:
            stack (h + 1) out_begin **
            stack h out_size **
            gas_pred own_gas **
-           memory_range in_begin in_size input **
+           memory_range in_begin input **
            this_account this **
            balance this fund **
            program_counter k ** continuing)
           {(k, Misc CALL)}
           (stack_height h ** 
-           memory_range in_begin in_size input **
+           memory_range in_begin input **
            balance this fund **
            program_counter k ** 
-           gas_pred (own_gas - X)
+           gas_pred (own_gas - X) **
            not_continuing **
            action (ContractCall \<lparr> callarg_gas = g
                                 , callarg_code = ucast r
