@@ -1280,6 +1280,11 @@ lemma call_gas_triple:
                                 , callarg_data = input
                                 , callarg_output_begin = out_begin
                                 , callarg_output_size = out_size \<rparr>))"
+apply(auto simp add: triple_def)
+apply(rule_tac x = 1 in exI)
+apply(case_tac presult; auto simp add: instruction_result_as_set_def)
+(* has to decompose (memory_range ___ ** rest) s *)
+oops
 
 
 lemma gas_gas_triple :
