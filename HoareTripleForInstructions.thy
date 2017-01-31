@@ -1183,6 +1183,11 @@ apply(simp add: memory8_sep)
 apply(simp add: instruction_result_as_set_def)
 done
 
+lemma memory_range_sep [simp] :
+"(memory_range start lst ** rest) s ==
+ memory_range_elms start lst \<subseteq> s \<and> rest (s - memory_range_elms start lst)"
+oops
+
 lemma sep_ac:
 "(a ** b ** c) s \<Longrightarrow> (b ** a ** c) s"
  using sep_assoc by (simp add: sep_commute)
