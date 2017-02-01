@@ -357,41 +357,10 @@ lemma balance_sep [simp] :
 apply(auto simp add: balance_def sep_def)
 done
 
-lemma pred_equiv_R_assoc [simp] :
-  "pred_equiv a ((b ** c) ** d) = pred_equiv a (b ** c ** d)"
-apply(auto)
- apply(rule pred_equiv_trans_other)
-  apply(rule pred_equiv_sep_assoc)
- apply(simp)
-apply(rule pred_equiv_trans_other)
- apply(rule pred_equiv_symm)
- apply(rule pred_equiv_sep_assoc)
-apply(simp)
-done
-
 lemma Gverylow_positive [simp]:
   "Gverylow > 0"
 apply(simp add: Gverylow_def)
 done
-
-
-lemma pred_equiv_R_pure :
-  "b \<Longrightarrow> pred_equiv a c \<Longrightarrow> pred_equiv a (\<langle> b \<rangle> ** c)"
-apply(simp add: pred_equiv_def)
-done
-
-lemma pred_equiv_L_pure :
-  "b \<Longrightarrow> pred_equiv a c \<Longrightarrow> pred_equiv (\<langle> b \<rangle> ** a) c"
-apply(simp add: pred_equiv_def)
-done
-
-
-lemma pred_equiv_R_comm :
-  "pred_equiv a (c ** d) \<Longrightarrow> pred_equiv a (d ** c)"
-apply(simp add: pred_equiv_def)
-(* sledgehammer *)
-	by (simp add: pred_equiv_sep_comm pred_equiv_sound)
-
 
 lemma saying_zero [simp] :
   "(x - Suc 0 < x) = (x \<noteq> 0)"
@@ -417,8 +386,6 @@ lemma advance_pc_as_set [simp] :
 apply(auto simp add: contexts_as_set_def variable_ctx_as_set_def stack_as_set_def
       vctx_advance_pc_def vctx_next_instruction_def ext_program_as_set_def)
 done
-
-
 
 lemma gas_change_as_set [simp] :
   "(contexts_as_set (x1\<lparr>vctx_gas := new_gas\<rparr>) co_ctx) 
@@ -1150,12 +1117,6 @@ lemma cut_memory_cons [simp] :
 apply(simp add: cut_memory.simps)
 done
 
-lemma memory_range_cons [simp] :
-  "pred_equiv (memory_range b (a # lst))
-     (memory8 b a ** memory_range (b + 1) lst)"
-apply(simp add: pred_equiv_def sep_def)
-done
-
 lemma memory8_sep :
   "(memory8 b a ** rest) s ==
    MemoryElm (b, a) \<in> s \<and> rest (s - {MemoryElm (b,a)})"
@@ -1172,8 +1133,7 @@ done
 
 lemma sep_ac:
 "(a ** b ** c) s \<Longrightarrow> (b ** a ** c) s"
-  by (smt imp_sepL pred_equiv_sep_comm pred_equiv_sound sep_assoc)
-
+ using sep_assoc by (simp add: sep_commute)
 
 lemma cut_memory_memory_range [simp] :
   "\<forall> rest b. 
