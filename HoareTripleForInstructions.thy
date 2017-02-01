@@ -1136,11 +1136,12 @@ lemma sep_ac:
  using sep_assoc by (simp add: sep_commute)
 
 lemma cut_memory_memory_range [simp] :
-  "\<forall> rest b. 
+  "\<forall> rest b n.
+   n = word_of_int (int (length lst)) \<longrightarrow>
    (memory_range b lst ** rest) (instruction_result_as_set c (InstructionContinue v))
-   \<longrightarrow> cut_memory b (length lst) (vctx_memory v) = lst"
+   \<longrightarrow> cut_memory b n (vctx_memory v) = lst"
 apply(induction lst)
- apply(simp add: cut_memory.simps sep_def)
+ apply(auto simp add: sep_def cut_memory.psimps)
 apply(auto)
 apply(drule_tac x = "memory8 b a ** rest" in spec)
 apply(drule_tac x = "b + 1" in spec)
