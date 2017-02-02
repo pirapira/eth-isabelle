@@ -145,7 +145,6 @@ declare jumpi_def [simp]
 declare datasize_def [simp]
 declare read_word_from_bytes_def [simp]
 declare cut_data_def [simp]
-declare cut_memory.simps [simp]
 declare delegatecall_def [simp]
 declare callcode_def [simp]
 declare create_def [simp]
@@ -365,5 +364,36 @@ done
 
 lemma program_sem_annotation_failure [simp] : "program_sem k con n InstructionAnnotationFailure = InstructionAnnotationFailure"
 by (induct_tac n; auto)
+
+lemma not_at_least_one :
+  "\<not> 1 \<le> (aa :: 256 word) \<Longrightarrow> aa = 0"
+apply(simp add:linorder_class.not_le)
+done
+
+lemma unat_suc : "unat (aa :: w256) = Suc n \<Longrightarrow> unat (aa - 1) = n"
+apply(case_tac "aa \<ge> 1")
+ apply(simp add: uint_minus_simple_alt)
+apply(drule not_at_least_one)
+apply(simp)
+done
+
+(* unat (1 + (aa - 1)) = Suc (unat(aa - 1)) *)
+
+
+lemma cut_memory_dom_nat :
+  "\<forall> a aa b. unat aa = n \<longrightarrow> cut_memory_dom (a, aa, b)"
+apply(induction n)
+ apply(clarify)
+ apply(rule cut_memory.domintros)
+ apply(simp add: unat_eq_0 uint_0_iff)
+apply(clarify)
+apply(rule cut_memory.domintros)
+apply(drule unat_suc)
+apply(auto)
+done
+
+termination cut_memory
+apply(auto simp add: cut_memory_dom_nat)
+done
 
 end

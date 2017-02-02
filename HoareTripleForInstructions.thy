@@ -1111,11 +1111,43 @@ lemma action_sep [simp] :
 apply(auto simp add: action_def sep_def)
 done
 
-lemma cut_memory_cons [simp] :
-  "(cut_memory b (Suc n) m = a # lst) =
-   (m b = a \<and> cut_memory (b + 1) n m = lst)"
+lemma cut_memory_head:
+ "cut_memory b (n + 1) m = a # lst \<Longrightarrow> m b = a"
+apply(simp add: cut_memory.psimps)
+apply(split if_splits; simp)
+done
+
+declare cut_memory.simps [simp del]
+
+lemma cut_memory_S1 :
+  "cut_memory b (n + 1) m = [] \<or> cut_memory b (n + 1) m = m b # cut_memory (b + 1) n m"
 apply(simp add: cut_memory.simps)
 done
+
+lemma cut_memory_tail:
+  "cut_memory b (n + 1) m = a # lst \<Longrightarrow> cut_memory (b + 1) n m = lst"
+proof -
+ assume "cut_memory b (n + 1) m = a # lst"
+ moreover have "cut_memory b (n + 1) m = [] \<or> cut_memory b (n + 1) m = (m b # cut_memory (b + 1) n m)"
+  by(rule cut_memory_S1)
+ ultimately moreover have "cut_memory b (n + 1) m = m b # cut_memory (b + 1) n m"
+  by simp
+ ultimately show "cut_memory (b + 1) n m = lst"
+  by simp
+qed
+
+lemma cut_memory_zero [simp] :
+"cut_memory b 0 m = []"
+apply(simp add: cut_memory.simps)
+done
+
+lemma cut_memory_cons [simp] :
+  "(cut_memory b (n + 1) m = a # lst) =
+   (n + 1 \<noteq> 0 \<and> m b = a \<and> cut_memory (b + 1) n m = lst)"
+apply(auto simp add: cut_memory_head cut_memory_tail)
+apply(simp add: cut_memory.simps)
+done
+
 
 lemma memory8_sep :
   "(memory8 b a ** rest) s ==
@@ -1135,30 +1167,16 @@ lemma sep_ac:
 "(a ** b ** c) s \<Longrightarrow> (b ** a ** c) s"
  using sep_assoc by (simp add: sep_commute)
 
+(** need a lemma to destruct **)
+  (* (memory_range b (a # lst) ** rest) *)
+
 lemma cut_memory_memory_range [simp] :
-  "\<forall> rest b. 
+  "\<forall> rest b n.
+   unat n = length lst \<longrightarrow>
    (memory_range b lst ** rest) (instruction_result_as_set c (InstructionContinue v))
-   \<longrightarrow> cut_memory b (length lst) (vctx_memory v) = lst"
-apply(induction lst)
- apply(simp add: cut_memory.simps sep_def)
-apply(auto)
-apply(drule_tac x = "memory8 b a ** rest" in spec)
-apply(drule_tac x = "b + 1" in spec)
-apply(drule sep_ac)
-apply(auto)
-done
+   \<longrightarrow> cut_memory b n (vctx_memory v) = lst"
+oops
 
-(*
-  need to get information about a from:
-
-  {MemoryElm (idx, (a # lst) ! unat (idx - b)) |idx.
-        b \<le> idx \<and> idx < b + word_of_int (1 + int (length lst))} \<union>
-       va =
-       instruction_result_as_set c (InstructionContinue v)
->>>>>>> Stashed changes
-
-Maybe I've decomposed too much definitions.
- *)
 
 (****** specifying each instruction *******)
 
