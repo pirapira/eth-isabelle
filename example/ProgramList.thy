@@ -27,18 +27,6 @@ lemma empty_eq : "map_tree_eq empty Leaf"
 apply(auto simp:map_tree_eq_def)
 done
 
-(*
-lemma wot_lst :
-  "map_of (upd_list x y lst) x = Some y"
-  by (simp add: map_of_ins_list)
-
-lemma wot :
- "sorted1(inorder m) \<Longrightarrow>
-  lookup (update x t (m::(int*inst) avl_tree)) =
-  (lookup m)(x := Some t)"
-  by (simp add: AVL_Map.map_update)
-*)
-
 lemma update_eq :
   "sorted1(inorder tree) \<Longrightarrow> n \<ge> 0 \<Longrightarrow> map_tree_eq m tree \<Longrightarrow>
    map_tree_eq (m(n:=Some t)) (update n t tree)"
@@ -61,6 +49,13 @@ lemma nat_suc : "n \<ge> 0 \<Longrightarrow> Suc (nat n) = nat (n+1)"
 apply(auto)
 done
 
+lemma store_bytes_inv :
+  "sorted1(inorder tree) \<Longrightarrow>
+   sorted1(inorder (store_byte_list_in_program n lst tree))"
+apply(induction lst arbitrary:tree n)
+apply(auto)
+  by (simp add: invar_update)
+
 lemma store_bytes_eq :
   "sorted1(inorder tree) \<Longrightarrow> n \<ge> 0 \<Longrightarrow> map_tree_eq m tree \<Longrightarrow>
    map_tree_eq (store_byte_list_in_map (nat n) lst m)
@@ -77,15 +72,15 @@ proof -
   assume a2: "map_tree_eq ma treea"
   assume a3: "\<And>tree n m. \<lbrakk>sorted1 (inorder tree); 0 \<le> n; map_tree_eq m tree\<rbrakk> \<Longrightarrow> map_tree_eq (store_byte_list_in_map (nat n) lsta m) (store_byte_list_in_program n lsta tree)"
   assume a4: "0 \<le> na"
-  have f5: "sorted1 (inorder (update na (Unknown a) treea))"
-    using a1 by (metis invar_update)
-  have "0 \<le> nat na"
-    by (metis not_le not_less_zero)
-  then have "map_tree_eq (ma(nat na \<mapsto> Unknown a)) (update na (Unknown a) treea)"
-  using a4 a2 a1 by (metis (no_types) nat_0_le update_eq)
+  have f5: "na + 1 = 1 + na"
+    by auto
+  have f6: "- 1 \<le> na"
+    using a4 by linarith
+  have "(0 \<le> 1 + na) = (- 1 \<le> na)"
+    by fastforce
   then show "map_tree_eq (store_byte_list_in_map (nat (na + 1)) lsta (ma(nat na \<mapsto> Unknown a))) (store_byte_list_in_program (na + 1) lsta (update na (Unknown a) treea))"
-    using f5 a4 a3 by simp
-  qed
+    using f6 f5 a4 a3 a2 a1 by (metis invar_update le_add2 le_add_same_cancel2 nat_0_le update_eq)
+qed
 
 fun program_map_of_lst ::
   "nat (* initial position in the AVL *) \<Rightarrow> inst list (* instructions *)
@@ -101,6 +96,216 @@ where
 | "program_map_of_lst pos (i # rest) =
    (program_map_of_lst (pos + 1) rest)(pos := Some i)"
 
+lemma program_avl_inv :
+  "sorted1(inorder (program_avl_of_lst n lst))"
+proof (induction lst arbitrary:n)
+case Nil thus ?case by simp
+next
+case (Cons a tl) thus ?case
+proof (cases a)
+  case (Unknown x1)
+  then show ?thesis
+    by (simp add: Cons.IH invar_update)
+next
+  case (Bits x2)
+  then show ?thesis
+    by (simp add: Cons.IH invar_update)
+
+next
+  case (Sarith x3)
+  then show ?thesis
+    by (simp add: Cons.IH invar_update)
+next
+  case (Arith x4)
+  then show ?thesis
+    by (simp add: Cons.IH invar_update)
+next
+  case (Info x5)
+  then show ?thesis
+    by (simp add: Cons.IH invar_update)
+next
+  case (Dup x6)
+  then show ?thesis
+    by (simp add: Cons.IH invar_update)
+next
+  case (Memory x7)
+  then show ?thesis
+    by (simp add: Cons.IH invar_update)
+next
+  case (Storage x8)
+  then show ?thesis
+    by (simp add: Cons.IH invar_update)
+next
+  case (Pc x9)
+  then show ?thesis
+    by (simp add: Cons.IH invar_update)
+next
+  case (Stack x10)
+  then show ?thesis proof (cases x10)
+    case POP
+    then show ?thesis
+      by (simp add: Cons.IH Stack invar_update) 
+  next
+    case (PUSH_N x2)
+    then show ?thesis
+      by (simp add: Cons.IH Stack invar_update store_bytes_inv) 
+  next
+    case CALLDATALOAD
+    then show ?thesis by (simp add: Cons.IH Stack invar_update) 
+
+  qed
+    
+next
+  case (Swap x11)
+  then show ?thesis
+    by (simp add: Cons.IH invar_update)
+next
+  case (Log x12)
+  then show ?thesis
+    by (simp add: Cons.IH invar_update)
+next
+  case (Misc x13)
+  then show ?thesis
+    by (simp add: Cons.IH invar_update)
+qed
+qed
+
+lemma nat_suc2 : "n \<ge> 0 \<Longrightarrow> Suc (nat n + length x2) = nat (n + 1 + length x2)"
+apply(auto)
+done
+
+lemma content_eq : 
+  "n \<ge> 0 \<Longrightarrow>
+   map_tree_eq (program_map_of_lst (nat n) lst)
+               (program_avl_of_lst n lst)"
+proof (induction lst arbitrary:n)
+case Nil thus ?case by (simp add:empty_eq)
+next
+case (Cons a tl) thus ?case
+proof (cases a)
+  case (Unknown x1)
+  then show ?thesis 
+apply(auto simp:map_tree_eq_def)
+  apply (simp add: AVL_Map.map_update Cons.prems program_avl_inv transfer_nat_int_relations(1))
+  by (smt AVL_Map.map_update Cons.IH Cons.prems fun_upd_apply int_eq_iff int_nat_eq map_tree_eq_def nat_eq_iff nat_suc program_avl_inv semiring_1_class.of_nat_simps(2))
+next
+  case (Bits x2)
+  then show ?thesis 
+apply(auto simp:map_tree_eq_def)
+  apply (simp add: AVL_Map.map_update Cons.prems program_avl_inv transfer_nat_int_relations(1))
+  by (smt AVL_Map.map_update Cons.IH Cons.prems fun_upd_apply int_eq_iff int_nat_eq map_tree_eq_def nat_eq_iff nat_suc program_avl_inv semiring_1_class.of_nat_simps(2))
+next
+  case (Sarith x3)
+  then show ?thesis 
+apply(auto simp:map_tree_eq_def)
+  apply (simp add: AVL_Map.map_update Cons.prems program_avl_inv transfer_nat_int_relations(1))
+  by (smt AVL_Map.map_update Cons.IH Cons.prems fun_upd_apply int_eq_iff int_nat_eq map_tree_eq_def nat_eq_iff nat_suc program_avl_inv semiring_1_class.of_nat_simps(2))
+next
+  case (Arith x4)
+  then show ?thesis 
+apply(auto simp:map_tree_eq_def)
+  apply (simp add: AVL_Map.map_update Cons.prems program_avl_inv transfer_nat_int_relations(1))
+  by (smt AVL_Map.map_update Cons.IH Cons.prems fun_upd_apply int_eq_iff int_nat_eq map_tree_eq_def nat_eq_iff nat_suc program_avl_inv semiring_1_class.of_nat_simps(2))
+next
+  case (Info x5)
+  then show ?thesis 
+apply(auto simp:map_tree_eq_def)
+  apply (simp add: AVL_Map.map_update Cons.prems program_avl_inv transfer_nat_int_relations(1))
+  by (smt AVL_Map.map_update Cons.IH Cons.prems fun_upd_apply int_eq_iff int_nat_eq map_tree_eq_def nat_eq_iff nat_suc program_avl_inv semiring_1_class.of_nat_simps(2))
+next
+  case (Dup x6)
+  then show ?thesis 
+apply(auto simp:map_tree_eq_def)
+  apply (simp add: AVL_Map.map_update Cons.prems program_avl_inv transfer_nat_int_relations(1))
+  by (smt AVL_Map.map_update Cons.IH Cons.prems fun_upd_apply int_eq_iff int_nat_eq map_tree_eq_def nat_eq_iff nat_suc program_avl_inv semiring_1_class.of_nat_simps(2))
+next
+  case (Memory x7)
+  then show ?thesis 
+apply(auto simp:map_tree_eq_def)
+  apply (simp add: AVL_Map.map_update Cons.prems program_avl_inv transfer_nat_int_relations(1))
+  by (smt AVL_Map.map_update Cons.IH Cons.prems fun_upd_apply int_eq_iff int_nat_eq map_tree_eq_def nat_eq_iff nat_suc program_avl_inv semiring_1_class.of_nat_simps(2))
+next
+  case (Storage x8)
+  then show ?thesis 
+apply(auto simp:map_tree_eq_def)
+  apply (simp add: AVL_Map.map_update Cons.prems program_avl_inv transfer_nat_int_relations(1))
+  by (smt AVL_Map.map_update Cons.IH Cons.prems fun_upd_apply int_eq_iff int_nat_eq map_tree_eq_def nat_eq_iff nat_suc program_avl_inv semiring_1_class.of_nat_simps(2))
+next
+  case (Pc x9)
+  then show ?thesis 
+apply(auto simp:map_tree_eq_def)
+  apply (simp add: AVL_Map.map_update Cons.prems program_avl_inv transfer_nat_int_relations(1))
+  by (smt AVL_Map.map_update Cons.IH Cons.prems fun_upd_apply int_eq_iff int_nat_eq map_tree_eq_def nat_eq_iff nat_suc program_avl_inv semiring_1_class.of_nat_simps(2))
+next
+  case (Stack x10)
+  then have "map_tree_eq
+     (program_map_of_lst (nat n)
+       (Stack x10 # tl))
+     (program_avl_of_lst n (Stack x10 # tl))"
+  proof (cases x10)
+    case POP
+    then show ?thesis
+    apply(auto simp:map_tree_eq_def)
+      apply (simp add: AVL_Map.map_update Cons.prems program_avl_inv transfer_nat_int_relations(1))
+      by (smt AVL_Map.map_update Cons.IH Cons.prems fun_upd_other map_tree_eq_def nat_suc program_avl_inv transfer_nat_int_relations(1))
+  next
+    case (PUSH_N x2)
+    then show ?thesis
+    (* apply(auto simp:map_tree_eq_def)
+    apply(auto)
+    apply(subst nat_suc)
+    apply (simp add: Cons.prems)
+    apply(subst nat_suc2)
+    apply (simp add: Cons.prems) *)
+    proof -
+     have "map_tree_eq (program_map_of_lst
+            (nat
+              (n + 1 + int (length x2)))
+            tl) (program_avl_of_lst
+           (n + 1 + int (length x2))
+           tl)" (is "map_tree_eq ?a1 ?b1")
+       by (simp add: Cons.IH Cons.prems)
+     then have "map_tree_eq (?a1(nat n \<mapsto> Stack (PUSH_N x2)))
+                       (update n (Stack (PUSH_N x2)) ?b1)"
+          (is "map_tree_eq ?a2 ?b2")
+       by (metis Cons.prems le_add2 le_add_same_cancel2 nat_0_le program_avl_inv update_eq)
+     then have "map_tree_eq
+       (store_byte_list_in_map (nat (n + 1)) x2 ?a2)
+       (store_byte_list_in_program (n + 1) x2 ?b2)"
+       by (simp add: Cons.prems invar_update program_avl_inv store_bytes_eq)
+     then show ?thesis
+       by (smt Cons.prems PUSH_N Suc_eq_plus1 nat_0_le nat_int_add nat_suc program_avl_of_lst.simps(2) program_map_of_lst.simps(2))
+     qed
+  next
+    case CALLDATALOAD
+    then show ?thesis
+    apply(auto simp:map_tree_eq_def)
+      apply (simp add: AVL_Map.map_update Cons.prems program_avl_inv transfer_nat_int_relations(1))
+  by (smt AVL_Map.map_update Cons.IH Cons.prems fun_upd_other map_tree_eq_def nat_suc program_avl_inv transfer_nat_int_relations(1))
+  qed
+  then show ?thesis
+    using Stack by auto
+next
+  case (Swap x11)
+  then show ?thesis 
+apply(auto simp:map_tree_eq_def)
+  apply (simp add: AVL_Map.map_update Cons.prems program_avl_inv transfer_nat_int_relations(1))
+  by (smt AVL_Map.map_update Cons.IH Cons.prems fun_upd_apply int_eq_iff int_nat_eq map_tree_eq_def nat_eq_iff nat_suc program_avl_inv semiring_1_class.of_nat_simps(2))
+next
+  case (Log x12)
+  then show ?thesis 
+apply(auto simp:map_tree_eq_def)
+  apply (simp add: AVL_Map.map_update Cons.prems program_avl_inv transfer_nat_int_relations(1))
+  by (smt AVL_Map.map_update Cons.IH Cons.prems fun_upd_apply int_eq_iff int_nat_eq map_tree_eq_def nat_eq_iff nat_suc program_avl_inv semiring_1_class.of_nat_simps(2))
+next
+  case (Misc x13)
+  then show ?thesis 
+apply(auto simp:map_tree_eq_def)
+  apply (simp add: AVL_Map.map_update Cons.prems program_avl_inv transfer_nat_int_relations(1))
+  by (smt AVL_Map.map_update Cons.IH Cons.prems fun_upd_apply int_eq_iff int_nat_eq map_tree_eq_def nat_eq_iff nat_suc program_avl_inv semiring_1_class.of_nat_simps(2))
+qed
+qed
+
 theorem content_small_aux_bytes [simp] :
   "k < pos \<Longrightarrow>
    m k = None \<Longrightarrow>
@@ -109,23 +314,17 @@ apply(induction lst arbitrary:pos k m)
 apply(auto)
 done
 
-theorem content_small [simp] :
-   "k < pos \<Longrightarrow> program_content_of_list pos lst k = None"
-apply(induction lst arbitrary:pos k)
-apply(auto)
-done
-
 theorem content_small_aux_stack [simp] :
  "(\<And>pos k.
            k < pos \<Longrightarrow>
-           program_content_of_lst pos lst k = None) \<Longrightarrow>
+           program_map_of_lst pos lst k = None) \<Longrightarrow>
        k < pos \<Longrightarrow>
        a = Stack x10 \<Longrightarrow>
-       program_content_of_lst pos (Stack x10 # lst) k =
+       program_map_of_lst pos (Stack x10 # lst) k =
        None"
 apply(cases x10)
 apply(auto)
-done
+  using Suc_eq_plus1 content_small_aux_bytes by auto
 
 theorem content_small_aux [simp] :
 "(\<And>pos k.
@@ -136,6 +335,13 @@ theorem content_small_aux [simp] :
 apply(cases a)
 apply(auto)
 done
+
+theorem content_small [simp] :
+   "k < pos \<Longrightarrow> program_map_of_lst pos lst k = None"
+apply(induction lst arbitrary:pos k)
+apply(auto)
+done
+
 
 theorem update_add :
    "m k = None \<Longrightarrow>
