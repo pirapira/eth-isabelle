@@ -329,9 +329,9 @@ apply(auto)
 theorem content_small_aux [simp] :
 "(\<And>pos k.
            k < pos \<Longrightarrow>
-           program_content_of_lst pos lst k = None) \<Longrightarrow>
+           program_map_of_lst pos lst k = None) \<Longrightarrow>
        k < pos \<Longrightarrow>
-       program_content_of_lst pos (a # lst) k = None"
+       program_map_of_lst pos (a # lst) k = None"
 apply(cases a)
 apply(auto)
 done
@@ -345,7 +345,7 @@ done
 
 theorem update_add :
    "m k = None \<Longrightarrow>
-    insert x (ran m) = ran (map_update k x m)"
+    Set.insert x (ran m) = ran (map_update k x m)"
 apply(auto)
 done
 
@@ -356,7 +356,7 @@ done
 
 theorem update_add2 :
    "m k = None \<Longrightarrow>
-    insert x (ran m) =
+    Set.insert x (ran m) =
     ran (\<lambda>a. if a = k then Some x else m a)"
 apply(subst update_add)
 apply(blast)
@@ -399,7 +399,7 @@ apply(auto)
 by (simp add: map_add_def)
 
 theorem program_list_bytes [simp] :
-  "store_byte_list_in_program pos bytes m =
+  "store_byte_list_in_map pos bytes m =
    m ++ make_unknown pos bytes"
 apply(induction bytes arbitrary: pos m)
 apply(auto simp:make_unknown_lemma)
@@ -414,13 +414,13 @@ apply(auto)
 done
 
 theorem more_lemmas :
-"insert x
+"Set.insert x
         (Unknown ` set bytes \<union>
          ran
-          (program_content_of_lst
+          (program_map_of_lst
             (Suc (pos + length bytes)) rest)) =
        ran
-        (program_content_of_lst
+        (program_map_of_lst
           (Suc (pos + length bytes)) rest
          (pos \<mapsto> x) ++
          make_unknown (Suc pos) bytes)"
@@ -437,9 +437,9 @@ done
 theorem lemma_2 [simp] :
   "0 < n \<Longrightarrow>
    (\<And>t n. index (program_list_of_lst lst) n =
-   program_content_of_lst t lst (n + t)) \<Longrightarrow>
+   program_map_of_lst t lst (n + t)) \<Longrightarrow>
    index (program_list_of_lst lst) (n-1) =
-   program_content_of_lst (Suc t) lst (n + t)"
+   program_map_of_lst (Suc t) lst (n + t)"
 apply (metis One_nat_def add_Suc_shift diff_Suc_1 less_imp_Suc_add)
 done
 
@@ -499,19 +499,19 @@ by (metis (mono_tags, lifting) Suc_leD Suc_le_D add_Suc_shift le_SucE)
 theorem lemma_3 :
     "(\<And>t n.
            index (program_list_of_lst lst) n =
-           program_content_of_lst t lst (n + t)) \<Longrightarrow>
+           program_map_of_lst t lst (n + t)) \<Longrightarrow>
        n \<ge> x2 + 1 \<Longrightarrow>
        index (program_list_of_lst lst) (n - Suc x2) =
-       program_content_of_lst (t + Suc x2) lst (n+t)"
+       program_map_of_lst (t + Suc x2) lst (n+t)"
 apply(auto)
 by (smt ab_semigroup_add_class.add_ac(1) add.commute add_Suc_right le_add_diff_inverse2)
 
 theorem lemma_1 :
    "(\<And>t n.
            index (program_list_of_lst lst) n =
-           program_content_of_lst t lst (n + t)) \<Longrightarrow>
+           program_map_of_lst t lst (n + t)) \<Longrightarrow>
        index (program_list_of_lst (a # lst)) n =
-       program_content_of_lst t (a # lst) (n + t)"
+       program_map_of_lst t (a # lst) (n + t)"
 apply(cases a)
 apply(auto)
 apply (metis One_nat_def add_Suc_shift diff_Suc_1 less_imp_Suc_add)
@@ -546,20 +546,20 @@ using lemma_3
 apply (fastforce)
 done
 
-theorem program_list_content_eq :
+theorem program_list_map_eq :
   "index (program_list_of_lst lst) n =
-    program_content_of_lst t lst (n+t)"
+    program_map_of_lst t lst (n+t)"
 apply(induction lst arbitrary:t n)
 apply(auto simp:lemma_1)
 done
 
 theorem program_list_content :
-  "set (program_list_of_lst lst) = ran (program_content_of_lst 0 lst)"
-apply(induction lst rule:program_content_of_lst.induct)
+  "set (program_list_of_lst lst) = ran (program_map_of_lst 0 lst)"
+apply(induction lst rule:program_map_of_lst.induct)
 apply(simp)
 defer
 apply(simp)
-apply(simp)
+(* apply(simp) *)
 apply(rule update_add2)
 apply(simp)
 apply(simp)
@@ -602,3 +602,19 @@ apply(simp)
 apply(rule update_add2)
 apply(auto simp:more_lemmas)
 done
+
+theorem program_list_content_eq :
+  "index (program_list_of_lst lst) n =
+   program_content_of_lst lst n"
+proof -
+  have a: "index (program_list_of_lst lst) n =
+         program_map_of_lst 0 lst n"
+    by (metis add.right_neutral program_list_map_eq)
+  have b: "program_map_of_lst 0 lst n =
+           program_content_of_lst lst n"
+    by (smt content_eq map_tree_eq_def nat_0 nat_int of_nat_0_le_iff)
+  from a and b show ?thesis by auto
+qed
+
+
+
