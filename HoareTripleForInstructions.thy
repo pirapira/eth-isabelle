@@ -1197,7 +1197,8 @@ lemma memory_range_cons :
 apply(auto)
 done
 
-lemma cut_memory_memory_range [simp] :
+declare memory8_sep [simp del]
+lemma cut_memory_memory_range :
   "\<forall> rest b n.
    unat n = length lst \<longrightarrow>
    (memory_range b lst ** rest) (instruction_result_as_set c (InstructionContinue v))
@@ -1212,6 +1213,8 @@ apply(drule_tac x = "n - 1" in spec)
 apply(auto)
 apply(drule unat_suc)
 by blast
+declare memory8_sep [simp]
+
 
 
 (****** specifying each instruction *******)
@@ -1254,6 +1257,55 @@ lemma leibniz :
   "r (s :: state_element set) \<Longrightarrow> s = t \<Longrightarrow> r t"
 apply(auto)
 done
+
+lemma emp_sep [simp] :
+  "(emp ** rest) s = rest s"
+apply(simp add: emp_def sep_def)
+done
+
+
+lemma memory_range_elms :
+       "\<forall> len_word begin_word va.
+        unat len_word = length input \<longrightarrow>
+        memory_range begin_word input va =
+        (va = memory_range_elms begin_word input)"
+apply(induction input)
+ apply(simp add: emp_def)
+apply(clarify)
+apply(drule_tac x = "len_word - 1" in spec)
+apply(drule_tac x = "begin_word + 1" in spec)
+apply(drule_tac x = "va - {MemoryElm (begin_word, a)}" in spec)
+apply(auto)
+   (* sledgehammer *)
+   apply (metis diff_Suc_1 lessI unat_eq_zero unat_minus_one zero_order(3))
+  apply (metis diff_Suc_1 lessI unat_eq_zero unat_minus_one zero_order(3))
+ apply (metis diff_Suc_1 lessI unat_eq_zero unat_minus_one zero_order(3))
+(*** I have to say it does not overlap *)
+oops
+
+
+(* is memory_range_pred already defined? *)
+lemma memory_range_sep :
+"  \<forall> begin_word len_word rest s.
+       unat (len_word :: w256) = length input \<longrightarrow>
+       (memory_range begin_word input ** rest) s =
+       ((memory_range_elms begin_word input \<subseteq> s) \<and> rest (s - memory_range_elms begin_word input)) 
+"
+(** can this be done in induction? **)
+(** is induction really a good strategy? **)
+apply(induction input)
+ apply(simp)
+apply(auto simp add: sep_def)
+       apply(simp add: memory8_def)
+      apply(drule unat_suc)
+      apply(simp)
+     apply(drule unat_suc)
+     apply(simp)
+    apply(drule unat_suc)
+    apply(simp)
+   apply(simp add: memory8_def)
+
+oops
 
 lemma call_gas_triple:
   "triple {OutOfGas}

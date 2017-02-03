@@ -231,7 +231,7 @@ definition memory8 :: "w256 \<Rightarrow> byte \<Rightarrow> state_element set \
 where
 "memory8 idx v s == s = {MemoryElm (idx ,v)}"
 
-lemma memory8_sep [simp] :
+lemma memory8_sep :
 "(memory8 idx v ** rest) s = (MemoryElm (idx, v) \<in> s \<and> rest (s - {MemoryElm (idx, v)}))"
 apply(auto simp add: memory8_def sep_def)
 done
@@ -246,30 +246,15 @@ where
   "memory_range_elms begin [] = {}"
 | "memory_range_elms begin (a # lst) = {MemoryElm (begin, a)} \<union> memory_range_elms (begin + 1) lst"
 
-lemma memory_range_elms_nil [simp] :
+lemma memory_range_elms_nil :
   "x \<notin> memory_range_elms b []"
 apply(simp)
 done
 
-lemma memory_range_elms_cons [simp] :
+lemma memory_range_elms_cons :
   "memory_range_elms b (a # lst) = {MemoryElm (b, a)} \<union> memory_range_elms (b + 1) lst"
 apply(auto)
 done
-
-
-lemma memory_range_alt :
-"\<forall> b s. memory_range b lst s = (s = memory_range_elms b lst)"
-apply(induction lst)
- apply(simp add: emp_def)
-apply(rule allI)
-apply(drule_tac x = "b + 1" in spec)
-apply(rule allI)
-apply(simp)
-apply(drule_tac x = "s - {MemoryElm (b, a)}" in spec)
-apply(auto)
-
-
-oops
 
 (* prove a lemma about the above two definitions *)
 
