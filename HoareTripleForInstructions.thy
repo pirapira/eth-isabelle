@@ -1167,8 +1167,10 @@ lemma sep_ac:
 "(a ** b ** c) s \<Longrightarrow> (b ** a ** c) s"
  using sep_assoc by (simp add: sep_commute)
 
-(** need a lemma to destruct **)
-  (* (memory_range b (a # lst) ** rest) *)
+lemma memory_range_cons :
+"(memory_range b (a # lst) ** rest) s = (memory8 b a ** memory_range (b + 1) lst ** rest) s"
+apply(auto)
+done
 
 lemma cut_memory_memory_range [simp] :
   "\<forall> rest b n.
