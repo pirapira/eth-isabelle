@@ -1141,13 +1141,33 @@ lemma cut_memory_zero [simp] :
 apply(simp add: cut_memory.simps)
 done
 
-lemma cut_memory_cons [simp] :
+lemma cut_memory_cons0 :
   "(cut_memory b (n + 1) m = a # lst) =
    (n + 1 \<noteq> 0 \<and> m b = a \<and> cut_memory (b + 1) n m = lst)"
 apply(auto simp add: cut_memory_head cut_memory_tail)
 apply(simp add: cut_memory.simps)
 done
 
+lemma cut_memory_cons1 :
+  "(cut_memory b (n - 1 + 1) m = a # lst) =
+   (n \<noteq> 0 \<and> m b = a \<and> cut_memory (b + 1) (n - 1) m = lst)"
+apply(simp only: cut_memory_cons0)
+apply(simp)
+done
+
+lemma cut_memory_cons [simp] :
+  "(cut_memory b n m = a # lst) =
+   (n \<noteq> 0 \<and> m b = a \<and> cut_memory (b + 1) (n - 1) m = lst)"
+proof -
+ have "(cut_memory b n m = a # lst) = (cut_memory b (n - 1 + 1) m = a # lst)"
+   by simp
+ moreover have "(cut_memory b (n - 1 + 1) m = a # lst) =
+   (n \<noteq> 0 \<and> m b = a \<and> cut_memory (b + 1) (n - 1) m = lst)"
+   by (rule cut_memory_cons1)
+ ultimately show "(cut_memory b n m = a # lst) =
+   (n \<noteq> 0 \<and> m b = a \<and> cut_memory (b + 1) (n - 1) m = lst)"
+   by blast
+qed
 
 lemma memory8_sep :
   "(memory8 b a ** rest) s ==
@@ -1177,7 +1197,16 @@ lemma cut_memory_memory_range [simp] :
    unat n = length lst \<longrightarrow>
    (memory_range b lst ** rest) (instruction_result_as_set c (InstructionContinue v))
    \<longrightarrow> cut_memory b n (vctx_memory v) = lst"
-oops
+apply(induction lst)
+ apply(simp add: unat_eq_0)
+apply(auto simp add: memory_range_cons)
+apply(drule sep_ac)
+apply(drule_tac x = "memory8 b a ** rest" in spec)
+apply(drule_tac x = "b + 1" in spec)
+apply(drule_tac x = "n - 1" in spec)
+apply(auto)
+apply(drule unat_suc)
+by blast
 
 
 (****** specifying each instruction *******)
