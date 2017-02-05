@@ -1258,10 +1258,116 @@ lemma emp_sep [simp] :
 apply(simp add: emp_def sep_def)
 done
 
+lemma memory_range_elms_index_aux :
+"\<forall> i a begin_word. MemoryElm (i, a) \<in> memory_range_elms begin_word input \<longrightarrow>
+    (\<exists>pos. \<not> length input \<le> pos \<and> begin_word + word_of_int (int pos) = i)"
+apply(induction input)
+ apply(simp)
+apply(auto)
+apply(drule_tac x = i in spec)
+apply(drule_tac x = aa in spec)
+apply(drule_tac x = "begin_word + 1" in spec)
+apply(auto)
+apply(rule_tac x = "Suc pos" in exI)
+apply(auto)
+apply(simp add: Word.wi_hom_syms(1))
+done
+
+lemma memory_range_elms_index :
+"MemoryElm (i, a) \<in> memory_range_elms begin_word input \<longrightarrow>
+    (\<exists>pos. \<not> length input \<le> pos \<and> begin_word + word_of_int (int pos) = i)"
+apply(auto simp add: memory_range_elms_index_aux)
+done
+
+lemma memory_range_elms_index_meta :
+"MemoryElm (i, a) \<in> memory_range_elms begin_word input \<Longrightarrow>
+    (\<exists>pos. \<not> length input \<le> pos \<and> begin_word + word_of_int (int pos) = i)"
+apply(auto simp add: memory_range_elms_index_aux)
+done
+
+
+lemma contra:
+  "\<not> P \<longrightarrow> \<not> Q \<Longrightarrow> Q \<longrightarrow> P"
+apply(auto)
+done
+
+lemma memory_range_elms_index_contra :
+"(\<forall> pos. pos \<ge> length input \<or> begin_word + (word_of_int (int pos)) \<noteq> i) \<longrightarrow>
+ MemoryElm (i, a) \<notin> memory_range_elms begin_word input"
+apply(rule contra)
+apply(simp)
+apply(rule memory_range_elms_index)
+done
+
+lemma memory_range_elms_index_contra_meta :
+"(\<forall> pos. pos \<ge> length input \<or> begin_word + (word_of_int (int pos)) \<noteq> i) \<Longrightarrow>
+ MemoryElm (i, a) \<notin> memory_range_elms begin_word input"
+apply(auto simp add: memory_range_elms_index_contra)
+done
+
+lemma suc_is_word :
+"unat (len_word :: w256) = Suc n \<Longrightarrow>
+n < 2 ^ 256 - 1
+"
+proof -
+  have "unat (len_word :: 256 word) < 2 ^ 256"
+    by (rule order_less_le_trans, rule unat_lt2p, simp)
+  moreover assume "unat (len_word :: w256) = Suc n"
+  ultimately have "Suc n < 2 ^ 256"
+    by auto
+  then show "n < 2 ^ 256 - 1"
+    by auto
+qed
+
+lemma w256_add_com :
+"(a :: w256) + b = b + a"
+apply(auto)
+done
+
+lemma word_of_int_mod :
+  "(word_of_int i = (w :: w256)) =
+   (i mod 2 ^ 256 = uint w)"
+apply(auto simp add:word_of_int_def Word.word.Abs_word_inverse Word.word.uint_inverse)
+done
+
+lemma too_small_to_overwrap :
+  "(1 :: 256 word) + word_of_int (int pos) = 0 \<Longrightarrow>
+   (pos :: nat) \<ge> 2 ^ 256 - 1"
+proof -
+  have "word_of_int (int pos) + (1 :: 256 word) = (1 :: 256 word) + word_of_int (int pos)"
+    by (rule w256_add_com)
+  moreover assume "(1 :: 256 word) + word_of_int (int pos) = 0"
+  ultimately have "word_of_int (int pos) + (1 :: 256 word) = 0"
+    by auto
+  then have "word_of_int (int pos) = (max_word :: 256 word)"
+    by (rule Word.max_word_wrap)
+  then have "(int pos) mod 2^256 = (uint (max_word :: 256 word))"
+    by (simp add: word_of_int_mod)
+  then have "pos \<ge> nat (uint (max_word :: 256 word))"
+    (* sledgehammer *)
+    proof -
+    have "(0::int) \<le> 2"
+      by auto
+    then show ?thesis
+      by (metis (no_types) Divides.mod_less_eq_dividend Divides.transfer_nat_int_functions(2) Nat_Transfer.transfer_nat_int_function_closures(4) Nat_Transfer.transfer_nat_int_function_closures(9) \<open>int pos mod 2 ^ 256 = uint max_word\<close> nat_int.Rep_inverse)
+    qed
+  then show "(pos :: nat) \<ge> 2 ^ 256 - 1"
+    by(simp add: max_word_def)
+  qed
+
+lemma no_overwrap [simp]:
+  "unat (len_word :: w256) = Suc (length input) \<Longrightarrow>
+   MemoryElm (begin_word, a) \<notin> memory_range_elms (begin_word + 1) input"
+apply(rule memory_range_elms_index_contra_meta)
+apply(drule suc_is_word)
+apply(auto)
+apply(drule too_small_to_overwrap)
+apply(auto)
+done
 
 lemma memory_range_elms :
        "\<forall> len_word begin_word va.
-        unat len_word = length input \<longrightarrow>
+        unat (len_word :: w256) = length input \<longrightarrow>
         memory_range begin_word input va =
         (va = memory_range_elms begin_word input)"
 apply(induction input)
@@ -1272,11 +1378,10 @@ apply(drule_tac x = "begin_word + 1" in spec)
 apply(drule_tac x = "va - {MemoryElm (begin_word, a)}" in spec)
 apply(auto)
    (* sledgehammer *)
-   apply (metis diff_Suc_1 lessI unat_eq_zero unat_minus_one zero_order(3))
   apply (metis diff_Suc_1 lessI unat_eq_zero unat_minus_one zero_order(3))
  apply (metis diff_Suc_1 lessI unat_eq_zero unat_minus_one zero_order(3))
-(*** I have to say it does not overlap *)
-oops
+apply (metis diff_Suc_1 lessI unat_eq_zero unat_minus_one zero_order(3))
+done
 
 
 (* is memory_range_pred already defined? *)
