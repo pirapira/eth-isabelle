@@ -1365,7 +1365,7 @@ apply(drule too_small_to_overwrap)
 apply(auto)
 done
 
-lemma memory_range_elms :
+lemma memory_range_alt :
        "\<forall> len_word begin_word va.
         unat (len_word :: w256) = length input \<longrightarrow>
         memory_range begin_word input va =
@@ -1384,32 +1384,64 @@ apply (metis diff_Suc_1 lessI unat_eq_zero unat_minus_one zero_order(3))
 done
 
 
-(* is memory_range_pred already defined? *)
 lemma memory_range_sep :
 "  \<forall> begin_word len_word rest s.
        unat (len_word :: w256) = length input \<longrightarrow>
        (memory_range begin_word input ** rest) s =
        ((memory_range_elms begin_word input \<subseteq> s) \<and> rest (s - memory_range_elms begin_word input)) 
 "
-(** can this be done in induction? **)
-(** is induction really a good strategy? **)
-apply(induction input)
- apply(simp)
-apply(auto simp add: sep_def)
-       apply(simp add: memory8_def)
-      apply(drule unat_suc)
-      apply(simp)
-     apply(drule unat_suc)
-     apply(simp)
-    apply(drule unat_suc)
-    apply(simp)
-   apply(simp add: memory8_def)
+apply(auto simp add: sep_def memory_range_alt)
+apply(rule leibniz)
+ apply blast
+apply(auto)
+done
 
-oops
+lemma continuging_not_memory_range [simp] :
+  "\<forall> in_begin. ContinuingElm False \<notin> memory_range_elms in_begin input"
+apply(induction input; auto)
+done
+
+lemma contractaction_not_memory_range [simp] :
+  "\<forall> in_begin a. ContractActionElm a
+       \<notin> memory_range_elms in_begin input"
+apply(induction input; auto)
+done
+
+lemma pc_not_memory_range [simp] :
+  "\<forall> in_begin k. PcElm k \<notin> memory_range_elms in_begin input"
+apply(induction input; auto)
+done
+
+lemma this_account_not_memory_range [simp] :
+  "\<forall> this in_begin. ThisAccountElm this \<notin> memory_range_elms in_begin input"
+apply(induction input; auto)
+done
+
+lemma balance_not_memory_range [simp] :
+  "\<forall> this fund in_begin. BalanceElm (this, fund) \<notin> memory_range_elms in_begin input"
+apply(induction input; auto)
+done
+
+lemma code_not_memory_range [simp] :
+  "\<forall> k in_begin. CodeElm (k, Misc CALL) \<notin> memory_range_elms in_begin input"
+apply(induction input; auto)
+done
+
+lemma continuing_not_memory_range [simp] :
+  "\<forall> b in_begin. ContinuingElm b \<notin> memory_range_elms in_begin input"
+apply(induction input; auto)
+done
+
+declare memory_range_elms.simps [simp del]
+declare memory_range_elms.psimps [simp del]
+
+declare predict_gas_def [simp del]
+declare misc_inst_numbers.simps [simp]
 
 lemma call_gas_triple:
   "triple {OutOfGas}
           (\<langle> h \<le> 1024 \<and> fund \<ge> v \<and> length input = unat in_size \<rangle> ** 
+           program_counter k ** memory_range in_begin input **
            stack_height (h + 7) **
            stack (h + 6) g ** 
            stack (h + 5) r **
@@ -1418,14 +1450,13 @@ lemma call_gas_triple:
            stack (h + 2) in_size**
            stack (h + 1) out_begin **
            stack h out_size **
-           gas_pred own_gas **
-           memory_range in_begin input **
+           gas_pred own_gas **     
            this_account this **
            balance this fund **
-           program_counter k ** continuing)
+           continuing)
           {(k, Misc CALL)}
-          (stack_height h ** 
-           memory_range in_begin input **
+          (memory_range in_begin input **
+           stack_height h ** 
            balance this fund **
            program_counter k ** 
            gas_pred (own_gas - X) **
@@ -1439,8 +1470,206 @@ lemma call_gas_triple:
                                 , callarg_output_size = out_size \<rparr>))"
 apply(auto simp add: triple_def)
 apply(rule_tac x = 1 in exI)
-apply(case_tac presult; auto simp add: instruction_result_as_set_def)
-(* has to decompose (memory_range ___ ** rest) s *)
+apply(case_tac presult)
+  defer
+  apply(simp add: instruction_result_as_set_def memory_range_sep)
+ apply(simp add: instruction_result_as_set_def memory_range_sep)
+apply(simp)
+apply(clarify)
+
+
+(* perhaps, think about spliting call into some functions *)
+(*
+       StackElm (Suc (Suc h), in_size) \<notin> memory_range_elms in_begin input \<and>
+       GasElm own_gas \<notin> memory_range_elms in_begin input \<and>
+       ThisAccountElm this \<in> instruction_result_as_set co_ctx (InstructionContinue x1) \<and>
+       vctx_balance x1 this = fund \<and>
+       k = vctx_pc x1 \<and>
+       program_content (cctx_program co_ctx) k = Some (Misc CALL) \<and>
+       rest (instruction_result_as_set co_ctx (InstructionContinue x1) -
+             memory_range_elms in_begin input -
+             {StackHeightElm (h + 7)} -
+             {StackElm (h + 6, g)} -
+             {StackElm (h + 5, r)} -
+             {StackElm (h + 4, v)} -
+             {StackElm (h + 3, in_begin)} -
+             {StackElm (Suc (Suc h), in_size)} -
+             {StackElm (Suc h, out_begin)} -
+             {StackElm (h, out_size)} -
+             {GasElm own_gas} -
+             {ThisAccountElm this} -
+             {BalanceElm (this, fund)} -
+             {PcElm k} -
+             {ContinuingElm True} -
+             {CodeElm (k, Misc CALL)}) \<Longrightarrow>
+       \<not> failed_for_reasons {OutOfGas}
+           (case case program_content (cctx_program co_ctx) (vctx_pc x1) of None \<Rightarrow> Some (Misc STOP)
+                 | Some x \<Rightarrow> Some x of
+            None \<Rightarrow> InstructionToEnvironment (ContractFail [ShouldNotHappen]) x1 None
+            | Some i \<Rightarrow>
+                if check_resources x1 co_ctx (vctx_stack x1) i then instruction_sem x1 co_ctx i
+                else InstructionToEnvironment
+                      (ContractFail
+                        (case inst_stack_numbers i of
+                         (consumed, produced) \<Rightarrow>
+                           (if int (length (vctx_stack x1)) + produced - consumed \<le> 1024 then []
+                            else [TooLongStack]) @
+                           (if predict_gas i x1 co_ctx \<le> vctx_gas x1 then [] else [OutOfGas])))
+                      x1 None) \<Longrightarrow>
+       memory_range_elms in_begin input
+       \<subseteq> instruction_result_as_set co_ctx
+           (case case program_content (cctx_program co_ctx) (vctx_pc x1) of None \<Rightarrow> Some (Misc STOP)
+                 | Some x \<Rightarrow> Some x of
+            None \<Rightarrow> InstructionToEnvironment (ContractFail [ShouldNotHappen]) x1 None
+            | Some i \<Rightarrow>
+                if check_resources x1 co_ctx (vctx_stack x1) i then instruction_sem x1 co_ctx i
+                else InstructionToEnvironment
+                      (ContractFail
+                        (case inst_stack_numbers i of
+                         (consumed, produced) \<Rightarrow>
+                           (if int (length (vctx_stack x1)) + produced - consumed \<le> 1024 then []
+                            else [TooLongStack]) @
+                           (if predict_gas i x1 co_ctx \<le> vctx_gas x1 then [] else [OutOfGas])))
+                      x1 None) \<and>
+       StackHeightElm h
+       \<in> instruction_result_as_set co_ctx
+           (case case program_content (cctx_program co_ctx) (vctx_pc x1) of None \<Rightarrow> Some (Misc STOP)
+                 | Some x \<Rightarrow> Some x of
+            None \<Rightarrow> InstructionToEnvironment (ContractFail [ShouldNotHappen]) x1 None
+            | Some i \<Rightarrow>
+                if check_resources x1 co_ctx (vctx_stack x1) i then instruction_sem x1 co_ctx i
+                else InstructionToEnvironment
+                      (ContractFail
+                        (case inst_stack_numbers i of
+                         (consumed, produced) \<Rightarrow>
+                           (if int (length (vctx_stack x1)) + produced - consumed \<le> 1024 then []
+                            else [TooLongStack]) @
+                           (if predict_gas i x1 co_ctx \<le> vctx_gas x1 then [] else [OutOfGas])))
+                      x1 None) \<and>
+       StackHeightElm h \<notin> memory_range_elms in_begin input \<and>
+       BalanceElm (this, fund)
+       \<in> instruction_result_as_set co_ctx
+           (case case program_content (cctx_program co_ctx) (vctx_pc x1) of None \<Rightarrow> Some (Misc STOP)
+                 | Some x \<Rightarrow> Some x of
+            None \<Rightarrow> InstructionToEnvironment (ContractFail [ShouldNotHappen]) x1 None
+            | Some i \<Rightarrow>
+                if check_resources x1 co_ctx (vctx_stack x1) i then instruction_sem x1 co_ctx i
+                else InstructionToEnvironment
+                      (ContractFail
+                        (case inst_stack_numbers i of
+                         (consumed, produced) \<Rightarrow>
+                           (if int (length (vctx_stack x1)) + produced - consumed \<le> 1024 then []
+                            else [TooLongStack]) @
+                           (if predict_gas i x1 co_ctx \<le> vctx_gas x1 then [] else [OutOfGas])))
+                      x1 None) \<and>
+       PcElm (vctx_pc x1)
+       \<in> instruction_result_as_set co_ctx
+           (case case program_content (cctx_program co_ctx) (vctx_pc x1) of None \<Rightarrow> Some (Misc STOP)
+                 | Some x \<Rightarrow> Some x of
+            None \<Rightarrow> InstructionToEnvironment (ContractFail [ShouldNotHappen]) x1 None
+            | Some i \<Rightarrow>
+                if check_resources x1 co_ctx (vctx_stack x1) i then instruction_sem x1 co_ctx i
+                else InstructionToEnvironment
+                      (ContractFail
+                        (case inst_stack_numbers i of
+                         (consumed, produced) \<Rightarrow>
+                           (if int (length (vctx_stack x1)) + produced - consumed \<le> 1024 then []
+                            else [TooLongStack]) @
+                           (if predict_gas i x1 co_ctx \<le> vctx_gas x1 then [] else [OutOfGas])))
+                      x1 None) \<and>
+       GasElm (own_gas - X)
+       \<in> instruction_result_as_set co_ctx
+           (case case program_content (cctx_program co_ctx) (vctx_pc x1) of None \<Rightarrow> Some (Misc STOP)
+                 | Some x \<Rightarrow> Some x of
+            None \<Rightarrow> InstructionToEnvironment (ContractFail [ShouldNotHappen]) x1 None
+            | Some i \<Rightarrow>
+                if check_resources x1 co_ctx (vctx_stack x1) i then instruction_sem x1 co_ctx i
+                else InstructionToEnvironment
+                      (ContractFail
+                        (case inst_stack_numbers i of
+                         (consumed, produced) \<Rightarrow>
+                           (if int (length (vctx_stack x1)) + produced - consumed \<le> 1024 then []
+                            else [TooLongStack]) @
+                           (if predict_gas i x1 co_ctx \<le> vctx_gas x1 then [] else [OutOfGas])))
+                      x1 None) \<and>
+       GasElm (own_gas - X) \<notin> memory_range_elms in_begin input \<and>
+       ContinuingElm False
+       \<in> instruction_result_as_set co_ctx
+           (case case program_content (cctx_program co_ctx) (vctx_pc x1) of None \<Rightarrow> Some (Misc STOP)
+                 | Some x \<Rightarrow> Some x of
+            None \<Rightarrow> InstructionToEnvironment (ContractFail [ShouldNotHappen]) x1 None
+            | Some i \<Rightarrow>
+                if check_resources x1 co_ctx (vctx_stack x1) i then instruction_sem x1 co_ctx i
+                else InstructionToEnvironment
+                      (ContractFail
+                        (case inst_stack_numbers i of
+                         (consumed, produced) \<Rightarrow>
+                           (if int (length (vctx_stack x1)) + produced - consumed \<le> 1024 then []
+                            else [TooLongStack]) @
+                           (if predict_gas i x1 co_ctx \<le> vctx_gas x1 then [] else [OutOfGas])))
+                      x1 None) \<and>
+       ContractActionElm
+        (ContractCall
+          \<lparr>callarg_gas = g, callarg_code = ucast r, callarg_recipient = ucast r, callarg_value = v,
+             callarg_data = input, callarg_output_begin = out_begin, callarg_output_size = out_size\<rparr>)
+       \<in> instruction_result_as_set co_ctx
+           (case case program_content (cctx_program co_ctx) (vctx_pc x1) of None \<Rightarrow> Some (Misc STOP)
+                 | Some x \<Rightarrow> Some x of
+            None \<Rightarrow> InstructionToEnvironment (ContractFail [ShouldNotHappen]) x1 None
+            | Some i \<Rightarrow>
+                if check_resources x1 co_ctx (vctx_stack x1) i then instruction_sem x1 co_ctx i
+                else InstructionToEnvironment
+                      (ContractFail
+                        (case inst_stack_numbers i of
+                         (consumed, produced) \<Rightarrow>
+                           (if int (length (vctx_stack x1)) + produced - consumed \<le> 1024 then []
+                            else [TooLongStack]) @
+                           (if predict_gas i x1 co_ctx \<le> vctx_gas x1 then [] else [OutOfGas])))
+                      x1 None) \<and>
+       CodeElm (vctx_pc x1, Misc CALL)
+       \<in> instruction_result_as_set co_ctx
+           (case case program_content (cctx_program co_ctx) (vctx_pc x1) of None \<Rightarrow> Some (Misc STOP)
+                 | Some x \<Rightarrow> Some x of
+            None \<Rightarrow> InstructionToEnvironment (ContractFail [ShouldNotHappen]) x1 None
+            | Some i \<Rightarrow>
+                if check_resources x1 co_ctx (vctx_stack x1) i then instruction_sem x1 co_ctx i
+                else InstructionToEnvironment
+                      (ContractFail
+                        (case inst_stack_numbers i of
+                         (consumed, produced) \<Rightarrow>
+                           (if int (length (vctx_stack x1)) + produced - consumed \<le> 1024 then []
+                            else [TooLongStack]) @
+                           (if predict_gas i x1 co_ctx \<le> vctx_gas x1 then [] else [OutOfGas])))
+                      x1 None) \<and>
+       rest (instruction_result_as_set co_ctx
+              (case case program_content (cctx_program co_ctx) (vctx_pc x1) of
+                    None \<Rightarrow> Some (Misc STOP) | Some x \<Rightarrow> Some x of
+               None \<Rightarrow> InstructionToEnvironment (ContractFail [ShouldNotHappen]) x1 None
+               | Some i \<Rightarrow>
+                   if check_resources x1 co_ctx (vctx_stack x1) i then instruction_sem x1 co_ctx i
+                   else InstructionToEnvironment
+                         (ContractFail
+                           (case inst_stack_numbers i of
+                            (consumed, produced) \<Rightarrow>
+                              (if int (length (vctx_stack x1)) + produced - consumed \<le> 1024 then []
+                               else [TooLongStack]) @
+                              (if predict_gas i x1 co_ctx \<le> vctx_gas x1 then [] else [OutOfGas])))
+                         x1 None) -
+             memory_range_elms in_begin input -
+             {StackHeightElm h} -
+             {BalanceElm (this, fund)} -
+             {PcElm (vctx_pc x1)} -
+             {GasElm (own_gas - X)} -
+             {ContinuingElm False} -
+             {ContractActionElm
+               (ContractCall
+                 \<lparr>callarg_gas = g, callarg_code = ucast r, callarg_recipient = ucast r,
+                    callarg_value = v, callarg_data = input, callarg_output_begin = out_begin,
+                    callarg_output_size = out_size\<rparr>)} -
+             {CodeElm (vctx_pc x1, Misc CALL)})
+StackElm (h, out_size) \<notin> memory_range_elms in_begin input
+*)
+
 oops
 
 
