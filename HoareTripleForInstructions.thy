@@ -1463,11 +1463,15 @@ where
          ((post ** code insts ** rest) (instruction_result_as_set co_ctx (program_sem stopper co_ctx k presult)))
          \<or> failed_for_reasons allowed_failures (program_sem stopper co_ctx k presult))"
 
+lemma code_ac :
+  "(code c ** pre ** rest) s =
+   (pre ** code c ** rest) s"
+  using sep_ac by blast
+
 lemma triple_triple_alt :
   "triple s pre c post = triple_alt s pre c post"
-apply(auto simp add: triple_def triple_alt_def)
-sorry
-
+apply(simp only: triple_def triple_alt_def code_ac)
+done
 
 declare stack_height_sep [simp del]
 declare stack_sep [simp del]
@@ -1570,12 +1574,16 @@ lemma stack_topmost_not_code [simp] :
 apply(induction lst; auto simp add: stack_topmost_elms.simps)
 done
 
-lemma call_memory_no_change [simp] :
-  "x \<in> memory_range_elms in_begin input \<Longrightarrow>
-   x \<in> instruction_result_as_set co_ctx
-         (subtract_gas (predict_gas (Misc CALL) x1 co_ctx) (call x1 co_ctx)) =
-  (x \<in> instruction_result_as_set co_ctx (InstructionContinue x1))"
-sorry
+lemma memory_subtract_gas [simp] :
+ "x \<in> memory_range_elms in_begin input \<Longrightarrow>
+  x \<in> instruction_result_as_set co_ctx
+          (subtract_gas g r) =
+  (x \<in> instruction_result_as_set co_ctx r)"
+apply(simp add: instruction_result_as_set_def)
+apply(case_tac r; simp)
+ apply(case_tac x; simp)
+apply(case_tac x; simp)
+done
 
 lemma stack_height_after_call [simp] :
        "(StackHeightElm h
@@ -1838,6 +1846,7 @@ lemma memory_range_balance [simp] :
 apply(case_tac x; simp)
 done
 
+
 lemma memory_range_advance_pc [simp] :
 "      x \<in> memory_range_elms in_begin input \<Longrightarrow>
        x \<in> variable_ctx_as_set (vctx_advance_pc co_ctx x1)
@@ -1904,6 +1913,38 @@ lemma memory_range_continue [simp] :
        (x \<in> variable_ctx_as_set x1)"
 apply(auto simp add: instruction_result_as_set_def contexts_as_set_def constant_ctx_as_set_def program_as_set_def)
 done
+
+lemma call_memory_no_change [simp] :
+  "x \<in> memory_range_elms in_begin input \<Longrightarrow>
+   x \<in> instruction_result_as_set co_ctx
+         (subtract_gas (predict_gas (Misc CALL) x1 co_ctx) (call x1 co_ctx)) =
+  (x \<in> instruction_result_as_set co_ctx (InstructionContinue x1))"
+apply(simp add: call_def)
+apply(case_tac "vctx_stack x1"; simp)
+apply(case_tac list; simp)
+apply(case_tac lista; simp)
+apply(case_tac listb;simp)
+apply(case_tac listc; simp)
+apply(case_tac listd; simp)
+apply(case_tac liste; simp)
+done
+
+
+lemma memory_call [simp] :
+  "x \<in> memory_range_elms in_begin input \<Longrightarrow>
+    x \<in> instruction_result_as_set co_ctx (call x1 co_ctx) =
+    (x \<in> instruction_result_as_set co_ctx (InstructionContinue x1))"
+apply(simp add: call_def)
+apply(case_tac "vctx_stack x1"; simp)
+apply(case_tac list; simp)
+apply(case_tac lista; simp)
+apply(case_tac listb; simp)
+apply(case_tac listc; simp)
+apply(case_tac listd; simp)
+apply(case_tac liste; simp)
+done
+
+
 
 lemma gas_limit_not_topmost [simp] :
   "\<forall> len. GaslimitElm g
