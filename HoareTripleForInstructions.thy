@@ -1586,10 +1586,11 @@ apply(case_tac x; simp)
 done
 
 lemma stack_height_after_call [simp] :
-       "(StackHeightElm h
-          \<in> instruction_result_as_set co_ctx (subtract_gas g (call x1 co_ctx))) =
-        (StackHeightElm (h + 7) \<in>
-          instruction_result_as_set co_ctx (InstructionContinue x1))"
+       "(StackHeightElm (h + 7) \<in>
+          instruction_result_as_set co_ctx (InstructionContinue x1)) \<Longrightarrow>
+        (StackHeightElm h
+          \<in> instruction_result_as_set co_ctx (subtract_gas g (call x1 co_ctx)))
+        "
 sorry
 
 lemma topmost_elms_means [simp] :
