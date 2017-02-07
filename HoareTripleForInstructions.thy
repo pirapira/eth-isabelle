@@ -1540,7 +1540,7 @@ apply(auto)
 done
 
 lemma memory_not_stack_topmost [simp] :
-  "\<forall> h. MemoryElm (in_begin, a) \<notin> stack_topmost_elms h lst"
+  "\<forall> h. MemoryElm p \<notin> stack_topmost_elms h lst"
 apply(induction lst; auto simp add: stack_topmost_elms.simps)
 done
 
@@ -1717,6 +1717,96 @@ lemma code_elm_in_c :
 apply(simp add: contexts_as_set_def)
 done
 
+lemma storage_not_stack_topmost [simp] :
+   "\<forall> len. StorageElm x3
+       \<notin> stack_topmost_elms len lst"
+apply(induction lst; auto simp add: stack_topmost_elms.simps)
+done
+
+lemma log_not_topmost [simp] :
+ "\<forall> len. LogElm x5
+       \<notin> stack_topmost_elms len lst"
+apply(induction lst; simp add: stack_topmost_elms.simps)
+done
+
+lemma caller_not_topmost [simp]:
+       "\<forall> len. CallerElm x12
+       \<notin> stack_topmost_elms len lst"
+apply(induction lst; simp add: stack_topmost_elms.simps)
+done
+
+lemma origin_not_topmost [simp] :
+  "\<forall> len. OriginElm x13
+       \<notin> stack_topmost_elms len lst"
+apply(induction lst; simp add: stack_topmost_elms.simps)
+done
+
+lemma sent_valie_not_topmost [simp] :
+  "\<forall> len. SentValueElm x14
+       \<notin> stack_topmost_elms len lst"
+apply(induction lst; simp add: stack_topmost_elms.simps)
+done
+
+lemma sent_data_length_not_topmost [simp] :
+       "\<forall> len. SentDataLengthElm x15
+       \<notin> stack_topmost_elms len lst"
+apply(induction lst; simp add : stack_topmost_elms.simps)
+done
+
+lemma sent_data_not_topmost [simp]:
+   "\<forall> len. SentDataElm x16
+       \<notin> stack_topmost_elms len lst"
+apply(induction lst; simp add: stack_topmost_elms.simps)
+done
+
+lemma ext_program_size_not_topmost [simp] :
+   "\<forall> len. ExtProgramSizeElm x17
+        \<notin> stack_topmost_elms len lst"
+apply(induction lst; simp add: stack_topmost_elms.simps)
+done
+
+lemma code_elm_c [simp] :
+  "CodeElm x \<in> contexts_as_set y c = (CodeElm x \<in> constant_ctx_as_set c)"
+apply(simp add: contexts_as_set_def)
+done
+
+lemma ext_program_not_topmost_elms [simp] :
+  "\<forall> len. ExtProgramElm x18
+       \<notin> stack_topmost_elms len lst"
+apply(induction lst; simp add: stack_topmost_elms.simps)
+done
+
+
+lemma block_hash_not_topmost [simp] :
+       "\<forall> len. BlockhashElm x21
+       \<notin> stack_topmost_elms len lst"
+apply(induction lst; simp add: stack_topmost_elms.simps)
+done
+
+lemma block_number_not_topmost [simp] :
+ "\<forall> len. BlockNumberElm n
+   \<notin> stack_topmost_elms len lst"
+apply(induction lst; simp add: stack_topmost_elms.simps)
+done
+
+lemma coinbase_not_topmost [simp] :
+  "\<forall> len.     CoinbaseElm x23
+       \<notin> stack_topmost_elms len lst"
+apply(induction lst; simp add: stack_topmost_elms.simps)
+done
+
+lemma timestamp_not_topmost [simp] :
+  "\<forall> len. TimestampElm t
+       \<notin> stack_topmost_elms len lst"
+apply(induction lst; simp add: stack_topmost_elms.simps)
+done
+
+lemma difficulty_not_topmost [simp] :
+  "\<forall> len. DifficultyElm d
+        \<notin> stack_topmost_elms len lst"
+apply(induction lst; simp add: stack_topmost_elms.simps)
+done
+
 lemma call_gas_triple:
   "triple {OutOfGas}
           (\<langle> h \<le> 1017 \<and> fund \<ge> v \<and> length input = unat in_size \<rangle> ** 
@@ -1730,6 +1820,7 @@ lemma call_gas_triple:
           {(k, Misc CALL)}
           (memory_range in_begin input **
            stack_topmost h [] **
+           this_account this **
            balance this (fund - v) **
            program_counter (k + 1) ** 
            gas_any **
@@ -1776,7 +1867,12 @@ apply(rule Set.equalityI)
  apply(simp add: update_balance_def)
  apply(split if_splits)
   apply(case_tac x11; simp)
-  
+ apply(case_tac x11; simp)
+apply(clarify)
+apply(rename_tac elm)
+apply(simp)
+apply(case_tac elm; simp)
+
 
 (*
  apply(simp add: update_balance_def)
