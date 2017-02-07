@@ -1586,12 +1586,22 @@ apply(case_tac x; simp)
 done
 
 lemma stack_height_after_call [simp] :
-       "(StackHeightElm (h + 7) \<in>
+       "vctx_balance x1 (cctx_this co_ctx) \<ge> vctx_stack x1 ! 2 \<Longrightarrow>
+        (StackHeightElm (h + 7) \<in>
           instruction_result_as_set co_ctx (InstructionContinue x1)) \<Longrightarrow>
         (StackHeightElm h
           \<in> instruction_result_as_set co_ctx (subtract_gas g (call x1 co_ctx)))
         "
-sorry
+apply(simp add: call_def)
+apply(case_tac "vctx_stack x1"; simp)
+apply(case_tac list; simp)
+apply(case_tac lista; simp)
+apply(case_tac listb; simp)
+apply(case_tac listc; simp)
+apply(case_tac listd; simp)
+apply(case_tac liste; simp)
+apply(auto simp add: instruction_result_as_set_def)
+done
 
 lemma topmost_elms_means [simp] :
    "stack_topmost_elms h lst
