@@ -990,7 +990,7 @@ let M s f l =
 
 (* Updating a balance of a single account:  *)
 val update_balance : address -> (w256 -> w256) -> (address -> w256) -> (address -> w256)
-let update_balance a f orig x = if x = a then f (orig a) else orig a
+let update_balance a f orig x = if x = a then f (orig a) else orig x
 
 (* Popping stack elements: *)
 val vctx_pop_stack : nat -> variable_ctx -> variable_ctx
