@@ -1603,13 +1603,42 @@ apply(case_tac liste; simp)
 apply(auto simp add: instruction_result_as_set_def)
 done
 
+lemma drop_suc :
+ "drop (Suc h) lst =
+  drop 1 (drop h lst)"
+  by simp
+
+lemma pqqp :
+ "(P :: bool) \<longrightarrow> Q \<Longrightarrow>
+  Q \<longrightarrow> P \<Longrightarrow>
+  P = Q"
+apply(case_tac P; case_tac Q; simp)
+done
+
+
 lemma topmost_elms_means [simp] :
-   "stack_topmost_elms h lst
+   "\<forall> h x1.
+    stack_topmost_elms h lst
        \<subseteq> instruction_result_as_set co_ctx (InstructionContinue x1) =
     (length (vctx_stack x1) = h + (length lst) \<and>
      drop h (rev (vctx_stack x1)) = lst)
     "
-sorry
+apply(induction lst; simp)
+ apply(simp add: stack_topmost_elms.simps)
+ apply blast
+apply(simp add: stack_topmost_elms.simps)
+apply(rule allI)
+apply(rule allI)
+apply(rule pqqp; simp)
+  (* sledgehammer *)
+  apply (metis Cons_nth_drop_Suc length_rev)
+apply(simp only: drop_suc)
+apply(rule impI)
+apply(rule conjI)
+ apply(rule List.nth_via_drop)
+ apply blast
+apply(simp)
+done
 
 lemma to_environment_not_continuing [simp] :
   "ContinuingElm True
