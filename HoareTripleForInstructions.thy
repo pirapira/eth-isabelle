@@ -1705,12 +1705,31 @@ lemma memory_range_elms_not_continuing [simp] :
 apply(auto)
 done
 
+lemma suc_unat :
+"Suc n = unat (aa :: w256) \<Longrightarrow>
+n = unat (aa - 1)
+"
+apply(rule HOL.sym)
+apply(drule HOL.sym)
+apply(rule unat_suc)
+apply(simp)
+done
+
 lemma memory_range_elms_cut_memory [simp] :
-       "\<forall> in_begin.
-        length lst = unat in_size \<Longrightarrow> 
-        memory_range_elms in_begin lst \<subseteq> variable_ctx_as_set x1 \<Longrightarrow>
+       "\<forall> in_begin in_size.
+        length lst = unat in_size \<longrightarrow> 
+        memory_range_elms in_begin lst \<subseteq> variable_ctx_as_set x1 \<longrightarrow>
         cut_memory in_begin in_size (vctx_memory x1) = lst"
-sorry
+apply(induction lst)
+ apply(simp add: unat_eq_0)
+apply(rule allI)
+apply(rule allI)
+apply(drule_tac x = "in_begin + 1" in spec)
+apply(drule_tac x = "in_size - 1" in spec)
+apply(auto simp add: memory_range_elms.simps)
+apply(drule suc_unat)
+apply(simp)
+done
 
 lemma stack_height_in_topmost [simp] :
    "\<forall> h. StackHeightElm x1a
