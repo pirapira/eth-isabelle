@@ -2219,6 +2219,14 @@ done
 StackElm (h, out_size) \<notin> memory_range_elms in_begin input
 *)
 
+declare stack_height_sep [simp]
+declare stack_sep [simp]
+declare balance_sep [simp]
+declare program_counter_sep [simp]
+declare predict_gas_def [simp]
+declare gas_def [simp]
+
+
 
 lemma gas_gas_triple :
   "triple {OutOfGas}
@@ -2236,8 +2244,6 @@ apply(rule  Set.equalityI; clarify)
  apply(simp)
  apply(rename_tac elm)
  apply(case_tac elm; simp)
- apply(rename_tac pair)
- apply(case_tac pair; auto)
 apply(simp)
 apply(rename_tac elm)
 apply(case_tac elm; auto simp add: gas_def Word.wi_hom_syms(2))
