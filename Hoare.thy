@@ -175,6 +175,10 @@ definition pure :: "bool \<Rightarrow> state_element set \<Rightarrow> bool"
     "pure b s == emp s \<and> b"
 
 notation pure ("\<langle> _ \<rangle>")
+
+definition memory_usage :: "int \<Rightarrow> state_element set \<Rightarrow> bool"
+where
+"memory_usage u s == (s = {MemoryUsageElm u})"
   
 definition stack_height :: "nat \<Rightarrow> state_element set \<Rightarrow> bool"
   where
@@ -191,6 +195,16 @@ definition program_counter :: "int \<Rightarrow> state_element set \<Rightarrow>
 definition gas_pred :: "int \<Rightarrow> state_element set \<Rightarrow> bool"
   where
     "gas_pred g s == s = {GasElm g}"
+
+definition gas_any :: "state_element set \<Rightarrow> bool"
+  where
+    "gas_any s == (\<exists> g. s = {GasElm g})"
+
+lemma gas_any_sep [simp] :
+  "(gas_any ** rest) s =
+   (\<exists> g. GasElm g \<in> s \<and> rest (s - {GasElm g}))"
+apply(auto simp add: gas_any_def sep_def)
+done
 
 definition caller :: "address \<Rightarrow> state_element set \<Rightarrow> bool"
 where
@@ -287,6 +301,11 @@ definition instruction_result_as_set :: "constant_ctx \<Rightarrow> instruction_
         | InstructionAnnotationFailure \<Rightarrow> {ContinuingElm False} (* need to assume no annotation failure somewhere *)
         )"
 
+lemma annotation_failure_as_set [simp] :
+  "instruction_result_as_set c InstructionAnnotationFailure = {ContinuingElm False}"
+apply(simp add: instruction_result_as_set_def)
+done
+
 definition code :: "(int * inst) set \<Rightarrow> state_element set \<Rightarrow> bool"
   where
     "code f s == s = { CodeElm(pos, i) | pos i. (pos, i) \<in> f }"
@@ -355,6 +374,12 @@ lemma code_sep [simp] : "(code pairs ** rest) s =
 lemma gas_pred_sep [simp] : "(gas_pred g ** rest) s =
   ( GasElm g \<in> s \<and> rest (s - { GasElm g }) )"
   apply(auto simp add: sep_def gas_pred_def)
+done
+
+lemma memory_usage_sep [simp] : 
+  "(memory_usage u ** rest) s =
+   (MemoryUsageElm u \<in> s \<and> rest (s - {MemoryUsageElm u}))"
+apply(auto simp add: memory_usage_def sep_def)
 done
 
 lemma stackHeightElmEquiv [simp] : "StackHeightElm h \<in> contexts_as_set v c =
