@@ -1,6 +1,6 @@
 theory "InstructionAux" 
 
-imports Main "../ContractSem" "../RelationalSem" "../ProgramInAvl"
+imports Main
   "../lem/Evm"
 begin
 
@@ -171,6 +171,14 @@ definition instruction_aux  :: " variable_ctx \<Rightarrow> constant_ctx \<Right
 lemma inst_gas :
   "instruction_sem v c inst =
    subtract_gas (predict_gas inst v c) (instruction_aux v c inst)"
-by (simp add: instruction_aux_def)
+  by (simp add: instruction_aux_def instruction_sem_def)
+
+lemma advance_stack :
+   "vctx_advance_pc c (v\<lparr>vctx_stack:=x\<rparr>) =
+    (vctx_advance_pc c v)\<lparr>vctx_stack:=x\<rparr>"
+apply(auto simp:vctx_advance_pc_def
+  vctx_next_instruction_def split:option.split)
+
+done
 
 end
