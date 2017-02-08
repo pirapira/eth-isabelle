@@ -1192,7 +1192,8 @@ lemma memory_range_cons :
 apply(auto)
 done
 
-lemma cut_memory_memory_range [simp] :
+declare memory8_sep [simp del]
+lemma cut_memory_memory_range :
   "\<forall> rest b n.
    unat n = length lst \<longrightarrow>
    (memory_range b lst ** rest) (instruction_result_as_set c (InstructionContinue v))
@@ -1207,6 +1208,8 @@ apply(drule_tac x = "n - 1" in spec)
 apply(auto)
 apply(drule unat_suc)
 by blast
+declare memory8_sep [simp]
+
 
 
 (****** specifying each instruction *******)
@@ -1250,6 +1253,1081 @@ lemma leibniz :
 apply(auto)
 done
 
+lemma emp_sep [simp] :
+  "(emp ** rest) s = rest s"
+apply(simp add: emp_def sep_def)
+done
+
+lemma memory_range_elms_index_aux :
+"\<forall> i a begin_word. MemoryElm (i, a) \<in> memory_range_elms begin_word input \<longrightarrow>
+    (\<exists>pos. \<not> length input \<le> pos \<and> begin_word + word_of_int (int pos) = i)"
+apply(induction input)
+ apply(simp)
+apply(auto)
+apply(drule_tac x = i in spec)
+apply(drule_tac x = aa in spec)
+apply(drule_tac x = "begin_word + 1" in spec)
+apply(auto)
+apply(rule_tac x = "Suc pos" in exI)
+apply(auto)
+apply(simp add: Word.wi_hom_syms(1))
+done
+
+lemma memory_range_elms_index :
+"MemoryElm (i, a) \<in> memory_range_elms begin_word input \<longrightarrow>
+    (\<exists>pos. \<not> length input \<le> pos \<and> begin_word + word_of_int (int pos) = i)"
+apply(auto simp add: memory_range_elms_index_aux)
+done
+
+lemma memory_range_elms_index_meta :
+"MemoryElm (i, a) \<in> memory_range_elms begin_word input \<Longrightarrow>
+    (\<exists>pos. \<not> length input \<le> pos \<and> begin_word + word_of_int (int pos) = i)"
+apply(auto simp add: memory_range_elms_index_aux)
+done
+
+
+lemma contra:
+  "\<not> P \<longrightarrow> \<not> Q \<Longrightarrow> Q \<longrightarrow> P"
+apply(auto)
+done
+
+lemma memory_range_elms_index_contra :
+"(\<forall> pos. pos \<ge> length input \<or> begin_word + (word_of_int (int pos)) \<noteq> i) \<longrightarrow>
+ MemoryElm (i, a) \<notin> memory_range_elms begin_word input"
+apply(rule contra)
+apply(simp)
+apply(rule memory_range_elms_index)
+done
+
+lemma memory_range_elms_index_contra_meta :
+"(\<forall> pos. pos \<ge> length input \<or> begin_word + (word_of_int (int pos)) \<noteq> i) \<Longrightarrow>
+ MemoryElm (i, a) \<notin> memory_range_elms begin_word input"
+apply(auto simp add: memory_range_elms_index_contra)
+done
+
+lemma suc_is_word :
+"unat (len_word :: w256) = Suc n \<Longrightarrow>
+n < 2 ^ 256 - 1
+"
+proof -
+  have "unat (len_word :: 256 word) < 2 ^ 256"
+    by (rule order_less_le_trans, rule unat_lt2p, simp)
+  moreover assume "unat (len_word :: w256) = Suc n"
+  ultimately have "Suc n < 2 ^ 256"
+    by auto
+  then show "n < 2 ^ 256 - 1"
+    by auto
+qed
+
+lemma w256_add_com :
+"(a :: w256) + b = b + a"
+apply(auto)
+done
+
+lemma word_of_int_mod :
+  "(word_of_int i = (w :: w256)) =
+   (i mod 2 ^ 256 = uint w)"
+apply(auto simp add:word_of_int_def Word.word.Abs_word_inverse Word.word.uint_inverse)
+done
+
+lemma too_small_to_overwrap :
+  "(1 :: 256 word) + word_of_int (int pos) = 0 \<Longrightarrow>
+   (pos :: nat) \<ge> 2 ^ 256 - 1"
+proof -
+  have "word_of_int (int pos) + (1 :: 256 word) = (1 :: 256 word) + word_of_int (int pos)"
+    by (rule w256_add_com)
+  moreover assume "(1 :: 256 word) + word_of_int (int pos) = 0"
+  ultimately have "word_of_int (int pos) + (1 :: 256 word) = 0"
+    by auto
+  then have "word_of_int (int pos) = (max_word :: 256 word)"
+    by (rule Word.max_word_wrap)
+  then have "(int pos) mod 2^256 = (uint (max_word :: 256 word))"
+    by (simp add: word_of_int_mod)
+  then have "pos \<ge> nat (uint (max_word :: 256 word))"
+    (* sledgehammer *)
+    proof -
+    have "(0::int) \<le> 2"
+      by auto
+    then show ?thesis
+      by (metis (no_types) Divides.mod_less_eq_dividend Divides.transfer_nat_int_functions(2) Nat_Transfer.transfer_nat_int_function_closures(4) Nat_Transfer.transfer_nat_int_function_closures(9) \<open>int pos mod 2 ^ 256 = uint max_word\<close> nat_int.Rep_inverse)
+    qed
+  then show "(pos :: nat) \<ge> 2 ^ 256 - 1"
+    by(simp add: max_word_def)
+  qed
+
+lemma no_overwrap [simp]:
+  "unat (len_word :: w256) = Suc (length input) \<Longrightarrow>
+   MemoryElm (begin_word, a) \<notin> memory_range_elms (begin_word + 1) input"
+apply(rule memory_range_elms_index_contra_meta)
+apply(drule suc_is_word)
+apply(auto)
+apply(drule too_small_to_overwrap)
+apply(auto)
+done
+
+lemma memory_range_alt :
+       "\<forall> len_word begin_word va.
+        unat (len_word :: w256) = length input \<longrightarrow>
+        memory_range begin_word input va =
+        (va = memory_range_elms begin_word input)"
+apply(induction input)
+ apply(simp add: emp_def)
+apply(clarify)
+apply(drule_tac x = "len_word - 1" in spec)
+apply(drule_tac x = "begin_word + 1" in spec)
+apply(drule_tac x = "va - {MemoryElm (begin_word, a)}" in spec)
+apply(auto)
+   (* sledgehammer *)
+  apply (metis diff_Suc_1 lessI unat_eq_zero unat_minus_one zero_order(3))
+ apply (metis diff_Suc_1 lessI unat_eq_zero unat_minus_one zero_order(3))
+apply (metis diff_Suc_1 lessI unat_eq_zero unat_minus_one zero_order(3))
+done
+
+
+lemma memory_range_sep :
+"  \<forall> begin_word len_word rest s.
+       unat (len_word :: w256) = length input \<longrightarrow>
+       (memory_range begin_word input ** rest) s =
+       ((memory_range_elms begin_word input \<subseteq> s) \<and> rest (s - memory_range_elms begin_word input)) 
+"
+apply(auto simp add: sep_def memory_range_alt)
+apply(rule leibniz)
+ apply blast
+apply(auto)
+done
+
+lemma continuging_not_memory_range [simp] :
+  "\<forall> in_begin. ContinuingElm False \<notin> memory_range_elms in_begin input"
+apply(induction input; auto)
+done
+
+lemma contractaction_not_memory_range [simp] :
+  "\<forall> in_begin a. ContractActionElm a
+       \<notin> memory_range_elms in_begin input"
+apply(induction input; auto)
+done
+
+lemma pc_not_memory_range [simp] :
+  "\<forall> in_begin k. PcElm k \<notin> memory_range_elms in_begin input"
+apply(induction input; auto)
+done
+
+lemma this_account_not_memory_range [simp] :
+  "\<forall> this in_begin. ThisAccountElm this \<notin> memory_range_elms in_begin input"
+apply(induction input; auto)
+done
+
+lemma balance_not_memory_range [simp] :
+  "\<forall> in_begin. BalanceElm p \<notin> memory_range_elms in_begin input"
+apply(induction input; auto)
+done
+
+lemma code_not_memory_range [simp] :
+  "\<forall> k in_begin. CodeElm pair \<notin> memory_range_elms in_begin input"
+apply(induction input; auto)
+done
+
+lemma continuing_not_memory_range [simp] :
+  "\<forall> b in_begin. ContinuingElm b \<notin> memory_range_elms in_begin input"
+apply(induction input; auto)
+done
+
+lemma stack_not_memory_range [simp] :
+  "\<forall> in_begin. StackElm e \<notin> memory_range_elms in_begin input"
+apply(induction input; auto)
+done
+
+lemma stack_height_not_memory_range [simp] :
+  "\<forall> in_begin. StackHeightElm h \<notin> memory_range_elms in_begin input"
+apply(induction input; auto)
+done
+
+lemma gas_not_memory_range [simp] :
+  "\<forall> in_begin. GasElm g \<notin> memory_range_elms in_begin input"
+apply(induction input; auto)
+done
+
+declare memory_range_elms.simps [simp del]
+declare memory_range_elms.psimps [simp del]
+
+declare predict_gas_def [simp del]
+declare misc_inst_numbers.simps [simp]
+
+definition triple_alt ::
+ "failure_reason set \<Rightarrow> (state_element set \<Rightarrow> bool) \<Rightarrow> (int * inst) set \<Rightarrow> (state_element set \<Rightarrow> bool) \<Rightarrow> bool"
+where
+  "triple_alt allowed_failures pre insts post ==
+    \<forall> co_ctx presult rest stopper. no_assertion co_ctx \<longrightarrow>
+       (code insts ** pre ** rest) (instruction_result_as_set co_ctx presult) \<longrightarrow>
+       (\<exists> k.
+         ((post ** code insts ** rest) (instruction_result_as_set co_ctx (program_sem stopper co_ctx k presult)))
+         \<or> failed_for_reasons allowed_failures (program_sem stopper co_ctx k presult))"
+
+lemma code_ac :
+  "(code c ** pre ** rest) s =
+   (pre ** code c ** rest) s"
+  using sep_ac by blast
+
+lemma triple_triple_alt :
+  "triple s pre c post = triple_alt s pre c post"
+apply(simp only: triple_def triple_alt_def code_ac)
+done
+
+declare stack_height_sep [simp del]
+declare stack_sep [simp del]
+declare balance_sep [simp del]
+declare program_counter_sep [simp del]
+
+(*
+     apply(simp only: stack_height_sep)
+     apply(simp only: stack_sep)
+     apply(clarify)
+     apply(simp only: balance_sep)
+     apply(simp only: program_counter_sep)
+     apply(simp only: gas_pred_sep)
+     apply(clarify)
+     apply(simp only: this_account_sep)
+     apply(simp only: balance_sep)
+     apply(simp only: not_continuing_sep)
+*)
+
+fun stack_topmost_elms :: "nat \<Rightarrow> w256 list \<Rightarrow> state_element set"
+where
+  "stack_topmost_elms h [] = { StackHeightElm h }"
+| "stack_topmost_elms h (f # rest) = { StackElm (h, f) } \<union> stack_topmost_elms (h + 1) rest"
+
+declare stack_topmost_elms.simps [simp del]
+
+definition stack_topmost :: "nat \<Rightarrow> w256 list \<Rightarrow> state_element set \<Rightarrow> bool"
+where
+  "stack_topmost h lst s = (s = stack_topmost_elms h lst)"
+
+lemma stack_topmost_sep [simp] :
+  "(stack_topmost h lst ** rest) s =
+   (stack_topmost_elms h lst \<subseteq> s \<and> rest (s - stack_topmost_elms h lst))"
+apply(auto simp add: stack_topmost_def sep_def)
+apply(rule leibniz)
+ apply blast
+apply(auto)
+done
+
+lemma this_account_not_stack_topmost [simp] :
+  "\<forall> h. ThisAccountElm this
+       \<notin> stack_topmost_elms h lst"
+apply(induction lst; simp add: stack_topmost_elms.simps)
+done
+
+lemma gas_not_stack_topmost [simp] :
+  "\<forall> h. GasElm g
+       \<notin> stack_topmost_elms h lst"
+apply(induction lst; simp add: stack_topmost_elms.simps)
+done
+
+lemma stack_topmost_empty [simp] :
+ "x \<in> stack_topmost_elms h [] = (x = StackHeightElm h)"
+apply(simp add: stack_topmost_elms.simps)
+done
+
+lemma memory_range_elms_not_pc [simp] :
+  "(memory_range_elms in_begin input \<subseteq> s - {PcElm k}) =
+   (memory_range_elms in_begin input \<subseteq> s)"
+apply(auto)
+done
+
+
+lemma memory_range_elms_not_code [simp] :
+  "(memory_range_elms in_begin input
+       \<subseteq> s - {CodeElm pair}) =
+   (memory_range_elms in_begin input \<subseteq> s)
+  "
+apply(auto)
+done
+
+lemma memory_not_stack_topmost [simp] :
+  "\<forall> h. MemoryElm p \<notin> stack_topmost_elms h lst"
+apply(induction lst; auto simp add: stack_topmost_elms.simps)
+done
+
+lemma stack_topmost_not_memory [simp] :
+  "\<forall> in_begin. (stack_topmost_elms h lst
+       \<subseteq> s - memory_range_elms in_begin input) =
+   (stack_topmost_elms h lst \<subseteq> s)"
+apply(induction input; auto simp add: memory_range_elms.simps)
+done
+
+lemma pc_not_stack_topmost [simp] :
+  "\<forall> h. PcElm (vctx_pc x1) \<notin> stack_topmost_elms h lst"
+apply(induction lst; auto simp add: stack_topmost_elms.simps)
+done
+
+lemma stack_topmost_not_pc [simp] :
+  "\<forall> h. stack_topmost_elms h lst
+       \<subseteq> s - {PcElm (vctx_pc x1)} =
+     (stack_topmost_elms h lst \<subseteq> s)"
+apply(auto)
+done
+
+lemma stack_topmost_not_code [simp] :
+  "\<forall> h. stack_topmost_elms h lst
+       \<subseteq> s - {CodeElm (vctx_pc x1, Misc CALL)} =
+     (stack_topmost_elms h lst \<subseteq> s)"
+apply(induction lst; auto simp add: stack_topmost_elms.simps)
+done
+
+lemma memory_subtract_gas [simp] :
+ "x \<in> memory_range_elms in_begin input \<Longrightarrow>
+  x \<in> instruction_result_as_set co_ctx
+          (subtract_gas g r) =
+  (x \<in> instruction_result_as_set co_ctx r)"
+apply(simp add: instruction_result_as_set_def)
+apply(case_tac r; simp)
+ apply(case_tac x; simp)
+apply(case_tac x; simp)
+done
+
+lemma stack_height_after_call [simp] :
+       "vctx_balance x1 (cctx_this co_ctx) \<ge> vctx_stack x1 ! 2 \<Longrightarrow>
+        (StackHeightElm (h + 7) \<in>
+          instruction_result_as_set co_ctx (InstructionContinue x1)) \<Longrightarrow>
+        (StackHeightElm h
+          \<in> instruction_result_as_set co_ctx (subtract_gas g (call x1 co_ctx)))
+        "
+apply(simp add: call_def)
+apply(case_tac "vctx_stack x1"; simp)
+apply(case_tac list; simp)
+apply(case_tac lista; simp)
+apply(case_tac listb; simp)
+apply(case_tac listc; simp)
+apply(case_tac listd; simp)
+apply(case_tac liste; simp)
+apply(auto simp add: instruction_result_as_set_def)
+done
+
+lemma drop_suc :
+ "drop (Suc h) lst =
+  drop 1 (drop h lst)"
+  by simp
+
+lemma pqqp :
+ "(P :: bool) \<longrightarrow> Q \<Longrightarrow>
+  Q \<longrightarrow> P \<Longrightarrow>
+  P = Q"
+apply(case_tac P; case_tac Q; simp)
+done
+
+
+lemma topmost_elms_means [simp] :
+   "\<forall> h x1.
+    stack_topmost_elms h lst
+       \<subseteq> instruction_result_as_set co_ctx (InstructionContinue x1) =
+    (length (vctx_stack x1) = h + (length lst) \<and>
+     drop h (rev (vctx_stack x1)) = lst)
+    "
+apply(induction lst; simp)
+ apply(simp add: stack_topmost_elms.simps)
+ apply blast
+apply(simp add: stack_topmost_elms.simps)
+apply(rule allI)
+apply(rule allI)
+apply(rule pqqp; simp)
+  (* sledgehammer *)
+  apply (metis Cons_nth_drop_Suc length_rev)
+apply(simp only: drop_suc)
+apply(rule impI)
+apply(rule conjI)
+ apply(rule List.nth_via_drop)
+ apply blast
+apply(simp)
+done
+
+lemma to_environment_not_continuing [simp] :
+  "ContinuingElm True
+       \<notin> instruction_result_as_set co_ctx (InstructionToEnvironment x31 x32 x33)"
+apply(simp add: instruction_result_as_set_def)
+done
+
+lemma balance_not_topmost [simp] :
+  "\<forall> h. BalanceElm pair \<notin> stack_topmost_elms h lst"
+apply(induction lst; auto simp add: stack_topmost_elms.simps)
+done
+
+lemma continue_not_topmost [simp] :
+  "\<forall> len. ContinuingElm b
+       \<notin> stack_topmost_elms len lst"
+apply(induction lst; auto simp add: stack_topmost_elms.simps)
+done
+
+lemma this_account_i_means [simp] :
+  "ThisAccountElm this \<in> instruction_result_as_set co_ctx (InstructionContinue x1) =
+   (cctx_this co_ctx = this)"
+apply(simp add: instruction_result_as_set_def)
+done
+
+lemma memory_usage_not_memory_range [simp] :
+  "\<forall> in_begin. MemoryUsageElm u \<notin> memory_range_elms in_begin input"
+apply(induction input; auto simp add: memory_range_elms.simps)
+done
+
+lemma memory_usage_not_topmost [simp] :
+  "\<forall> len. MemoryUsageElm u
+       \<notin> stack_topmost_elms len lst"
+apply(induction lst; auto simp add: stack_topmost_elms.simps)
+done
+
+lemma call_new_balance [simp] :
+      "v \<le> fund \<Longrightarrow>
+       ThisAccountElm this \<in> instruction_result_as_set co_ctx (InstructionContinue x1) \<Longrightarrow>
+       vctx_balance x1 this = fund \<Longrightarrow>
+       predict_gas (Misc CALL) x1 co_ctx \<le> vctx_gas x1 \<Longrightarrow>
+       vctx_stack x1 = g # r # v # in_begin # in_size # out_begin # out_size # tf \<Longrightarrow>
+       BalanceElm (this, fund - v)
+       \<in> instruction_result_as_set co_ctx
+           (subtract_gas (predict_gas (Misc CALL) x1 co_ctx) (call x1 co_ctx))"
+apply(clarify)
+apply(auto simp add: call_def failed_for_reasons_def)
+apply(simp add: instruction_result_as_set_def)
+apply(simp add: update_balance_def)
+done
+
+lemma advance_pc_call [simp] :
+      "program_content (cctx_program co_ctx) (vctx_pc x1) = Some (Misc CALL) \<Longrightarrow>
+       k = vctx_pc x1 \<Longrightarrow>
+       vctx_pc (vctx_advance_pc co_ctx x1) = vctx_pc x1 + 1"
+apply(simp add: vctx_advance_pc_def inst_size_def inst_code.simps)
+done
+
+lemma memory_range_elms_not_continuing [simp] :
+  "(memory_range_elms in_begin input
+       \<subseteq> insert (ContinuingElm True) (contexts_as_set x1 co_ctx))
+  = (memory_range_elms in_begin input
+       \<subseteq> (contexts_as_set x1 co_ctx))
+  "
+apply(auto)
+done
+
+lemma suc_unat :
+"Suc n = unat (aa :: w256) \<Longrightarrow>
+n = unat (aa - 1)
+"
+apply(rule HOL.sym)
+apply(drule HOL.sym)
+apply(rule unat_suc)
+apply(simp)
+done
+
+lemma memory_range_elms_cut_memory [simp] :
+       "\<forall> in_begin in_size.
+        length lst = unat in_size \<longrightarrow> 
+        memory_range_elms in_begin lst \<subseteq> variable_ctx_as_set x1 \<longrightarrow>
+        cut_memory in_begin in_size (vctx_memory x1) = lst"
+apply(induction lst)
+ apply(simp add: unat_eq_0)
+apply(rule allI)
+apply(rule allI)
+apply(drule_tac x = "in_begin + 1" in spec)
+apply(drule_tac x = "in_size - 1" in spec)
+apply(auto simp add: memory_range_elms.simps)
+apply(drule suc_unat)
+apply(simp)
+done
+
+lemma stack_height_in_topmost [simp] :
+   "\<forall> h. StackHeightElm x1a
+       \<in> stack_topmost_elms h lst =
+    (x1a = h + length lst)"
+apply(induction lst)
+ apply(simp)
+apply(auto simp add: stack_topmost_elms.simps)
+done
+
+lemma code_elm_not_stack_topmost [simp] :
+ "\<forall> len. CodeElm x9
+       \<notin> stack_topmost_elms len lst"
+apply(induction lst)
+ apply(auto)
+apply(auto simp add: stack_topmost_elms.simps)
+done
+
+lemma stack_elm_c_means [simp] :
+  "StackElm x
+       \<in> contexts_as_set v c =
+   (
+    rev (vctx_stack v) ! fst x = snd x \<and>
+    fst x < length (vctx_stack v) )"
+apply(simp add: contexts_as_set_def)
+done
+
+lemma stack_elm_in_topmost [simp] :
+  "\<forall> len. StackElm x2
+       \<in> stack_topmost_elms len lst =
+   (fst x2 \<ge> len \<and> fst x2 < len + length lst \<and> lst ! (fst x2 - len) = snd x2)"
+apply(induction lst)
+ apply(simp)
+apply(rule allI)
+apply(drule_tac x = "Suc len" in spec)
+apply(case_tac x2)
+apply(auto simp only: stack_topmost_elms.simps; simp)
+ apply(case_tac "aa \<le> len"; auto)
+apply(case_tac "aa = len"; auto)
+done
+
+lemma rev_append_eq :
+  "(rev tf @ l) ! a =
+   (if a < length tf then rev tf ! a else l ! (a - length tf))"
+apply(auto)
+  by (simp add: nth_append)
+
+lemma code_elm_in_c :
+  "CodeElm x9 \<in> contexts_as_set x1 co_ctx =
+   (program_content (cctx_program co_ctx) (fst x9) = Some (snd x9) \<or>
+    program_content (cctx_program co_ctx) (fst x9) = None \<and> snd x9 = Misc STOP)"
+apply(simp add: contexts_as_set_def)
+done
+
+lemma storage_not_stack_topmost [simp] :
+   "\<forall> len. StorageElm x3
+       \<notin> stack_topmost_elms len lst"
+apply(induction lst; auto simp add: stack_topmost_elms.simps)
+done
+
+lemma log_not_topmost [simp] :
+ "\<forall> len. LogElm x5
+       \<notin> stack_topmost_elms len lst"
+apply(induction lst; simp add: stack_topmost_elms.simps)
+done
+
+lemma caller_not_topmost [simp]:
+       "\<forall> len. CallerElm x12
+       \<notin> stack_topmost_elms len lst"
+apply(induction lst; simp add: stack_topmost_elms.simps)
+done
+
+lemma origin_not_topmost [simp] :
+  "\<forall> len. OriginElm x13
+       \<notin> stack_topmost_elms len lst"
+apply(induction lst; simp add: stack_topmost_elms.simps)
+done
+
+lemma sent_valie_not_topmost [simp] :
+  "\<forall> len. SentValueElm x14
+       \<notin> stack_topmost_elms len lst"
+apply(induction lst; simp add: stack_topmost_elms.simps)
+done
+
+lemma sent_data_length_not_topmost [simp] :
+       "\<forall> len. SentDataLengthElm x15
+       \<notin> stack_topmost_elms len lst"
+apply(induction lst; simp add : stack_topmost_elms.simps)
+done
+
+lemma sent_data_not_topmost [simp]:
+   "\<forall> len. SentDataElm x16
+       \<notin> stack_topmost_elms len lst"
+apply(induction lst; simp add: stack_topmost_elms.simps)
+done
+
+lemma ext_program_size_not_topmost [simp] :
+   "\<forall> len. ExtProgramSizeElm x17
+        \<notin> stack_topmost_elms len lst"
+apply(induction lst; simp add: stack_topmost_elms.simps)
+done
+
+lemma code_elm_c [simp] :
+  "CodeElm x \<in> contexts_as_set y c = (CodeElm x \<in> constant_ctx_as_set c)"
+apply(simp add: contexts_as_set_def)
+done
+
+lemma ext_program_not_topmost_elms [simp] :
+  "\<forall> len. ExtProgramElm x18
+       \<notin> stack_topmost_elms len lst"
+apply(induction lst; simp add: stack_topmost_elms.simps)
+done
+
+
+lemma block_hash_not_topmost [simp] :
+       "\<forall> len. BlockhashElm x21
+       \<notin> stack_topmost_elms len lst"
+apply(induction lst; simp add: stack_topmost_elms.simps)
+done
+
+lemma block_number_not_topmost [simp] :
+ "\<forall> len. BlockNumberElm n
+   \<notin> stack_topmost_elms len lst"
+apply(induction lst; simp add: stack_topmost_elms.simps)
+done
+
+lemma coinbase_not_topmost [simp] :
+  "\<forall> len.     CoinbaseElm x23
+       \<notin> stack_topmost_elms len lst"
+apply(induction lst; simp add: stack_topmost_elms.simps)
+done
+
+lemma timestamp_not_topmost [simp] :
+  "\<forall> len. TimestampElm t
+       \<notin> stack_topmost_elms len lst"
+apply(induction lst; simp add: stack_topmost_elms.simps)
+done
+
+lemma difficulty_not_topmost [simp] :
+  "\<forall> len. DifficultyElm d
+        \<notin> stack_topmost_elms len lst"
+apply(induction lst; simp add: stack_topmost_elms.simps)
+done
+
+lemma memory_range_gas_update [simp] :
+  "x \<in> memory_range_elms in_begin input \<Longrightarrow>
+   x \<in> variable_ctx_as_set
+               (x1
+                \<lparr>vctx_gas := g \<rparr>) =
+   (x \<in> variable_ctx_as_set x1)"
+apply(auto simp add: variable_ctx_as_set_def)
+done
+
+lemma memory_range_stack [simp] :
+"      x \<in> memory_range_elms in_begin input \<Longrightarrow>
+       x \<in> variable_ctx_as_set (x1\<lparr>vctx_stack := sta\<rparr>)
+      = (x \<in> variable_ctx_as_set x1)"
+apply(case_tac x; simp)
+done
+
+lemma memory_range_memory_usage [simp] :
+"      x \<in> memory_range_elms in_begin input \<Longrightarrow>
+       x \<in> variable_ctx_as_set (x1\<lparr>vctx_memory_usage := u\<rparr>)
+      = (x \<in> variable_ctx_as_set x1)"
+apply(case_tac x; simp)
+done
+
+
+lemma memory_range_balance [simp] :
+"      x \<in> memory_range_elms in_begin input \<Longrightarrow>
+       x \<in> variable_ctx_as_set (x1\<lparr>vctx_balance := u\<rparr>)
+      = (x \<in> variable_ctx_as_set x1)"
+apply(case_tac x; simp)
+done
+
+
+lemma memory_range_advance_pc [simp] :
+"      x \<in> memory_range_elms in_begin input \<Longrightarrow>
+       x \<in> variable_ctx_as_set (vctx_advance_pc co_ctx x1)
+     = (x \<in> variable_ctx_as_set x1)
+"
+apply(case_tac x; simp)
+done
+
+(*
+       x \<in> memory_range_elms in_begin input \<Longrightarrow>
+       \<not> vctx_balance x1 (cctx_this co_ctx) < v \<Longrightarrow>
+       x \<in> variable_ctx_as_set
+             (vctx_advance_pc co_ctx x1
+              \<lparr>vctx_stack := tf,
+                 vctx_balance :=
+                   update_balance (cctx_this co_ctx) (\<lambda>orig. orig - v) (vctx_balance x1),
+                 vctx_memory_usage :=
+                   M (M (vctx_memory_usage x1) in_begin in_size) out_begin out_size\<rparr>)
+*)
+
+lemma memory_range_action [simp] :
+      "x \<in> memory_range_elms in_begin input \<Longrightarrow>
+       x \<in> instruction_result_as_set co_ctx
+             (InstructionToEnvironment
+               act
+               v
+               cont) =
+       (x \<in> variable_ctx_as_set v)"
+apply(auto simp add: instruction_result_as_set_def)
+ apply(case_tac x; simp)
+apply(case_tac x; simp)
+done
+
+lemma storage_not_memory_range [simp] :
+  "\<forall> in_begin. StorageElm x3 \<notin> memory_range_elms in_begin input"
+apply(induction input; simp add: memory_range_elms.simps)
+done
+
+lemma memory_range_insert_cont [simp] :
+   "memory_range_elms in_begin input
+         \<subseteq> insert (ContinuingElm True) s =
+    (memory_range_elms in_begin input
+         \<subseteq> s)"
+apply(auto)
+done
+
+lemma memory_range_constant_union [simp] :
+  "memory_range_elms in_begin input \<subseteq> constant_ctx_as_set co_ctx \<union> s =
+   (memory_range_elms in_begin input \<subseteq> s)"
+apply(auto simp add: constant_ctx_as_set_def program_as_set_def)
+done
+
+lemma memory_range_elms_i [simp] :
+      "memory_range_elms in_begin input
+       \<subseteq> instruction_result_as_set co_ctx (InstructionContinue x1) =
+       (memory_range_elms in_begin input \<subseteq>
+        variable_ctx_as_set x1)"
+apply(auto simp add: instruction_result_as_set_def contexts_as_set_def)
+done
+
+lemma memory_range_continue [simp] :
+"      x \<in> memory_range_elms in_begin input \<Longrightarrow>
+       x \<in> instruction_result_as_set co_ctx (InstructionContinue x1) =
+       (x \<in> variable_ctx_as_set x1)"
+apply(auto simp add: instruction_result_as_set_def contexts_as_set_def constant_ctx_as_set_def program_as_set_def)
+done
+
+lemma call_memory_no_change [simp] :
+  "x \<in> memory_range_elms in_begin input \<Longrightarrow>
+   x \<in> instruction_result_as_set co_ctx
+         (subtract_gas (predict_gas (Misc CALL) x1 co_ctx) (call x1 co_ctx)) =
+  (x \<in> instruction_result_as_set co_ctx (InstructionContinue x1))"
+apply(simp add: call_def)
+apply(case_tac "vctx_stack x1"; simp)
+apply(case_tac list; simp)
+apply(case_tac lista; simp)
+apply(case_tac listb;simp)
+apply(case_tac listc; simp)
+apply(case_tac listd; simp)
+apply(case_tac liste; simp)
+done
+
+
+lemma memory_call [simp] :
+  "x \<in> memory_range_elms in_begin input \<Longrightarrow>
+    x \<in> instruction_result_as_set co_ctx (call x1 co_ctx) =
+    (x \<in> instruction_result_as_set co_ctx (InstructionContinue x1))"
+apply(simp add: call_def)
+apply(case_tac "vctx_stack x1"; simp)
+apply(case_tac list; simp)
+apply(case_tac lista; simp)
+apply(case_tac listb; simp)
+apply(case_tac listc; simp)
+apply(case_tac listd; simp)
+apply(case_tac liste; simp)
+done
+
+
+
+lemma gas_limit_not_topmost [simp] :
+  "\<forall> len. GaslimitElm g
+       \<notin> stack_topmost_elms len lst"
+apply(induction lst; simp add: stack_topmost_elms.simps)
+done
+
+lemma gas_price_not_topmost [simp] :
+" \<forall> len. GaspriceElm p
+       \<notin> stack_topmost_elms len lst"
+apply(induction lst; simp add: stack_topmost_elms.simps)
+done
+
+
+lemma call_gas_triple:
+  "triple {OutOfGas}
+          (\<langle> h \<le> 1017 \<and> fund \<ge> v \<and> length input = unat in_size \<rangle> ** 
+           program_counter k ** memory_range in_begin input **
+           stack_topmost h [out_size, out_begin, in_size, in_begin, v, r, g] **
+           gas_pred own_gas **
+           memory_usage u **
+           this_account this **
+           balance this fund **
+           continuing)
+          {(k, Misc CALL)}
+          (memory_range in_begin input **
+           stack_topmost h [] **
+           this_account this **
+           balance this (fund - v) **
+           program_counter (k + 1) ** 
+           gas_any **
+           memory_usage (M (M u in_begin in_size) out_begin out_size) **
+           not_continuing **
+           action (ContractCall \<lparr> callarg_gas = g
+                                , callarg_code = ucast r
+                                , callarg_recipient = ucast r
+                                , callarg_value = v
+                                , callarg_data = input
+                                , callarg_output_begin = out_begin
+                                , callarg_output_size = out_size \<rparr>))"
+apply(simp only: triple_triple_alt)
+apply(auto simp add: triple_alt_def)
+apply(rule_tac x = 1 in exI)
+apply(case_tac presult)
+(*  defer
+  apply(simp add: instruction_result_as_set_def memory_range_sep)
+ apply(simp add: instruction_result_as_set_def memory_range_sep stack_height_sep) *)
+apply(simp)
+apply(clarify)
+apply(simp add: call_def)
+  defer
+  apply(simp add: balance_sep)
+ apply(simp add: instruction_result_as_set_def failed_for_reasons_def program_counter_sep
+     memory_range_sep balance_sep)
+apply(simp add: program_counter_sep)
+apply(split if_splits; auto)
+   defer
+   apply(simp add: memory_range_sep)
+  apply(simp add: memory_range_sep)
+ apply(simp add: memory_range_sep)
+apply(simp add: memory_range_sep)
+apply(auto simp add: call_def)
+    apply(simp add: balance_sep)
+   apply(simp add: instruction_result_as_set_def)
+  apply(simp add: instruction_result_as_set_def)
+ apply(simp add: balance_sep)
+apply(simp add: balance_sep instruction_result_as_set_def)
+apply(simp add: update_balance_def)
+apply(simp add: program_counter_sep)
+apply(rule_tac x = "vctx_gas x1 - predict_gas (Misc CALL) x1 co_ctx" in exI)
+apply(simp add: failed_for_reasons_def)
+apply(rule leibniz)
+ apply blast
+apply(rule Set.equalityI)
+ apply(clarify)
+ apply(rename_tac elm)
+ apply(simp)
+ apply(case_tac elm; simp)
+   apply(clarify)
+   apply(simp add: rev_append_eq)
+   apply(split if_splits; simp)
+  apply(simp add: contexts_as_set_def)
+  apply(case_tac "program_content (cctx_program co_ctx) (fst x9) = Some (snd x9)"; simp)
+ apply(simp add: update_balance_def)
+ apply(split if_splits)
+  apply(case_tac x11; simp)
+ apply(case_tac x11; simp)
+apply(clarify)
+apply(rename_tac elm)
+apply(simp)
+apply(case_tac elm; simp)
+apply(simp add: update_balance_def)
+apply(split if_splits; simp)
+apply(clarify)
+apply(simp)
+done
+
+
+(*  I'm seeing something squared ---
+    maybe use this in a blog post.
+     \<not> (h + 3 = h + 4 \<and> in_begin = v) \<Longrightarrow>
+     \<not> False \<Longrightarrow>
+     \<not> (h + 3 = h + 5 \<and> in_begin = r) \<Longrightarrow>
+     \<not> False \<Longrightarrow>
+     \<not> (h + 3 = h + 6 \<and> in_begin = g) \<Longrightarrow>
+     \<not> False \<Longrightarrow>
+     StackElm (h + 3, in_begin) \<notin> memory_range_elms in_begin input \<Longrightarrow>
+     StackElm (h + 3, in_begin) \<noteq> StackHeightElm (h + 7) \<Longrightarrow>
+     \<not> False \<Longrightarrow>
+     StackElm (h + 3, in_begin) \<in> insert (ContinuingElm True) (contexts_as_set x1 co_ctx) \<Longrightarrow>
+     StackElm (h + 3, in_begin) \<noteq> PcElm (vctx_pc x1) \<Longrightarrow>
+     StackElm (h + 3, in_begin) \<notin> {} \<Longrightarrow>
+     StackElm (h + 3, in_begin) \<noteq> CodeElm (vctx_pc x1, Misc CALL) \<Longrightarrow>
+     \<not> False \<Longrightarrow>
+     \<not> (Suc (Suc h) = h + 3 \<and> in_size = in_begin) \<Longrightarrow>
+     \<not> False \<Longrightarrow>
+     \<not> (Suc (Suc h) = h + 4 \<and> in_size = v) \<Longrightarrow>
+     \<not> False \<Longrightarrow>
+     \<not> (Suc (Suc h) = h + 5 \<and> in_size = r) \<Longrightarrow>
+     \<not> False \<Longrightarrow>
+     \<not> (Suc (Suc h) = h + 6 \<and> in_size = g) \<Longrightarrow>
+*)
+
+(* perhaps, think about spliting call into some functions *)
+(*
+       StackElm (Suc (Suc h), in_size) \<notin> memory_range_elms in_begin input \<and>
+       GasElm own_gas \<notin> memory_range_elms in_begin input \<and>
+       ThisAccountElm this \<in> instruction_result_as_set co_ctx (InstructionContinue x1) \<and>
+       vctx_balance x1 this = fund \<and>
+       k = vctx_pc x1 \<and>
+       program_content (cctx_program co_ctx) k = Some (Misc CALL) \<and>
+       rest (instruction_result_as_set co_ctx (InstructionContinue x1) -
+             memory_range_elms in_begin input -
+             {StackHeightElm (h + 7)} -
+             {StackElm (h + 6, g)} -
+             {StackElm (h + 5, r)} -
+             {StackElm (h + 4, v)} -
+             {StackElm (h + 3, in_begin)} -
+             {StackElm (Suc (Suc h), in_size)} -
+             {StackElm (Suc h, out_begin)} -
+             {StackElm (h, out_size)} -
+             {GasElm own_gas} -
+             {ThisAccountElm this} -
+             {BalanceElm (this, fund)} -
+             {PcElm k} -
+             {ContinuingElm True} -
+             {CodeElm (k, Misc CALL)}) \<Longrightarrow>
+       \<not> failed_for_reasons {OutOfGas}
+           (case case program_content (cctx_program co_ctx) (vctx_pc x1) of None \<Rightarrow> Some (Misc STOP)
+                 | Some x \<Rightarrow> Some x of
+            None \<Rightarrow> InstructionToEnvironment (ContractFail [ShouldNotHappen]) x1 None
+            | Some i \<Rightarrow>
+                if check_resources x1 co_ctx (vctx_stack x1) i then instruction_sem x1 co_ctx i
+                else InstructionToEnvironment
+                      (ContractFail
+                        (case inst_stack_numbers i of
+                         (consumed, produced) \<Rightarrow>
+                           (if int (length (vctx_stack x1)) + produced - consumed \<le> 1024 then []
+                            else [TooLongStack]) @
+                           (if predict_gas i x1 co_ctx \<le> vctx_gas x1 then [] else [OutOfGas])))
+                      x1 None) \<Longrightarrow>
+       memory_range_elms in_begin input
+       \<subseteq> instruction_result_as_set co_ctx
+           (case case program_content (cctx_program co_ctx) (vctx_pc x1) of None \<Rightarrow> Some (Misc STOP)
+                 | Some x \<Rightarrow> Some x of
+            None \<Rightarrow> InstructionToEnvironment (ContractFail [ShouldNotHappen]) x1 None
+            | Some i \<Rightarrow>
+                if check_resources x1 co_ctx (vctx_stack x1) i then instruction_sem x1 co_ctx i
+                else InstructionToEnvironment
+                      (ContractFail
+                        (case inst_stack_numbers i of
+                         (consumed, produced) \<Rightarrow>
+                           (if int (length (vctx_stack x1)) + produced - consumed \<le> 1024 then []
+                            else [TooLongStack]) @
+                           (if predict_gas i x1 co_ctx \<le> vctx_gas x1 then [] else [OutOfGas])))
+                      x1 None) \<and>
+       StackHeightElm h
+       \<in> instruction_result_as_set co_ctx
+           (case case program_content (cctx_program co_ctx) (vctx_pc x1) of None \<Rightarrow> Some (Misc STOP)
+                 | Some x \<Rightarrow> Some x of
+            None \<Rightarrow> InstructionToEnvironment (ContractFail [ShouldNotHappen]) x1 None
+            | Some i \<Rightarrow>
+                if check_resources x1 co_ctx (vctx_stack x1) i then instruction_sem x1 co_ctx i
+                else InstructionToEnvironment
+                      (ContractFail
+                        (case inst_stack_numbers i of
+                         (consumed, produced) \<Rightarrow>
+                           (if int (length (vctx_stack x1)) + produced - consumed \<le> 1024 then []
+                            else [TooLongStack]) @
+                           (if predict_gas i x1 co_ctx \<le> vctx_gas x1 then [] else [OutOfGas])))
+                      x1 None) \<and>
+       StackHeightElm h \<notin> memory_range_elms in_begin input \<and>
+       BalanceElm (this, fund)
+       \<in> instruction_result_as_set co_ctx
+           (case case program_content (cctx_program co_ctx) (vctx_pc x1) of None \<Rightarrow> Some (Misc STOP)
+                 | Some x \<Rightarrow> Some x of
+            None \<Rightarrow> InstructionToEnvironment (ContractFail [ShouldNotHappen]) x1 None
+            | Some i \<Rightarrow>
+                if check_resources x1 co_ctx (vctx_stack x1) i then instruction_sem x1 co_ctx i
+                else InstructionToEnvironment
+                      (ContractFail
+                        (case inst_stack_numbers i of
+                         (consumed, produced) \<Rightarrow>
+                           (if int (length (vctx_stack x1)) + produced - consumed \<le> 1024 then []
+                            else [TooLongStack]) @
+                           (if predict_gas i x1 co_ctx \<le> vctx_gas x1 then [] else [OutOfGas])))
+                      x1 None) \<and>
+       PcElm (vctx_pc x1)
+       \<in> instruction_result_as_set co_ctx
+           (case case program_content (cctx_program co_ctx) (vctx_pc x1) of None \<Rightarrow> Some (Misc STOP)
+                 | Some x \<Rightarrow> Some x of
+            None \<Rightarrow> InstructionToEnvironment (ContractFail [ShouldNotHappen]) x1 None
+            | Some i \<Rightarrow>
+                if check_resources x1 co_ctx (vctx_stack x1) i then instruction_sem x1 co_ctx i
+                else InstructionToEnvironment
+                      (ContractFail
+                        (case inst_stack_numbers i of
+                         (consumed, produced) \<Rightarrow>
+                           (if int (length (vctx_stack x1)) + produced - consumed \<le> 1024 then []
+                            else [TooLongStack]) @
+                           (if predict_gas i x1 co_ctx \<le> vctx_gas x1 then [] else [OutOfGas])))
+                      x1 None) \<and>
+       GasElm (own_gas - X)
+       \<in> instruction_result_as_set co_ctx
+           (case case program_content (cctx_program co_ctx) (vctx_pc x1) of None \<Rightarrow> Some (Misc STOP)
+                 | Some x \<Rightarrow> Some x of
+            None \<Rightarrow> InstructionToEnvironment (ContractFail [ShouldNotHappen]) x1 None
+            | Some i \<Rightarrow>
+                if check_resources x1 co_ctx (vctx_stack x1) i then instruction_sem x1 co_ctx i
+                else InstructionToEnvironment
+                      (ContractFail
+                        (case inst_stack_numbers i of
+                         (consumed, produced) \<Rightarrow>
+                           (if int (length (vctx_stack x1)) + produced - consumed \<le> 1024 then []
+                            else [TooLongStack]) @
+                           (if predict_gas i x1 co_ctx \<le> vctx_gas x1 then [] else [OutOfGas])))
+                      x1 None) \<and>
+       GasElm (own_gas - X) \<notin> memory_range_elms in_begin input \<and>
+       ContinuingElm False
+       \<in> instruction_result_as_set co_ctx
+           (case case program_content (cctx_program co_ctx) (vctx_pc x1) of None \<Rightarrow> Some (Misc STOP)
+                 | Some x \<Rightarrow> Some x of
+            None \<Rightarrow> InstructionToEnvironment (ContractFail [ShouldNotHappen]) x1 None
+            | Some i \<Rightarrow>
+                if check_resources x1 co_ctx (vctx_stack x1) i then instruction_sem x1 co_ctx i
+                else InstructionToEnvironment
+                      (ContractFail
+                        (case inst_stack_numbers i of
+                         (consumed, produced) \<Rightarrow>
+                           (if int (length (vctx_stack x1)) + produced - consumed \<le> 1024 then []
+                            else [TooLongStack]) @
+                           (if predict_gas i x1 co_ctx \<le> vctx_gas x1 then [] else [OutOfGas])))
+                      x1 None) \<and>
+       ContractActionElm
+        (ContractCall
+          \<lparr>callarg_gas = g, callarg_code = ucast r, callarg_recipient = ucast r, callarg_value = v,
+             callarg_data = input, callarg_output_begin = out_begin, callarg_output_size = out_size\<rparr>)
+       \<in> instruction_result_as_set co_ctx
+           (case case program_content (cctx_program co_ctx) (vctx_pc x1) of None \<Rightarrow> Some (Misc STOP)
+                 | Some x \<Rightarrow> Some x of
+            None \<Rightarrow> InstructionToEnvironment (ContractFail [ShouldNotHappen]) x1 None
+            | Some i \<Rightarrow>
+                if check_resources x1 co_ctx (vctx_stack x1) i then instruction_sem x1 co_ctx i
+                else InstructionToEnvironment
+                      (ContractFail
+                        (case inst_stack_numbers i of
+                         (consumed, produced) \<Rightarrow>
+                           (if int (length (vctx_stack x1)) + produced - consumed \<le> 1024 then []
+                            else [TooLongStack]) @
+                           (if predict_gas i x1 co_ctx \<le> vctx_gas x1 then [] else [OutOfGas])))
+                      x1 None) \<and>
+       CodeElm (vctx_pc x1, Misc CALL)
+       \<in> instruction_result_as_set co_ctx
+           (case case program_content (cctx_program co_ctx) (vctx_pc x1) of None \<Rightarrow> Some (Misc STOP)
+                 | Some x \<Rightarrow> Some x of
+            None \<Rightarrow> InstructionToEnvironment (ContractFail [ShouldNotHappen]) x1 None
+            | Some i \<Rightarrow>
+                if check_resources x1 co_ctx (vctx_stack x1) i then instruction_sem x1 co_ctx i
+                else InstructionToEnvironment
+                      (ContractFail
+                        (case inst_stack_numbers i of
+                         (consumed, produced) \<Rightarrow>
+                           (if int (length (vctx_stack x1)) + produced - consumed \<le> 1024 then []
+                            else [TooLongStack]) @
+                           (if predict_gas i x1 co_ctx \<le> vctx_gas x1 then [] else [OutOfGas])))
+                      x1 None) \<and>
+       rest (instruction_result_as_set co_ctx
+              (case case program_content (cctx_program co_ctx) (vctx_pc x1) of
+                    None \<Rightarrow> Some (Misc STOP) | Some x \<Rightarrow> Some x of
+               None \<Rightarrow> InstructionToEnvironment (ContractFail [ShouldNotHappen]) x1 None
+               | Some i \<Rightarrow>
+                   if check_resources x1 co_ctx (vctx_stack x1) i then instruction_sem x1 co_ctx i
+                   else InstructionToEnvironment
+                         (ContractFail
+                           (case inst_stack_numbers i of
+                            (consumed, produced) \<Rightarrow>
+                              (if int (length (vctx_stack x1)) + produced - consumed \<le> 1024 then []
+                               else [TooLongStack]) @
+                              (if predict_gas i x1 co_ctx \<le> vctx_gas x1 then [] else [OutOfGas])))
+                         x1 None) -
+             memory_range_elms in_begin input -
+             {StackHeightElm h} -
+             {BalanceElm (this, fund)} -
+             {PcElm (vctx_pc x1)} -
+             {GasElm (own_gas - X)} -
+             {ContinuingElm False} -
+             {ContractActionElm
+               (ContractCall
+                 \<lparr>callarg_gas = g, callarg_code = ucast r, callarg_recipient = ucast r,
+                    callarg_value = v, callarg_data = input, callarg_output_begin = out_begin,
+                    callarg_output_size = out_size\<rparr>)} -
+             {CodeElm (vctx_pc x1, Misc CALL)})
+StackElm (h, out_size) \<notin> memory_range_elms in_begin input
+*)
+
+declare stack_height_sep [simp]
+declare stack_sep [simp]
+declare balance_sep [simp]
+declare program_counter_sep [simp]
+declare predict_gas_def [simp]
+declare gas_def [simp]
+
+
+
 lemma gas_gas_triple :
   "triple {OutOfGas}
           (\<langle> h \<le> 1023 \<rangle> ** stack_height h ** program_counter k ** gas_pred g ** continuing)
@@ -1266,8 +2344,6 @@ apply(rule  Set.equalityI; clarify)
  apply(simp)
  apply(rename_tac elm)
  apply(case_tac elm; simp)
- apply(rename_tac pair)
- apply(case_tac pair; auto)
 apply(simp)
 apply(rename_tac elm)
 apply(case_tac elm; auto simp add: gas_def Word.wi_hom_syms(2))

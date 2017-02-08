@@ -175,6 +175,10 @@ definition pure :: "bool \<Rightarrow> state_element set \<Rightarrow> bool"
     "pure b s == emp s \<and> b"
 
 notation pure ("\<langle> _ \<rangle>")
+
+definition memory_usage :: "int \<Rightarrow> state_element set \<Rightarrow> bool"
+where
+"memory_usage u s == (s = {MemoryUsageElm u})"
   
 definition stack_height :: "nat \<Rightarrow> state_element set \<Rightarrow> bool"
   where
@@ -191,6 +195,16 @@ definition program_counter :: "int \<Rightarrow> state_element set \<Rightarrow>
 definition gas_pred :: "int \<Rightarrow> state_element set \<Rightarrow> bool"
   where
     "gas_pred g s == s = {GasElm g}"
+
+definition gas_any :: "state_element set \<Rightarrow> bool"
+  where
+    "gas_any s == (\<exists> g. s = {GasElm g})"
+
+lemma gas_any_sep [simp] :
+  "(gas_any ** rest) s =
+   (\<exists> g. GasElm g \<in> s \<and> rest (s - {GasElm g}))"
+apply(auto simp add: gas_any_def sep_def)
+done
 
 definition caller :: "address \<Rightarrow> state_element set \<Rightarrow> bool"
 where
@@ -231,10 +245,32 @@ definition memory8 :: "w256 \<Rightarrow> byte \<Rightarrow> state_element set \
 where
 "memory8 idx v s == s = {MemoryElm (idx ,v)}"
 
+lemma memory8_sep :
+"(memory8 idx v ** rest) s = (MemoryElm (idx, v) \<in> s \<and> rest (s - {MemoryElm (idx, v)}))"
+apply(auto simp add: memory8_def sep_def)
+done
+
 fun memory_range :: "w256 \<Rightarrow> byte list \<Rightarrow> state_element set \<Rightarrow> bool"
 where
   "memory_range begin [] = emp"
 | "memory_range begin (h # t) = memory8 begin h ** memory_range (begin + 1) t"
+
+fun memory_range_elms :: "w256 \<Rightarrow> byte list \<Rightarrow> state_element set"
+where
+  "memory_range_elms begin [] = {}"
+| "memory_range_elms begin (a # lst) = {MemoryElm (begin, a)} \<union> memory_range_elms (begin + 1) lst"
+
+lemma memory_range_elms_nil :
+  "x \<notin> memory_range_elms b []"
+apply(simp)
+done
+
+lemma memory_range_elms_cons :
+  "memory_range_elms b (a # lst) = {MemoryElm (b, a)} \<union> memory_range_elms (b + 1) lst"
+apply(auto)
+done
+
+(* prove a lemma about the above two definitions *)
 
 lemma stack_sound0 :
   "(stack pos w ** p) s \<Longrightarrow> StackElm (pos, w) \<in> s"
@@ -264,6 +300,11 @@ definition instruction_result_as_set :: "constant_ctx \<Rightarrow> instruction_
         | InstructionToEnvironment act v _ \<Rightarrow> {ContinuingElm False, ContractActionElm act} \<union> contexts_as_set v c
         | InstructionAnnotationFailure \<Rightarrow> {ContinuingElm False} (* need to assume no annotation failure somewhere *)
         )"
+
+lemma annotation_failure_as_set [simp] :
+  "instruction_result_as_set c InstructionAnnotationFailure = {ContinuingElm False}"
+apply(simp add: instruction_result_as_set_def)
+done
 
 definition code :: "(int * inst) set \<Rightarrow> state_element set \<Rightarrow> bool"
   where
@@ -333,6 +374,12 @@ lemma code_sep [simp] : "(code pairs ** rest) s =
 lemma gas_pred_sep [simp] : "(gas_pred g ** rest) s =
   ( GasElm g \<in> s \<and> rest (s - { GasElm g }) )"
   apply(auto simp add: sep_def gas_pred_def)
+done
+
+lemma memory_usage_sep [simp] : 
+  "(memory_usage u ** rest) s =
+   (MemoryUsageElm u \<in> s \<and> rest (s - {MemoryUsageElm u}))"
+apply(auto simp add: memory_usage_def sep_def)
 done
 
 lemma stackHeightElmEquiv [simp] : "StackHeightElm h \<in> contexts_as_set v c =
