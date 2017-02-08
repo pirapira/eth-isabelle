@@ -1,7 +1,7 @@
 theory "ConstantStorage" 
 
 imports 
-   "InstructionAux"
+   "InstructionAux" "../ProgramInAvl"
 
 begin
 
