@@ -46,10 +46,14 @@ apply(rule_tac x = 1 in exI)
 apply(case_tac presult; auto simp add: instruction_result_as_set_def)
 apply(rule leibniz)
  apply blast
+apply(rule Set.equalityI)
+ apply(clarify)
+ apply(simp)
+ apply(rename_tac elm; case_tac elm; simp)
+apply(clarify)
+apply(simp)
+apply(rename_tac elm; case_tac elm; simp)
 apply(auto)
-  apply(rename_tac elm; case_tac elm; auto)
- apply(rename_tac elm; case_tac elm; auto)
-apply(rename_tac elm; case_tac elm; auto)
 done
 
 
@@ -64,11 +68,14 @@ apply(rule_tac x = 1 in exI)
 apply(case_tac presult; simp add: instruction_result_as_set_def)
 apply(rule leibniz)
  apply blast
+apply(rule Set.equalityI)
+ apply(clarify)
+ apply(simp)
+ apply(rename_tac elm; case_tac elm; simp)
+apply(clarify)
+apply(simp)
+apply(rename_tac elm; case_tac elm; simp)
 apply(auto)
-  apply(rename_tac elm; case_tac elm; auto)
- apply(rename_tac elm; case_tac elm; auto)
-apply(rename_tac elm; case_tac elm; auto)
-
 done
 
 
@@ -102,10 +109,14 @@ apply(rule_tac x = 1 in exI)
 apply(case_tac presult; simp add: instruction_result_as_set_def constant_mark_def)
 apply(rule leibniz)
  apply blast
+apply(rule Set.equalityI)
+ apply(clarify)
+ apply(simp)
+ apply(rename_tac elm; case_tac elm; simp)
+apply(clarify)
+apply(simp)
+apply(rename_tac elm; case_tac elm; simp)
 apply(auto)
-  apply(rename_tac elm; case_tac elm; auto)
- apply(rename_tac elm; case_tac elm; auto)
-apply(rename_tac elm; case_tac elm; auto)
 done
 
 
@@ -293,9 +304,57 @@ done
 lemma jumpdest_advance [simp] :
   "k = vctx_pc x1 \<Longrightarrow>
    program_content (cctx_program co_ctx) (vctx_pc x1) = Some (Pc JUMPDEST) \<Longrightarrow>
-   vctx_pc x1 + 1 = vctx_pc (vctx_advance_pc co_ctx x1)"
+   vctx_pc (vctx_advance_pc co_ctx x1) = vctx_pc x1 + 1"
 apply(simp add: vctx_advance_pc_def inst_size_def inst_code.simps)
 done
+
+lemma storage_continue [simp] :
+  "StorageElm x3
+       \<in> instruction_result_as_set co_ctx (InstructionContinue x1) =
+   (StorageElm x3 \<in> variable_ctx_as_set x1)"
+apply(simp add: instruction_result_as_set_def)
+done
+
+lemma memory_continue [simp] :
+  "MemoryElm x4
+       \<in> instruction_result_as_set co_ctx (InstructionContinue x1) =
+   (MemoryElm x4 \<in> variable_ctx_as_set x1)"
+apply(simp only: instruction_result_as_set_def)
+apply(simp)
+done
+
+lemma union_cong :
+  "a = b \<Longrightarrow> c = d \<Longrightarrow> a \<union> c = b \<union> d"
+apply(simp)
+done
+
+lemma contract_action_not_vctx [simp] :
+  "ContractActionElm x19 \<notin> variable_ctx_as_set x1"
+apply(simp add: variable_ctx_as_set_def ext_program_as_set_def)
+done
+
+lemma continuing_not_vctx [simp] :
+  "ContinuingElm b \<notin> variable_ctx_as_set v"
+apply(simp add: variable_ctx_as_set_def ext_program_as_set_def)
+done
+
+lemma vctx_gas_changed [simp] :
+   "variable_ctx_as_set
+             (v \<lparr> vctx_gas := g \<rparr>) =
+    variable_ctx_as_set v - { GasElm (vctx_gas v)} \<union> { GasElm g }"
+apply(simp)
+apply(rule Set.equalityI)
+ apply(clarify)
+ apply(simp)
+ apply(rename_tac elm)
+ apply(case_tac elm; simp)
+apply(clarify)
+apply(simp)
+apply(rename_tac elm)
+apply(case_tac elm; simp)
+apply(auto)
+done
+
 
 lemma jumpdest_gas_triple :
    "triple {OutOfGas} (\<langle> h \<le> 1024 \<rangle> **
@@ -313,21 +372,18 @@ lemma jumpdest_gas_triple :
 apply(auto simp add: triple_def)
 apply(rule_tac x = 1 in exI)
 apply(case_tac presult; simp)
-  apply(rule leibniz)
-   apply blast
-  apply(rule Set.equalityI) (* why is the following so complicated? *)
-   apply(simp add: Set.subset_eq)
-   apply(clarify)
-   apply(rename_tac elm)
-   apply(case_tac elm; simp add: instruction_result_as_set_def)
-  apply(simp add: Set.subset_eq)
-  apply(simp add: instruction_result_as_set_def)
-  apply(clarify)
-  apply(rename_tac elm)
-  apply(case_tac elm; clarify?; simp?)
- apply(simp add: instruction_result_as_set_def)
-apply(simp add: instruction_result_as_set_def)
-done
+apply(clarify)
+apply(rule leibniz)
+ apply blast
+apply(simp add: instruction_result_as_set_def contexts_as_set_def)
+apply(rule Set.equalityI)
+ apply(clarify)
+ apply(simp)
+ apply(rename_tac elm; case_tac elm; simp)
+apply(clarify)
+apply(simp)
+apply(rename_tac elm; case_tac elm; simp)
+done 
 
 lemma pop_gas_triple : "triple {OutOfGas} (\<langle> h \<le> 1024 \<rangle> **
                             stack_height (h + 1) **
@@ -539,7 +595,7 @@ apply(rule frame)
 apply(rule add_instance)
 done
 
-
+(*
 lemma addadd_triple :
   "triple {} (\<langle> h \<le> 1022 \<and> g \<ge> 2 * Gverylow \<rangle> **
               stack_height (Suc (Suc (Suc h))) **
@@ -561,20 +617,14 @@ lemma addadd_triple :
 apply(auto)
 apply(rule_tac cL = "{(k, Arith ADD)}" and cR = "{(k + 1, Arith ADD)}" in composition)
   apply(simp)
-  apply(rule_tac r = "stack h w" in frame_backward)
-   apply(rule_tac h = "h + 1" and g = g and v = x and w = v and k = k in add_triple)
-  apply(simp)
-  apply(rule pred_equiv_R_pure)
-   apply (simp add: Gverylow_def)
-  using pred_equiv_sep_comm pred_equiv_R_assoc apply blast
  defer
- apply(rule postW)
+ apply(rule weaken_post)
  apply(rule_tac h = h and v = "x + v" and w = w and k = "k + 1" and g = "g - Gverylow" in add_triple)
  apply(auto)
-apply(rule pred_equiv_L_pure)
- apply(simp)
-using pred_equiv_sep_comm pred_equiv_R_assoc by blast
-
+apply(rule weaken_post)
+ apply(rule strengthen_pre)
+oops
+*)
 
 lemma pop1 [simp] :
 "
@@ -619,11 +669,12 @@ apply(clarify)
 apply(rule_tac x = "1" in exI)
 apply(case_tac presult; simp)
 apply(auto simp add:
-      stack_inst_numbers.simps
-      pop_def
       instruction_result_as_set_def
       )
 apply(auto simp add: stack_as_set_def)
+apply(rule leibniz)
+ apply blast
+apply(auto)
 done
 
 declare misc_inst_numbers.simps [simp]
@@ -686,7 +737,13 @@ lemma caller_gas_triple :
            ** program_counter (k + 1) ** caller c ** gas_pred (g - Gbase) ** continuing )"
 apply(auto simp add: triple_def)
 apply(rule_tac x = 1 in exI)
-apply(case_tac presult; auto simp add: stack_0_1_op_def instruction_result_as_set_def)
+apply(case_tac presult; auto simp add: instruction_result_as_set_def)
+apply(rule leibniz)
+ apply blast
+apply(auto)
+  apply(rename_tac elm; case_tac elm; auto simp add: stack_as_set_def)
+ apply(rename_tac elm; case_tac elm; auto simp add: stack_as_set_def)
+apply(rename_tac elm; case_tac elm; auto simp add: stack_as_set_def)
 done
 
 

@@ -1175,7 +1175,7 @@ lemma memory8_sep :
 apply(simp add: memory8_def sep_def)
 by (smt DiffE Diff_insert_absorb insertI1 insert_Diff)
 
-lemma memory8_short [simp]
+lemma memory8_short
  :"      (memory8 b a ** rest)
         (instruction_result_as_set c (InstructionContinue v)) \<Longrightarrow>
        vctx_memory v b = a"
@@ -1200,7 +1200,7 @@ lemma cut_memory_memory_range :
    \<longrightarrow> cut_memory b n (vctx_memory v) = lst"
 apply(induction lst)
  apply(simp add: unat_eq_0)
-apply(auto simp add: memory_range_cons)
+apply(auto simp add: memory_range_cons memory8_short)
 apply(drule sep_ac)
 apply(drule_tac x = "memory8 b a ** rest" in spec)
 apply(drule_tac x = "b + 1" in spec)

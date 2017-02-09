@@ -1,6 +1,6 @@
 theory SimpleWallet
 
-imports "../HoareTripleForInstrucitons2"
+imports "../HoareTripleForInstructions2"
 
 begin
 

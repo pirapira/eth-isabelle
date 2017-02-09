@@ -543,7 +543,7 @@ lemma imp_sepL:
    (\<forall>s. (a ** c) s \<longrightarrow> (b ** c) s)"
  by (auto simp add: sep_def)
 
-lemma strengthen_post:
+lemma weaken_post:
   "triple F P c Q \<Longrightarrow> (\<forall>s. Q s \<longrightarrow> R s) \<Longrightarrow> triple F P c R"
   apply (simp add: triple_def)
   apply clarsimp
@@ -559,7 +559,7 @@ lemma strengthen_post:
   done
  done
 
-lemma weaken_pre:
+lemma strengthen_pre:
   "triple F P c Q \<Longrightarrow> (\<forall>s. R s \<longrightarrow> P s) \<Longrightarrow> triple F R c Q"
   apply (simp add: triple_def)
   apply clarsimp
