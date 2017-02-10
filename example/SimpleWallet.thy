@@ -211,4 +211,35 @@ apply(rule sep_functional)
 apply(rule rotate4)
 done
 
+lemma abcbca :
+  "a ** b ** c = b ** c ** a"
+  using sep_assoc sep_commute by auto
+
+lemma uu_addr [simp] :
+  "(ucast (ucast (a :: address) :: w256) :: address) = a"
+apply(rule ucast_down_ucast_id)
+apply(simp add: is_down_def target_size_def source_size_def word_size)
+done
+
+lemma this_balance :
+  "triple {OutOfGas}
+          (\<langle> h \<le> 1023 \<and> unat bn \<ge> 2463000\<rangle>
+           ** block_number_pred bn ** stack_height h ** program_counter k ** this_account t ** 
+           balance t b ** gas_pred g ** continuing)
+          {(k, Info ADDRESS), (k + 1, Info BALANCE)}
+          (block_number_pred bn ** stack_height (h + 1) ** stack h b ** balance t b
+           ** program_counter (2 + k) ** this_account t ** gas_pred (g - Gbase - 400)
+           ** continuing )"
+apply(auto)
+apply(rule_tac cL = "{(k, Info ADDRESS)}" and cR = "{(k + 1, Info BALANCE)}" in composition)
+  apply(auto)
+ apply(rule_tac R = "balance t b ** block_number_pred bn" in frame_backward)
+  apply(rule_tac h = h and g = g and t = t in address_gas_triple)
+  using sep_assoc sep_commute apply auto
+apply(rule_tac R = "this_account t" in frame_backward)
+ apply(rule_tac h = h and g = "g - 2" and bn = bn and a = "ucast t" and b = b in balance_gas_triple)
+ apply(auto)
+done
+ 
+
 end
