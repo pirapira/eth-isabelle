@@ -332,6 +332,114 @@ apply(rule sep_functional)
 apply(simp)
 done
 
-   
+lemma first_two:
+ "b ** a ** rest = R \<Longrightarrow> a ** b ** rest = R"
+  by (simp add: abcbca sep_commute)
+
+lemma five_plus:
+ "5 + h = Suc (Suc (Suc (Suc (Suc h))))"
+apply(simp)
+done
+
+lemma six_plus:
+ "6 + h = Suc (Suc (Suc (Suc (Suc (Suc h)))))"
+apply(simp)
+done
+
+
+lemma seven_args:
+"triple {OutOfGas} (\<langle> h \<le> 1017 \<and> 2463000 \<le> unat bn\<rangle>
+                    ** block_number_pred bn ** caller c **
+                       stack_height h **
+                       program_counter k **
+                       this_account t **
+                       balance t b **
+                       gas_pred g **
+                       continuing
+                      )
+                      {(k, Stack (PUSH_N [0])),
+                       (k + 2, Dup 0),
+                       (k + 3, Dup 0),
+                       (k + 4, Dup 0),
+                       (5 + k, Info ADDRESS),
+                       (6 + k, Info BALANCE),
+                       (7 + k, Info CALLER),
+                       (8 + k, Info GAS)
+                      }
+                      (block_number_pred bn ** caller c **
+                       stack_height (h + 7) **
+                       stack (Suc (Suc (Suc (Suc (Suc (Suc h)))))) (word_of_int (g - 4 * Gverylow - 2 * Gbase - 402)) **
+                       stack (Suc (Suc (Suc (Suc (Suc h))))) (ucast c) **
+                       stack (Suc (Suc (Suc (Suc h)))) b **
+                       stack (Suc (Suc (Suc h))) (word_rcat [0]) **
+                       stack (Suc (Suc h)) (word_rcat [0]) **
+                       stack (Suc h) (word_rcat [0]) **
+                       stack h (word_rcat [0]) **
+                       program_counter (9 + k) **
+                       this_account t **
+                       balance t b **
+                       gas_pred (g - 4 * Gverylow - 2 * Gbase - 402) **
+                       continuing
+                      )"
+apply(auto)
+ apply(rule_tac cL = "{(k, Stack (PUSH_N [0])),
+                       (k + 2, Dup 0),
+                       (k + 3, Dup 0),
+                       (k + 4, Dup 0)}"
+            and cR = "{(5 + k, Info ADDRESS),
+                       (6 + k, Info BALANCE),
+                       (7 + k, Info CALLER),
+                       (8 + k, Info GAS)}" in composition)
+  apply(auto)
+ apply(rule_tac R = "block_number_pred bn **
+      caller c ** this_account t ** balance t b" in frame_backward)
+   apply(rule_tac h = h and g = g in pddd_triple)
+  using sep_assoc sep_commute apply auto
+apply(rule_tac R = "
+      stack h (word_rcat [0]) **
+      stack (Suc h) (word_rcat [0]) **
+      stack (Suc (Suc h)) (word_rcat [0]) **
+      stack (Suc (Suc (Suc h))) (word_rcat [0])"
+      in frame_backward)
+  apply(rule triple_code_eq)
+  apply(rule_tac k = "5 + k" and bn = bn and h = "h + 4" 
+             and c = c and t = t and b = b
+             and g = "g - 4 * Gverylow" in first_three_args)
+  apply(simp)
+ apply(simp)
+apply(simp)
+apply(rule sep_functional)
+ apply(simp)
+apply(rule sep_functional)
+ apply(simp)
+apply(rule sep_functional)
+ apply(simp)
+apply(rule sep_functional)
+ apply(simp)
+apply(rule sep_functional)
+ apply(simp)
+apply(rule sep_functional)
+ apply(simp)
+apply(rule sep_functional)
+ apply(simp)
+apply(rule first_two)
+apply(rule sep_functional)
+ apply (simp add: semiring_normalization_rules(24))
+apply(rule first_two)
+apply(rule sep_functional)
+ apply(simp)
+apply(rule first_two)
+apply(rule sep_functional)
+ apply(simp)
+apply(rule sep_functional)
+ apply (metis add.left_commute numeral_Bit0 s2n_ths(1) s2n_ths(2))
+apply(rule sep_functional)
+ apply(simp)
+apply(rule sep_functional)
+ apply(simp add: five_plus)
+apply(rule sep_functional)
+ apply(simp)
+apply(simp add: six_plus)
+done
 
 end
