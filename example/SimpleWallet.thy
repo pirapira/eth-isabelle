@@ -442,4 +442,71 @@ apply(rule sep_functional)
 apply(simp add: six_plus)
 done
 
+lemma pc_not_topmost [simp] :
+  "\<forall> h. PcElm x6
+       \<notin> stack_topmost_elms h lst"
+apply(induction lst) 
+ apply(simp add: stack_topmost_elms.simps)
+apply(simp add: stack_topmost_elms.simps)
+done
+
+lemma contract_action_not_topmost [simp] :
+  "\<forall> h. ContractActionElm x19
+       \<notin> stack_topmost_elms h lst"
+apply(induction lst; simp add: stack_topmost_elms.simps)
+done
+
+lemma plus_seven :
+"h + 7 = Suc (Suc (Suc (Suc (Suc (Suc (Suc h))))))"
+apply(simp)
+done
+
+lemma stack_topmost_translate_inner :
+"(stack_topmost h [out_size, out_begin, in_size, in_begin, v, r, g] ** rest) s =
+                       ((stack_height (h + 7) **
+                       stack (Suc (Suc (Suc (Suc (Suc (Suc h)))))) g **
+                       stack (Suc (Suc (Suc (Suc (Suc h))))) r **
+                       stack (Suc (Suc (Suc (Suc h)))) v **
+                       stack (Suc (Suc (Suc h))) in_begin **
+                       stack (Suc (Suc h)) in_size **
+                       stack (Suc h) out_begin **
+                       stack h out_size) **
+                       rest) s"
+apply(auto simp add: stack_topmost_def)
+  apply(rule leibniz)
+   apply blast
+  apply(auto)
+  apply(rename_tac elm; case_tac elm; simp)
+  apply(case_tac x2; simp)
+  apply(case_tac "a = h"; simp)
+  apply(case_tac "a = Suc h"; simp)
+  apply(case_tac "a = Suc (Suc h)"; simp)
+  apply(case_tac "a = Suc (Suc (Suc h))"; simp)
+  apply(case_tac "a = Suc (Suc (Suc (Suc h)))"; simp)
+  apply(case_tac "a = Suc (Suc (Suc (Suc (Suc h))))"; simp)
+  apply(case_tac "a = Suc (Suc (Suc (Suc (Suc (Suc h)))))"; simp)
+ apply(simp add: stack_topmost_elms.simps plus_seven)
+ apply(auto)
+apply(rule leibniz)
+ apply blast
+apply(simp add: stack_topmost_elms.simps plus_seven)
+apply(auto)
+done
+
+
+lemma stack_topmost_translate :
+"(stack_topmost h [out_size, out_begin, in_size, in_begin, v, r, g] ** rest) s =
+                       (stack_height (h + 7) **
+                       stack (Suc (Suc (Suc (Suc (Suc (Suc h)))))) g **
+                       stack (Suc (Suc (Suc (Suc (Suc h))))) r **
+                       stack (Suc (Suc (Suc (Suc h)))) v **
+                       stack (Suc (Suc (Suc h))) in_begin **
+                       stack (Suc (Suc h)) in_size **
+                       stack (Suc h) out_begin **
+                       stack h out_size **
+                       rest) s"
+apply(simp only: stack_topmost_translate_inner)
+apply(simp)
+done
+
 end
