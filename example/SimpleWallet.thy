@@ -240,6 +240,26 @@ apply(rule_tac R = "this_account t" in frame_backward)
  apply(rule_tac h = h and g = "g - 2" and bn = bn and a = "ucast t" and b = b in balance_gas_triple)
  apply(auto)
 done
+
+lemma caller_gas :
+"
+triple {OutOfGas}
+          (\<langle> h \<le> 1022 \<rangle> ** stack_height h ** program_counter k ** caller c ** gas_pred g ** continuing)
+          {(k, Info CALLER), (k + 1, Info GAS)}
+          (stack_height (h + 2) ** stack (Suc h) (word_of_int (g - Gbase - 2)) ** stack h (ucast c)
+           ** program_counter (2 + k) ** caller c ** gas_pred (g - Gbase - 2) ** continuing )
+"
+apply(auto)
+apply(rule_tac cL = "{(k, Info CALLER)}" and cR = "{(k + 1, Info GAS)}" in composition)
+  apply(auto)
+ apply(rule strengthen_pre)
+  apply(rule_tac h = "h" and c = c and g = g in caller_gas_triple) 
+ apply(auto)
+apply(rule_tac R = "stack h (ucast c) ** caller c" in frame_backward)
+  apply(rule_tac h = "Suc h" and g = "g - 2" in gas_gas_triple)
+ apply(auto)
+ using sep_assoc sep_commute apply auto
+done
  
 
 end
