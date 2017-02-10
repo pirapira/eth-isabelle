@@ -616,5 +616,6 @@ proof -
   from a and b show ?thesis by auto
 qed
 
+end
 
 
