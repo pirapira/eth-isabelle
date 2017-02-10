@@ -260,6 +260,78 @@ apply(rule_tac R = "stack h (ucast c) ** caller c" in frame_backward)
  apply(auto)
  using sep_assoc sep_commute apply auto
 done
- 
+
+lemma program_counter_comm :
+  "program_counter (x + y) = program_counter (y + x)"
+(* sledgehammer *)
+proof -
+  have "y + x = x + y"
+    by presburger
+  then show ?thesis
+    by presburger
+qed
+
+lemma first_three_args :
+  "triple {OutOfGas}
+          (\<langle> h \<le> 1021 \<and> unat bn \<ge> 2463000\<rangle>
+           ** block_number_pred bn ** caller c ** stack_height h ** program_counter k ** this_account t ** 
+           balance t b ** gas_pred g ** continuing)
+          {(k, Info ADDRESS), (k + 1, Info BALANCE), (k + 2, Info CALLER), (k + 3, Info GAS)}
+          (block_number_pred bn ** caller c ** stack_height (h + 3) ** 
+           stack (Suc (Suc h)) (word_of_int (g - 2 * Gbase - 402)) ** stack (Suc h) (ucast c) ** stack h b ** balance t b
+           ** program_counter (4 + k) ** this_account t ** gas_pred (g - 2 * Gbase - 402)
+           ** continuing )"
+apply(auto)
+apply(rule_tac cL = "{(k, Info ADDRESS), (k + 1, Info BALANCE)}"
+           and cR = "{(k + 2, Info CALLER), (k + 3, Info GAS)}" in composition)
+  apply(auto)
+ apply(rule_tac R = "caller c" in frame_backward)
+   apply(rule_tac h = h and bn = bn and g = g and t = t and b = b in this_balance)
+  apply(auto)
+ using sep_assoc sep_commute apply auto
+apply(rule_tac R = "balance t b ** stack h b ** block_number_pred bn ** this_account t" in frame_backward)
+  apply(rule triple_code_eq)
+  apply(rule_tac k = "k + 2" and h = "Suc h" and c = c and g = "g - Gbase - 400" in caller_gas)
+   apply simp
+   apply auto[1]
+ apply auto
+ apply(rule sep_functional)
+  apply(simp)
+ apply(rule sep_functional)
+  apply(simp)
+ apply(rule sep_functional)
+  apply(simp)
+ apply(rule sep_functional)
+  apply(simp)
+ apply(rule sep_functional)
+  apply(simp)
+ apply(rule sep_functional)
+  apply(simp)
+ apply(rule sep_functional)
+  apply(simp)
+ apply(rule sep_functional)
+  apply(rule program_counter_comm)
+ apply(simp)
+apply(rule sep_functional)
+ apply(simp)
+apply(rule sep_functional)
+ apply(simp)
+apply(rule sep_functional)
+ apply(simp)
+apply(rule sep_functional)
+ apply(simp)
+apply(rule sep_functional)
+ apply(simp)
+apply(rule sep_functional)
+ apply(simp)
+apply(rule sep_functional)
+ apply(simp)
+apply(rule sep_functional)
+(* sledgehammer *)
+  apply (simp add: Suc3_eq_add_3 semiring_normalization_rules(24))
+apply(simp)
+done
+
+   
 
 end
