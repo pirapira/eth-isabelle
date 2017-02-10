@@ -564,4 +564,152 @@ apply(simp only: stack_topmost_special_translate)
 apply blast
 done
 
+lemma pick_fifth_L :
+  "e ** a ** b ** c ** d ** rest = R \<Longrightarrow> a ** b ** c ** d ** e ** rest = R"
+proof -
+ have "e ** a ** b ** c ** d ** rest = a ** b ** c ** d ** e ** rest"
+  using first_two by presburger
+ moreover assume "e ** a ** b ** c ** d ** rest = R"
+ ultimately show "a ** b ** c ** d ** e ** rest = R"
+  by auto
+qed
+
+lemma pick_sixth_last_L :
+  "f ** a ** b ** c ** d ** e = R \<Longrightarrow>
+   a ** b ** c ** d ** e ** f = R"
+proof -
+ have "f ** a ** b ** c ** d ** e = a ** b ** c ** d ** e ** f"
+  using rotate4 by auto
+ moreover assume "f ** a ** b ** c ** d ** e = R"
+ ultimately show "a ** b ** c ** d ** e ** f = R"
+  by auto
+qed
+
+
+lemma pick_fourth_L :
+  "d ** a ** b ** c ** rest = R \<Longrightarrow> a ** b ** c ** d ** rest = R"
+proof -
+ have "d ** a ** b ** c ** rest = a ** b ** c ** d** rest"
+  using first_two by presburger
+ moreover assume "d ** a ** b ** c ** rest = R"
+ ultimately show "a ** b ** c ** d ** rest = R"
+  by auto
+qed
+
+lemma pick_third_L :
+  "c ** a ** b ** rest = R \<Longrightarrow> a ** b ** c ** rest = R"
+proof -
+ have "c ** a ** b ** rest = a ** b ** c ** rest"
+  using first_two by presburger
+ moreover assume "c ** a ** b ** rest = R"
+ ultimately show "a ** b ** c ** rest = R"
+  by auto
+qed
+
+
+lemma call_with_args:
+"triple {OutOfGas} (\<langle> h \<le> 1017 \<and> 2463000 \<le> unat bn\<rangle>
+                    ** block_number_pred bn ** caller c **
+                       stack_height h **
+                       program_counter k **
+                       this_account t **
+                       balance t b **
+                       gas_pred g **
+                       continuing ** memory_usage u
+
+                      )
+                      {(k, Stack (PUSH_N [0])),
+                       (k + 2, Dup 0),
+                       (k + 3, Dup 0),
+                       (k + 4, Dup 0),
+                       (5 + k, Info ADDRESS),
+                       (6 + k, Info BALANCE),
+                       (7 + k, Info CALLER),
+                       (8 + k, Info GAS),
+                       (9 + k, Misc CALL)
+                      }
+                      (block_number_pred bn ** caller c **
+                       memory_usage u **
+                       stack_topmost h [] **
+                       program_counter (10 + k) **
+                       this_account t **
+                       balance t 0 **
+                       gas_any **
+                       not_continuing **
+                       action (ContractCall \<lparr> callarg_gas = word_of_int (g - 4 * Gverylow - 2 * Gbase - 402)
+                                , callarg_code = c
+                                , callarg_recipient = c
+                                , callarg_value = b
+                                , callarg_data = []
+                                , callarg_output_begin = word_rcat [0]
+                                , callarg_output_size = word_rcat [0] \<rparr>)
+                      )"
+apply(auto)
+apply(rule_tac cL = "{(k, Stack (PUSH_N [0])),
+                       (k + 2, Dup 0),
+                       (k + 3, Dup 0),
+                       (k + 4, Dup 0),
+                       (5 + k, Info ADDRESS),
+                       (6 + k, Info BALANCE),
+                       (7 + k, Info CALLER),
+                       (8 + k, Info GAS)}"
+            and cR = "{(9 + k, Misc CALL)}" in composition)
+  apply(auto)
+ apply(rule_tac R = "memory_usage u" in frame_backward)
+   apply(rule_tac k = k and h = h and c = c and bn = bn and t = t and b = b and g = g in seven_args_packed)
+  apply(simp)
+ apply simp
+apply(rule_tac R = "block_number_pred bn **
+      caller c" in frame_backward)
+  apply(rule_tac h = h and v = b and fund = b and input = "[]" 
+        and in_size = "word_rcat [0]" and in_begin = "word_rcat [0]"
+        and out_size = "word_rcat [0]" and out_begin = "word_rcat [0]"
+        and g = "word_of_int (g - 4 * Gverylow - 406)" and r = "ucast c"
+        and this = t and u = u
+        in call_gas_triple)
+ apply(simp add: word_rcat_def bin_rcat_def)
+ apply(rule pick_fourth_L)
+ apply(rule sep_functional)
+  apply(simp)
+ apply(rule pick_third_L)
+ apply(rule sep_functional)
+  apply(simp)
+ apply(rule pick_fifth_L)
+ apply(rule sep_functional)
+  apply(simp)
+ apply(rule pick_sixth_last_L)
+ apply(rule sep_functional)
+  apply(simp)
+ apply(rule pick_third_L)
+ apply(rule sep_functional)
+  apply(simp)
+ apply(rule pick_third_L)
+ apply(rule sep_functional)
+  apply(simp)
+ apply (metis abcbca)
+apply(simp add: word_rcat_def bin_rcat_def M_def)
+apply(rule pick_fourth_L)
+apply(rule sep_functional)
+ apply(simp)
+apply(rule pick_fifth_L)
+apply(rule sep_functional)
+ apply(simp)
+apply(rule pick_fifth_L)
+apply(rule sep_functional)
+ apply(simp)
+apply(rule pick_fourth_L)
+apply(rule sep_functional)
+ apply(simp)
+apply(rule pick_fourth_L)
+apply(rule sep_functional)
+ apply(simp)
+apply(rule pick_third_L)
+apply(rule sep_functional)
+ apply(simp)
+apply(rule pick_third_L)
+apply(rule sep_functional)
+ apply(simp)
+apply (metis abcbca)
+done
+
 end
