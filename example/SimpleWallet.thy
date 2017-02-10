@@ -606,6 +606,17 @@ proof -
   by auto
 qed
 
+lemma pick_second_L :
+  "b ** a ** rest = R \<Longrightarrow> a ** b ** rest = R"
+proof -
+ have "b ** a ** rest = a ** b ** rest"
+  using first_two by presburger
+ moreover assume "b ** a ** rest = R"
+ ultimately show "a ** b ** rest = R"
+  by auto
+qed
+
+
 
 lemma call_with_args:
 "triple {OutOfGas} (\<langle> h \<le> 1017 \<and> 2463000 \<le> unat bn\<rangle>
@@ -710,6 +721,88 @@ apply(rule pick_third_L)
 apply(rule sep_functional)
  apply(simp)
 apply (metis abcbca)
+done
+
+lemma pick_secondL:
+ "a ** rest = R \<Longrightarrow> a ** b ** rest = b ** R"
+  by (simp add: first_two)
+
+lemma pick_thirdL:
+ "a ** b ** rest = R \<Longrightarrow> a ** b ** c ** rest = c ** R"
+  by (simp add: pick_third_L)
+
+lemma sep_ac :
+ "a ** b ** c = b ** a ** c"
+  using first_two by blast
+
+lemma equal_pred :
+ "P = Q \<Longrightarrow> \<forall> s. P s \<longrightarrow> Q s"
+apply(simp)
+done
+
+lemma sep_emp [simp] :
+  "r ** emp = r"
+apply(simp add: emp_def sep_def)
+done
+
+lemma cons_eq :
+  "a = b \<Longrightarrow> c ** a = c ** b"
+apply(simp)
+done
+
+lemma push0sload :
+   "triple {OutOfGas} (\<langle> h \<le> 1023 \<and> unat bn \<ge> 2463000 \<rangle> **
+                       block_number_pred bn **
+                       stack_height h **
+                       program_counter k **
+                       storage (word_rcat [0]) w **
+                       gas_pred g **
+                       continuing
+                      )
+                      {(k, Stack (PUSH_N [0])), (k + 2, Storage SLOAD)}
+                      (block_number_pred bn **
+                       stack_height (h + 1) **
+                       stack h w **
+                       program_counter (3 + k) **
+                       storage (word_rcat [0]) w **
+                       gas_pred (g - Gverylow - Gsload (unat bn)) **
+                       continuing
+                      )"
+apply(auto)
+apply(rule_tac cL = "{(k, Stack (PUSH_N [0]))}"
+           and cR = "{(k + 2, Storage SLOAD)}" in composition)
+  apply(auto)
+ apply(rule_tac R = "block_number_pred bn ** storage (word_rcat [0]) w"
+    in frame_backward)
+   apply(rule_tac h = h and g = g in push_gas_triple)
+  apply(simp)
+  apply(rule pick_secondL)
+  apply(rule pick_secondL)
+  apply(rule pick_thirdL)
+  apply(auto simp: sep_commute)
+ apply(rule sep_ac)
+apply(rule_tac R = "emp" in frame_backward)
+  apply(rule_tac bn = bn and h = h and w = w and g = "g - Gverylow"
+        and idx = "word_rcat [0]"
+        in sload_gas_triple)
+ apply(simp)
+ apply(rule sep_functional)
+  apply(simp)
+ apply(rule pick_secondL)
+ apply(rule pick_secondL)
+ apply(rule pick_second_L)
+ apply(rule sep_functional)
+  apply(simp add: program_counter_comm)
+ apply(rule sep_functional)
+  apply (simp add: word_rcat_def bin_rcat_def)
+ apply(rule sep_commute)
+apply(simp)
+apply(rule cons_eq)
+apply(rule cons_eq)
+apply(rule cons_eq)
+apply(rule cons_eq)
+apply(simp add: word_rcat_def bin_rcat_def)
+using sep_commute apply auto
 done
 
 end
