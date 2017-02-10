@@ -574,6 +574,17 @@ proof -
   by auto
 qed
 
+lemma pick_fifth_last_L :
+  "e ** a ** b ** c ** d = R \<Longrightarrow> a ** b ** c ** d ** e = R"
+proof -
+ have "e ** a ** b ** c ** d = a ** b ** c ** d ** e"
+  using rotate4 by auto
+ moreover assume "e ** a ** b ** c ** d = R"
+ ultimately show "a ** b ** c ** d ** e = R"
+  by auto
+qed
+
+
 lemma pick_sixth_last_L :
   "f ** a ** b ** c ** d ** e = R \<Longrightarrow>
    a ** b ** c ** d ** e ** f = R"
@@ -804,5 +815,84 @@ apply(rule cons_eq)
 apply(simp add: word_rcat_def bin_rcat_def)
 using sep_commute apply auto
 done
+
+lemma caller_eq :
+  "triple {OutOfGas}  ( \<langle> h \<le> 1022 \<rangle> **
+                        stack_height (h + 1) **
+                        stack h w **
+                        program_counter k ** caller c **
+                        gas_pred g **
+                        continuing
+                      )
+                      {(k, Info CALLER), (k + 1, Arith inst_EQ)}
+                      ( stack_height (h + 1) **
+                        stack h (if ucast c = w then((word_of_int 1) ::  256 word) else((word_of_int 0) ::  256 word)) **
+                        program_counter (k + 2) ** caller c **
+                        gas_pred (g - Gbase - Gverylow) **
+                        continuing )"
+apply(auto)
+ apply(rule_tac cL = "{(k, Info CALLER)}"
+           and cR = "{(k + 1, Arith inst_EQ)}" in composition)
+   apply(auto)
+  apply(rule_tac R = "stack h w" in frame_backward)
+    apply(rule_tac h = "Suc h" and g = g and c = c in caller_gas_triple)
+   apply(simp)
+   apply(rule cons_eq)
+   apply(rule pick_secondL)
+   apply(rule pick_secondL)
+   apply(rule pick_secondL)
+   apply(rule sep_commute)
+  apply(simp)
+ apply(rule_tac R = "caller c" in frame_backward)
+   apply(rule_tac h = h and g = "g - 2" and v = "ucast c" and w = "ucast c"
+       in eq_gas_triple)
+  apply(simp)
+  apply(rule cons_eq)
+  apply(rule cons_eq)
+  apply(rule pick_fifth_last_L)
+  apply(rule cons_eq)
+  apply(rule cons_eq)
+  apply(rule pick_secondL)
+  apply(rule sep_commute)
+ apply(simp)
+ apply(rule cons_eq)
+ apply(rule cons_eq)
+ apply(rule sep_functional)
+  apply(rule program_counter_comm)
+ apply(rule pick_secondL)
+ apply(rule sep_commute)
+apply(rule_tac cL = "{(k, Info CALLER)}"
+          and cR = "{(k + 1, Arith inst_EQ)}" in composition)
+  apply(auto)
+ apply(rule_tac R = "stack h w" in frame_backward)
+   apply(rule_tac h = "Suc h" and g = g and c = c in caller_gas_triple)
+  apply(simp)
+  apply(rule cons_eq)
+  apply(rule pick_secondL)
+  apply(rule pick_secondL)
+  apply(rule pick_secondL)
+  apply(rule sep_commute)
+ apply(simp)
+apply(rule_tac R = "caller c" in frame_backward)
+  apply(rule_tac h = h and g = "g - 2" and v = "ucast c" and w = "w"
+      in eq_gas_triple)
+ apply(simp)
+ apply(rule cons_eq)
+ apply(rule cons_eq)
+ apply(rule pick_fifth_last_L)
+ apply(rule cons_eq)
+ apply(rule cons_eq)
+ apply(rule pick_secondL)
+ apply(rule sep_commute)
+apply(simp)
+apply(rule cons_eq)
+apply(rule cons_eq)
+apply(rule sep_functional)
+ apply(rule program_counter_comm)
+apply(rule pick_secondL)
+apply(rule sep_commute)
+done
+
+
 
 end
