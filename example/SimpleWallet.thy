@@ -509,4 +509,59 @@ apply(simp only: stack_topmost_translate_inner)
 apply(simp)
 done
 
+lemma tri_sep :
+  "\<forall> s. c s = d s \<Longrightarrow> (a ** b ** c) k = (a ** b ** d) k"
+apply(simp add: sep_def)
+done
+
+lemma stack_topmost_special_translate :
+"(a ** b ** stack_topmost h [out_size, out_begin, in_size, in_begin, v, r, g] ** rest) s =
+                       (a ** b ** stack_height (h + 7) **
+                       stack (Suc (Suc (Suc (Suc (Suc (Suc h)))))) g **
+                       stack (Suc (Suc (Suc (Suc (Suc h))))) r **
+                       stack (Suc (Suc (Suc (Suc h)))) v **
+                       stack (Suc (Suc (Suc h))) in_begin **
+                       stack (Suc (Suc h)) in_size **
+                       stack (Suc h) out_begin **
+                       stack h out_size **
+                       rest) s"
+apply(rule tri_sep)
+apply(simp only: stack_topmost_translate)
+apply(simp)
+done
+
+lemma seven_args_packed:
+"triple {OutOfGas} (\<langle> h \<le> 1017 \<and> 2463000 \<le> unat bn\<rangle>
+                    ** block_number_pred bn ** caller c **
+                       stack_height h **
+                       program_counter k **
+                       this_account t **
+                       balance t b **
+                       gas_pred g **
+                       continuing
+                      )
+                      {(k, Stack (PUSH_N [0])),
+                       (k + 2, Dup 0),
+                       (k + 3, Dup 0),
+                       (k + 4, Dup 0),
+                       (5 + k, Info ADDRESS),
+                       (6 + k, Info BALANCE),
+                       (7 + k, Info CALLER),
+                       (8 + k, Info GAS)
+                      }
+                      (block_number_pred bn ** caller c **
+                       stack_topmost h [word_rcat [0], word_rcat [0], word_rcat [0], word_rcat [0],
+                         b, ucast c, word_of_int (g - 4 * Gverylow - 2 * Gbase - 402)] **
+                       program_counter (9 + k) **
+                       this_account t **
+                       balance t b **
+                       gas_pred (g - 4 * Gverylow - 2 * Gbase - 402) **
+                       continuing
+                      )"
+apply(rule weaken_post)
+ apply(rule seven_args)
+apply(simp only: stack_topmost_special_translate)
+apply blast
+done
+
 end
