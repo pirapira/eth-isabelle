@@ -751,10 +751,6 @@ lemma equal_pred :
 apply(simp)
 done
 
-lemma sep_emp [simp] :
-  "r ** emp = r"
-apply(simp add: emp_def sep_def)
-done
 
 lemma cons_eq :
   "a = b \<Longrightarrow> c ** a = c ** b"

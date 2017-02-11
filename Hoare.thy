@@ -153,8 +153,10 @@ definition contexts_as_set :: "variable_ctx \<Rightarrow> constant_ctx \<Rightar
     "contexts_as_set v c ==
        constant_ctx_as_set c \<union> variable_ctx_as_set v"
 
+type_synonym set_pred = "state_element set \<Rightarrow> bool"
+
 (* From Magnus Myreen's thesis, Section 3.3 *)
-definition sep :: "(state_element set \<Rightarrow> bool) \<Rightarrow> (state_element set \<Rightarrow> bool) \<Rightarrow> state_element set \<Rightarrow> bool"
+definition sep :: "set_pred \<Rightarrow> set_pred \<Rightarrow> set_pred"
   where
     "sep p q == (\<lambda> s. \<exists> u v. p u \<and> q v \<and> u \<union> v = s \<and> u \<inter> v = {})"
 
@@ -166,9 +168,33 @@ lemma sep_assoc [simp]: "((a ** b) ** c) = (a ** b ** c)"
 lemma sep_commute: "(a ** b)= (b ** a)"
   by (simp add: sep_def) blast
 
+lemma sep_three : "c ** a ** b = a ** b ** c"
+proof -
+ have "c ** a ** b = (a ** b) ** c"
+  using sep_commute by auto
+ moreover have "(a ** b) ** c = a ** b ** c"
+  by simp
+ ultimately show ?thesis
+  by auto
+qed
+ 
+
 definition emp :: "state_element set \<Rightarrow> bool"
   where
     "emp s == (s = {})"
+
+lemma sep_emp [simp] :
+  "r ** emp = r"
+apply(simp add: emp_def sep_def)
+done
+
+
+interpretation set_pred : comm_monoid
+   "sep :: set_pred \<Rightarrow> set_pred \<Rightarrow> set_pred"
+   "emp :: set_pred"
+apply(auto simp add: comm_monoid_def abel_semigroup_def semigroup_def abel_semigroup_axioms_def
+      sep_commute sep_three comm_monoid_axioms_def)
+done
 
 definition pure :: "bool \<Rightarrow> state_element set \<Rightarrow> bool"
   where
