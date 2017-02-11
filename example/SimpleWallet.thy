@@ -889,6 +889,75 @@ apply(rule pick_secondL)
 apply(rule sep_commute)
 done
 
+lemma abccba :
+  "a ** b ** c = c ** b ** a"
+  using abel_semigroup.left_commute sep_three set_pred.abel_semigroup_axioms by fastforce
 
+lemma first_four :
+   "triple {OutOfGas} (\<langle> h \<le> 1022 \<and> unat bn \<ge> 2463000 \<rangle> **
+                       block_number_pred bn **
+                       stack_height h **
+                       program_counter k ** caller c **
+                       storage (word_rcat [0]) w **
+                       gas_pred g **
+                       continuing
+                      )
+                      {(k, Stack (PUSH_N [0])), (k + 2, Storage SLOAD),
+                       (k + 3, Info CALLER), (k + 4, Arith inst_EQ)}
+                      (block_number_pred bn **
+                       stack_height (h + 1) **
+                       stack h (if ucast c = w then((word_of_int 1) ::  256 word) else((word_of_int 0) ::  256 word)) **
+                       program_counter (5 + k) ** caller c **
+                       storage (word_rcat [0]) w **
+                       gas_pred (g + (- Gsload (unat bn) - 2) - 2 * Gverylow) **
+                       continuing
+                      )"
+apply(simp only: move_pureL)
+apply(rule impI)
+apply(rule_tac cL = "{(k, Stack (PUSH_N [0])), (k + 2, Storage SLOAD)}"
+           and cR = "{(k + 3, Info CALLER), (k + 4, Arith inst_EQ)}" in composition)
+  apply blast
+ apply(rule_tac R = "caller c" in frame_backward)
+   apply(rule_tac h = h and bn = bn and w = w and g = g in push0sload)
+  apply(simp)
+  apply(rule cons_eq)
+  apply(rule cons_eq)
+  apply(rule cons_eq)
+  apply(rule pick_secondL)
+  apply(rule abcbca)
+ apply(simp)
+apply(rule_tac R = "storage (word_rcat [0]) w ** block_number_pred bn" in frame_backward)
+  apply(rule triple_code_eq)
+   apply(rule_tac k = "k + 3" and h = h and w = w and c = c and g = "g - Gverylow - Gsload (unat bn)" in caller_eq)
+  apply simp
+  apply auto[1]
+ apply(simp)
+ apply(rule pick_secondL)
+ apply(rule pick_secondL)
+ apply(rule pick_second_L)
+ apply(rule sep_functional)
+  apply(rule program_counter_comm)
+ apply(rule pick_fifth_last_L)
+ apply(rule cons_eq)
+ apply(rule pick_thirdL)
+ apply(rule abccba)
+apply(auto)
+ apply(rule pick_secondL)
+ apply(rule pick_secondL)
+ apply(rule pick_secondL)
+ apply(rule pick_secondL)
+ apply(rule pick_third_L)
+ apply(rule sep_functional)
+  apply(simp)
+ apply(rule abccba)
+apply(rule pick_secondL)
+apply(rule pick_secondL)
+apply(rule pick_secondL)
+apply(rule pick_secondL)
+apply(rule pick_third_L)
+apply(rule sep_functional)
+ apply(simp)
+apply(rule abccba)
+done
 
 end
