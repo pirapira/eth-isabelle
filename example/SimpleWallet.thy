@@ -1044,8 +1044,58 @@ apply(rule pick_secondL)
 apply(rule sep_commute)
 done
 
-
-
-(* prefix_invalid_caller *)
+lemma prefix_invalid_caller:
+"triple {OutOfGas} (\<langle> h \<le> 1022 \<and> unat bn \<ge> 2463000 \<and> ucast c \<noteq> w\<rangle> **
+                       block_number_pred bn **
+                       stack_height h **
+                       program_counter k ** caller c **
+                       storage (word_rcat [0]) w **
+                       gas_pred g **
+                       continuing
+                      )
+                      {(k, Stack (PUSH_N [0])), (k + 2, Storage SLOAD),
+                       (k + 3, Info CALLER), (k + 4, Arith inst_EQ),
+                       (k + 5, Stack (PUSH_N [x])), (k + 7, Pc JUMPI),
+                       (k + 8, Misc STOP)}
+                      (block_number_pred bn **
+                       stack_height h **
+                       program_counter (8 + k) ** caller c **
+                       storage (word_rcat [0]) w **
+                       gas_pred (g + (- Gsload (unat bn) - 2) - 2 * Gverylow - Gverylow - Ghigh) **
+                       not_continuing ** action (ContractReturn []))"
+apply(auto)
+apply(rule_tac cL = "{(k, Stack (PUSH_N [0])), (k + 2, Storage SLOAD),
+                       (k + 3, Info CALLER), (k + 4, Arith inst_EQ)}"
+           and cR = "{(k + 5, Stack (PUSH_N [x])), (k + 7, Pc JUMPI),
+                       (k + 8, Misc STOP)}" in composition)
+  apply(auto)
+ apply(rule_tac R = emp in frame_backward)
+   apply(rule_tac h = h and bn = bn and c = c and g = g and w = w in first_four)
+  apply(simp)
+ apply(simp)
+apply(rule_tac R = "block_number_pred bn ** caller c ** storage (word_rcat [0]) w" in frame_backward)
+  apply(rule triple_code_eq)
+  apply(rule_tac h = h and k = "k + 5" and x = x in pushjumpistop_false)
+  apply(auto)
+ apply(rule pick_secondL)
+ apply(rule pick_secondL)
+ apply(rule pick_second_L)
+ apply(rule sep_functional)
+  apply(rule program_counter_comm)
+ apply(rule pick_fourth_L)
+ apply(rule sep_functional)
+  apply simp
+ apply(rule pick_fourth_last_L)
+ apply(simp)
+apply(simp)
+apply(rule pick_secondL)
+apply(rule pick_secondL)
+apply(rule pick_fourth_L)
+apply(rule cons_eq)
+apply(rule pick_fourth_L)
+apply(rule cons_eq)
+apply(rule pick_fourth_last_L)
+apply(simp)
+done
 
 end
