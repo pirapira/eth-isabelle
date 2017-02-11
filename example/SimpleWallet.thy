@@ -5,14 +5,14 @@ imports "../HoareTripleForInstructions2"
 begin
 
 (*
-PUSH 0
-SLOAD
-CALLER
-EQ
-PUSH ??
-JUMPI
-STOP
-?? JUMPDEST
+0: PUSH 0
+2: SLOAD
+3: CALLER
+4: EQ
+5: PUSH 9
+7: JUMPI
+8: STOP
+9: JUMPDEST
 PUSH 0
 DUP1
 DUP1
@@ -584,6 +584,16 @@ proof -
   by auto
 qed
 
+lemma pick_fourth_last_L :
+  "d ** a ** b ** c = R \<Longrightarrow> a ** b ** c ** d = R"
+proof -
+ have "d ** a ** b ** c = a ** b ** c ** d"
+  using rotate4 by auto
+ moreover assume "d ** a ** b ** c = R"
+ ultimately show "a ** b ** c ** d = R"
+  by auto
+qed
+
 
 lemma pick_sixth_last_L :
   "f ** a ** b ** c ** d ** e = R \<Longrightarrow>
@@ -959,5 +969,49 @@ apply(rule sep_functional)
  apply(simp)
 apply(rule abccba)
 done
+
+
+lemma pushjumpi_false:
+   "triple {OutOfGas} (\<langle> h \<le> 1022 \<rangle> **
+                       stack_height (h + 1) **
+                       stack h 0 **
+                       program_counter k **
+                       gas_pred g **
+                       continuing
+                      )
+                      {(k, Stack (PUSH_N [x])), (k + 2, Pc JUMPI)}
+                      (stack_height h **
+                       program_counter (k + 3) **
+                       gas_pred (g - Gverylow - Ghigh) **
+                       continuing)"
+apply(auto)
+apply(rule_tac cL = "{(k, Stack (PUSH_N [x]))}"
+           and cR = "{(k + 2, Pc JUMPI)}" in composition)
+  apply blast
+ apply(rule_tac R = "stack h 0" in frame_backward)
+   apply(rule_tac g = g and h = "Suc h" in push_gas_triple)
+  apply(simp)
+  apply(rule cons_eq)
+  apply(rule pick_secondL)
+  apply(rule pick_secondL)
+  apply(rule sep_commute)
+ apply simp
+apply(rule_tac R = "emp" in frame_backward)
+  apply(rule_tac h = h and g = "g - Gverylow" and d = "(word_rcat [x])"
+        in jumpi_false_gas_triple)
+ apply(simp)
+ apply(rule cons_eq)
+ apply(rule cons_eq)
+ apply(rule pick_fourth_last_L)
+ apply(rule cons_eq)
+ apply(rule sep_functional)
+  apply(rule program_counter_comm)
+ apply(simp)
+apply(simp add: program_counter_comm)
+done
+
+(* pushjumpistop_false *)
+
+(* invalid_caller *)
 
 end
