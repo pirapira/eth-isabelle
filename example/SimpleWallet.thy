@@ -1010,8 +1010,42 @@ apply(rule_tac R = "emp" in frame_backward)
 apply(simp add: program_counter_comm)
 done
 
-(* pushjumpistop_false *)
+lemma pushjumpistop_false :
+   "triple {OutOfGas} (\<langle> h \<le> 1022 \<rangle> **
+                       stack_height (h + 1) **
+                       stack h 0 **
+                       program_counter k **
+                       gas_pred g **
+                       continuing
+                      )
+                      {(k, Stack (PUSH_N [x])), (k + 2, Pc JUMPI),
+                       (k + 3, Misc STOP)}
+                      (stack_height h **
+                       program_counter (k + 3) **
+                       gas_pred (g - Gverylow - Ghigh) **
+                       not_continuing ** action (ContractReturn []))"
+apply(auto)
+apply(rule_tac cL = "{(k, Stack (PUSH_N [x])), (k + 2, Pc JUMPI)}"
+           and cR = "{(k + 3, Misc STOP)}" in composition)
+  apply(auto)
+ apply(rule strengthen_pre)
+ apply(rule_tac h = h and g = g in pushjumpi_false)
+ apply(auto)
+apply(rule_tac R = "gas_pred (g - Gverylow - Ghigh)" in frame_backward)
+  apply(rule_tac h = h in stop_gas_triple)
+ apply(simp)
+ apply(rule cons_eq)
+ apply(rule cons_eq)
+ apply(rule sep_commute)
+apply(simp)
+apply(rule cons_eq)
+apply(rule cons_eq)
+apply(rule pick_secondL)
+apply(rule sep_commute)
+done
 
-(* invalid_caller *)
+
+
+(* prefix_invalid_caller *)
 
 end
