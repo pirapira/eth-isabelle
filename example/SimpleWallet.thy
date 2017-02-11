@@ -1098,4 +1098,65 @@ apply(rule pick_fourth_last_L)
 apply(simp)
 done
 
+lemma bintrunc_byte_uint :
+  "bintrunc 8 (uint (d :: byte)) = uint d"
+apply(rule Word.bintr_uint)
+apply(simp)
+done
+
+lemma word_rcat_single [simp] :
+  "(word_rcat [(d :: byte)] :: w256) = ucast d"
+apply(simp add: word_rcat_def bin_rcat_def bintrunc_byte_uint ucast_def)
+done
+
+lemma uint_ucast_bw [simp] :
+  "uint (ucast (d :: byte) :: w256) = uint d"
+apply(rule uint_up_ucast)
+apply(simp add: is_up source_size_def target_size_def)
+done
+
+
+lemma pushjumpi_true:
+   "triple {OutOfGas} (\<langle> h \<le> 1022 \<and> cond \<noteq> 0 \<rangle> **
+                       stack_height (h + 1) **
+                       stack h cond **
+                       program_counter k **
+                       gas_pred g **
+                       continuing
+                      )
+                      {(k, Stack (PUSH_N [d])), (k + 2, Pc JUMPI), ((uint (ucast d :: w256)), Pc JUMPDEST)}
+                      (stack_height h **
+                       program_counter (uint d) **
+                       gas_pred (g - Gverylow - Ghigh) **
+                       continuing)"
+apply(auto)
+apply(rule_tac cL = "{(k, Stack (PUSH_N [d]))}" 
+           and cR = "{(k + 2, Pc JUMPI), ((uint (ucast d :: w256)), Pc JUMPDEST)}" in composition)
+  apply(auto)
+ apply(rule_tac R = "stack h cond" in frame_backward)
+   apply(rule_tac h = "h + 1" and g = g in push_gas_triple)
+  apply(simp)
+  apply(rule cons_eq)
+  apply(rule pick_secondL)
+  apply(rule pick_secondL)
+  apply(rule sep_commute)
+ apply(simp)
+apply(rule_tac R = "emp" in frame_backward)
+  apply(rule triple_code_eq)
+  apply(rule_tac g = "g - Gverylow" and cond = cond and h = h and k = "k + 2" and d = "ucast d" in jumpi_true_gas_triple)
+  apply(simp)
+ apply(simp)
+ apply(rule cons_eq)
+ apply(rule cons_eq)
+ apply(rule pick_fourth_last_L)
+ apply(rule cons_eq)
+ apply(rule sep_functional)
+  apply(rule program_counter_comm)
+ apply(simp)
+apply(simp)
+done
+
+(*
+*)
+
 end
