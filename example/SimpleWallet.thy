@@ -1156,7 +1156,63 @@ apply(rule_tac R = "emp" in frame_backward)
 apply(simp)
 done
 
+
+lemma prefix_true:
+   "triple {OutOfGas} (\<langle> h \<le> 1022 \<and> unat bn \<ge> 2463000 \<rangle> **
+                       block_number_pred bn **
+                       stack_height h **
+                       program_counter k ** caller c **
+                       storage (word_rcat [0]) (ucast c) **
+                       gas_pred g **
+                       continuing
+                      )
+                      {(k, Stack (PUSH_N [0])), (k + 2, Storage SLOAD),
+                       (k + 3, Info CALLER), (k + 4, Arith inst_EQ),
+                       (5 + k, Stack (PUSH_N [d])), (k + 7, Pc JUMPI),
+                       ((uint (ucast d :: w256)), Pc JUMPDEST)}
+                      (block_number_pred bn **
+                       stack_height h **
+                       program_counter (uint d) ** caller c **
+                       storage (word_rcat [0]) (ucast c) **
+                       gas_pred (g + (- Gsload (unat bn) - 2) - 3 * Gverylow - Ghigh) **
+                       continuing
+                      )"
+apply(auto)
+apply(rule_tac cL = "{(k, Stack (PUSH_N [0])), (k + 2, Storage SLOAD),
+                       (k + 3, Info CALLER), (k + 4, Arith inst_EQ)}"
+           and cR = "{(5 + k, Stack (PUSH_N [d])), (k + 7, Pc JUMPI),
+                       ((uint (ucast d :: w256)), Pc JUMPDEST)}" in composition)
+  apply(auto)
+ apply(rule_tac R = emp in frame_backward)
+   apply(rule_tac h = h and g = g and bn = bn and c = c and w = "ucast c" in first_four)
+  apply(simp)
+ apply(simp)
+apply(rule_tac R = "block_number_pred bn ** caller c ** storage (word_rcat [0]) (ucast c)" in frame_backward)
+  apply(rule triple_code_eq)
+  apply(rule_tac h = h and k = "k + 5" and d = d and cond = 1 in pushjumpi_true)
+  apply(auto)
+ apply(rule pick_secondL)
+ apply(rule pick_secondL)
+ apply(rule pick_second_L)
+ apply(rule sep_functional)
+  apply(rule program_counter_comm)
+ apply(rule pick_fourth_L)
+ apply(rule sep_functional)
+  apply(simp)
+ apply(rule pick_fourth_last_L)
+ apply(simp)
+apply(simp)
+apply(rule pick_secondL)
+apply(rule pick_secondL)
+apply(rule pick_fourth_last_L)
+apply(simp)
+done
+
+
+(* prefix_true_over_JUMPDEST *)
+
 (*
+prefix_invalid_caller_concrete
 *)
 
 end
