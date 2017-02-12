@@ -574,6 +574,20 @@ proof -
   by auto
 qed
 
+lemma pick_ninth_L :
+  "i ** a ** b ** c ** d ** e ** f ** g ** h ** rest = R \<Longrightarrow>
+   a ** b ** c ** d ** e ** f ** g ** h ** i ** rest = R"
+proof -
+ have "i ** a ** b ** c ** d ** e ** f ** g ** h ** rest
+     = a ** b ** c ** d ** e ** f ** g ** h ** i ** rest"
+  using first_two by presburger
+ moreover assume "i ** a ** b ** c ** d ** e ** f ** g ** h ** rest = R"
+ ultimately show "a ** b ** c ** d ** e ** f ** g ** h ** i ** rest = R"
+  by auto
+qed
+
+
+
 lemma pick_fifth_last_L :
   "e ** a ** b ** c ** d = R \<Longrightarrow> a ** b ** c ** d ** e = R"
 proof -
@@ -1258,6 +1272,165 @@ apply(rule pick_fourth_last_L)
 apply(simp)
 done
 
+
+lemma check_pass_whole:
+  "triple {OutOfGas} (\<langle> h \<le> 1017 \<and> unat bn \<ge> 2463000 \<rangle> **
+                       block_number_pred bn **
+                       stack_height h **
+                       program_counter k ** caller c **
+                       storage (word_rcat [0]) (ucast c) **
+                       gas_pred g **
+                       continuing **
+                       this_account t **
+                       balance t b **
+                       memory_usage u
+                      )
+                      {(k, Stack (PUSH_N [0])), (k + 2, Storage SLOAD),
+                       (k + 3, Info CALLER), (k + 4, Arith inst_EQ),
+                       (5 + k, Stack (PUSH_N [d])), (k + 7, Pc JUMPI),
+                       ((uint (ucast d :: w256)), Pc JUMPDEST),
+                       ((uint d) + 1, Stack (PUSH_N [0])),
+                       (3 + (uint d), Dup 0),
+                       (4 + uint d, Dup 0),
+                       (5 + uint d, Dup 0),
+                       (6 + uint d, Info ADDRESS),
+                       (7 + uint d, Info BALANCE),
+                       (8 + uint d, Info CALLER),
+                       (9 + uint d, Info GAS),
+                       (10 + uint d, Misc CALL)
+                      }
+                      (memory_usage u **
+                       stack_topmost h [] **
+                       program_counter (uint d + 11) **
+                       this_account t **
+                       balance t 0 **
+                       gas_any **
+                       not_continuing **
+                       action (ContractCall \<lparr>
+                                  callarg_gas = word_of_int (g + (- Gjumpdest - Ghigh - 7 * Gverylow - Gsload (unat bn)) - 408)
+                                , callarg_code = c
+                                , callarg_recipient = c
+                                , callarg_value = b
+                                , callarg_data = []
+                                , callarg_output_begin = word_rcat [0]
+                                , callarg_output_size = word_rcat [0] \<rparr>) **
+                       block_number_pred bn **
+                       caller c **
+                       storage (word_rcat [0]) (ucast c)
+                      )"
+apply(auto)
+apply(rule_tac cL = "{(k, Stack (PUSH_N [0])), (k + 2, Storage SLOAD),
+                       (k + 3, Info CALLER), (k + 4, Arith inst_EQ),
+                       (5 + k, Stack (PUSH_N [d])), (k + 7, Pc JUMPI),
+                       ((uint (ucast d :: w256)), Pc JUMPDEST)}"
+           and cR = "{((uint d) + 1, Stack (PUSH_N [0])),
+                       (3 + (uint d), Dup 0),
+                       (4 + uint d, Dup 0),
+                       (5 + uint d, Dup 0),
+                       (6 + uint d, Info ADDRESS),
+                       (7 + uint d, Info BALANCE),
+                       (8 + uint d, Info CALLER),
+                       (9 + uint d, Info GAS),
+                       (10 + uint d, Misc CALL)}" in composition)
+  apply(auto)
+ apply(rule_tac R = "this_account t ** balance t b ** memory_usage u" in
+       frame_backward)
+   apply(rule triple_code_eq)
+    apply(rule_tac h = h in prefix_true_over_JUMPDEST)
+   apply(simp)
+  apply(auto)
+apply(rule_tac R = "storage (word_rcat [0]) (ucast c)" in
+      frame_backward)
+  apply(rule_tac triple_code_eq)
+   apply(rule_tac bn = bn and  h = h and k = "uint d + 1" in call_with_args)
+  apply(simp)
+ apply(simp)
+ apply(rule cons_eq)
+ apply(rule pick_third_L)
+ apply(rule cons_eq)
+ apply(rule cons_eq)
+ apply(rule cons_eq)
+ apply(rule pick_fourth_L)
+ apply(rule cons_eq)
+ apply(rule pick_fourth_L)
+ apply(rule cons_eq)
+ apply(rule pick_second_L)
+ apply(rule cons_eq)
+ apply(rule pick_second_L)
+ apply(rule cons_eq)
+ apply(rule sep_commute)
+apply(simp)
+apply(rule pick_ninth_L)
+apply(rule cons_eq)
+apply(rule pick_ninth_L)
+apply(rule cons_eq)
+apply(rule cons_eq)
+apply(rule cons_eq)
+apply(rule sep_functional)
+ apply(rule program_counter_comm)
+apply(simp)
+done
+
+(* whole_concrete_program *)
+
+definition whole_concrete_program :: "(int * inst) set"
+where "whole_concrete_program =
+     {(0, Stack (PUSH_N [0])), (2, Storage SLOAD),
+                       (3, Info CALLER), (4, Arith inst_EQ),
+                       (5, Stack (PUSH_N [8])), (7, Pc JUMPI),
+                       (8, Pc JUMPDEST),
+                       (9, Stack (PUSH_N [0])),
+                       (11, Dup 0),
+                       (12, Dup 0),
+                       (13, Dup 0),
+                       (14, Info ADDRESS),
+                       (15, Info BALANCE),
+                       (16, Info CALLER),
+                       (17, Info GAS),
+                       (18, Misc CALL)}"
+
+(* check_pass_whole_concrete *)
+lemma check_pass_whole_concrete:
+  "triple {OutOfGas} (\<langle>unat bn \<ge> 2463000 \<rangle> **
+                       block_number_pred bn **
+                       stack_height 0 **
+                       program_counter 0 ** caller c **
+                       storage (word_rcat [0]) (ucast c) **
+                       gas_pred g **
+                       continuing **
+                       this_account t **
+                       balance t b **
+                       memory_usage 0
+                      )
+                      whole_concrete_program
+                      (memory_usage 0 **
+                       stack_topmost 0 [] **
+                       program_counter 19 **
+                       this_account t **
+                       balance t 0 **
+                       gas_any **
+                       not_continuing **
+                       action (ContractCall \<lparr>
+                                  callarg_gas = word_of_int (g + (- Gjumpdest - Ghigh - 7 * Gverylow - Gsload (unat bn)) - 408)
+                                , callarg_code = c
+                                , callarg_recipient = c
+                                , callarg_value = b
+                                , callarg_data = []
+                                , callarg_output_begin = word_rcat [0]
+                                , callarg_output_size = word_rcat [0] \<rparr>) **
+                       block_number_pred bn **
+                       caller c **
+                       storage (word_rcat [0]) (ucast c)
+                      )"
+apply(auto)
+apply(rule triple_code_eq)
+ apply(rule_tac R = "emp" in frame_backward)
+   apply(rule_tac k = 0 and d = 8 and h = 0 and bn = bn and c = c and g = g and u = 0 in  check_pass_whole)
+  apply(simp)
+ apply(simp)
+apply(simp add: whole_concrete_program_def)
+done
+  
 
 (*
 prefix_invalid_caller_concrete:
