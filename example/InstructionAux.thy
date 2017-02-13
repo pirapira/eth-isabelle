@@ -278,4 +278,19 @@ apply(cases x)
 apply(auto simp:program_step_def)
 done
 
+lemma program_step_is_next_state :
+ "program_step c x = next_state stopper c x"
+by (simp add: program_step_def next_state_def)
+
+lemma program_step_is_next_state2 :
+ "next_state stopper c x = program_step c x"
+by (simp add: program_step_def next_state_def)
+
+
+lemma program_iter_is_sem :
+ "program_sem stopper c n x = program_iter n c x"
+apply(induction n arbitrary:x)
+apply(auto simp:program_sem.simps program_step_is_next_state2)
+done
+
 end

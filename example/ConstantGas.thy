@@ -961,7 +961,7 @@ apply(auto)
 using get_continue_lemma apply blast
 done
 
-lemma gas_will_run_out :
+lemma gas_will_run_out_aux :
   assumes a:"0 \<le> vctx_memory_usage v" and
    b:"vctx_gas v \<ge> 0" and
    c:"program_iter (nat (vctx_gas v)+1) c (InstructionContinue v) = InstructionContinue nv"
@@ -974,6 +974,15 @@ proof -
    then show False
      by (smt assms(3) b iter_gas_left)  
 qed
+
+lemma gas_will_run_out :
+  "0 \<le> vctx_memory_usage v \<Longrightarrow>
+   vctx_gas v \<ge> 0 \<Longrightarrow>
+   program_sem  stopper c (nat (vctx_gas v)+1) (InstructionContinue v) = InstructionContinue nv \<Longrightarrow>
+   False"
+apply(subst (asm) program_iter_is_sem)
+using gas_will_run_out_aux apply blast
+done
 
 end
 
