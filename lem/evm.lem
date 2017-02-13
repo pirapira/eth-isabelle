@@ -1522,7 +1522,7 @@ let L x = x - x / 64
 val Cgascap : w256 -> w256 -> bool -> integer -> natural -> integer
 let Cgascap mu0 mu1 emp remaining_gas blocknumber =
   if remaining_gas >= Cextra mu1 emp blocknumber then
-    integerMin (L (uint mu0 - Cextra mu1 emp blocknumber)) (uint mu0)
+    integerMin (L (remaining_gas - Cextra mu1 emp blocknumber)) (uint mu0)
   else
     uint mu0
 
