@@ -2,6 +2,7 @@ theory "RunList"
 
 imports 
    "InstructionAux" "ProgramList" "InstructionRelocate"
+"InstructionPc"
 
 begin
 
@@ -59,8 +60,7 @@ fun run_list :: "constant_ctx \<Rightarrow> variable_ctx \<Rightarrow>
  | _ \<Rightarrow> None)"
 
 theorem program_content_first [simp] :
-  "inst_size a > 0 \<Longrightarrow>
-   program_map_of_lst 0 (a # lst) 0 = Some a"
+  "program_map_of_lst 0 (a # lst) 0 = Some a"
 apply(cases a)
 apply(auto)
 apply(subst program_list_content_eq4)
@@ -162,10 +162,13 @@ apply(auto)
 done
 *)
 
+fun good_inst :: "inst \<Rightarrow> bool" where
+"good_inst (Stack (PUSH_N lst)) = (length lst > 0 \<and> length lst \<le> 32)"
+| "good_inst _ = True"
+
 lemma program_length_not_empty : "p_length (a # lst) = 0 \<Longrightarrow>
-    inst_code a \<noteq> [] \<Longrightarrow>
     False"
-apply(auto simp:p_length_def program_list_of_lst.simps)
+apply(auto simp:p_length_def)
 apply(cases a)
 apply(auto)
 apply(cases "get_stack a")
@@ -179,12 +182,12 @@ lemma program_next_some :
            program_content
             (cctx_program c)
             (int 0 + vctx_pc v)) \<Longrightarrow>
-       inst_code a \<noteq> [] \<Longrightarrow>
        program_content (cctx_program c)
         (vctx_pc v) =
        Some a"
 apply(auto)
 using program_length_not_empty apply blast
+
 done
 
 lemma program_next_none :
@@ -192,7 +195,6 @@ lemma program_next_none :
      program_map_of_lst 0 (a # lst) 0 =
         program_content (cctx_program c)
          (int 0 + vctx_pc v) ) \<Longrightarrow>
-    inst_code a \<noteq> [] \<Longrightarrow>
     program_content (cctx_program c)
      (vctx_pc v) =
     None \<Longrightarrow>
@@ -203,7 +205,6 @@ done
 
 theorem program_next : 
   "program_at (cctx_program c) (a # lst) (vctx_pc v) \<Longrightarrow>
-   inst_size a > 0 \<Longrightarrow>
    vctx_next_instruction v c = Some a"
 apply(auto simp:program_content_first
     program_at_def vctx_next_instruction_def split:option.split)
@@ -279,7 +280,6 @@ done
 
 theorem list_like_step :
   "relocatable inst \<Longrightarrow>
-   inst_size inst > 0 \<Longrightarrow>
    vctx_next_instruction v c = Some inst \<Longrightarrow>
    program_step c (InstructionContinue v) = InstructionContinue v2 \<Longrightarrow>
    run_list c v [inst] = Some v3 \<Longrightarrow>
@@ -304,67 +304,76 @@ fun get_push :: "inst \<Rightarrow> byte list" where
 "get_push (Stack (PUSH_N lst)) = lst"
 
 theorem inst_size_eq :
-  "inst_size a > 0 \<Longrightarrow>
+  "good_inst a \<Longrightarrow>
    inst_size a = p_length [a]"
 apply(auto simp:p_length_def)
 apply(cases a)
 apply(auto)
-apply(auto simp:dup_inst_code_def)
-apply(cases "get_dup (Some a) <s 1")
-apply(auto simp: maybe_to_list.simps)
 apply(cases "get_stack a")
 apply(auto)
-apply(cases "get_push a")
-apply(auto)
-apply(auto simp:swap_inst_code_def)
-apply(cases "get_swap (Some a) <s 1")
-apply(auto simp: maybe_to_list.simps)
 done
 
 theorem no_jump_inc_pc2 :
-   "program_step c (Continue v n k) = Continue nv n2 k2 \<Longrightarrow>
-   is_inc_pc (venv_next_instruction v c) \<Longrightarrow>
-   venv_pc nv = Suc (venv_pc v)"
+   "program_step c (InstructionContinue v) = InstructionContinue nv \<Longrightarrow>
+   is_inc_pc (vctx_next_instruction v c) \<Longrightarrow>
+   vctx_pc nv = vctx_pc v + 1"
+apply(auto simp:program_step_def)
+apply(cases "\<not> check_annotations v c")
+apply(auto)
+apply(cases "vctx_next_instruction v c")
+apply(auto)
+apply(cases "check_resources v c
+            (vctx_stack v) (get_some (vctx_next_instruction v c))")
 apply(auto simp:no_jump_inc_pc)
 done
 
+theorem push_inc_pc2 :
+   "program_step c (InstructionContinue v) = InstructionContinue nv \<Longrightarrow>
+   vctx_next_instruction v c = Some (Stack (PUSH_N lst)) \<Longrightarrow>
+   good_inst (Stack (PUSH_N lst)) \<Longrightarrow>
+   vctx_pc nv = vctx_pc v + length lst + 1"
+apply(auto simp:program_step_def)
+apply(cases "\<not> check_annotations v c")
+apply(auto)
+apply(cases "vctx_next_instruction v c")
+apply(auto)
+apply(cases "check_resources v c
+            (vctx_stack v) (get_some (vctx_next_instruction v c))")
+apply(auto simp:push_inc_pc)
+using push_inc_pc
+done
+
+
+
 theorem unknown_fail :
-  "venv_next_instruction v c =
-          Some (Unknown x1) \<Longrightarrow>
-          program_step c (Continue v n k) =
-          Continue v2 n2 k2 \<Longrightarrow>
+  "vctx_next_instruction v c = Some (Unknown x1) \<Longrightarrow>
+   program_step c (InstructionContinue v) =
+          InstructionContinue v2 \<Longrightarrow>
    False"
-apply(auto simp:program_step.simps)
-apply(cases k, auto)
-apply(cases n, auto)
-apply(cases "\<not> check_annotations v c", auto)
+apply(auto simp:program_step_def)
+apply(cases "\<not> check_annotations v c")
+apply(cases "vctx_next_instruction v c")
+apply(auto)
+apply(cases "check_resources v c
+            (vctx_stack v) (get_some (vctx_next_instruction v c))")
+apply(auto simp:instruction_sem_def)
 done
 
 theorem correct_pc_inc1 :
   "relocatable a \<Longrightarrow>
-   inst_size a > 0 \<Longrightarrow>
-   venv_next_instruction v c = Some a \<Longrightarrow>
-   program_step c (Continue v n k) = Continue v2 n2 k2 \<Longrightarrow>
-   venv_pc v2 = venv_pc v + inst_size a"
+   good_inst a \<Longrightarrow>
+   vctx_next_instruction v c = Some a \<Longrightarrow>
+   program_step c (InstructionContinue v) = InstructionContinue v2 \<Longrightarrow>
+   vctx_pc v2 = vctx_pc v + inst_size a"
 apply(cases a)
 apply(auto)
-apply(auto simp:no_jump_inc_pc)
-defer
-apply(simp add:dup_inc_pc dup_inst_code_def)
-apply(auto)
-apply(cases "get_dup (Some a) <s 1")
-apply(auto simp: maybe_to_list.simps)
-defer
-apply(simp add:swap_inc_pc swap_inst_code_def)
-apply(cases "get_swap (Some a) <s 1")
-apply(auto simp: maybe_to_list.simps)
-defer
-apply(cases "get_stack a")
-apply(auto simp:no_jump_inc_pc)
-apply(cases "get_push a")
-apply(auto simp:push_inc_pc)
 using unknown_fail
 apply(blast)
+apply(auto simp:is_inc_pc.simps no_jump_inc_pc2)
+apply(cases "get_stack a")
+apply(auto simp:is_inc_pc.simps no_jump_inc_pc2)
+apply(cases "get_push a")
+apply(auto simp:push_inc_pc2)
 done
 
 theorem app_cons : "a # lst = [a]@lst"
@@ -393,10 +402,10 @@ theorem test :
  "p_length (a # lst) \<le> (xa+p_length[a]) \<or>
                index (program_list_of_lst (a # lst))
                 (xa+p_length[a]) =
-               program_content prog (xa + p_length[a] + x) \<Longrightarrow>
+               program_content prog (xa + p_length[a] + (x::int)) \<Longrightarrow>
           index (program_list_of_lst lst) xa \<noteq>
           program_content prog
-           (xa + (x + p_length [a])) \<Longrightarrow>
+           (int xa + (x + int (p_length [a]))) \<Longrightarrow>
           p_length lst \<le> xa"
 apply(auto)
 apply(simp add:p_length_def)
@@ -405,18 +414,19 @@ apply(auto)
 apply(auto simp:program_index)
 by (simp add: add.left_commute semiring_normalization_rules(24))
 
-
 theorem program_at_inst :
-  "program_at prog (a # lst) x \<Longrightarrow>
-  program_at prog lst (x + p_length [a])"
+  "program_at prog (a # lst) (x::int) \<Longrightarrow>
+   program_at prog lst (x + p_length [a])"
 apply(auto simp:program_at_def inst_size_eq)
 apply(auto simp:program_list_content_eq4)
-apply(rule test)
-apply(auto)
+
+apply(rule_tac xa=xa and a=a and prog=prog and x="x" in test)
+apply fastforce
+apply fastforce
 done
 
 theorem inst_size_eq2 :
-  "inst_size a > 0 \<Longrightarrow>
+  "good_inst a \<Longrightarrow>
    p_length [a] = inst_size a"
 apply(subst inst_size_eq)
 apply(auto)
@@ -425,23 +435,24 @@ done
 declare inst_size_def [simp del]
 
 theorem program_at_next_aux :
- "program_at (cenv_program c) (a # lst) (venv_pc v) \<Longrightarrow>
+ "program_at (cctx_program c) (a # lst) (vctx_pc v) \<Longrightarrow>
   relocatable a \<Longrightarrow>
-  inst_size a > 0 \<Longrightarrow>
-  program_step c (Continue v e1 e2) = Continue v2 f1 f2 \<Longrightarrow>
-  venv_pc v2 = venv_pc v + p_length [a]"
+  good_inst a \<Longrightarrow>
+  program_step c (InstructionContinue v) = InstructionContinue v2 \<Longrightarrow>
+  vctx_pc v2 = vctx_pc v + p_length [a]"
 apply(auto simp:inst_size_eq2)
 using correct_pc_inc1 program_next
 apply(blast)
 done
 
 theorem program_at_next :
- "program_at (cenv_program c) (a # lst) (venv_pc v) \<Longrightarrow>
+ "program_at (cctx_program c) (a # lst) (vctx_pc v) \<Longrightarrow>
   relocatable a \<Longrightarrow>
-  inst_size a > 0 \<Longrightarrow>
-  program_step c (Continue v e1 e2) = Continue v2 f1 f2 \<Longrightarrow>
-  program_at (cenv_program c) lst (venv_pc v2)"
-apply(simp add:program_at_next_aux)
+  good_inst a \<Longrightarrow>
+  program_step c (InstructionContinue v) = InstructionContinue v2 \<Longrightarrow>
+  program_at (cctx_program c) lst (vctx_pc v2)"
+apply(subst program_at_next_aux)
+apply auto
 apply(simp add:program_at_inst)
 done
 
@@ -455,6 +466,131 @@ apply(auto)
 apply(auto simp:run_list.simps)
 done
 
+fun abc1 :: "constant_ctx \<Rightarrow> variable_ctx \<Rightarrow> variable_ctx" where
+"abc1 c v = (case program_step c (InstructionContinue v) of
+  InstructionContinue a \<Rightarrow> a)"
+
+lemma program_step_failure :
+ "program_step c InstructionAnnotationFailure =
+    InstructionContinue v2 \<Longrightarrow> False"
+apply (auto simp:program_step_def)
+done
+
+lemma program_step_failure_env :
+ "program_step c InstructionAnnotationFailure =
+    InstructionToEnvironment x31 x32
+        x33 \<Longrightarrow> False"
+apply (auto simp:program_step_def)
+done
+
+lemma program_step_env :
+ "program_step c (InstructionToEnvironment x31 x32
+        x33) =
+    InstructionContinue v2 \<Longrightarrow> False"
+apply (auto simp:program_step_def)
+done
+
+lemma program_step_env_failure :
+ "program_step c (InstructionToEnvironment x31 x32
+        x33) =
+    InstructionAnnotationFailure \<Longrightarrow> False"
+apply (auto simp:program_step_def)
+done
+
+lemma program_iter_failure :
+ "program_iter n c InstructionAnnotationFailure =
+    InstructionContinue v2 \<Longrightarrow> False"
+apply (induction n arbitrary:v2)
+apply (auto)
+apply (cases "program_step c
+          InstructionAnnotationFailure")
+apply auto
+using program_step_failure apply blast
+using program_step_failure_env apply blast
+done
+
+lemma program_iter_env :
+ "program_iter n c (InstructionToEnvironment e f g) =
+    InstructionContinue v2 \<Longrightarrow> False"
+apply (induction n arbitrary:v2 e f g)
+apply (cases n)
+apply (auto)
+apply (cases "program_step c
+          (InstructionToEnvironment e f g)")
+using program_step_env apply blast
+using program_step_env_failure apply blast
+  using program_step_def by auto
+
+theorem step_abc1 :
+   "program_iter (length lst) c
+        (program_step c (InstructionContinue v))
+         = InstructionContinue v2
+       \<Longrightarrow>
+       program_step c (InstructionContinue v) =
+       InstructionContinue (abc1 c v)"
+apply(auto)
+apply(cases "program_step c (InstructionContinue v)")
+apply(auto)
+using program_iter_failure apply blast
+using program_iter_env apply blast
+done
+
+theorem list_aux2 :
+"     program_step c (InstructionContinue v) =
+      InstructionContinue vv \<Longrightarrow>
+      run_list c v [a] = Some vv \<Longrightarrow>
+
+
+       program_at (cctx_program c) (a # lst)
+        (vctx_pc v) \<Longrightarrow>
+       program_iter (length lst) c
+        (program_step c (InstructionContinue v))  =
+       InstructionContinue v2 \<Longrightarrow>
+       run_list c v (a # lst) = Some v3 \<Longrightarrow>
+       relocatable a \<Longrightarrow>
+       good_inst a \<Longrightarrow>
+       \<forall>x\<in>set lst. relocatable x \<and> good_inst x \<Longrightarrow>
+
+      ( program_at (cctx_program c) lst
+            (vctx_pc vv) \<and>
+           program_iter (length lst) c (InstructionContinue vv) =
+           InstructionContinue v2 \<and>
+           run_list c vv lst = Some v3)"
+apply(auto)
+apply(simp add:program_at_next)
+using run_list_step
+apply(blast)
+done
+
+theorem list_aux3 :
+"     vv = abc1 c v \<Longrightarrow>
+      program_step c (InstructionContinue v) =
+      InstructionContinue vv \<Longrightarrow>
+      run_list c v [a] = Some vv \<Longrightarrow>
+
+      ( program_at (cctx_program c) lst
+            (vctx_pc vv) \<Longrightarrow>
+        program_iter (length lst) c (InstructionContinue vv) =
+           InstructionContinue v2 \<Longrightarrow>
+        run_list c vv lst = Some v3 \<Longrightarrow> v2 = v3) \<Longrightarrow>
+
+
+       program_at (cctx_program c) (a # lst)
+        (vctx_pc v) \<Longrightarrow>
+       program_iter (length lst) c
+        (program_step c (InstructionContinue v)) =
+       InstructionContinue v2 \<Longrightarrow>
+       run_list c v (a # lst) = Some v3 \<Longrightarrow>
+       relocatable a \<Longrightarrow>
+       good_inst a \<Longrightarrow>
+       \<forall>x\<in>set lst. relocatable x \<and> good_inst x \<Longrightarrow>
+       v2 = v3"
+using list_aux2
+apply blast
+done
+
+
+(*
 theorem list_aux2 :
 "     program_step c (Continue v e1 e2) =
       Continue vv ee1 ee2 \<Longrightarrow>
@@ -533,9 +669,6 @@ theorem why2 :
 using why
 by metis
 
-fun abc1 :: "constant_env \<Rightarrow> variable_env \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> variable_env" where
-"abc1 c v e1 e2 = (case program_step c (Continue v e1 e2) of
-  Continue a _ _ \<Rightarrow> a)"
 
 fun abc2 :: "constant_env \<Rightarrow> variable_env \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> nat" where
 "abc2 c v e1 e2 = (case program_step c (Continue v e1 e2) of
@@ -545,17 +678,7 @@ fun abc3 :: "constant_env \<Rightarrow> variable_env \<Rightarrow> nat \<Rightar
 "abc3 c v e1 e2 = (case program_step c (Continue v e1 e2) of
   Continue _ _ a \<Rightarrow> a)"
 
-theorem why3 :
-   "program_iter c
-        (program_step c (Continue v e1 e2))
-        (length lst) = Continue v2 f1 f2
-       \<Longrightarrow>
-       program_step c (Continue v e1 e2) =
-       Continue (abc1 c v e1 e2) (abc2 c v e1 e2) (abc3 c v e1 e2)"
-apply(auto)
-apply(cases "program_step c (Continue v e1 e2)")
-apply(auto)
-done
+
 
 theorem list_aux3 :
 "     vv = abc1 c v e1 e2 \<Longrightarrow>
@@ -588,15 +711,17 @@ using list_aux2
 apply blast
 done
 
-declare abc1.simps [simp del]
 declare abc2.simps [simp del]
 declare abc3.simps [simp del]
+*)
+
+declare abc1.simps [simp del]
 
 theorem list_like_step2 :
   "relocatable inst \<Longrightarrow>
-   inst_size inst > 0 \<Longrightarrow>
-   venv_next_instruction v c = Some inst \<Longrightarrow>
-   program_step c (Continue v e1 e2) = Continue v2 f1 f2 \<Longrightarrow>
+   good_inst inst \<Longrightarrow>
+   vctx_next_instruction v c = Some inst \<Longrightarrow>
+   program_step c (InstructionContinue v) = InstructionContinue v2 \<Longrightarrow>
    run_list c v (inst#lst) = Some v3 \<Longrightarrow>
    run_list c v [inst] = Some v2"
 using list_like_step asd
@@ -605,37 +730,38 @@ done
 
 theorem list_like_step3 :
   "relocatable inst \<Longrightarrow>
-   inst_size inst > 0 \<Longrightarrow>
-   venv_next_instruction v c = Some inst \<Longrightarrow>
-   program_step c (Continue v e1 e2) = Continue v2 f1 f2 \<Longrightarrow>
+   good_inst inst \<Longrightarrow>
+   vctx_next_instruction v c = Some inst \<Longrightarrow>
+   program_step c (InstructionContinue v) = InstructionContinue v2 \<Longrightarrow>
    run_list c v (inst#lst) = Some v3 \<Longrightarrow>
-   run_list c v [inst] = Some (abc1 c v e1 e2)"
+   run_list c v [inst] = Some (abc1 c v)"
 apply(auto simp:abc1.simps)
 using list_like_step asd
 apply(fastforce)
 done
 
 theorem list_like_run :
-  "(\<forall>x \<in> set lst. relocatable x \<and> inst_size x > 0) \<Longrightarrow>
-   program_at (cenv_program c) lst (venv_pc v) \<Longrightarrow>
-   program_iter c (Continue v e1 e2)
-      (length lst) = Continue v2 f1 f2 \<Longrightarrow>
+  "(\<forall>x \<in> set lst. relocatable x \<and> good_inst x) \<Longrightarrow>
+   program_at (cctx_program c) lst (vctx_pc v) \<Longrightarrow>
+   program_iter (length lst) c (InstructionContinue v)
+       = InstructionContinue v2 \<Longrightarrow>
    run_list c v lst = Some v3 \<Longrightarrow>
    v2 = v3"
-apply(induction lst arbitrary: e1 e2 f1 f2 v v2 v3)
+apply(induction lst arbitrary:v v2 v3)
 apply(simp add:run_list.simps)
 apply(auto simp:simple_step)
-apply(auto simp:program_iter.simps)
+
+(* apply(auto simp:program_iter.simps) *)
 apply(rule list_aux3)
 
 apply(auto)
-using why3
+using step_abc1
 apply(blast)
 apply(rule list_like_step3)
 apply(auto)
 apply(rule program_next)
 apply(auto)
-using why3
+using step_abc1
 apply(blast)
 done
 

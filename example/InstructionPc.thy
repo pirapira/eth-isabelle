@@ -78,15 +78,6 @@ done
 
 declare vctx_next_instruction_def [simp del]
 
-theorem push_inc_pc :
-  "instruction_aux v c (Stack (PUSH_N lst)) = InstructionContinue nv \<Longrightarrow>
-   vctx_next_instruction v c = Some (Stack (PUSH_N lst)) \<Longrightarrow>
-   \<not>(lst = []) \<Longrightarrow>
-   32 \<ge> length lst \<Longrightarrow>
-   vctx_pc nv = vctx_pc v + length lst + 1"
-apply(auto simp:instruction_aux_def)
-apply(auto simp:vctx_advance_pc_def inst_size_def)
-done
 
 theorem no_jump_inc_pc_aux :
   "instruction_aux v c inst = InstructionContinue nv \<Longrightarrow>
@@ -257,5 +248,52 @@ apply(cases "vctx_stack v")
 apply(auto)
 
 done
+
+lemma lemma_subtract : 
+  "subtract_gas x (InstructionContinue v) = InstructionContinue nv \<Longrightarrow>
+   vctx_pc v = vctx_pc nv"
+apply auto
+done
+
+theorem no_jump_inc_pc :
+  "instruction_sem v c inst = InstructionContinue nv \<Longrightarrow>
+   vctx_next_instruction v c = Some inst \<Longrightarrow>
+   is_inc_pc (vctx_next_instruction v c) \<Longrightarrow>
+   vctx_pc nv = vctx_pc v + 1"
+apply(subst (asm) inst_gas)
+apply(cases "instruction_aux v c inst")
+defer
+apply(simp)
+apply(simp)
+  by (metis lemma_subtract no_jump_inc_pc_aux)
+
+theorem push_inc_pc_aux :
+  "instruction_aux v c (Stack (PUSH_N lst)) = InstructionContinue nv \<Longrightarrow>
+   vctx_next_instruction v c = Some (Stack (PUSH_N lst)) \<Longrightarrow>
+   \<not>(lst = []) \<Longrightarrow>
+   32 \<ge> length lst \<Longrightarrow>
+   vctx_pc nv = vctx_pc v + length lst + 1"
+apply(auto simp:instruction_aux_def)
+apply(auto simp:vctx_advance_pc_def inst_size_def)
+done
+
+theorem push_inc_pc :
+  "instruction_sem v c (Stack (PUSH_N lst)) = InstructionContinue nv \<Longrightarrow>
+   vctx_next_instruction v c = Some (Stack (PUSH_N lst)) \<Longrightarrow>
+   \<not>(lst = []) \<Longrightarrow>
+   32 \<ge> length lst \<Longrightarrow>
+   vctx_pc nv = vctx_pc v + length lst + 1"
+apply(subst (asm) inst_gas)
+apply(cases "instruction_aux v c (Stack (PUSH_N lst))")
+defer
+apply(simp)
+apply(simp)
+  by (metis lemma_subtract push_inc_pc_aux)
+
+declare is_inc_pc.simps [simp del]
+declare inc_pc_one [simp del]
+declare lemma_log [simp del]
+declare lemma_stack_op_2_1 [simp del]
+declare lemma_pop_stack [simp del]
 
 end

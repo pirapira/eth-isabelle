@@ -3,7 +3,7 @@ theory ProgramList
 imports Main "../ContractSem" "../RelationalSem" "../ProgramInAvl"
 
 begin
-  
+
 (* Instead of map, make a list first *)
 fun  program_list_of_lst  :: "inst list \<Rightarrow> inst list"  where 
  " program_list_of_lst [] = []"
