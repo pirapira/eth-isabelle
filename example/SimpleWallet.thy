@@ -1414,7 +1414,7 @@ x = 16:        6000543314600957005b6000808080303133610800f1
 *)
 
 (* The bytecode is: *)
-(* 336000556014601060003960146000f36000543314600957005b60008080803031335af1 *)
+(* 336000556016601060003960166000f36000543314600957005b6000808080303133610800f1 *)
 
 (* check_pass_whole_concrete *)
 lemma check_pass_whole_concrete:
@@ -1482,5 +1482,123 @@ apply(rule code_extension_backward)
  apply(simp)
 apply(simp add: whole_concrete_program_def)
 done
+
+(* how to test the contract
+
+// build geth
+
+$ cd shared
+$ git clone git@github.com:ethereum/go-ethereum.git
+$ cd go-ethereum
+$ make
+
+
+// setup chain
+
+$ rm -rf ~/dapps/testing/00
+$ mkdir -p ~/dapps/testing/00
+$ cat > ~/dapps/testing/00/genesis.json
+{
+  "alloc": { },
+  "nonce": "0x0000000000000042",
+  "difficulty": "0x00400",
+  "mixhash": "0x0000000000000000000000000000000000000000000000000000000000000000",
+  "coinbase": "0x0000000000000000000000000000000000000000",
+  "timestamp": "0x00",
+  "parentHash": "0x0000000000000000000000000000000000000000000000000000000000000000",
+  "extraData": "0x11bbe8db4e347b4e8c937c1c8370e4b5ed33adb3db69cbdb7a38e1e50b1b82fa",
+  "gasLimit": "0x4c4b40"
+}
+
+$ build/bin/geth --datadir ~/dapps/testing/00/ --networkid 4995690 init ~/dapps/testing/00/genesis.json
+$ build/bin/geth --datadir ~/dapps/testing/00/ --networkid 4995690 --nodiscover --maxpeers 0 --verbosity 6 console 2>> ~/dapps/testing/00/00.log
+
+
+
+
+// create two accounts
+
+> eth.accounts
+[]
+// see how many there are
+
+> personal.newAccount("empty")
+> personal.newAccount("empty")
+
+> owner = eth.accounts[0]
+> other = eth.accounts[1]
+
+// mine some ether.
+> miner.start(8); admin.sleepBlocks(3); miner.stop()
+
+> personal.unlockAccount(owner)
+
+// send half ether from owner to other
+> eth.sendTransaction({from: owner, to: other, value: eth.getBalance(owner) / 2})
+> miner.start(8); admin.sleepBlocks(1); miner.stop()
+
+> eth.getBalance(owner)
+> eth.getBalance(other)
+
+// owner deploys the contract
+> bytecode = "0x336000556016601060003960166000f36000543314600957005b6000808080303133610800f1"
+
+> tx = eth.sendTransaction({from: owner, data: bytecode })
+> miner.start(8); admin.sleepBlocks(1); miner.stop()
+
+// get the transaction receipt
+> re = eth.getTransactionReceipt(tx)
+
+// set contract as the address of the contract
+> contract = re.contractAddress
+
+// check the storage content of the contract
+> eth.getStorageAt(contract, 0, "latest")
+"0x0000000000000000000000008d8182285c55959f8c33995492edc3facf3e00c3"
+> owner
+"0x8d8182285c55959f8c33995492edc3facf3e00c3"
+> eth.getCode(contract, "latest")
+"0x6000543314600957005b60008080803031335af1"
+
+// send owner to contract, some amount —> should bounce
+> personal.unlockAccount(owner)
+> eth.sendTransaction({from: owner, to: contract, value: web3.toWei(2, "ether")})
+> miner.start(8);  admin.sleepBlocks(1)
+> miner.stop()
+
+> eth.getBalance(owner)
+173515625000000000000
+> eth.getBalance(contract)
+0
+
+// send other to contract, some amount —> the contract’s balance should increase
+> personal.unlockAccount(other)
+> eth.sendTransaction({from: other, to: contract, value: web3.toWei(3, "ether")})
+> miner.start(8); admin.sleepBlocks(1); miner.stop()
+
+> eth.getBalance(other)
+52702703580000000000
+> eth.getBalance(contract)
+3000000000000000000
+
+// send other to contract, some more amount —> the contract’s balance should again increase
+> eth.sendTransaction({from: other, to: contract, value: web3.toWei(1, "ether")})
+>     
+> eth.getBalance(other)
+51702282160000000000
+> eth.getBalance(contract)
+4000000000000000000
+
+// owner calls the contract —> all funds should move from the contract to the owner
+> eth.getBalance(owner)
+> personal.unlockAccount(owner)
+> eth.sendTransaction({from: owner, to: contract})
+
+> miner.start(8); admin.sleepBlocks(1); miner.stop()
+> eth.getBalance(owner)
+> eth.getBalance(contract)
+
+
+*)
 
 end
