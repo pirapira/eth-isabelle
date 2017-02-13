@@ -30,6 +30,7 @@ session "deed" = "HOL" +
   document_files
     "root.tex"
 
+
 session "all" = "HOL" +
   theories [document = false]
     "~~/src/HOL/Word/Word"
@@ -39,6 +40,7 @@ session "all" = "HOL" +
     RelationalSem
     Hoare
     HoareTripleForInstructions
+    HoareTripleForInstructions2
     "attic/HP"
     "attic/YellowPaper"
     "example/Optimization"
@@ -50,13 +52,5 @@ session "light" = "HOL" +
   theories [document = false]
     "~~/src/HOL/Word/Word"
     "~~/src/HOL/Data_Structures/AVL_Map"
-    "attic/Parse"
-    ContractSem
-    RelationalSem
-    Hoare
     HoareTripleForInstructions
-    "attic/HP"
-    "attic/YellowPaper"
-    "example/Optimization"
-    "example/AlwaysFail"
     "example/FailOnReentrance"

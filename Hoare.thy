@@ -4,6 +4,38 @@ imports Main "./lem/Evm"
 
 begin
 
+lemma not_at_least_one :
+  "\<not> 1 \<le> (aa :: 256 word) \<Longrightarrow> aa = 0"
+apply(simp add:linorder_class.not_le)
+done
+
+lemma unat_suc : "unat (aa :: w256) = Suc n \<Longrightarrow> unat (aa - 1) = n"
+apply(case_tac "aa \<ge> 1")
+ apply(simp add: uint_minus_simple_alt unat_def)
+apply(drule not_at_least_one)
+apply(simp)
+done
+
+(* unat (1 + (aa - 1)) = Suc (unat(aa - 1)) *)
+
+
+lemma cut_memory_dom_nat :
+  "\<forall> a aa b. unat aa = n \<longrightarrow> cut_memory_dom (a, aa, b)"
+apply(induction n)
+ apply(clarify)
+ apply(rule cut_memory.domintros)
+ apply(simp add: unat_eq_0 uint_0_iff)
+apply(clarify)
+apply(rule cut_memory.domintros)
+apply(drule unat_suc)
+apply(auto)
+done
+
+termination cut_memory
+apply(auto simp add: cut_memory_dom_nat)
+done
+
+
 (* Following Magnus Myreen's thesis "Formal verification of machine-code programs" 3.2.4 *)  
 
 datatype state_element =
@@ -121,57 +153,58 @@ definition contexts_as_set :: "variable_ctx \<Rightarrow> constant_ctx \<Rightar
     "contexts_as_set v c ==
        constant_ctx_as_set c \<union> variable_ctx_as_set v"
 
+type_synonym set_pred = "state_element set \<Rightarrow> bool"
+
 (* From Magnus Myreen's thesis, Section 3.3 *)
-definition sep :: "(state_element set \<Rightarrow> bool) \<Rightarrow> (state_element set \<Rightarrow> bool) \<Rightarrow> state_element set \<Rightarrow> bool"
+definition sep :: "set_pred \<Rightarrow> set_pred \<Rightarrow> set_pred"
   where
     "sep p q == (\<lambda> s. \<exists> u v. p u \<and> q v \<and> u \<union> v = s \<and> u \<inter> v = {})"
 
 notation sep (infixr "**" 60)
 
-lemma sep_assoc [simp] : "((p ** q) ** r) s = (p ** q ** r) s"
-  apply(auto simp add: sep_def)
-  apply(rule_tac x = "ua" in exI; auto)
-done
+lemma sep_assoc [simp]: "((a ** b) ** c) = (a ** b ** c)"
+  by (simp add: sep_def) blast
 
-(** equivalence of predicates **)
+lemma sep_commute: "(a ** b)= (b ** a)"
+  by (simp add: sep_def) blast
 
-definition pred_equiv :: "(state_element set \<Rightarrow> bool) \<Rightarrow> (state_element set \<Rightarrow> bool) \<Rightarrow> bool"
-where
-"pred_equiv a b = (\<forall> s. a s = b s)"
-
-(** equivalence is reflexivie **)
-lemma pred_equiv_refl [simp] : "pred_equiv a a"
-apply(simp add: pred_equiv_def)
-done
-
-lemma pred_equiv_symm : "pred_equiv a b \<Longrightarrow> pred_equiv b a"
-apply(simp add: pred_equiv_def)
-done
-
-(** congruence of equivalence over sep **)
-lemma pred_equiv_sep : "pred_equiv a b \<Longrightarrow> pred_equiv c d \<Longrightarrow> pred_equiv (a ** c) (b ** d)"
-apply(simp add: pred_equiv_def sep_def)
-done
-
-lemma pred_equiv_sep_comm : "pred_equiv (a ** b) (b ** a)"
-apply(simp add: pred_equiv_def sep_def)
-by blast
-
-lemma pred_equiv_addL [intro!]: "pred_equiv b c \<Longrightarrow> pred_equiv (a ** b) (a ** c)"
-apply(simp add: pred_equiv_def sep_def)
-done
-
-
+lemma sep_three : "c ** a ** b = a ** b ** c"
+proof -
+ have "c ** a ** b = (a ** b) ** c"
+  using sep_commute by auto
+ moreover have "(a ** b) ** c = a ** b ** c"
+  by simp
+ ultimately show ?thesis
+  by auto
+qed
+ 
 
 definition emp :: "state_element set \<Rightarrow> bool"
   where
     "emp s == (s = {})"
+
+lemma sep_emp [simp] :
+  "r ** emp = r"
+apply(simp add: emp_def sep_def)
+done
+
+
+interpretation set_pred : comm_monoid
+   "sep :: set_pred \<Rightarrow> set_pred \<Rightarrow> set_pred"
+   "emp :: set_pred"
+apply(auto simp add: comm_monoid_def abel_semigroup_def semigroup_def abel_semigroup_axioms_def
+      sep_commute sep_three comm_monoid_axioms_def)
+done
 
 definition pure :: "bool \<Rightarrow> state_element set \<Rightarrow> bool"
   where
     "pure b s == emp s \<and> b"
 
 notation pure ("\<langle> _ \<rangle>")
+
+definition memory_usage :: "int \<Rightarrow> state_element set \<Rightarrow> bool"
+where
+"memory_usage u s == (s = {MemoryUsageElm u})"
   
 definition stack_height :: "nat \<Rightarrow> state_element set \<Rightarrow> bool"
   where
@@ -189,9 +222,28 @@ definition gas_pred :: "int \<Rightarrow> state_element set \<Rightarrow> bool"
   where
     "gas_pred g s == s = {GasElm g}"
 
+definition gas_any :: "state_element set \<Rightarrow> bool"
+  where
+    "gas_any s == (\<exists> g. s = {GasElm g})"
+
+lemma gas_any_sep [simp] :
+  "(gas_any ** rest) s =
+   (\<exists> g. GasElm g \<in> s \<and> rest (s - {GasElm g}))"
+apply(auto simp add: gas_any_def sep_def)
+done
+
 definition caller :: "address \<Rightarrow> state_element set \<Rightarrow> bool"
 where
 "caller c s == s = {CallerElm c}"
+
+definition storage :: "w256 \<Rightarrow> w256 \<Rightarrow> state_element set \<Rightarrow> bool"
+where
+"storage idx w s == s = {StorageElm (idx, w)}"
+
+
+definition this_account :: "address \<Rightarrow> state_element set \<Rightarrow> bool"
+where
+"this_account t s == s = {ThisAccountElm t}"
 
 definition balance :: "address \<Rightarrow> w256 \<Rightarrow> state_element set \<Rightarrow> bool"
 where
@@ -214,6 +266,37 @@ where
 "action act s == s = {ContractActionElm act}"
 
 (* memory8, memory, calldata, and storage should be added here *)
+
+definition memory8 :: "w256 \<Rightarrow> byte \<Rightarrow> state_element set \<Rightarrow> bool"
+where
+"memory8 idx v s == s = {MemoryElm (idx ,v)}"
+
+lemma memory8_sep :
+"(memory8 idx v ** rest) s = (MemoryElm (idx, v) \<in> s \<and> rest (s - {MemoryElm (idx, v)}))"
+apply(auto simp add: memory8_def sep_def)
+done
+
+fun memory_range :: "w256 \<Rightarrow> byte list \<Rightarrow> state_element set \<Rightarrow> bool"
+where
+  "memory_range begin [] = emp"
+| "memory_range begin (h # t) = memory8 begin h ** memory_range (begin + 1) t"
+
+fun memory_range_elms :: "w256 \<Rightarrow> byte list \<Rightarrow> state_element set"
+where
+  "memory_range_elms begin [] = {}"
+| "memory_range_elms begin (a # lst) = {MemoryElm (begin, a)} \<union> memory_range_elms (begin + 1) lst"
+
+lemma memory_range_elms_nil :
+  "x \<notin> memory_range_elms b []"
+apply(simp)
+done
+
+lemma memory_range_elms_cons :
+  "memory_range_elms b (a # lst) = {MemoryElm (b, a)} \<union> memory_range_elms (b + 1) lst"
+apply(auto)
+done
+
+(* prove a lemma about the above two definitions *)
 
 lemma stack_sound0 :
   "(stack pos w ** p) s \<Longrightarrow> StackElm (pos, w) \<in> s"
@@ -244,14 +327,14 @@ definition instruction_result_as_set :: "constant_ctx \<Rightarrow> instruction_
         | InstructionAnnotationFailure \<Rightarrow> {ContinuingElm False} (* need to assume no annotation failure somewhere *)
         )"
 
+lemma annotation_failure_as_set [simp] :
+  "instruction_result_as_set c InstructionAnnotationFailure = {ContinuingElm False}"
+apply(simp add: instruction_result_as_set_def)
+done
+
 definition code :: "(int * inst) set \<Rightarrow> state_element set \<Rightarrow> bool"
   where
     "code f s == s = { CodeElm(pos, i) | pos i. (pos, i) \<in> f }"
-
-(* code and set separation *)
-lemma code_diff_union : "pred_equiv (code (a \<union> b)) (code a ** (code (b - a)))"
-apply(auto simp add: pred_equiv_def code_def sep_def)
-done
 
 definition no_assertion :: "constant_ctx \<Rightarrow> bool"
   where "no_assertion c == (\<forall> pos. program_annotation (cctx_program c) pos = [])"
@@ -262,6 +345,7 @@ where
  (\<exists> reasons a b. 
               r = InstructionToEnvironment (ContractFail reasons) a b
               \<and> set reasons \<subseteq> allowed)"
+
 
 definition triple ::
  "failure_reason set \<Rightarrow> (state_element set \<Rightarrow> bool) \<Rightarrow> (int * inst) set \<Rightarrow> (state_element set \<Rightarrow> bool) \<Rightarrow> bool"
@@ -284,6 +368,12 @@ done
 lemma contiuning_sep [simp] :
   "(continuing ** rest) s = ((ContinuingElm True) \<in> s \<and> rest (s - {ContinuingElm True}))"
 apply(auto simp add: sep_def continuing_def)
+done
+
+lemma storage_sep [simp] :
+  "(storage idx w ** rest) s =
+   (StorageElm (idx, w) \<in> s \<and> rest (s - {StorageElm (idx, w)}))"
+apply(auto simp add: sep_def storage_def)
 done
 
 lemma stack_height_sep [simp] : "(stack_height h ** rest) s =
@@ -310,6 +400,12 @@ lemma code_sep [simp] : "(code pairs ** rest) s =
 lemma gas_pred_sep [simp] : "(gas_pred g ** rest) s =
   ( GasElm g \<in> s \<and> rest (s - { GasElm g }) )"
   apply(auto simp add: sep_def gas_pred_def)
+done
+
+lemma memory_usage_sep [simp] : 
+  "(memory_usage u ** rest) s =
+   (MemoryUsageElm u \<in> s \<and> rest (s - {MemoryUsageElm u}))"
+apply(auto simp add: memory_usage_def sep_def)
 done
 
 lemma stackHeightElmEquiv [simp] : "StackHeightElm h \<in> contexts_as_set v c =
@@ -380,54 +476,22 @@ declare memory_as_set_def [simp]
   balance_as_set_def [simp]
   next_state_def [simp]
 
-
-
 (**
  ** Inference rules about Hoare triples
  ** Following Magnus Myreen's thesis, 3.5
  **)
+lemma code_diff_union : "code (a \<union> b) = code a ** (code (b - a))"
+ by (rule ext) (auto simp: code_def sep_def)
 
+lemma code_middle:
+  "(p ** code (c_1 \<union> c_2) ** rest) =
+   (p ** (code c_1 ** (code (c_2 - c_1))) ** rest)"
+ by (simp add: code_diff_union)
 
-
-(** Composition **)
-lemma pred_equiv_sound : "pred_equiv p0 p1 \<Longrightarrow> p0 s = p1 s"
-apply(simp add: pred_equiv_def)
-done
-
-lemma pred_equiv_trans : "pred_equiv a b \<Longrightarrow> pred_equiv b c \<Longrightarrow> pred_equiv a c"
-apply(simp add: pred_equiv_def)
-done
-
-lemma pred_equiv_trans_other : "pred_equiv b c \<Longrightarrow> pred_equiv a b \<Longrightarrow> pred_equiv a c"
-apply(simp add: pred_equiv_def)
-done
-
-
-lemma equiv_middle :
-"pred_equiv p0 p1 \<Longrightarrow> (p ** p0 ** rest) s = (p ** p1 ** rest) s"
-apply(rule pred_equiv_sound)
-apply(simp add: pred_equiv_sep)
-done
-
-lemma code_middle :
-"(p ** code (c_1 \<union> c_2) ** rest) s =
- (p ** (code c_1 ** (code (c_2 - c_1))) ** rest) s"
-apply(rule equiv_middle)
-by (simp add: code_diff_union)
-
-lemma pred_equiv_sep_assoc:
-  "pred_equiv ((a ** b) ** c) (a ** b ** c)"
-apply(simp add: pred_equiv_def)
-done
-
-lemma shuffle3 :
-"(p ** (code c_1 ** code (c_2 - c_1)) ** rest) s =
- (p ** code c_1 ** (code (c_2 - c_1) ** rest)) s"
-apply(rule pred_equiv_sound)
-apply(rule pred_equiv_sep)
- apply(rule pred_equiv_refl)
-apply(rule pred_equiv_sep_assoc)
-done
+lemma shuffle3:
+  "(p ** (code c_1 ** code (c_2 - c_1)) ** rest) =
+   (p ** code c_1 ** (code (c_2 - c_1) ** rest))"
+  by (simp add: sep_def) blast
 
 lemma execution_continue [simp]:
   "\<forall> presult. (program_sem s co_ctx a (program_sem s co_ctx b presult) = program_sem s co_ctx (b + a) presult)"
@@ -485,145 +549,58 @@ done
 (** Frame **)
 
 lemma commute_in_four :
-  "(a ** b ** c ** d) s \<Longrightarrow> (a ** c ** b ** d) s"
-proof -
- have "pred_equiv (b ** c) (c ** b)" by (simp add: pred_equiv_sep_comm)
- hence "pred_equiv (a ** b ** c) (a ** c ** b)" by(rule  pred_equiv_addL)
- hence "pred_equiv ((a ** b ** c) ** d) ((a ** c ** b) ** d)"
-	by (simp add: pred_equiv_sep)
- hence "pred_equiv (a ** ((b ** c) ** d)) ((a ** c ** b) ** d)"
-  (* sledgehammer *)
-	by (meson pred_equiv_sep_assoc pred_equiv_sep_comm pred_equiv_trans)
- hence "pred_equiv (a ** b ** c ** d) ((a ** c ** b) ** d)"
-	using pred_equiv_def pred_equiv_sep_assoc sep_def by auto
- hence "pred_equiv (a ** b ** c ** d) (a ** c ** b ** d)"
-	using pred_equiv_def pred_equiv_sep_assoc sep_def by auto
- thus "(a ** b ** c ** d) s \<Longrightarrow> (a ** c ** b ** d) s"
-  (* sledgehammer *)
-  using pred_equiv_sound by blast
-qed
+  "(a ** b ** c ** d) = (a ** c ** b ** d)"
+  using sep_assoc by (simp add: sep_commute)
 
+lemma frame:
+ "triple F P c Q \<Longrightarrow> triple F (P ** R) c (Q ** R)"
+  apply (simp add: triple_def)
+  apply clarsimp
+  subgoal for co_ctx presult rest stopper
+  apply (drule spec[where x=co_ctx])
+  apply clarsimp
+  apply (drule spec2[where x=presult and y="R ** rest"])
+  apply (simp add: commute_in_four)
+  done
+ done
 
-lemma frame : "triple failures p c q \<Longrightarrow> triple failures (p ** r) c (q ** r)"
-apply(simp add: triple_def)
-apply(rule allI)
-apply(rule impI)
-apply(drule_tac x = co_ctx in spec)
-apply(erule impE)
- apply(simp)
-apply(rule allI)
-apply(rule allI)
-apply(rule impI)
-apply(drule_tac x = presult in spec)
-apply(drule_tac x = "r ** rest" in spec)
-apply(erule impE)
- apply(rule commute_in_four; blast)
-apply(rule allI)
-apply(erule_tac x = stopper in allE)
-apply(erule exE)
-apply(rule_tac x = k in exI)
-using commute_in_four by blast
+lemma imp_sepL:
+  "(\<forall>s. a s \<longrightarrow> b s) \<Longrightarrow>
+   (\<forall>s. (a ** c) s \<longrightarrow> (b ** c) s)"
+ by (auto simp add: sep_def)
 
-lemma imp_sepL :
-  "(\<forall> s. a s \<longrightarrow> b s) \<Longrightarrow>
-   (\<forall> s. (a ** c) s \<longrightarrow> (b ** c) s)"
-apply(auto simp add: sep_def)
-done
+lemma weaken_post:
+  "triple F P c Q \<Longrightarrow> (\<forall>s. Q s \<longrightarrow> R s) \<Longrightarrow> triple F P c R"
+  apply (simp add: triple_def)
+  apply clarsimp
+  subgoal for co_ctx presult rest stopper
+  apply (drule spec[where x=co_ctx])
+  apply clarsimp
+  apply (drule spec2[where x=presult and y=rest])
+  apply clarsimp
+  apply (drule spec[where x=stopper])
+  apply clarsimp
+  apply (drule imp_sepL[where c="code c ** rest"])
+  apply fastforce
+  done
+ done
 
+lemma strengthen_pre:
+  "triple F P c Q \<Longrightarrow> (\<forall>s. R s \<longrightarrow> P s) \<Longrightarrow> triple F R c Q"
+  apply (simp add: triple_def)
+  apply clarsimp
+  subgoal for co_ctx presult rest stopper
+  apply (drule spec[where x=co_ctx])
+  apply clarsimp
+  apply (drule imp_sepL[where c="code c ** rest"])
+  apply simp
+  done
+ done
 
-lemma postW : "triple failures p c q \<Longrightarrow> (\<forall> s. q s \<longrightarrow> r s) \<Longrightarrow> triple failures p c r"
-proof -
- assume "triple failures p c q" "\<forall> s. q s \<longrightarrow> r s"
- then have "(\<forall> co_ctx presult rest. no_assertion co_ctx \<longrightarrow>
-       (p ** code c ** rest) (instruction_result_as_set co_ctx presult) \<longrightarrow>
-       (\<forall> stopper. (\<exists> k. ((r ** code c ** rest) (instruction_result_as_set co_ctx (program_sem stopper co_ctx k presult)))
-                          \<or> failed_for_reasons failures (program_sem stopper co_ctx k presult))))"
-   (is ?longer)
-  proof -
-   assume "triple failures p c q"
-   then have "\<forall>co_ctx presult rest.
-       no_assertion co_ctx \<longrightarrow>
-       (p ** code c ** rest) (instruction_result_as_set co_ctx presult) \<longrightarrow>
-       (\<forall>stopper. \<exists>k. ((q ** code c ** rest) (instruction_result_as_set co_ctx (program_sem stopper co_ctx k presult))
-                       \<or> failed_for_reasons failures (program_sem stopper co_ctx k presult)))"
-     using triple_def by blast
-   moreover assume " \<forall>s. q s \<longrightarrow> r s "
-   ultimately show "\<forall>co_ctx presult rest.
-       no_assertion co_ctx \<longrightarrow>
-       (p ** code c ** rest) (instruction_result_as_set co_ctx presult) \<longrightarrow>
-       (\<forall>stopper. \<exists>k. ((r ** code c ** rest) (instruction_result_as_set co_ctx (program_sem stopper co_ctx k presult))
-                      \<or> failed_for_reasons failures (program_sem stopper co_ctx k presult)))"
-    apply(rule_tac allI)
-    apply(rule_tac allI)
-    apply(rule_tac allI)
-    apply(drule_tac x = "co_ctx" in spec)
-    apply(drule_tac x = presult in spec)
-    apply(drule_tac x = rest in spec)
-    apply(rule impI)
-    apply(rule impI)
-    apply(erule impE; simp?)
-    apply(rule_tac allI)
-    apply(drule_tac x = stopper in spec)
-    using imp_sepL by blast
-  qed
- moreover have "triple failures p c r = ?longer"
-  using triple_def by blast
- ultimately show "triple failures p c r"
-  by blast
-qed
-
-
-lemma preS : "triple reasons p c q \<Longrightarrow> (\<forall> s. r s \<longrightarrow> p s) \<Longrightarrow> triple reasons r c q"
-proof -
- assume "triple reasons p c q" "\<forall> s. r s \<longrightarrow> p s"
- then have "(\<forall> co_ctx presult rest stopper. no_assertion co_ctx \<longrightarrow>
-       (r ** code c ** rest) (instruction_result_as_set co_ctx presult) \<longrightarrow>
-       (\<exists> k. ((q ** code c ** rest) (instruction_result_as_set co_ctx (program_sem stopper co_ctx k presult)))
-             \<or> failed_for_reasons reasons (program_sem stopper co_ctx k presult)))" (is ?longer)
-  proof(clarify)
-   fix co_ctx presult rest stopper
-   assume "triple reasons p c q" "no_assertion co_ctx" "\<forall> s. r s \<longrightarrow> p s"
-          "(r ** code c ** rest) (instruction_result_as_set co_ctx presult)"
-   then moreover have "(p ** code c ** rest) (instruction_result_as_set co_ctx presult)"
-     using sep_def by auto
-   ultimately show "\<exists>k. ((q ** code c ** rest) (instruction_result_as_set co_ctx (program_sem stopper co_ctx k presult))
-                         \<or> failed_for_reasons reasons (program_sem stopper co_ctx k presult) )"
-    by(simp add: triple_def)
-  qed
- moreover have "triple reasons r c q = ?longer"
-  by(simp add: triple_def)
- ultimately show "triple reasons r c q" by blast
-qed
-
-lemma pred_equiv_triple :
-  "pred_equiv a b \<Longrightarrow> triple failures b c d \<Longrightarrow> triple failures a c d"
-apply(rule preS)
- apply(simp)
-apply(simp add: pred_equiv_def)
-done
-
-lemma triple_pred_equiv :
-  "pred_equiv d b \<Longrightarrow> triple failures a c b \<Longrightarrow> triple failures a c d"
-apply(rule postW)
- apply(simp)
-apply(simp add: pred_equiv_def)
-done
-
-lemma frame_backward : "triple failures p c q \<Longrightarrow> 
-                        pred_equiv p' (p ** r) \<Longrightarrow> pred_equiv q' (q ** r) \<Longrightarrow> triple failures p' c q'"
-proof -
- assume "triple failures p c q"
- have "triple failures (p ** r) c (q ** r)"
-  (* sledgehammer *)
-  by (simp add: \<open>triple failures p c q\<close> frame)
- moreover assume "pred_equiv p' (p ** r)"
- ultimately have "triple failures p' c (q ** r)"
-  using pred_equiv_triple by blast
- moreover assume "pred_equiv q' (q ** r)"
- ultimately show "triple failures p' c q'"
-  using triple_pred_equiv by blast
-qed
-
+lemma frame_backward:
+  "triple F P c Q \<Longrightarrow> P' = (P ** R) \<Longrightarrow> Q' = (Q ** R) \<Longrightarrow>
+   triple F P' c Q'"
+  by (simp add: frame)
 
 lemma remove_true:
  "(p ** \<langle> True \<rangle> ** rest) s = (p ** rest) s"
@@ -725,6 +702,20 @@ done
 
 lemma code_extension : "triple failures p c q \<Longrightarrow> triple failures p (c \<union> e) q"
 	by (simp add: composition triple_tauto)
+
+lemma code_extension_backward :
+  "triple failures p c' q \<Longrightarrow> c' \<subseteq> c \<Longrightarrow> triple failures p c q" 
+proof -
+ assume "triple failures p c' q"
+ then have "triple failures p (c' \<union> c) q"
+  using code_extension by blast
+ moreover assume "c' \<subseteq> c"
+ then have "c = c' \<union> c"
+  by (auto)
+ ultimately show "triple failures p c q"
+  by auto
+qed
+
 
 
 (* Some rules about this if-then-else should be derivable. *)

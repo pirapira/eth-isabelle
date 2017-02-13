@@ -634,8 +634,8 @@ val Gsload : natural -> integer
 let Gsload blocknumber =
   if blocknumber >= 2463000 then 200 else 50
 
-val Gjumpsdest : integer
-let Gjumpsdest = 1
+val Gjumpdest : integer
+let Gjumpdest = 1
 
 val Gsset : integer
 let Gsset = 20000
@@ -990,7 +990,7 @@ let M s f l =
 
 (* Updating a balance of a single account:  *)
 val update_balance : address -> (w256 -> w256) -> (address -> w256) -> (address -> w256)
-let update_balance a f orig x = if x = a then f (orig a) else orig a
+let update_balance a f orig x = if x = a then f (orig a) else orig x
 
 (* Popping stack elements: *)
 val vctx_pop_stack : nat -> variable_ctx -> variable_ctx
@@ -1152,19 +1152,18 @@ val cut_data : variable_ctx -> w256 -> w256
 let cut_data v idx = read_word_from_bytes (word256ToNatural idx) v.vctx_data_sent
 
 (* Looking up a number of bytes from the memory: *)
-val cut_memory : w256 -> natural -> (w256 -> byte) -> list byte
-let rec cut_memory idx n memory = match n with
- | 0 -> []
- | n + 1 -> memory idx :: cut_memory (idx + 1) n memory
-end
-declare termination_argument cut_memory = automatic
+val cut_memory : w256 -> w256 -> (w256 -> byte) -> list byte
+let rec cut_memory idx n memory =
+  if n = 0 then []
+  else memory idx :: cut_memory (idx + 1) (n - 1) memory
+
+declare termination_argument cut_memory = manual
 
 val cut_natural_map : natural -> natural -> (natural -> byte) -> list byte
 let rec cut_natural_map idx n nmap = match n with
  | 0 -> []
  | n + 1 -> nmap idx :: cut_natural_map (idx + 1) n nmap
 end
-declare termination_argument cut_memory = automatic
 
 (* CALL instruction results in @{term ContractCall} action when there are enough stack elements *)
 (* (and gas, when we introduce the gas accounting). *)
@@ -1183,7 +1182,7 @@ let call v c = match v.vctx_stack with
             callarg_code = w256_to_address e1;
             callarg_recipient = w256_to_address e1;
             callarg_value = e2;
-            callarg_data = cut_memory e3 (word256ToNatural e4) v.vctx_memory;
+            callarg_data = cut_memory e3 e4 v.vctx_memory;
             callarg_output_begin = e5;
             callarg_output_size = e6 |>)
         (<| (vctx_advance_pc c v) with
@@ -1213,7 +1212,7 @@ let delegatecall v c = match v.vctx_stack with
               callarg_code = w256_to_address e1;
               callarg_recipient = w256_to_address e1;
               callarg_value = v.vctx_value_sent;
-              callarg_data = cut_memory e3 (word256ToNatural e4) v.vctx_memory;
+              callarg_data = cut_memory e3 e4 v.vctx_memory;
               callarg_output_begin = e5;
               callarg_output_size = e6 |>)
           (<| (vctx_advance_pc c v) with
@@ -1241,7 +1240,7 @@ let callcode v c = match v.vctx_stack with
               callarg_code = w256_to_address e1;
               callarg_recipient = c.cctx_this;
               callarg_value = e2;
-              callarg_data = cut_memory e3 (word256ToNatural e4) v.vctx_memory;
+              callarg_data = cut_memory e3 e4 v.vctx_memory;
               callarg_output_begin = e5;
               callarg_output_size = e6 |>)
           (<| (vctx_advance_pc c v) with
@@ -1264,7 +1263,7 @@ let create v c = match v.vctx_stack with
              |>
            ))
       else
-        let code = cut_memory code_start (word256ToNatural code_len) v.vctx_memory in
+        let code = cut_memory code_start code_len v.vctx_memory in
         let new_balance = update_balance c.cctx_this (fun orig -> orig - vl) v.vctx_balance in
         InstructionToEnvironment
            (ContractCreate
@@ -1281,7 +1280,7 @@ end
 according to the stack elements: *)
 
 let vctx_returned_bytes v = match v.vctx_stack with
- | e0 :: e1 :: _ -> cut_memory e0 (word256ToNatural e1) v.vctx_memory
+ | e0 :: e1 :: _ -> cut_memory e0 e1 v.vctx_memory
  | _ -> []
 end
 
@@ -1463,7 +1462,7 @@ let sha3 v c = match v.vctx_stack with
  | start :: len :: rest ->
       InstructionContinue (
         vctx_advance_pc c
-           <| v with vctx_stack = keccak (cut_memory start (word256ToNatural len) v.vctx_memory) :: rest;
+           <| v with vctx_stack = keccak (cut_memory start len v.vctx_memory) :: rest;
                      vctx_memory_usage = M v.vctx_memory_usage start len |>)
  | _ -> instruction_failure_result v [TooShortStack]
 end
@@ -1523,7 +1522,7 @@ let L x = x - x / 64
 val Cgascap : w256 -> w256 -> bool -> integer -> natural -> integer
 let Cgascap mu0 mu1 emp remaining_gas blocknumber =
   if remaining_gas >= Cextra mu1 emp blocknumber then
-    integerMin (L (uint mu0 - Cextra mu1 emp blocknumber)) (uint mu0)
+    integerMin (L (remaining_gas - Cextra mu1 emp blocknumber)) (uint mu0)
   else
     uint mu0
 
@@ -1574,7 +1573,7 @@ let thirdComponentOfC i s0 s1 s2 s3 recipient_empty orig_val new_val remaining_g
   | Misc SUICIDE -> Csuicide recipient_empty blocknumber
   | Misc CREATE -> Gcreate
   | Arith SHA3 -> Gsha3 + Gsha3word * ((uint s1 + 31) / 32)
-  | Pc JUMPDEST -> Gjumpsdest
+  | Pc JUMPDEST -> Gjumpdest
   | Storage SLOAD -> Gsload blocknumber
   | Misc STOP -> Gzero
   | Misc RETURN -> Gzero
