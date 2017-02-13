@@ -81,6 +81,11 @@ apply(cases "get_pc (program_content (cctx_program c)
 apply auto
 done
 
+declare keccak_def [simp del]
+declare inst_size_def [simp del]
+declare Groups.ab_semigroup_mult_class.mult.commute [simp del]
+declare cut_memory.simps [simp del]
+
 theorem no_modify_gas :
   "instruction_aux v c inst = InstructionContinue nv \<Longrightarrow>
    vctx_gas v = vctx_gas nv"
@@ -97,6 +102,8 @@ apply(auto simp:sha3_def)
 apply(cases "vctx_stack v")
 apply(auto)
 apply(cases "tl (vctx_stack v)")
+apply(simp)
+apply(simp)
 apply(auto split:option.split)
 apply(cases "get_info (Some inst)")
 apply(auto simp:lemma_stack_2_1_op lemma_stack_3_1_op lemma_stack_1_1_op)
