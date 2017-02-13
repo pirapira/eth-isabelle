@@ -181,4 +181,101 @@ apply(auto simp:vctx_advance_pc_def
 
 done
 
+definition program_step  :: "constant_ctx \<Rightarrow> instruction_result \<Rightarrow> instruction_result "  where
+"program_step c pr1 = (
+  (case  pr1 of
+    InstructionToEnvironment _ _ _ => pr1
+  | InstructionAnnotationFailure => pr1
+  | InstructionContinue v =>
+     if \<not> (check_annotations v c) then InstructionAnnotationFailure else
+     (case  vctx_next_instruction v c of
+        None => InstructionToEnvironment (ContractFail [ShouldNotHappen]) v None
+      | Some i =>
+        if check_resources v c ((vctx_stack   v)) i then
+          instruction_sem v c i
+        else
+          InstructionToEnvironment (ContractFail
+              ((case  inst_stack_numbers i of
+                 (consumed, produced) =>
+                 (if (((int (List.length ((vctx_stack   v))) + produced) - consumed) \<le>( 1024 :: int)) then [] else [TooLongStack])
+                  @ (if predict_gas i v c \<le>(vctx_gas   v) then [] else [OutOfGas])
+               )
+              ))
+              v None
+     )
+  ))"
+
+fun program_iter ::
+   "nat \<Rightarrow> constant_ctx \<Rightarrow> instruction_result \<Rightarrow> instruction_result"  where
+"program_iter 0 ctx x = x"
+| "program_iter (Suc n) ctx x = program_iter n ctx (program_step ctx x)"
+
+
+lemma program_step_failure :
+ "program_step c InstructionAnnotationFailure =
+    InstructionContinue v2 \<Longrightarrow> False"
+apply (auto simp:program_step_def)
+done
+
+lemma program_step_failure_env :
+ "program_step c InstructionAnnotationFailure =
+    InstructionToEnvironment x31 x32
+        x33 \<Longrightarrow> False"
+apply (auto simp:program_step_def)
+done
+
+lemma program_step_env :
+ "program_step c (InstructionToEnvironment x31 x32
+        x33) =
+    InstructionContinue v2 \<Longrightarrow> False"
+apply (auto simp:program_step_def)
+done
+
+lemma program_step_env_failure :
+ "program_step c (InstructionToEnvironment x31 x32
+        x33) =
+    InstructionAnnotationFailure \<Longrightarrow> False"
+apply (auto simp:program_step_def)
+done
+
+lemma program_iter_failure :
+ "program_iter n c InstructionAnnotationFailure =
+    InstructionContinue v2 \<Longrightarrow> False"
+apply (induction n arbitrary:v2)
+apply (auto)
+apply (cases "program_step c
+          InstructionAnnotationFailure")
+apply auto
+using program_step_failure apply blast
+using program_step_failure_env apply blast
+done
+
+lemma program_iter_env :
+ "program_iter n c (InstructionToEnvironment e f g) =
+    InstructionContinue v2 \<Longrightarrow> False"
+apply (induction n arbitrary:v2 e f g)
+apply (cases n)
+apply (auto)
+apply (cases "program_step c
+          (InstructionToEnvironment e f g)")
+using program_step_env apply blast
+using program_step_env_failure apply blast
+  using program_step_def by auto
+
+theorem program_step_continue :
+ "InstructionContinue v2 = program_step c x \<Longrightarrow>
+  \<exists>v. x = InstructionContinue v"
+apply(cases x)
+apply(auto simp:program_step_def)
+done
+
+theorem program_iter_continue :
+ "InstructionContinue v2 = program_iter steps c x \<Longrightarrow>
+  \<exists>v n k. x = InstructionContinue v"
+apply(induction steps arbitrary:v2 n2 k2 c)
+apply(auto simp:program_step_continue)
+apply(cases x)
+apply(auto simp:program_step_def)
+done
+
 end

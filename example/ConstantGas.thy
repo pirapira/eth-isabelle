@@ -774,6 +774,206 @@ apply(cases "vctx_stack v")
 apply(auto)
 done
 
+declare check_annotations_def [simp del]
+declare vctx_next_instruction_def [simp del]
+
+lemma gas_left :
+  "program_step c (InstructionContinue v) = InstructionContinue nv \<Longrightarrow>
+   vctx_gas nv \<ge> 0"
+apply(auto simp:program_step_def)
+apply(subst (asm) inst_gas)
+
+
+apply(cases "\<not> check_annotations v c")
+apply(auto)
+apply(cases "vctx_next_instruction v c")
+apply(auto)
+apply(cases "check_resources v c (vctx_stack v)
+  (get_some (vctx_next_instruction v c))")
+apply(auto)
+
+apply(cases "instruction_aux v c (get_some (vctx_next_instruction v c))")
+
+apply(auto simp:no_modify_gas subtract_gas.simps)
+apply(auto simp:check_resources_def)
+using lemma_predict
+  by (simp add: no_modify_gas)
+
+lemma iter_reorder :
+   "program_iter n c (program_step c v) =
+    program_step c (program_iter n c v)"
+apply(induction n arbitrary:v)
+apply(auto)
+done
+
+lemma iter_gas_left :
+  "vctx_gas v \<ge> 0 \<Longrightarrow>
+   program_iter n c (InstructionContinue v) = InstructionContinue nv \<Longrightarrow>
+   vctx_gas nv \<ge> 0"
+apply(cases n)
+apply(auto simp:iter_reorder)
+using gas_left and  program_step_continue
+  by metis
+
+declare instruction_sem_def [simp del]
+
+lemma no_spend_gas_exit : 
+   "instruction_aux v c inst = InstructionContinue nv \<Longrightarrow>
+    no_spend_gas inst \<Longrightarrow>
+    False"
+apply(cases inst)
+apply(auto simp:instruction_aux_def)
+apply(cases "get_misc (Some inst)")
+apply(auto)
+apply(cases "vctx_stack v")
+apply(auto)
+apply(cases "tl (vctx_stack v)")
+apply(auto)
+apply(cases "vctx_stack v")
+apply(auto)
+done
+
+lemma step_gas_less :
+  "0 \<le> vctx_memory_usage v \<Longrightarrow>
+   program_step c (InstructionContinue v) = InstructionContinue nv \<Longrightarrow>
+   vctx_gas nv < vctx_gas v"
+apply(auto simp:program_step_def)
+
+apply(cases "\<not> check_annotations v c")
+apply(auto)
+apply(cases "vctx_next_instruction v c")
+apply(auto)
+apply(cases "check_resources v c (vctx_stack v)
+  (get_some (vctx_next_instruction v c))")
+apply(auto)
+
+apply(cases "instruction_sem v c (get_some (vctx_next_instruction v c))")
+apply(auto)
+apply(cases "\<not>no_spend_gas (vctx_next_instruction_default v c)")
+using gas_smaller apply blast
+apply auto
+apply(simp add:vctx_next_instruction_default_def)
+apply(subst (asm) inst_gas)
+apply(cases "instruction_aux v c (get_some (vctx_next_instruction v c))")
+apply(auto)
+using no_spend_gas_exit
+apply blast
+done
+
+lemma step_memory_usage :
+ "0 \<le> vctx_memory_usage v \<Longrightarrow>
+  program_step c (InstructionContinue v) =
+         InstructionContinue nv \<Longrightarrow>
+  0 \<le> vctx_memory_usage nv"
+apply(auto simp:program_step_def)
+apply(subst (asm) inst_gas)
+
+
+apply(cases "\<not> check_annotations v c")
+apply(auto)
+apply(cases "vctx_next_instruction v c")
+apply(auto)
+apply(cases "check_resources v c (vctx_stack v)
+  (get_some (vctx_next_instruction v c))")
+apply(auto)
+apply(cases "instruction_aux v c (get_some (vctx_next_instruction v c))")
+apply(auto)
+  using memory_usage_grows by force
+
+lemma iter_gas_less_aux :
+  "(
+           0 \<le> vctx_memory_usage v2 \<Longrightarrow>
+           program_iter n c
+            (InstructionContinue v2) =
+           InstructionContinue nv \<Longrightarrow>
+           vctx_gas nv + int n
+           \<le> vctx_gas v2 \<and>
+           0 \<le> vctx_memory_usage nv) \<Longrightarrow>
+       0 \<le> vctx_memory_usage v \<Longrightarrow>
+       program_iter n c
+        (program_step c
+          (InstructionContinue v)) =
+       InstructionContinue nv \<Longrightarrow>
+       program_step c (InstructionContinue v) =
+         InstructionContinue v2 \<Longrightarrow>
+       0 \<le> vctx_memory_usage nv"
+using step_memory_usage
+apply fastforce
+done
+
+fun get_continue :: "instruction_result \<Rightarrow> variable_ctx" where
+"get_continue (InstructionContinue v) = v"
+
+lemma get_continue_lemma :
+"program_iter n c
+        (program_step c
+          (InstructionContinue v)) =
+       InstructionContinue nv \<Longrightarrow>
+       program_step c
+        (InstructionContinue v) =
+       InstructionContinue
+        (get_continue
+          (program_step c
+            (InstructionContinue v)))"
+apply(cases "program_step c
+            (InstructionContinue v)")
+apply(auto)
+using program_iter_failure apply blast
+using program_iter_env apply blast
+done
+
+lemma iter_gas_less_aux2 :
+"(0 \<le> vctx_memory_usage v2 \<Longrightarrow>
+             program_iter n c
+              (InstructionContinue v2) =
+             InstructionContinue nv \<Longrightarrow>
+             vctx_gas nv + int n
+             \<le> vctx_gas v2 \<and>
+             0 \<le> vctx_memory_usage
+                   nv) \<Longrightarrow>
+       0 \<le> vctx_memory_usage v \<Longrightarrow>
+       program_iter n c
+        (program_step c
+          (InstructionContinue v)) =
+       InstructionContinue nv \<Longrightarrow>
+      program_step c (InstructionContinue v) = InstructionContinue v2 \<Longrightarrow>
+       vctx_gas nv  + (1 + int n) \<le> vctx_gas v"
+using step_gas_less
+  by (smt step_memory_usage)
+
+lemma iter_gas_less :
+  "0 \<le> vctx_memory_usage v \<Longrightarrow>
+   program_iter n c (InstructionContinue v) = InstructionContinue nv \<Longrightarrow>
+   (vctx_gas nv + n \<le> vctx_gas v \<and> 0 \<le> vctx_memory_usage nv)"
+apply(induction n arbitrary:v)
+apply(simp)
+apply(auto)
+defer
+
+apply(rule_tac v=v and n=n and ?v2.0 = "get_continue (program_step c
+          (InstructionContinue v))" in iter_gas_less_aux)
+apply(auto)
+using get_continue_lemma apply blast
+
+apply(rule_tac v=v and n=n and ?v2.0 = "get_continue (program_step c
+          (InstructionContinue v))" in iter_gas_less_aux2)
+apply(auto)
+using get_continue_lemma apply blast
+done
+
+lemma gas_will_run_out :
+  assumes a:"0 \<le> vctx_memory_usage v" and
+   b:"vctx_gas v \<ge> 0" and
+   c:"program_iter (nat (vctx_gas v)+1) c (InstructionContinue v) = InstructionContinue nv"
+   shows "False"
+proof -
+   from iter_gas_less and a and c
+   have "vctx_gas nv  + (nat (vctx_gas v)+1) \<le> vctx_gas v" by blast
+   then have "vctx_gas nv < 0"
+     by linarith
+   then show False
+     by (smt assms(3) b iter_gas_left)  
+qed
 
 end
 
