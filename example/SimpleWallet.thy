@@ -1288,6 +1288,7 @@ lemma check_pass_whole:
                       {(k, Stack (PUSH_N [0])), (k + 2, Storage SLOAD),
                        (k + 3, Info CALLER), (k + 4, Arith inst_EQ),
                        (5 + k, Stack (PUSH_N [d])), (k + 7, Pc JUMPI),
+                       (k + 8, Misc STOP),
                        ((uint (ucast d :: w256)), Pc JUMPDEST),
                        ((uint d) + 1, Stack (PUSH_N [0])),
                        (3 + (uint d), Dup 0),
@@ -1322,6 +1323,7 @@ apply(auto)
 apply(rule_tac cL = "{(k, Stack (PUSH_N [0])), (k + 2, Storage SLOAD),
                        (k + 3, Info CALLER), (k + 4, Arith inst_EQ),
                        (5 + k, Stack (PUSH_N [d])), (k + 7, Pc JUMPI),
+                       (k + 8, Misc STOP),
                        ((uint (ucast d :: w256)), Pc JUMPDEST)}"
            and cR = "{((uint d) + 1, Stack (PUSH_N [0])),
                        (3 + (uint d), Dup 0),
@@ -1335,8 +1337,8 @@ apply(rule_tac cL = "{(k, Stack (PUSH_N [0])), (k + 2, Storage SLOAD),
   apply(auto)
  apply(rule_tac R = "this_account t ** balance t b ** memory_usage u" in
        frame_backward)
-   apply(rule triple_code_eq)
-    apply(rule_tac h = h in prefix_true_over_JUMPDEST)
+   apply(rule code_extension_backward)
+    apply(rule_tac h = h and k = k in prefix_true_over_JUMPDEST)
    apply(simp)
   apply(auto)
 apply(rule_tac R = "storage (word_rcat [0]) (ucast c)" in
@@ -1377,17 +1379,18 @@ definition whole_concrete_program :: "(int * inst) set"
 where "whole_concrete_program =
      {(0, Stack (PUSH_N [0])), (2, Storage SLOAD),
                        (3, Info CALLER), (4, Arith inst_EQ),
-                       (5, Stack (PUSH_N [8])), (7, Pc JUMPI),
-                       (8, Pc JUMPDEST),
-                       (9, Stack (PUSH_N [0])),
-                       (11, Dup 0),
+                       (5, Stack (PUSH_N [9])), (7, Pc JUMPI),
+                       (8, Misc STOP),
+                       (9, Pc JUMPDEST),
+                       (10, Stack (PUSH_N [0])),
                        (12, Dup 0),
                        (13, Dup 0),
-                       (14, Info ADDRESS),
-                       (15, Info BALANCE),
-                       (16, Info CALLER),
-                       (17, Info GAS),
-                       (18, Misc CALL)}"
+                       (14, Dup 0),
+                       (15, Info ADDRESS),
+                       (16, Info BALANCE),
+                       (17, Info CALLER),
+                       (18, Info GAS),
+                       (19, Misc CALL)}"
 
 (* check_pass_whole_concrete *)
 lemma check_pass_whole_concrete:
@@ -1405,7 +1408,7 @@ lemma check_pass_whole_concrete:
                       whole_concrete_program
                       (memory_usage 0 **
                        stack_topmost 0 [] **
-                       program_counter 19 **
+                       program_counter 20 **
                        this_account t **
                        balance t 0 **
                        gas_any **
@@ -1425,15 +1428,35 @@ lemma check_pass_whole_concrete:
 apply(auto)
 apply(rule triple_code_eq)
  apply(rule_tac R = "emp" in frame_backward)
-   apply(rule_tac k = 0 and d = 8 and h = 0 and bn = bn and c = c and g = g and u = 0 in  check_pass_whole)
+   apply(rule_tac k = 0 and d = 9 and h = 0 and bn = bn and c = c and g = g and u = 0 in  check_pass_whole)
   apply(simp)
  apply(simp)
 apply(simp add: whole_concrete_program_def)
 done
   
-
-(*
-prefix_invalid_caller_concrete:
-*)
+lemma whole_program_invalid_caller:
+"triple {OutOfGas} (\<langle>unat bn \<ge> 2463000 \<and> ucast c \<noteq> w\<rangle> **
+                       block_number_pred bn **
+                       stack_height 0 **
+                       program_counter 0 ** caller c **
+                       storage (word_rcat [0]) w **
+                       gas_pred g **
+                       continuing
+                      )
+                      whole_concrete_program
+                      (block_number_pred bn **
+                       stack_height 0 **
+                       program_counter 8 ** caller c **
+                       storage (word_rcat [0]) w **
+                       gas_pred (g + (- Gsload (unat bn) - 2) - 2 * Gverylow - Gverylow - Ghigh) **
+                       not_continuing ** action (ContractReturn []))"
+apply(auto)
+apply(rule code_extension_backward)
+ apply(rule_tac R = emp in frame_backward)
+   apply(rule_tac h = 0 and bn = bn and c = c and w = w and x = 9 in prefix_invalid_caller)
+  apply(simp)
+ apply(simp)
+apply(simp add: whole_concrete_program_def)
+done
 
 end

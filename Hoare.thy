@@ -703,6 +703,20 @@ done
 lemma code_extension : "triple failures p c q \<Longrightarrow> triple failures p (c \<union> e) q"
 	by (simp add: composition triple_tauto)
 
+lemma code_extension_backward :
+  "triple failures p c' q \<Longrightarrow> c' \<subseteq> c \<Longrightarrow> triple failures p c q" 
+proof -
+ assume "triple failures p c' q"
+ then have "triple failures p (c' \<union> c) q"
+  using code_extension by blast
+ moreover assume "c' \<subseteq> c"
+ then have "c = c' \<union> c"
+  by (auto)
+ ultimately show "triple failures p c q"
+  by auto
+qed
+
+
 
 (* Some rules about this if-then-else should be derivable. *)
 
