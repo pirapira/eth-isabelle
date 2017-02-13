@@ -1170,7 +1170,7 @@ proof -
 qed
 
 lemma memory8_sep :
-  "(memory8 b a ** rest) s ==
+  "(rest ** memory8 b a) s ==
    MemoryElm (b, a) \<in> s \<and> rest (s - {MemoryElm (b,a)})"
 apply(simp add: memory8_def sep_def)
 by (smt DiffE Diff_insert_absorb insertI1 insert_Diff)
@@ -1183,6 +1183,21 @@ apply(simp add: memory8_sep)
 apply(simp add: instruction_result_as_set_def)
 done
 
+lemma memory8_short2
+ :"      (q ** memory8 b a ** rest)
+        (instruction_result_as_set c (InstructionContinue v)) \<Longrightarrow>
+       vctx_memory v b = a"
+proof -
+ assume "(q ** memory8 b a ** rest)
+        (instruction_result_as_set c (InstructionContinue v))"
+ then have "(memory8 b a ** q ** rest)
+        (instruction_result_as_set c (InstructionContinue v))"
+  by auto
+ then show "vctx_memory v b = a"
+  by (rule memory8_short)
+qed
+
+
 lemma sep_ac:
 "(a ** b ** c) s \<Longrightarrow> (b ** a ** c) s"
  using sep_assoc by (simp add: sep_commute)
@@ -1192,7 +1207,8 @@ lemma memory_range_cons :
 apply(auto)
 done
 
-declare memory8_sep [simp del]
+declare Hoare.memory8_sep [simp del]
+
 lemma cut_memory_memory_range :
   "\<forall> rest b n.
    unat n = length lst \<longrightarrow>
@@ -1201,6 +1217,8 @@ lemma cut_memory_memory_range :
 apply(induction lst)
  apply(simp add: unat_eq_0)
 apply(auto simp add: memory_range_cons memory8_short)
+ apply(rule memory8_short2)
+ apply blast
 apply(drule sep_ac)
 apply(drule_tac x = "memory8 b a ** rest" in spec)
 apply(drule_tac x = "b + 1" in spec)
@@ -1208,7 +1226,7 @@ apply(drule_tac x = "n - 1" in spec)
 apply(auto)
 apply(drule unat_suc)
 by blast
-declare memory8_sep [simp]
+declare Hoare.memory8_sep [simp]
 
 
 
@@ -1248,10 +1266,6 @@ dup_inst_numbers_def [simp]
 storage_inst_numbers.simps [simp]
 Gbase_def [simp]
 
-lemma leibniz :
-  "r (s :: state_element set) \<Longrightarrow> s = t \<Longrightarrow> r t"
-apply(auto)
-done
 
 lemma emp_sep [simp] :
   "(emp ** rest) s = rest s"
@@ -1365,6 +1379,14 @@ apply(drule too_small_to_overwrap)
 apply(auto)
 done
 
+lemma insert_is :
+       "(e \<in> va \<and>
+        va - {e} = R) =
+       (va = insert e R \<and> e \<notin> R)"
+apply(auto)
+done
+
+
 lemma memory_range_alt :
        "\<forall> len_word begin_word va.
         unat (len_word :: w256) = length input \<longrightarrow>
@@ -1376,10 +1398,9 @@ apply(clarify)
 apply(drule_tac x = "len_word - 1" in spec)
 apply(drule_tac x = "begin_word + 1" in spec)
 apply(drule_tac x = "va - {MemoryElm (begin_word, a)}" in spec)
-apply(auto)
-   (* sledgehammer *)
-  apply (metis diff_Suc_1 lessI unat_eq_zero unat_minus_one zero_order(3))
- apply (metis diff_Suc_1 lessI unat_eq_zero unat_minus_one zero_order(3))
+apply(subgoal_tac "unat (len_word - 1) = length input")
+ apply (simp add: insert_is)
+apply(simp)
 apply (metis diff_Suc_1 lessI unat_eq_zero unat_minus_one zero_order(3))
 done
 
@@ -2047,11 +2068,13 @@ lemma call_gas_triple:
 apply(simp only: triple_triple_alt)
 apply(auto simp add: triple_alt_def)
 apply(rule_tac x = 1 in exI)
-apply(case_tac presult)
+apply(case_tac presult; simp)
 (*  defer
-  apply(simp add: instruction_result_as_set_def memory_range_sep)
+  apply(auto simp add: instruction_result_as_set_def memory_range_sep)
  apply(simp add: instruction_result_as_set_def memory_range_sep stack_height_sep) *)
-apply(simp)
+  defer
+  
+
 apply(clarify)
 apply(simp add: call_def)
   defer
