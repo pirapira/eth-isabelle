@@ -1377,20 +1377,44 @@ done
 
 definition whole_concrete_program :: "(int * inst) set"
 where "whole_concrete_program =
-     {(0, Stack (PUSH_N [0])), (2, Storage SLOAD),
-                       (3, Info CALLER), (4, Arith inst_EQ),
-                       (5, Stack (PUSH_N [9])), (7, Pc JUMPI),
-                       (8, Misc STOP),
-                       (9, Pc JUMPDEST),
-                       (10, Stack (PUSH_N [0])),
-                       (12, Dup 0),
-                       (13, Dup 0),
-                       (14, Dup 0),
-                       (15, Info ADDRESS),
-                       (16, Info BALANCE),
-                       (17, Info CALLER),
-                       (18, Info GAS),
-                       (19, Misc CALL)}"
+     {(0, Stack (PUSH_N [0])),   (* 6000 *)
+      (2, Storage SLOAD),        (* 54 *)
+      (3, Info CALLER),          (* 33 *)
+      (4, Arith inst_EQ),        (* 14 *)
+      (5, Stack (PUSH_N [9])),   (* 6009 *)
+      (7, Pc JUMPI),             (* 57 *)
+      (8, Misc STOP),            (* 00 *)
+      (9, Pc JUMPDEST),          (* 5b *)
+      (10, Stack (PUSH_N [0])),  (* 6000 *)
+      (12, Dup 0),               (* 80 *)
+      (13, Dup 0),               (* 80 *)
+      (14, Dup 0),               (* 80 *)
+      (15, Info ADDRESS),        (* 30 *)
+      (16, Info BALANCE),        (* 31 *)
+      (17, Info CALLER),         (* 33 *)
+      (18, Info GAS),            (* 5a *)
+      (19, Misc CALL)}"          (* f1 *)
+(* An implicit Misc STOP follows *)
+
+(* The runtime code has 20 bytes: *)
+(* 6000543314600957005b60008080803031335af1 *)
+
+(* To deploy this:
+0: CALLER      33
+1: 0           6000
+3: SSTORE      55
+4: 20          6014
+6: x           6010
+8: 0           6000
+10: CODECOPY   39
+11: 20         6014
+13: 0          6000
+15: RETURN     f3
+x = 16:        6000543314600957005b60008080803031335af1
+*)
+
+(* The bytecode is: *)
+(* 336000556014601060003960146000f36000543314600957005b60008080803031335af1 *)
 
 (* check_pass_whole_concrete *)
 lemma check_pass_whole_concrete:
