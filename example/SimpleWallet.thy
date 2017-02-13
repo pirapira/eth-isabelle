@@ -241,22 +241,27 @@ apply(rule_tac R = "this_account t" in frame_backward)
  apply(auto)
 done
 
+lemma cons_eq :
+  "a = b \<Longrightarrow> c ** a = c ** b"
+apply(simp)
+done
+
 lemma caller_gas :
 "
 triple {OutOfGas}
           (\<langle> h \<le> 1022 \<rangle> ** stack_height h ** program_counter k ** caller c ** gas_pred g ** continuing)
-          {(k, Info CALLER), (k + 1, Info GAS)}
-          (stack_height (h + 2) ** stack (Suc h) (word_of_int (g - Gbase - 2)) ** stack h (ucast c)
-           ** program_counter (2 + k) ** caller c ** gas_pred (g - Gbase - 2) ** continuing )
+          {(k, Info CALLER), (k + 1, Stack (PUSH_N [8, 0]))}
+          (stack_height (h + 2) ** stack (Suc h) (word_rcat [(8 :: byte), 0]) ** stack h (ucast c)
+           ** program_counter (4 + k) ** caller c ** gas_pred (g - 2 - Gverylow) ** continuing )
 "
 apply(auto)
-apply(rule_tac cL = "{(k, Info CALLER)}" and cR = "{(k + 1, Info GAS)}" in composition)
+apply(rule_tac cL = "{(k, Info CALLER)}" and cR = "{(k + 1, Stack (PUSH_N [8, 0]))}" in composition)
   apply(auto)
  apply(rule strengthen_pre)
   apply(rule_tac h = "h" and c = c and g = g in caller_gas_triple) 
  apply(auto)
 apply(rule_tac R = "stack h (ucast c) ** caller c" in frame_backward)
-  apply(rule_tac h = "Suc h" and g = "g - 2" in gas_gas_triple)
+  apply(rule_tac h = "Suc h" and g = "g - 2" in push_gas_triple)
  apply(auto)
  using sep_assoc sep_commute apply auto
 done
@@ -276,14 +281,14 @@ lemma first_three_args :
           (\<langle> h \<le> 1021 \<and> unat bn \<ge> 2463000\<rangle>
            ** block_number_pred bn ** caller c ** stack_height h ** program_counter k ** this_account t ** 
            balance t b ** gas_pred g ** continuing)
-          {(k, Info ADDRESS), (k + 1, Info BALANCE), (k + 2, Info CALLER), (k + 3, Info GAS)}
+          {(k, Info ADDRESS), (k + 1, Info BALANCE), (k + 2, Info CALLER), (k + 3, Stack (PUSH_N [8, 0]))}
           (block_number_pred bn ** caller c ** stack_height (h + 3) ** 
-           stack (Suc (Suc h)) (word_of_int (g - 2 * Gbase - 402)) ** stack (Suc h) (ucast c) ** stack h b ** balance t b
-           ** program_counter (4 + k) ** this_account t ** gas_pred (g - 2 * Gbase - 402)
+           stack (Suc (Suc h)) (word_rcat [(8 :: byte), 0]) ** stack (Suc h) (ucast c) ** stack h b ** balance t b
+           ** program_counter (6 + k) ** this_account t ** gas_pred (g - 404 - Gverylow)
            ** continuing )"
 apply(auto)
 apply(rule_tac cL = "{(k, Info ADDRESS), (k + 1, Info BALANCE)}"
-           and cR = "{(k + 2, Info CALLER), (k + 3, Info GAS)}" in composition)
+           and cR = "{(k + 2, Info CALLER), (k + 3, Stack (PUSH_N [8, 0]))}" in composition)
   apply(auto)
  apply(rule_tac R = "caller c" in frame_backward)
    apply(rule_tac h = h and bn = bn and g = g and t = t and b = b in this_balance)
@@ -364,21 +369,21 @@ lemma seven_args:
                        (5 + k, Info ADDRESS),
                        (6 + k, Info BALANCE),
                        (7 + k, Info CALLER),
-                       (8 + k, Info GAS)
+                       (8 + k, Stack (PUSH_N [8, 0]))
                       }
                       (block_number_pred bn ** caller c **
                        stack_height (h + 7) **
-                       stack (Suc (Suc (Suc (Suc (Suc (Suc h)))))) (word_of_int (g - 4 * Gverylow - 2 * Gbase - 402)) **
+                       stack (Suc (Suc (Suc (Suc (Suc (Suc h)))))) (word_rcat [(8 :: byte), 0]) **
                        stack (Suc (Suc (Suc (Suc (Suc h))))) (ucast c) **
                        stack (Suc (Suc (Suc (Suc h)))) b **
                        stack (Suc (Suc (Suc h))) (word_rcat [0]) **
                        stack (Suc (Suc h)) (word_rcat [0]) **
                        stack (Suc h) (word_rcat [0]) **
                        stack h (word_rcat [0]) **
-                       program_counter (9 + k) **
+                       program_counter (11 + k) **
                        this_account t **
                        balance t b **
-                       gas_pred (g - 4 * Gverylow - 2 * Gbase - 402) **
+                       gas_pred (g - 404 - 5 * Gverylow) **
                        continuing
                       )"
 apply(auto)
@@ -389,7 +394,7 @@ apply(auto)
             and cR = "{(5 + k, Info ADDRESS),
                        (6 + k, Info BALANCE),
                        (7 + k, Info CALLER),
-                       (8 + k, Info GAS)}" in composition)
+                       (8 + k, Stack (PUSH_N [8, 0]))}" in composition)
   apply(auto)
  apply(rule_tac R = "block_number_pred bn **
       caller c ** this_account t ** balance t b" in frame_backward)
@@ -438,8 +443,8 @@ apply(rule sep_functional)
 apply(rule sep_functional)
  apply(simp add: five_plus)
 apply(rule sep_functional)
- apply(simp)
-apply(simp add: six_plus)
+ apply(simp add: six_plus)
+apply(simp)
 done
 
 lemma pc_not_topmost [simp] :
@@ -547,15 +552,15 @@ lemma seven_args_packed:
                        (5 + k, Info ADDRESS),
                        (6 + k, Info BALANCE),
                        (7 + k, Info CALLER),
-                       (8 + k, Info GAS)
+                       (8 + k, Stack (PUSH_N [8, 0]))
                       }
                       (block_number_pred bn ** caller c **
                        stack_topmost h [word_rcat [0], word_rcat [0], word_rcat [0], word_rcat [0],
-                         b, ucast c, word_of_int (g - 4 * Gverylow - 2 * Gbase - 402)] **
-                       program_counter (9 + k) **
+                         b, ucast c, word_rcat [(8 :: byte), 0]] **
+                       program_counter (11 + k) **
                        this_account t **
                        balance t b **
-                       gas_pred (g - 4 * Gverylow - 2 * Gbase - 402) **
+                       gas_pred (g - 404 - 5 * Gverylow) **
                        continuing
                       )"
 apply(rule weaken_post)
@@ -671,18 +676,18 @@ lemma call_with_args:
                        (5 + k, Info ADDRESS),
                        (6 + k, Info BALANCE),
                        (7 + k, Info CALLER),
-                       (8 + k, Info GAS),
-                       (9 + k, Misc CALL)
+                       (8 + k, Stack (PUSH_N [8, 0])),
+                       (11 + k, Misc CALL)
                       }
                       (block_number_pred bn ** caller c **
                        memory_usage u **
                        stack_topmost h [] **
-                       program_counter (10 + k) **
+                       program_counter (12 + k) **
                        this_account t **
                        balance t 0 **
                        gas_any **
                        not_continuing **
-                       action (ContractCall \<lparr> callarg_gas = word_of_int (g - 4 * Gverylow - 2 * Gbase - 402)
+                       action (ContractCall \<lparr> callarg_gas = word_rcat [(8 :: byte), 0]
                                 , callarg_code = c
                                 , callarg_recipient = c
                                 , callarg_value = b
@@ -698,8 +703,8 @@ apply(rule_tac cL = "{(k, Stack (PUSH_N [0])),
                        (5 + k, Info ADDRESS),
                        (6 + k, Info BALANCE),
                        (7 + k, Info CALLER),
-                       (8 + k, Info GAS)}"
-            and cR = "{(9 + k, Misc CALL)}" in composition)
+                       (8 + k, Stack (PUSH_N [8, 0]))}"
+            and cR = "{(11 + k, Misc CALL)}" in composition)
   apply(auto)
  apply(rule_tac R = "memory_usage u" in frame_backward)
    apply(rule_tac k = k and h = h and c = c and bn = bn and t = t and b = b and g = g in seven_args_packed)
@@ -710,7 +715,7 @@ apply(rule_tac R = "block_number_pred bn **
   apply(rule_tac h = h and v = b and fund = b and input = "[]" 
         and in_size = "word_rcat [0]" and in_begin = "word_rcat [0]"
         and out_size = "word_rcat [0]" and out_begin = "word_rcat [0]"
-        and g = "word_of_int (g - 4 * Gverylow - 406)" and r = "ucast c"
+        and g = "word_rcat [(8 :: byte), 0]" and r = "ucast c"
         and this = t and u = u
         in call_gas_triple)
  apply(simp add: word_rcat_def bin_rcat_def)
@@ -775,11 +780,6 @@ lemma equal_pred :
 apply(simp)
 done
 
-
-lemma cons_eq :
-  "a = b \<Longrightarrow> c ** a = c ** b"
-apply(simp)
-done
 
 lemma push0sload :
    "triple {OutOfGas} (\<langle> h \<le> 1023 \<and> unat bn \<ge> 2463000 \<rangle> **
@@ -1297,18 +1297,18 @@ lemma check_pass_whole:
                        (6 + uint d, Info ADDRESS),
                        (7 + uint d, Info BALANCE),
                        (8 + uint d, Info CALLER),
-                       (9 + uint d, Info GAS),
-                       (10 + uint d, Misc CALL)
+                       (9 + uint d, Stack (PUSH_N [8, 0])),
+                       (12 + uint d, Misc CALL)
                       }
                       (memory_usage u **
                        stack_topmost h [] **
-                       program_counter (uint d + 11) **
+                       program_counter (uint d + 13) **
                        this_account t **
                        balance t 0 **
                        gas_any **
                        not_continuing **
                        action (ContractCall \<lparr>
-                                  callarg_gas = word_of_int (g + (- Gjumpdest - Ghigh - 7 * Gverylow - Gsload (unat bn)) - 408)
+                                  callarg_gas = word_rcat [(8 :: byte), 0]
                                 , callarg_code = c
                                 , callarg_recipient = c
                                 , callarg_value = b
@@ -1332,8 +1332,8 @@ apply(rule_tac cL = "{(k, Stack (PUSH_N [0])), (k + 2, Storage SLOAD),
                        (6 + uint d, Info ADDRESS),
                        (7 + uint d, Info BALANCE),
                        (8 + uint d, Info CALLER),
-                       (9 + uint d, Info GAS),
-                       (10 + uint d, Misc CALL)}" in composition)
+                       (9 + uint d, Stack (PUSH_N [8, 0])),
+                       (12 + uint d, Misc CALL)}" in composition)
   apply(auto)
  apply(rule_tac R = "this_account t ** balance t b ** memory_usage u" in
        frame_backward)
@@ -1392,25 +1392,25 @@ where "whole_concrete_program =
       (15, Info ADDRESS),        (* 30 *)
       (16, Info BALANCE),        (* 31 *)
       (17, Info CALLER),         (* 33 *)
-      (18, Info GAS),            (* 5a *)
-      (19, Misc CALL)}"          (* f1 *)
+      (18, Stack (PUSH_N [8, 0])), (* 610800 *)
+      (21, Misc CALL)}"          (* f1 *)
 (* An implicit Misc STOP follows *)
 
-(* The runtime code has 20 bytes: *)
-(* 6000543314600957005b60008080803031335af1 *)
+(* The runtime code has 22 bytes: *)
+(* 6000543314600957005b6000808080303133610800f1 *)
 
 (* To deploy this:
 0: CALLER      33
 1: 0           6000
 3: SSTORE      55
-4: 20          6014
+4: 22          6016
 6: x           6010
 8: 0           6000
 10: CODECOPY   39
-11: 20         6014
+11: 22         6016
 13: 0          6000
 15: RETURN     f3
-x = 16:        6000543314600957005b60008080803031335af1
+x = 16:        6000543314600957005b6000808080303133610800f1
 *)
 
 (* The bytecode is: *)
@@ -1432,13 +1432,13 @@ lemma check_pass_whole_concrete:
                       whole_concrete_program
                       (memory_usage 0 **
                        stack_topmost 0 [] **
-                       program_counter 20 **
+                       program_counter 22 **
                        this_account t **
                        balance t 0 **
                        gas_any **
                        not_continuing **
                        action (ContractCall \<lparr>
-                                  callarg_gas = word_of_int (g + (- Gjumpdest - Ghigh - 7 * Gverylow - Gsload (unat bn)) - 408)
+                                  callarg_gas = word_rcat [(8 :: byte), 0]
                                 , callarg_code = c
                                 , callarg_recipient = c
                                 , callarg_value = b
