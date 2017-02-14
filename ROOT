@@ -55,9 +55,12 @@ session "simplewallet" = "HOL" +
     "lem/Word8"
     "lem/Keccak"
     "lem/Evm"
+	"Hoare"
+	"HoareTripleForInstructions"
+	"HoareTripleForInstructions2"
   theories
     "example/SimpleWallet"
-  document_files
+  document_files (in simple_wallet_document)
     "root.tex"
 
 
