@@ -1,5 +1,8 @@
 *~
 *#
+lem/*.vo
+lem/*.d
+lem/*.glob
 lem/Block.thy
 lem/Evm.thy
 lem/EvmAuxiliary.thy

@@ -5,6 +5,8 @@ imports
 
 begin
 
+declare cut_memory.simps [simp del]
+
 fun is_inc_pc :: "inst option \<Rightarrow> bool" where
   "is_inc_pc (Some (Pc JUMP)) = False"
 | "is_inc_pc (Some (Pc JUMPI)) = False"

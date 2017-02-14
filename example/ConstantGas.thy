@@ -81,9 +81,6 @@ apply(cases "get_pc (program_content (cctx_program c)
 apply auto
 done
 
-declare keccak_def [simp del]
-declare inst_size_def [simp del]
-declare Groups.ab_semigroup_mult_class.mult.commute [simp del]
 declare cut_memory.simps [simp del]
 
 theorem no_modify_gas :
