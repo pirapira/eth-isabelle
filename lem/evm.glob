@@ -1,0 +1,88 @@
+DIGEST e7201180ffc5d055de69bb63a5955553
+FEvm.evm
+R53:57 Coq.Arith.Arith <> <> lib
+R75:78 Coq.Bool.Bool <> <> lib
+R96:99 Coq.Lists.List <> <> lib
+R117:122 Coq.Strings.String <> <> lib
+R140:149 Coq.Program.Wf <> <> lib
+R168:177 Lem.coqharness <> <> lib
+R1436:1449 Lem.lem_pervasives <> <> lib
+R1467:1480 Lem.lem_pervasives <> <> lib
+R1499:1506 Lem.lem_word <> <> lib
+R1524:1531 Lem.lem_word <> <> lib
+R1550:1556 Evm.word256 <> <> lib
+R1574:1580 Evm.word256 <> <> lib
+R1599:1605 Evm.word160 <> <> lib
+R1623:1629 Evm.word160 <> <> lib
+R1648:1652 Evm.word8 <> <> lib
+R1670:1674 Evm.word8 <> <> lib
+R1693:1697 Evm.word4 <> <> lib
+R1715:1719 Evm.word4 <> <> lib
+R1738:1743 Evm.keccak <> <> lib
+R1761:1766 Evm.keccak <> <> lib
+def 1959:1965 <> address
+R1978:1984 Evm.word160 <> word160 ind
+def 1999:2013 <> address_default
+R2016:2022 Evm.evm <> address def
+R2028:2042 Evm.word160 <> word160_default def
+def 2097:2108 <> sintFromW256
+R2121:2125 Coq.Init.Logic <> :type_scope:x_'->'_x not
+R2126:2126 Coq.Numbers.BinNums <> Z ind
+R2114:2120 Evm.word256 <> word256 ind
+R2132:2147 Evm.word256 <> word256ToInteger def
+def 2202:2205 <> uint
+R2213:2219 Evm.word256 <> word256 ind
+R2226:2226 Coq.Numbers.BinNums <> Z ind
+R2233:2237 Coq.ZArith.BinInt <> Zpred syndef
+R2240:2243 Coq.Numbers.BinNums <> Zpos constr
+R2246:2258 Coq.PArith.BinPos <> P_of_succ_nat syndef
+R2261:2276 Evm.word256 <> word256ToNatural def
+R2278:2278 Evm.evm <> w var
+def 2337:2342 <> absnat
+R2350:2356 Evm.word256 <> word256 ind
+R2363:2365 Coq.Init.Datatypes <> nat ind
+R2371:2378 Coq.ZArith.BinInt <> Zabs_nat syndef
+R2383:2398 Evm.word256 <> word256ToInteger def
+R2400:2400 Evm.evm <> w var
+def 2457:2467 <> byteFromNat
+R2476:2480 Coq.Init.Logic <> :type_scope:x_'->'_x not
+R2481:2485 Evm.word8 <> word8 ind
+R2473:2475 Coq.Init.Datatypes <> nat ind
+R2491:2502 Evm.word8 <> word8FromNat def
+def 2557:2566 <> w256_of_bl
+R2584:2587 Coq.Init.Logic <> :type_scope:x_'->'_x not
+R2588:2594 Evm.word256 <> word256 ind
+R2572:2575 Coq.Init.Datatypes <> list ind
+R2578:2581 Coq.Init.Datatypes <> bool ind
+R2600:2618 Evm.word256 <> word256FromBoollist def
+def 2673:2687 <> w256_to_address
+R2695:2701 Evm.word256 <> word256 ind
+R2708:2714 Evm.word160 <> word160 ind
+R2720:2737 Evm.word160 <> word160FromNatural def
+R2740:2755 Evm.word256 <> word256ToNatural def
+R2757:2757 Evm.evm <> w var
+def 2813:2827 <> address_to_w256
+R2835:2841 Evm.word160 <> word160 ind
+R2848:2854 Evm.word256 <> word256 ind
+R2860:2877 Evm.word256 <> word256FromNatural def
+R2880:2895 Evm.word160 <> word160ToNatural def
+R2897:2897 Evm.evm <> w var
+def 2953:2964 <> w256_to_byte
+R2972:2978 Evm.word256 <> word256 ind
+R2985:2989 Evm.word8 <> word8 ind
+R2995:3010 Evm.word8 <> word8FromNatural def
+R3013:3028 Evm.word256 <> word256ToNatural def
+R3030:3030 Evm.evm <> w var
+def 3086:3097 <> byte_to_w256
+R3105:3109 Evm.word8 <> word8 ind
+R3116:3122 Evm.word256 <> word256 ind
+R3128:3141 Evm.word256 <> word256FromNat def
+R3144:3153 Evm.word8 <> word8ToNat def
+R3155:3155 Evm.evm <> w var
+def 3211:3224 <> word_rsplit256
+R3232:3238 Evm.word256 <> word256 ind
+R3245:3248 Coq.Init.Datatypes <> list ind
+R3251:3254 Evm.keccak <> byte def
+R3262:3276 Evm.keccak <> word_rsplit_aux def
+R3279:3297 Evm.word256 <> boolListFromWord256 def
+R3299:3299 Evm.evm <> w var

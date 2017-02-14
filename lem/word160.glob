@@ -1,0 +1,470 @@
+DIGEST aa8a21564b883f1e2cc9d44e460fbedf
+FEvm.word160
+R57:61 Coq.Arith.Arith <> <> lib
+R79:82 Coq.Bool.Bool <> <> lib
+R100:103 Coq.Lists.List <> <> lib
+R121:126 Coq.Strings.String <> <> lib
+R144:153 Coq.Program.Wf <> <> lib
+R172:181 Lem.coqharness <> <> lib
+R841:854 Lem.lem_pervasives <> <> lib
+R872:885 Lem.lem_pervasives <> <> lib
+R904:911 Lem.lem_word <> <> lib
+R929:936 Lem.lem_word <> <> lib
+ind 951:957 <> word160
+constr 970:973 <> W160
+R981:986 Coq.Init.Logic <> :type_scope:x_'->'_x not
+R997:1001 Coq.Init.Logic <> :type_scope:x_'->'_x not
+R1002:1008 Evm.word160 <> word160 ind
+R987:990 Coq.Init.Datatypes <> list ind
+R993:996 Coq.Init.Datatypes <> bool ind
+R977:980 Coq.Init.Datatypes <> bool ind
+def 1023:1037 <> word160_default
+R1040:1046 Evm.word160 <> word160 ind
+R1052:1055 Evm.word160 <> W160 constr
+R1070:1075 Lem.coqharness <> DAEMON prfax
+R1057:1068 Lem.coqharness <> bool_default def
+def 1130:1139 <> bs_to_w160
+R1149:1159 Lem.lem_word <> bitSequence ind
+R1166:1172 Evm.word160 <> word160 ind
+R1186:1197 Lem.lem_word <> resizeBitSeq def
+R1212:1214 Evm.word160 <> seq var
+R1200:1203 Coq.Init.Datatypes <> Some constr
+R1226:1231 Lem.lem_word <> BitSeq constr
+R1242:1245 Evm.word160 <> W160 constr
+def 1308:1317 <> w160_to_bs
+R1325:1331 Evm.word160 <> word160 ind
+R1338:1348 Lem.lem_word <> bitSequence ind
+R1365:1365 Evm.word160 <> w var
+R1377:1380 Evm.word160 <> W160 constr
+R1391:1396 Lem.lem_word <> BitSeq constr
+R1399:1402 Coq.Init.Datatypes <> Some constr
+def 1473:1486 <> word160BinTest
+R1520:1524 Coq.Init.Logic <> :type_scope:x_'->'_x not
+R1536:1540 Coq.Init.Logic <> :type_scope:x_'->'_x not
+R1541:1541 Evm.word160 <> a var
+R1525:1535 Lem.lem_word <> bitSequence ind
+R1509:1519 Lem.lem_word <> bitSequence ind
+R1550:1556 Evm.word160 <> word160 ind
+R1566:1572 Evm.word160 <> word160 ind
+R1579:1579 Evm.word160 <> a var
+R1584:1588 Evm.word160 <> binop var
+R1607:1616 Evm.word160 <> w160_to_bs def
+R1618:1619 Evm.word160 <> w2 var
+R1591:1600 Evm.word160 <> w160_to_bs def
+R1602:1603 Evm.word160 <> w1 var
+def 1675:1686 <> word160BinOp
+R1709:1713 Coq.Init.Logic <> :type_scope:x_'->'_x not
+R1725:1729 Coq.Init.Logic <> :type_scope:x_'->'_x not
+R1730:1740 Lem.lem_word <> bitSequence ind
+R1714:1724 Lem.lem_word <> bitSequence ind
+R1698:1708 Lem.lem_word <> bitSequence ind
+R1750:1756 Evm.word160 <> word160 ind
+R1766:1772 Evm.word160 <> word160 ind
+R1779:1785 Evm.word160 <> word160 ind
+R1791:1800 Evm.word160 <> bs_to_w160 def
+R1803:1807 Evm.word160 <> binop var
+R1826:1835 Evm.word160 <> w160_to_bs def
+R1837:1838 Evm.word160 <> w2 var
+R1810:1819 Evm.word160 <> w160_to_bs def
+R1821:1822 Evm.word160 <> w1 var
+def 1895:1906 <> word160NatOp
+R1929:1933 Coq.Init.Logic <> :type_scope:x_'->'_x not
+R1937:1941 Coq.Init.Logic <> :type_scope:x_'->'_x not
+R1942:1952 Lem.lem_word <> bitSequence ind
+R1934:1936 Coq.Init.Datatypes <> nat ind
+R1918:1928 Lem.lem_word <> bitSequence ind
+R1962:1968 Evm.word160 <> word160 ind
+R1977:1979 Coq.Init.Datatypes <> nat ind
+R1986:1992 Evm.word160 <> word160 ind
+R1998:2007 Evm.word160 <> bs_to_w160 def
+R2010:2014 Evm.word160 <> binop var
+R2032:2032 Evm.word160 <> n var
+R2017:2026 Evm.word160 <> w160_to_bs def
+R2028:2029 Evm.word160 <> w1 var
+def 2088:2101 <> word160UnaryOp
+R2121:2125 Coq.Init.Logic <> :type_scope:x_'->'_x not
+R2126:2136 Lem.lem_word <> bitSequence ind
+R2110:2120 Lem.lem_word <> bitSequence ind
+R2145:2151 Evm.word160 <> word160 ind
+R2158:2164 Evm.word160 <> word160 ind
+R2170:2179 Evm.word160 <> bs_to_w160 def
+R2182:2183 Evm.word160 <> op var
+R2186:2195 Evm.word160 <> w160_to_bs def
+R2197:2197 Evm.word160 <> w var
+def 2254:2269 <> word160ToInteger
+R2277:2283 Evm.word160 <> word160 ind
+R2290:2290 Coq.Numbers.BinNums <> Z ind
+R2296:2312 Lem.lem_word <> integerFromBitSeq def
+R2315:2324 Evm.word160 <> w160_to_bs def
+R2326:2326 Evm.word160 <> w var
+def 2382:2388 <> size160
+R2394:2394 Coq.Numbers.BinNums <> Z ind
+R2400:2427 Coq.ZArith.Zpower <> Zpower_nat def
+R2430:2434 Coq.ZArith.BinInt <> Zpred syndef
+R2437:2440 Coq.Numbers.BinNums <> Zpos constr
+R2443:2455 Coq.PArith.BinPos <> P_of_succ_nat syndef
+def 2522:2537 <> word160ToNatural
+R2545:2551 Evm.word160 <> word160 ind
+R2558:2560 Coq.Init.Datatypes <> nat ind
+R2566:2573 Coq.ZArith.BinInt <> Zabs_nat syndef
+R2577:2596 Coq.ZArith.Zdiv <> Zmod syndef
+R2618:2624 Evm.word160 <> size160 def
+R2598:2613 Evm.word160 <> word160ToInteger def
+R2615:2615 Evm.word160 <> w var
+def 2680:2697 <> word160FromInteger
+R2705:2705 Coq.Numbers.BinNums <> Z ind
+R2712:2718 Evm.word160 <> word160 ind
+R2724:2733 Evm.word160 <> bs_to_w160 def
+R2736:2752 Lem.lem_word <> bitSeqFromInteger def
+R2767:2767 Evm.word160 <> i var
+R2755:2758 Coq.Init.Datatypes <> Some constr
+def 2823:2836 <> word160FromInt
+R2844:2844 Coq.Numbers.BinNums <> Z ind
+R2851:2857 Evm.word160 <> word160 ind
+R2863:2872 Evm.word160 <> bs_to_w160 def
+R2875:2891 Lem.lem_word <> bitSeqFromInteger def
+R2908:2908 Evm.word160 <> i var
+R2894:2897 Coq.Init.Datatypes <> Some constr
+def 2965:2982 <> word160FromNatural
+R2990:2992 Coq.Init.Datatypes <> nat ind
+R2999:3005 Evm.word160 <> word160 ind
+R3011:3028 Evm.word160 <> word160FromInteger def
+R3032:3036 Coq.ZArith.BinInt <> Zpred syndef
+R3039:3042 Coq.Numbers.BinNums <> Zpos constr
+R3045:3057 Coq.PArith.BinPos <> P_of_succ_nat syndef
+R3059:3059 Evm.word160 <> i var
+def 3118:3136 <> word160FromBoollist
+R3146:3149 Coq.Init.Datatypes <> list ind
+R3152:3155 Coq.Init.Datatypes <> bool ind
+R3163:3169 Evm.word160 <> word160 ind
+R3183:3200 Lem.lem_word <> bitSeqFromBoolList def
+R3203:3210 Coq.Lists.List <> rev def
+R3212:3214 Evm.word160 <> lst var
+R3227:3230 Coq.Init.Datatypes <> None constr
+R3235:3244 Evm.word160 <> bs_to_w160 def
+R3246:3262 Lem.lem_word <> bitSeqFromInteger def
+R3271:3275 Coq.ZArith.BinInt <> Zpred syndef
+R3278:3281 Coq.Numbers.BinNums <> Zpos constr
+R3284:3296 Coq.PArith.BinPos <> P_of_succ_nat syndef
+R3264:3267 Coq.Init.Datatypes <> None constr
+R3308:3311 Coq.Init.Datatypes <> Some constr
+R3318:3327 Evm.word160 <> bs_to_w160 def
+def 3388:3406 <> boolListFromWord160
+R3414:3420 Evm.word160 <> word160 ind
+R3427:3430 Coq.Init.Datatypes <> list ind
+R3433:3436 Coq.Init.Datatypes <> bool ind
+R3443:3450 Coq.Lists.List <> rev def
+R3453:3470 Lem.lem_word <> boolListFrombitSeq def
+R3479:3488 Evm.word160 <> w160_to_bs def
+R3490:3490 Evm.word160 <> w var
+def 3547:3564 <> word160FromNumeral
+R3572:3574 Coq.Init.Datatypes <> nat ind
+R3581:3587 Evm.word160 <> word160 ind
+R3593:3602 Evm.word160 <> bs_to_w160 def
+R3605:3621 Lem.lem_word <> bitSeqFromInteger def
+R3630:3634 Coq.ZArith.BinInt <> Zpred syndef
+R3637:3640 Coq.Numbers.BinNums <> Zpos constr
+R3643:3655 Coq.PArith.BinPos <> P_of_succ_nat syndef
+R3657:3657 Evm.word160 <> w var
+R3623:3626 Coq.Init.Datatypes <> None constr
+def 3812:3817 <> w160Eq
+R3830:3834 Coq.Init.Logic <> :type_scope:x_'->'_x not
+R3842:3846 Coq.Init.Logic <> :type_scope:x_'->'_x not
+R3847:3850 Coq.Init.Datatypes <> bool ind
+R3835:3841 Evm.word160 <> word160 ind
+R3823:3829 Evm.word160 <> word160 ind
+R3856:3884 Lem.coqharness <> classical_boolean_equivalence def
+def 3939:3946 <> w160Less
+R3956:3962 Evm.word160 <> word160 ind
+R3973:3979 Evm.word160 <> word160 ind
+R3986:3989 Coq.Init.Datatypes <> bool ind
+R3995:4008 Evm.word160 <> word160BinTest def
+R4025:4027 Evm.word160 <> bs2 var
+R4021:4023 Evm.word160 <> bs1 var
+R4010:4019 Lem.lem_word <> bitSeqLess def
+def 4082:4094 <> w160LessEqual
+R4104:4110 Evm.word160 <> word160 ind
+R4121:4127 Evm.word160 <> word160 ind
+R4134:4137 Coq.Init.Datatypes <> bool ind
+R4143:4156 Evm.word160 <> word160BinTest def
+R4178:4180 Evm.word160 <> bs2 var
+R4174:4176 Evm.word160 <> bs1 var
+R4158:4172 Lem.lem_word <> bitSeqLessEqual def
+def 4235:4245 <> w160Greater
+R4255:4261 Evm.word160 <> word160 ind
+R4272:4278 Evm.word160 <> word160 ind
+R4285:4288 Coq.Init.Datatypes <> bool ind
+R4294:4307 Evm.word160 <> word160BinTest def
+R4327:4329 Evm.word160 <> bs2 var
+R4323:4325 Evm.word160 <> bs1 var
+R4309:4321 Lem.lem_word <> bitSeqGreater def
+def 4384:4399 <> w160GreaterEqual
+R4409:4415 Evm.word160 <> word160 ind
+R4426:4432 Evm.word160 <> word160 ind
+R4439:4442 Coq.Init.Datatypes <> bool ind
+R4448:4461 Evm.word160 <> word160BinTest def
+R4486:4488 Evm.word160 <> bs2 var
+R4482:4484 Evm.word160 <> bs1 var
+R4463:4480 Lem.lem_word <> bitSeqGreaterEqual def
+def 4543:4553 <> w160Compare
+R4563:4569 Evm.word160 <> word160 ind
+R4580:4586 Evm.word160 <> word160 ind
+R4593:4600 Lem.coqharness <> ordering ind
+R4606:4619 Evm.word160 <> word160BinTest def
+R4639:4641 Evm.word160 <> bs2 var
+R4635:4637 Evm.word160 <> bs1 var
+R4621:4633 Lem.lem_word <> bitSeqCompare def
+inst 4654:4660 <> x61_Ord
+R4664:4666 Lem.lem_basic_classes <> Ord class
+R4668:4674 Evm.word160 <> word160 ind
+R4804:4817 Lem.lem_basic_classes <> isGreaterEqual meth
+R4773:4781 Lem.lem_basic_classes <> isGreater meth
+R4738:4748 Lem.lem_basic_classes <> isLessEqual meth
+R4713:4718 Lem.lem_basic_classes <> isLess meth
+R4684:4690 Lem.lem_basic_classes <> compare meth
+R4697:4707 Evm.word160 <> w160Compare def
+R4725:4732 Evm.word160 <> w160Less def
+R4755:4767 Evm.word160 <> w160LessEqual def
+R4788:4798 Evm.word160 <> w160Greater def
+R4824:4839 Evm.word160 <> w160GreaterEqual def
+inst 4855:4865 <> x60_SetType
+R4869:4875 Lem.lem_basic_classes <> SetType class
+R4877:4883 Evm.word160 <> word160 ind
+R4893:4906 Lem.lem_basic_classes <> setElemCompare meth
+R4913:4923 Evm.word160 <> w160Compare def
+def 4981:4993 <> word160Negate
+R5006:5010 Coq.Init.Logic <> :type_scope:x_'->'_x not
+R5011:5017 Evm.word160 <> word160 ind
+R4999:5005 Evm.word160 <> word160 ind
+R5023:5036 Evm.word160 <> word160UnaryOp def
+R5038:5049 Lem.lem_word <> bitSeqNegate def
+def 5104:5114 <> word160Succ
+R5127:5131 Coq.Init.Logic <> :type_scope:x_'->'_x not
+R5132:5138 Evm.word160 <> word160 ind
+R5120:5126 Evm.word160 <> word160 ind
+R5144:5157 Evm.word160 <> word160UnaryOp def
+R5159:5168 Lem.lem_word <> bitSeqSucc def
+def 5223:5233 <> word160Pred
+R5246:5250 Coq.Init.Logic <> :type_scope:x_'->'_x not
+R5251:5257 Evm.word160 <> word160 ind
+R5239:5245 Evm.word160 <> word160 ind
+R5263:5276 Evm.word160 <> word160UnaryOp def
+R5278:5287 Lem.lem_word <> bitSeqPred def
+def 5342:5352 <> word160Lnot
+R5365:5369 Coq.Init.Logic <> :type_scope:x_'->'_x not
+R5370:5376 Evm.word160 <> word160 ind
+R5358:5364 Evm.word160 <> word160 ind
+R5382:5395 Evm.word160 <> word160UnaryOp def
+R5397:5405 Lem.lem_word <> bitSeqNot def
+def 5460:5469 <> word160Add
+R5482:5486 Coq.Init.Logic <> :type_scope:x_'->'_x not
+R5494:5498 Coq.Init.Logic <> :type_scope:x_'->'_x not
+R5499:5505 Evm.word160 <> word160 ind
+R5487:5493 Evm.word160 <> word160 ind
+R5475:5481 Evm.word160 <> word160 ind
+R5511:5522 Evm.word160 <> word160BinOp def
+R5524:5532 Lem.lem_word <> bitSeqAdd def
+def 5587:5598 <> word160Minus
+R5611:5615 Coq.Init.Logic <> :type_scope:x_'->'_x not
+R5623:5627 Coq.Init.Logic <> :type_scope:x_'->'_x not
+R5628:5634 Evm.word160 <> word160 ind
+R5616:5622 Evm.word160 <> word160 ind
+R5604:5610 Evm.word160 <> word160 ind
+R5640:5651 Evm.word160 <> word160BinOp def
+R5653:5663 Lem.lem_word <> bitSeqMinus def
+def 5718:5728 <> word160Mult
+R5741:5745 Coq.Init.Logic <> :type_scope:x_'->'_x not
+R5753:5757 Coq.Init.Logic <> :type_scope:x_'->'_x not
+R5758:5764 Evm.word160 <> word160 ind
+R5746:5752 Evm.word160 <> word160 ind
+R5734:5740 Evm.word160 <> word160 ind
+R5770:5781 Evm.word160 <> word160BinOp def
+R5783:5792 Lem.lem_word <> bitSeqMult def
+def 5847:5868 <> word160IntegerDivision
+R5881:5885 Coq.Init.Logic <> :type_scope:x_'->'_x not
+R5893:5897 Coq.Init.Logic <> :type_scope:x_'->'_x not
+R5898:5904 Evm.word160 <> word160 ind
+R5886:5892 Evm.word160 <> word160 ind
+R5874:5880 Evm.word160 <> word160 ind
+R5910:5921 Evm.word160 <> word160BinOp def
+R5923:5931 Lem.lem_word <> bitSeqDiv def
+def 5986:6000 <> word160Division
+R6013:6017 Coq.Init.Logic <> :type_scope:x_'->'_x not
+R6025:6029 Coq.Init.Logic <> :type_scope:x_'->'_x not
+R6030:6036 Evm.word160 <> word160 ind
+R6018:6024 Evm.word160 <> word160 ind
+R6006:6012 Evm.word160 <> word160 ind
+R6042:6053 Evm.word160 <> word160BinOp def
+R6055:6063 Lem.lem_word <> bitSeqDiv def
+def 6118:6133 <> word160Remainder
+R6146:6150 Coq.Init.Logic <> :type_scope:x_'->'_x not
+R6158:6162 Coq.Init.Logic <> :type_scope:x_'->'_x not
+R6163:6169 Evm.word160 <> word160 ind
+R6151:6157 Evm.word160 <> word160 ind
+R6139:6145 Evm.word160 <> word160 ind
+R6175:6186 Evm.word160 <> word160BinOp def
+R6188:6196 Lem.lem_word <> bitSeqMod def
+def 6251:6261 <> word160Land
+R6274:6278 Coq.Init.Logic <> :type_scope:x_'->'_x not
+R6286:6290 Coq.Init.Logic <> :type_scope:x_'->'_x not
+R6291:6297 Evm.word160 <> word160 ind
+R6279:6285 Evm.word160 <> word160 ind
+R6267:6273 Evm.word160 <> word160 ind
+R6303:6314 Evm.word160 <> word160BinOp def
+R6316:6324 Lem.lem_word <> bitSeqAnd def
+def 6379:6388 <> word160Lor
+R6401:6405 Coq.Init.Logic <> :type_scope:x_'->'_x not
+R6413:6417 Coq.Init.Logic <> :type_scope:x_'->'_x not
+R6418:6424 Evm.word160 <> word160 ind
+R6406:6412 Evm.word160 <> word160 ind
+R6394:6400 Evm.word160 <> word160 ind
+R6430:6441 Evm.word160 <> word160BinOp def
+R6443:6450 Lem.lem_word <> bitSeqOr def
+def 6505:6515 <> word160Lxor
+R6528:6532 Coq.Init.Logic <> :type_scope:x_'->'_x not
+R6540:6544 Coq.Init.Logic <> :type_scope:x_'->'_x not
+R6545:6551 Evm.word160 <> word160 ind
+R6533:6539 Evm.word160 <> word160 ind
+R6521:6527 Evm.word160 <> word160 ind
+R6557:6568 Evm.word160 <> word160BinOp def
+R6570:6578 Lem.lem_word <> bitSeqXor def
+def 6633:6642 <> word160Min
+R6655:6659 Coq.Init.Logic <> :type_scope:x_'->'_x not
+R6667:6671 Coq.Init.Logic <> :type_scope:x_'->'_x not
+R6672:6678 Evm.word160 <> word160 ind
+R6660:6666 Evm.word160 <> word160 ind
+R6648:6654 Evm.word160 <> word160 ind
+R6684:6695 Evm.word160 <> word160BinOp def
+R6698:6706 Lem.lem_word <> bitSeqMin def
+def 6762:6771 <> word160Max
+R6784:6788 Coq.Init.Logic <> :type_scope:x_'->'_x not
+R6796:6800 Coq.Init.Logic <> :type_scope:x_'->'_x not
+R6801:6807 Evm.word160 <> word160 ind
+R6789:6795 Evm.word160 <> word160 ind
+R6777:6783 Evm.word160 <> word160 ind
+R6813:6824 Evm.word160 <> word160BinOp def
+R6827:6835 Lem.lem_word <> bitSeqMax def
+def 6891:6902 <> word160Power
+R6915:6919 Coq.Init.Logic <> :type_scope:x_'->'_x not
+R6923:6927 Coq.Init.Logic <> :type_scope:x_'->'_x not
+R6928:6934 Evm.word160 <> word160 ind
+R6920:6922 Coq.Init.Datatypes <> nat ind
+R6908:6914 Evm.word160 <> word160 ind
+R6940:6951 Evm.word160 <> word160NatOp def
+R6953:6961 Lem.lem_word <> bitSeqPow def
+def 7016:7025 <> word160Asr
+R7038:7042 Coq.Init.Logic <> :type_scope:x_'->'_x not
+R7046:7050 Coq.Init.Logic <> :type_scope:x_'->'_x not
+R7051:7057 Evm.word160 <> word160 ind
+R7043:7045 Coq.Init.Datatypes <> nat ind
+R7031:7037 Evm.word160 <> word160 ind
+R7063:7074 Evm.word160 <> word160NatOp def
+R7076:7101 Lem.lem_word <> bitSeqArithmeticShiftRight def
+def 7156:7165 <> word160Lsr
+R7178:7182 Coq.Init.Logic <> :type_scope:x_'->'_x not
+R7186:7190 Coq.Init.Logic <> :type_scope:x_'->'_x not
+R7191:7197 Evm.word160 <> word160 ind
+R7183:7185 Coq.Init.Datatypes <> nat ind
+R7171:7177 Evm.word160 <> word160 ind
+R7203:7214 Evm.word160 <> word160NatOp def
+R7216:7238 Lem.lem_word <> bitSeqLogicalShiftRight def
+def 7293:7302 <> word160Lsl
+R7315:7319 Coq.Init.Logic <> :type_scope:x_'->'_x not
+R7323:7327 Coq.Init.Logic <> :type_scope:x_'->'_x not
+R7328:7334 Evm.word160 <> word160 ind
+R7320:7322 Coq.Init.Datatypes <> nat ind
+R7308:7314 Evm.word160 <> word160 ind
+R7340:7351 Evm.word160 <> word160NatOp def
+R7353:7367 Lem.lem_word <> bitSeqShiftLeft def
+inst 7381:7393 <> x59_NumNegate
+R7397:7405 Lem.lem_num <> NumNegate class
+R7407:7413 Evm.word160 <> word160 ind
+R7423:7431 Lem.lem_num <> numNegate meth
+R7438:7450 Evm.word160 <> word160Negate def
+inst 7466:7475 <> x58_NumAdd
+R7479:7484 Lem.lem_num <> NumAdd class
+R7486:7492 Evm.word160 <> word160 ind
+R7502:7507 Lem.lem_num <> numAdd meth
+R7514:7523 Evm.word160 <> word160Add def
+inst 7539:7550 <> x57_NumMinus
+R7554:7561 Lem.lem_num <> NumMinus class
+R7563:7569 Evm.word160 <> word160 ind
+R7579:7586 Lem.lem_num <> numMinus meth
+R7593:7604 Evm.word160 <> word160Minus def
+inst 7620:7630 <> x56_NumSucc
+R7634:7640 Lem.lem_num <> NumSucc class
+R7642:7648 Evm.word160 <> word160 ind
+R7658:7661 Lem.lem_num <> succ meth
+R7668:7678 Evm.word160 <> word160Succ def
+inst 7694:7704 <> x55_NumPred
+R7708:7714 Lem.lem_num <> NumPred class
+R7716:7722 Evm.word160 <> word160 ind
+R7732:7735 Lem.lem_num <> pred meth
+R7742:7752 Evm.word160 <> word160Pred def
+inst 7768:7778 <> x54_NumMult
+R7782:7788 Lem.lem_num <> NumMult class
+R7790:7796 Evm.word160 <> word160 ind
+R7806:7812 Lem.lem_num <> numMult meth
+R7819:7829 Evm.word160 <> word160Mult def
+inst 7845:7854 <> x53_NumPow
+R7858:7863 Lem.lem_num <> NumPow class
+R7865:7871 Evm.word160 <> word160 ind
+R7881:7886 Lem.lem_num <> numPow meth
+R7893:7904 Evm.word160 <> word160Power def
+inst 7920:7941 <> x52_NumIntegerDivision
+R7945:7962 Lem.lem_num <> NumIntegerDivision class
+R7964:7970 Evm.word160 <> word160 ind
+R7981:7998 Lem.lem_num <> numIntegerDivision meth
+R8005:8026 Evm.word160 <> word160IntegerDivision def
+inst 8042:8056 <> x51_NumDivision
+R8060:8070 Lem.lem_num <> NumDivision class
+R8072:8078 Evm.word160 <> word160 ind
+R8089:8099 Lem.lem_num <> numDivision meth
+R8106:8120 Evm.word160 <> word160Division def
+inst 8136:8151 <> x50_NumRemainder
+R8155:8166 Lem.lem_num <> NumRemainder class
+R8168:8174 Evm.word160 <> word160 ind
+R8185:8196 Lem.lem_num <> numRemainder meth
+R8203:8218 Evm.word160 <> word160Remainder def
+inst 8234:8246 <> x49_OrdMaxMin
+R8250:8258 Lem.lem_basic_classes <> OrdMaxMin class
+R8260:8266 Evm.word160 <> word160 ind
+R8301:8303 Lem.lem_basic_classes <> min meth
+R8277:8279 Lem.lem_basic_classes <> max meth
+R8286:8295 Evm.word160 <> word160Max def
+R8310:8319 Evm.word160 <> word160Min def
+inst 8335:8345 <> x48_WordNot
+R8349:8355 Lem.lem_word <> WordNot class
+R8357:8363 Evm.word160 <> word160 ind
+R8374:8377 Lem.lem_word <> lnot meth
+R8384:8394 Evm.word160 <> word160Lnot def
+inst 8410:8420 <> x47_WordAnd
+R8424:8430 Lem.lem_word <> WordAnd class
+R8432:8438 Evm.word160 <> word160 ind
+R8449:8459 Lem.lem_word <> conjunction meth
+R8466:8476 Evm.word160 <> word160Land def
+inst 8492:8501 <> x46_WordOr
+R8505:8510 Lem.lem_word <> WordOr class
+R8512:8518 Evm.word160 <> word160 ind
+R8529:8540 Lem.lem_word <> inclusive_or meth
+R8547:8556 Evm.word160 <> word160Lor def
+inst 8572:8582 <> x45_WordXor
+R8586:8592 Lem.lem_word <> WordXor class
+R8594:8600 Evm.word160 <> word160 ind
+R8611:8622 Lem.lem_word <> exclusive_or meth
+R8629:8639 Evm.word160 <> word160Lxor def
+inst 8655:8665 <> x44_WordLsl
+R8669:8675 Lem.lem_word <> WordLsl class
+R8677:8683 Evm.word160 <> word160 ind
+R8694:8703 Lem.lem_word <> left_shift meth
+R8710:8719 Evm.word160 <> word160Lsl def
+inst 8735:8745 <> x43_WordLsr
+R8749:8755 Lem.lem_word <> WordLsr class
+R8757:8763 Evm.word160 <> word160 ind
+R8773:8792 Lem.lem_word <> logicial_right_shift meth
+R8799:8808 Evm.word160 <> word160Lsr def
+inst 8824:8834 <> x42_WordAsr
+R8838:8844 Lem.lem_word <> WordAsr class
+R8846:8852 Evm.word160 <> word160 ind
+R8862:8883 Lem.lem_word <> arithmetic_right_shift meth
+R8890:8899 Evm.word160 <> word160Asr def

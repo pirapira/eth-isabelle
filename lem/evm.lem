@@ -71,11 +71,43 @@ declare isabelle target_rep function word_rsplit256 = `word_rsplit`
 
 val get_byte : w256 -> w256 -> w256
 let get_byte position w =
-  if uint position >= 32 then 0 else
+  if uint position >= 32 then (0) else
   match List.index (word_rsplit256 w) (natFromInteger (uint position)) with
   | Nothing -> 0
   | Just (a:byte) -> byte_to_w256 a
   end
+
+(* log256floor takes a logarithm (base 256) of an integer and takes floor *)
+
+val log2 : integer -> integer
+let rec log2 x =
+  if x <= 1 then 0
+  else 1 + log2 (x / 2)
+declare coq target_rep function log2 = `Z.log2`
+
+val log256floor : integer -> integer
+let rec {isabelle; hol} log256floor x =
+  if x <= 255 then 0
+  else 1 + log256floor (x / 256)
+let {coq} log256floor x = log2 x / 8
+
+val word_exp : integer -> natural -> integer
+let rec {isabelle;hol} word_exp i n =
+  match n with
+  | 0 -> 1
+  | _ ->
+      let half = n / 2 in
+      let modulo = natFromNatural (n mod 2) in
+      let recur = word_exp i half in
+         ((i ** modulo) * recur * recur) mod (2 ** 256)
+  end
+let rec {coq} word_exp i n =
+  match n with
+  | 0 -> 1
+  | n+1 -> (word_exp i n * i) mod (2 ** 256)
+  end
+
+
 
 (* In EVM, the memory contains one byte for each machine word (offset). *)
 (* The storage contains one machine word for each machine word (index). *)
@@ -85,12 +117,40 @@ let get_byte position w =
 type memory = w256 -> byte
 type storage = w256 -> w256
 
+(* Looking up a number of bytes from the memory: *)
+val cut_memory_aux : w256 -> natural -> memory -> list byte
+let rec cut_memory_aux idx n memory = match n with
+  | 0 -> []
+  | n + 1 -> memory idx :: cut_memory_aux (idx + 1) n memory
+end
+declare termination_argument cut_memory_aux = automatic
+
+val cut_memory : w256 -> w256 -> memory -> list byte
+let cut_memory idx n memory = cut_memory_aux idx (word256ToNatural n) memory
+
+val put_return_values_aux : memory -> list byte -> integer -> natural -> memory
+let rec put_return_values_aux orig lst b s = match s with
+  | 0 -> orig
+  | s + 1 ->
+  match lst with
+  | [] -> orig
+  | h :: t -> put_return_values_aux (fun addr -> if addr = word256FromInteger b then h else orig addr) t (b + 1) s
+  end
+end
+declare termination_argument put_return_values_aux = automatic
+
+val put_return_values : memory -> list byte -> integer -> integer -> memory
+let put_return_values orig lst b s =
+  if s <= 0 then orig else put_return_values_aux orig lst b (naturalFromInteger s)
+
+
+
 (* The storage is modelled as a function.  For example, the empty storage *)
 (* is a function that returns zero for every index.  Initially all accounts come with *)
 (* the empty storage. *)
 
 val empty_storage : storage
-let empty_storage _ = 0
+let empty_storage addr = 0
 
 type aenv = <|
   aenv_stack : list w256;
@@ -622,17 +682,20 @@ let Gmid = 8
 val Ghigh : integer
 let Ghigh = 10
 
+val magic_block : natural
+let magic_block = 2463*1000
+
 val Gextcode : natural -> integer
 let Gextcode blocknumber =
-  if blocknumber >= 2463000 then 700 else 20
+  if blocknumber >= magic_block then 700 else 20
 
 val Gbalance : natural -> integer
 let Gbalance blocknumber =
-  if blocknumber >= 2463000 then 400 else 20
+  if blocknumber >= magic_block then 400 else 20
 
 val Gsload : natural -> integer
 let Gsload blocknumber =
-  if blocknumber >= 2463000 then 200 else 50
+  if blocknumber >= magic_block then 200 else 50
 
 val Gjumpdest : integer
 let Gjumpdest = 1
@@ -651,7 +714,7 @@ let Rsuicide = 24000
 
 val Gsuicide : natural -> integer
 let Gsuicide blocknumber =
-  if blocknumber >= 2463000 then 5000 else 0
+  if blocknumber >= magic_block then 5000 else 0
 
 val Gcreate : integer
 let Gcreate = 32000
@@ -661,7 +724,7 @@ let Gcodedeposit = 200
 
 val Gcall : natural -> integer
 let Gcall blocknumber =
-  if blocknumber >= 2463000 then 700 else 40
+  if blocknumber >= magic_block then 700 else 40
 
 val Gcallvalue : integer
 let Gcallvalue = 9000
@@ -1103,14 +1166,14 @@ end
 (* The second argument has no meaning but to control the Isabelle/HOL simplifier. *)
 
 val blockedInstructionContinue : variable_ctx -> bool -> instruction_result
-let blockedInstructionContinue v _ = InstructionContinue v
+let blockedInstructionContinue v bloop = InstructionContinue v
 
 (* This is another reminiscent of my struggle against the Isabelle/HOL simplifier. *)
 (* Again, the simplifier is not allowed to expand the definition unless the second argument *)
 (* is known to be @{term True}.*)
 
 val blocked_jump : variable_ctx -> constant_ctx -> bool -> instruction_result
-let blocked_jump v c _ = jump v c
+let blocked_jump v c bloop = jump v c
 
 val strict_if : forall 'a. bool -> (bool -> 'a) -> (bool -> 'a) -> 'a
 let strict_if b x y = if b then x true else y true
@@ -1150,14 +1213,6 @@ let read_word_from_bytes idx lst =
 
 val cut_data : variable_ctx -> w256 -> w256
 let cut_data v idx = read_word_from_bytes (word256ToNatural idx) v.vctx_data_sent
-
-(* Looking up a number of bytes from the memory: *)
-val cut_memory : w256 -> w256 -> (w256 -> byte) -> list byte
-let rec cut_memory idx n memory =
-  if n = 0 then []
-  else memory idx :: cut_memory (idx + 1) (n - 1) memory
-
-declare termination_argument cut_memory = manual
 
 val cut_natural_map : natural -> natural -> (natural -> byte) -> list byte
 let rec cut_natural_map idx n nmap = match n with
@@ -1286,7 +1341,7 @@ end
 
 (* RETURN is modeled like this: *)
 val ret : variable_ctx -> constant_ctx -> instruction_result
-let ret v _ =  match v.vctx_stack with
+let ret v c =  match v.vctx_stack with
  | e0 :: e1 :: _ ->
      let new_v = <| v with vctx_memory_usage = M v.vctx_memory_usage e0 e1 |> in
      InstructionToEnvironment (ContractReturn (vctx_returned_bytes new_v))
@@ -1297,7 +1352,7 @@ end
 
 (* STOP is simpler than RETURN: *)
 val stop : variable_ctx -> constant_ctx -> instruction_result
-let stop v _ =
+let stop v c =
     InstructionToEnvironment (ContractReturn []) v Nothing
 
 (* POP removes the topmost element of the stack: *)
@@ -1496,7 +1551,7 @@ let Csstore orig newer = if not (newer = 0) && orig = 0 then Gsset else Gsreset
 (* However, it takes a boolean indicating new account creation. *)
 val Csuicide : bool -> natural -> integer
 let Csuicide recipient_empty blocknumber =
-  Gsuicide blocknumber + (if recipient_empty && blocknumber >= 2463000 then Gnewaccount else 0)
+  Gsuicide blocknumber + (if recipient_empty && blocknumber >= magic_block then Gnewaccount else 0)
 
 (* Cnew is the funciton denoted as C_\text{\tiny NEW} in the yellow paper.*)
 (* However, it takes the sent value and a boolean indicating emptiness of the recipient. *)
@@ -1542,11 +1597,6 @@ let Ccallgas mu0 mu1 mu2 emp remaining_gas blocknumber =
 val Ccall : w256 -> w256 -> w256 -> bool -> integer -> natural -> integer
 let Ccall mu0 mu1 mu2 emp remaining_gas blocknumber = Cgascap mu0 mu1 emp remaining_gas blocknumber + Cextra mu2 emp blocknumber
 
-(* log256floor takes a logarithm (base 256) of an integer and takes floor *)
-val log256floor : integer -> integer
-let rec log256floor x =
-  if x <= 255 then 0
-  else 1 + log256floor (x / 256)
 
 (* thirdComponentOfC is the third component in the definition of C (the gas function). *)
 (* However, it takes the next instruction, the four topmost stack elements,
@@ -1714,18 +1764,6 @@ let subtract_gas consumption orig =
     InstructionToEnvironment act (<|v with vctx_gas = v.vctx_gas - consumption|>) opt
   end
 
-val word_exp : integer -> natural -> integer
-let rec word_exp i n =
-  match n with
-  | 0 -> 1
-  | _ ->
-      let half = n / 2 in
-      let modulo = natFromNatural (n mod 2) in
-      let recur = word_exp i half in
-         ((i ** modulo) * recur * recur) mod (2 ** 256)
-  end
-
-
 val signextend : w256 -> w256 -> w256
 let signextend len w =
   if uint len >= 31 then
@@ -1824,9 +1862,7 @@ let instruction_sem v c inst =
   | Arith MULMOD -> stack_3_1_op v c
        (fun a b divisor ->
            (if divisor = 0 then 0 else word256FromInteger ((uint a * uint b) mod (uint divisor))))
-  | Arith EXP -> stack_2_1_op v c (fun a exponent ->
-      word256FromInteger
-       (word_exp (uint a) (word256ToNatural exponent)))
+  | Arith EXP -> stack_2_1_op v c (fun a exponent -> word256FromInteger (word_exp (word256ToInteger a) (word256ToNatural exponent)))
   | Arith inst_LT -> stack_2_1_op v c (fun arg0 arg1 -> if word256UGT arg1 arg0 then 1 else 0)
   | Arith SHA3 -> sha3 v c
   | Info ADDRESS -> stack_0_1_op v c (address_to_w256 c.cctx_this)
@@ -2064,15 +2100,6 @@ indreln [build_vctx_called : account_state -> call_env -> variable_ctx -> bool]
 (* Moreover, the balance of *)
 (* our contract might increase because some other contracts might have destroyed themselves, *)
 (* transferring value to our contract.*)
-
-val put_return_values : memory -> list byte -> integer -> integer -> memory
-let rec put_return_values orig lst b s =
-  if s <= 0 then orig else
-  match lst with
-  | [] -> orig
-  | h :: t -> put_return_values (fun addr -> if addr = word256FromInteger b then h else orig addr) t (b + 1) (s - 1)
-  end
-declare termination_argument put_return_values = automatic
 
 indreln [build_vctx_returned : account_state -> return_result -> variable_ctx -> bool]
 vctx_returned:

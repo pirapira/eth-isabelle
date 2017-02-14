@@ -1,0 +1,505 @@
+DIGEST b7c95706d76f9dfb94a49e4045473209
+FEvm.word256
+R57:61 Coq.Arith.Arith <> <> lib
+R79:82 Coq.Bool.Bool <> <> lib
+R100:103 Coq.Lists.List <> <> lib
+R121:126 Coq.Strings.String <> <> lib
+R144:153 Coq.Program.Wf <> <> lib
+R172:181 Lem.coqharness <> <> lib
+R842:855 Lem.lem_pervasives <> <> lib
+R873:886 Lem.lem_pervasives <> <> lib
+R905:912 Lem.lem_word <> <> lib
+R930:937 Lem.lem_word <> <> lib
+ind 952:958 <> word256
+constr 971:974 <> W256
+R982:987 Coq.Init.Logic <> :type_scope:x_'->'_x not
+R998:1002 Coq.Init.Logic <> :type_scope:x_'->'_x not
+R1003:1009 Evm.word256 <> word256 ind
+R988:991 Coq.Init.Datatypes <> list ind
+R994:997 Coq.Init.Datatypes <> bool ind
+R978:981 Coq.Init.Datatypes <> bool ind
+def 1024:1038 <> word256_default
+R1041:1047 Evm.word256 <> word256 ind
+R1053:1056 Evm.word256 <> W256 constr
+R1071:1076 Lem.coqharness <> DAEMON prfax
+R1058:1069 Lem.coqharness <> bool_default def
+def 1131:1140 <> bs_to_w256
+R1150:1160 Lem.lem_word <> bitSequence ind
+R1167:1173 Evm.word256 <> word256 ind
+R1187:1198 Lem.lem_word <> resizeBitSeq def
+R1213:1215 Evm.word256 <> seq var
+R1201:1204 Coq.Init.Datatypes <> Some constr
+R1227:1232 Lem.lem_word <> BitSeq constr
+R1243:1246 Evm.word256 <> W256 constr
+def 1309:1318 <> w256_to_bs
+R1326:1332 Evm.word256 <> word256 ind
+R1339:1349 Lem.lem_word <> bitSequence ind
+R1366:1366 Evm.word256 <> w var
+R1378:1381 Evm.word256 <> W256 constr
+R1392:1397 Lem.lem_word <> BitSeq constr
+R1400:1403 Coq.Init.Datatypes <> Some constr
+def 1474:1487 <> word256BinTest
+R1521:1525 Coq.Init.Logic <> :type_scope:x_'->'_x not
+R1537:1541 Coq.Init.Logic <> :type_scope:x_'->'_x not
+R1542:1542 Evm.word256 <> a var
+R1526:1536 Lem.lem_word <> bitSequence ind
+R1510:1520 Lem.lem_word <> bitSequence ind
+R1551:1557 Evm.word256 <> word256 ind
+R1567:1573 Evm.word256 <> word256 ind
+R1580:1580 Evm.word256 <> a var
+R1585:1589 Evm.word256 <> binop var
+R1608:1617 Evm.word256 <> w256_to_bs def
+R1619:1620 Evm.word256 <> w2 var
+R1592:1601 Evm.word256 <> w256_to_bs def
+R1603:1604 Evm.word256 <> w1 var
+def 1676:1687 <> word256BinOp
+R1710:1714 Coq.Init.Logic <> :type_scope:x_'->'_x not
+R1726:1730 Coq.Init.Logic <> :type_scope:x_'->'_x not
+R1731:1741 Lem.lem_word <> bitSequence ind
+R1715:1725 Lem.lem_word <> bitSequence ind
+R1699:1709 Lem.lem_word <> bitSequence ind
+R1751:1757 Evm.word256 <> word256 ind
+R1767:1773 Evm.word256 <> word256 ind
+R1780:1786 Evm.word256 <> word256 ind
+R1792:1801 Evm.word256 <> bs_to_w256 def
+R1804:1808 Evm.word256 <> binop var
+R1827:1836 Evm.word256 <> w256_to_bs def
+R1838:1839 Evm.word256 <> w2 var
+R1811:1820 Evm.word256 <> w256_to_bs def
+R1822:1823 Evm.word256 <> w1 var
+def 1896:1907 <> word256NatOp
+R1930:1934 Coq.Init.Logic <> :type_scope:x_'->'_x not
+R1938:1942 Coq.Init.Logic <> :type_scope:x_'->'_x not
+R1943:1953 Lem.lem_word <> bitSequence ind
+R1935:1937 Coq.Init.Datatypes <> nat ind
+R1919:1929 Lem.lem_word <> bitSequence ind
+R1963:1969 Evm.word256 <> word256 ind
+R1978:1980 Coq.Init.Datatypes <> nat ind
+R1987:1993 Evm.word256 <> word256 ind
+R1999:2008 Evm.word256 <> bs_to_w256 def
+R2011:2015 Evm.word256 <> binop var
+R2033:2033 Evm.word256 <> n var
+R2018:2027 Evm.word256 <> w256_to_bs def
+R2029:2030 Evm.word256 <> w1 var
+def 2089:2102 <> word256UnaryOp
+R2122:2126 Coq.Init.Logic <> :type_scope:x_'->'_x not
+R2127:2137 Lem.lem_word <> bitSequence ind
+R2111:2121 Lem.lem_word <> bitSequence ind
+R2146:2152 Evm.word256 <> word256 ind
+R2159:2165 Evm.word256 <> word256 ind
+R2171:2180 Evm.word256 <> bs_to_w256 def
+R2183:2184 Evm.word256 <> op var
+R2187:2196 Evm.word256 <> w256_to_bs def
+R2198:2198 Evm.word256 <> w var
+def 2255:2261 <> size256
+R2267:2267 Coq.Numbers.BinNums <> Z ind
+R2273:2300 Coq.ZArith.Zpower <> Zpower_nat def
+R2303:2307 Coq.ZArith.BinInt <> Zpred syndef
+R2310:2313 Coq.Numbers.BinNums <> Zpos constr
+R2316:2328 Coq.PArith.BinPos <> P_of_succ_nat syndef
+def 2395:2410 <> word256ToInteger
+R2418:2424 Evm.word256 <> word256 ind
+R2431:2431 Coq.Numbers.BinNums <> Z ind
+R2437:2453 Lem.lem_word <> integerFromBitSeq def
+R2456:2465 Evm.word256 <> w256_to_bs def
+R2467:2467 Evm.word256 <> w var
+def 2523:2538 <> word256ToNatural
+R2546:2552 Evm.word256 <> word256 ind
+R2559:2561 Coq.Init.Datatypes <> nat ind
+R2567:2574 Coq.ZArith.BinInt <> Zabs_nat syndef
+R2578:2597 Coq.ZArith.Zdiv <> Zmod syndef
+R2619:2625 Evm.word256 <> size256 def
+R2599:2614 Evm.word256 <> word256ToInteger def
+R2616:2616 Evm.word256 <> w var
+def 2681:2698 <> word256FromInteger
+R2706:2706 Coq.Numbers.BinNums <> Z ind
+R2713:2719 Evm.word256 <> word256 ind
+R2725:2734 Evm.word256 <> bs_to_w256 def
+R2737:2753 Lem.lem_word <> bitSeqFromInteger def
+R2768:2768 Evm.word256 <> i var
+R2756:2759 Coq.Init.Datatypes <> Some constr
+def 2824:2837 <> word256FromInt
+R2845:2845 Coq.Numbers.BinNums <> Z ind
+R2852:2858 Evm.word256 <> word256 ind
+R2864:2873 Evm.word256 <> bs_to_w256 def
+R2876:2892 Lem.lem_word <> bitSeqFromInteger def
+R2909:2909 Evm.word256 <> i var
+R2895:2898 Coq.Init.Datatypes <> Some constr
+def 2966:2983 <> word256FromNatural
+R2991:2993 Coq.Init.Datatypes <> nat ind
+R3000:3006 Evm.word256 <> word256 ind
+R3012:3029 Evm.word256 <> word256FromInteger def
+R3033:3037 Coq.ZArith.BinInt <> Zpred syndef
+R3040:3043 Coq.Numbers.BinNums <> Zpos constr
+R3046:3058 Coq.PArith.BinPos <> P_of_succ_nat syndef
+R3060:3060 Evm.word256 <> i var
+def 3119:3132 <> word256FromNat
+R3140:3142 Coq.Init.Datatypes <> nat ind
+R3149:3155 Evm.word256 <> word256 ind
+R3161:3178 Evm.word256 <> word256FromInteger def
+R3182:3186 Coq.ZArith.BinInt <> Zpred syndef
+R3189:3192 Coq.Numbers.BinNums <> Zpos constr
+R3195:3207 Coq.PArith.BinPos <> P_of_succ_nat syndef
+R3209:3209 Evm.word256 <> i var
+def 3268:3286 <> word256FromBoollist
+R3296:3299 Coq.Init.Datatypes <> list ind
+R3302:3305 Coq.Init.Datatypes <> bool ind
+R3313:3319 Evm.word256 <> word256 ind
+R3333:3350 Lem.lem_word <> bitSeqFromBoolList def
+R3353:3360 Coq.Lists.List <> rev def
+R3362:3364 Evm.word256 <> lst var
+R3377:3380 Coq.Init.Datatypes <> None constr
+R3385:3394 Evm.word256 <> bs_to_w256 def
+R3396:3412 Lem.lem_word <> bitSeqFromInteger def
+R3421:3425 Coq.ZArith.BinInt <> Zpred syndef
+R3428:3431 Coq.Numbers.BinNums <> Zpos constr
+R3434:3446 Coq.PArith.BinPos <> P_of_succ_nat syndef
+R3414:3417 Coq.Init.Datatypes <> None constr
+R3458:3461 Coq.Init.Datatypes <> Some constr
+R3468:3477 Evm.word256 <> bs_to_w256 def
+def 3538:3556 <> boolListFromWord256
+R3564:3570 Evm.word256 <> word256 ind
+R3577:3580 Coq.Init.Datatypes <> list ind
+R3583:3586 Coq.Init.Datatypes <> bool ind
+R3593:3600 Coq.Lists.List <> rev def
+R3603:3620 Lem.lem_word <> boolListFrombitSeq def
+R3629:3638 Evm.word256 <> w256_to_bs def
+R3640:3640 Evm.word256 <> w var
+def 3697:3714 <> word256FromNumeral
+R3722:3724 Coq.Init.Datatypes <> nat ind
+R3731:3737 Evm.word256 <> word256 ind
+R3743:3752 Evm.word256 <> bs_to_w256 def
+R3755:3771 Lem.lem_word <> bitSeqFromInteger def
+R3780:3784 Coq.ZArith.BinInt <> Zpred syndef
+R3787:3790 Coq.Numbers.BinNums <> Zpos constr
+R3793:3805 Coq.PArith.BinPos <> P_of_succ_nat syndef
+R3807:3807 Evm.word256 <> w var
+R3773:3776 Coq.Init.Datatypes <> None constr
+def 3962:3967 <> w256Eq
+R3980:3984 Coq.Init.Logic <> :type_scope:x_'->'_x not
+R3992:3996 Coq.Init.Logic <> :type_scope:x_'->'_x not
+R3997:4000 Coq.Init.Datatypes <> bool ind
+R3985:3991 Evm.word256 <> word256 ind
+R3973:3979 Evm.word256 <> word256 ind
+R4006:4034 Lem.coqharness <> classical_boolean_equivalence def
+def 4089:4096 <> w256Less
+R4106:4112 Evm.word256 <> word256 ind
+R4123:4129 Evm.word256 <> word256 ind
+R4136:4139 Coq.Init.Datatypes <> bool ind
+R4145:4158 Evm.word256 <> word256BinTest def
+R4175:4177 Evm.word256 <> bs2 var
+R4171:4173 Evm.word256 <> bs1 var
+R4160:4169 Lem.lem_word <> bitSeqLess def
+def 4232:4244 <> w256LessEqual
+R4254:4260 Evm.word256 <> word256 ind
+R4271:4277 Evm.word256 <> word256 ind
+R4284:4287 Coq.Init.Datatypes <> bool ind
+R4293:4306 Evm.word256 <> word256BinTest def
+R4328:4330 Evm.word256 <> bs2 var
+R4324:4326 Evm.word256 <> bs1 var
+R4308:4322 Lem.lem_word <> bitSeqLessEqual def
+def 4385:4395 <> w256Greater
+R4405:4411 Evm.word256 <> word256 ind
+R4422:4428 Evm.word256 <> word256 ind
+R4435:4438 Coq.Init.Datatypes <> bool ind
+R4444:4457 Evm.word256 <> word256BinTest def
+R4477:4479 Evm.word256 <> bs2 var
+R4473:4475 Evm.word256 <> bs1 var
+R4459:4471 Lem.lem_word <> bitSeqGreater def
+def 4534:4549 <> w256GreaterEqual
+R4559:4565 Evm.word256 <> word256 ind
+R4576:4582 Evm.word256 <> word256 ind
+R4589:4592 Coq.Init.Datatypes <> bool ind
+R4598:4611 Evm.word256 <> word256BinTest def
+R4636:4638 Evm.word256 <> bs2 var
+R4632:4634 Evm.word256 <> bs1 var
+R4613:4630 Lem.lem_word <> bitSeqGreaterEqual def
+def 4693:4703 <> w256Compare
+R4713:4719 Evm.word256 <> word256 ind
+R4730:4736 Evm.word256 <> word256 ind
+R4743:4750 Lem.coqharness <> ordering ind
+R4756:4769 Evm.word256 <> word256BinTest def
+R4789:4791 Evm.word256 <> bs2 var
+R4785:4787 Evm.word256 <> bs1 var
+R4771:4783 Lem.lem_word <> bitSeqCompare def
+inst 4804:4810 <> x19_Ord
+R4814:4816 Lem.lem_basic_classes <> Ord class
+R4818:4824 Evm.word256 <> word256 ind
+R4954:4967 Lem.lem_basic_classes <> isGreaterEqual meth
+R4923:4931 Lem.lem_basic_classes <> isGreater meth
+R4888:4898 Lem.lem_basic_classes <> isLessEqual meth
+R4863:4868 Lem.lem_basic_classes <> isLess meth
+R4834:4840 Lem.lem_basic_classes <> compare meth
+R4847:4857 Evm.word256 <> w256Compare def
+R4875:4882 Evm.word256 <> w256Less def
+R4905:4917 Evm.word256 <> w256LessEqual def
+R4938:4948 Evm.word256 <> w256Greater def
+R4974:4989 Evm.word256 <> w256GreaterEqual def
+inst 5005:5015 <> x18_SetType
+R5019:5025 Lem.lem_basic_classes <> SetType class
+R5027:5033 Evm.word256 <> word256 ind
+R5043:5056 Lem.lem_basic_classes <> setElemCompare meth
+R5063:5073 Evm.word256 <> w256Compare def
+def 5131:5143 <> word256Negate
+R5156:5160 Coq.Init.Logic <> :type_scope:x_'->'_x not
+R5161:5167 Evm.word256 <> word256 ind
+R5149:5155 Evm.word256 <> word256 ind
+R5173:5186 Evm.word256 <> word256UnaryOp def
+R5188:5199 Lem.lem_word <> bitSeqNegate def
+def 5254:5264 <> word256Succ
+R5277:5281 Coq.Init.Logic <> :type_scope:x_'->'_x not
+R5282:5288 Evm.word256 <> word256 ind
+R5270:5276 Evm.word256 <> word256 ind
+R5294:5307 Evm.word256 <> word256UnaryOp def
+R5309:5318 Lem.lem_word <> bitSeqSucc def
+def 5373:5383 <> word256Pred
+R5396:5400 Coq.Init.Logic <> :type_scope:x_'->'_x not
+R5401:5407 Evm.word256 <> word256 ind
+R5389:5395 Evm.word256 <> word256 ind
+R5413:5426 Evm.word256 <> word256UnaryOp def
+R5428:5437 Lem.lem_word <> bitSeqPred def
+def 5492:5502 <> word256Lnot
+R5515:5519 Coq.Init.Logic <> :type_scope:x_'->'_x not
+R5520:5526 Evm.word256 <> word256 ind
+R5508:5514 Evm.word256 <> word256 ind
+R5532:5545 Evm.word256 <> word256UnaryOp def
+R5547:5555 Lem.lem_word <> bitSeqNot def
+def 5610:5619 <> word256Add
+R5632:5636 Coq.Init.Logic <> :type_scope:x_'->'_x not
+R5644:5648 Coq.Init.Logic <> :type_scope:x_'->'_x not
+R5649:5655 Evm.word256 <> word256 ind
+R5637:5643 Evm.word256 <> word256 ind
+R5625:5631 Evm.word256 <> word256 ind
+R5661:5672 Evm.word256 <> word256BinOp def
+R5674:5682 Lem.lem_word <> bitSeqAdd def
+def 5737:5748 <> word256Minus
+R5761:5765 Coq.Init.Logic <> :type_scope:x_'->'_x not
+R5773:5777 Coq.Init.Logic <> :type_scope:x_'->'_x not
+R5778:5784 Evm.word256 <> word256 ind
+R5766:5772 Evm.word256 <> word256 ind
+R5754:5760 Evm.word256 <> word256 ind
+R5790:5801 Evm.word256 <> word256BinOp def
+R5803:5813 Lem.lem_word <> bitSeqMinus def
+def 5868:5878 <> word256Mult
+R5891:5895 Coq.Init.Logic <> :type_scope:x_'->'_x not
+R5903:5907 Coq.Init.Logic <> :type_scope:x_'->'_x not
+R5908:5914 Evm.word256 <> word256 ind
+R5896:5902 Evm.word256 <> word256 ind
+R5884:5890 Evm.word256 <> word256 ind
+R5920:5931 Evm.word256 <> word256BinOp def
+R5933:5942 Lem.lem_word <> bitSeqMult def
+def 5997:6018 <> word256IntegerDivision
+R6031:6035 Coq.Init.Logic <> :type_scope:x_'->'_x not
+R6043:6047 Coq.Init.Logic <> :type_scope:x_'->'_x not
+R6048:6054 Evm.word256 <> word256 ind
+R6036:6042 Evm.word256 <> word256 ind
+R6024:6030 Evm.word256 <> word256 ind
+R6060:6071 Evm.word256 <> word256BinOp def
+R6073:6081 Lem.lem_word <> bitSeqDiv def
+def 6136:6150 <> word256Division
+R6163:6167 Coq.Init.Logic <> :type_scope:x_'->'_x not
+R6175:6179 Coq.Init.Logic <> :type_scope:x_'->'_x not
+R6180:6186 Evm.word256 <> word256 ind
+R6168:6174 Evm.word256 <> word256 ind
+R6156:6162 Evm.word256 <> word256 ind
+R6192:6203 Evm.word256 <> word256BinOp def
+R6205:6213 Lem.lem_word <> bitSeqDiv def
+def 6268:6283 <> word256Remainder
+R6296:6300 Coq.Init.Logic <> :type_scope:x_'->'_x not
+R6308:6312 Coq.Init.Logic <> :type_scope:x_'->'_x not
+R6313:6319 Evm.word256 <> word256 ind
+R6301:6307 Evm.word256 <> word256 ind
+R6289:6295 Evm.word256 <> word256 ind
+R6325:6336 Evm.word256 <> word256BinOp def
+R6338:6346 Lem.lem_word <> bitSeqMod def
+def 6401:6411 <> word256Land
+R6424:6428 Coq.Init.Logic <> :type_scope:x_'->'_x not
+R6436:6440 Coq.Init.Logic <> :type_scope:x_'->'_x not
+R6441:6447 Evm.word256 <> word256 ind
+R6429:6435 Evm.word256 <> word256 ind
+R6417:6423 Evm.word256 <> word256 ind
+R6453:6464 Evm.word256 <> word256BinOp def
+R6466:6474 Lem.lem_word <> bitSeqAnd def
+def 6529:6538 <> word256Lor
+R6551:6555 Coq.Init.Logic <> :type_scope:x_'->'_x not
+R6563:6567 Coq.Init.Logic <> :type_scope:x_'->'_x not
+R6568:6574 Evm.word256 <> word256 ind
+R6556:6562 Evm.word256 <> word256 ind
+R6544:6550 Evm.word256 <> word256 ind
+R6580:6591 Evm.word256 <> word256BinOp def
+R6593:6600 Lem.lem_word <> bitSeqOr def
+def 6655:6665 <> word256Lxor
+R6678:6682 Coq.Init.Logic <> :type_scope:x_'->'_x not
+R6690:6694 Coq.Init.Logic <> :type_scope:x_'->'_x not
+R6695:6701 Evm.word256 <> word256 ind
+R6683:6689 Evm.word256 <> word256 ind
+R6671:6677 Evm.word256 <> word256 ind
+R6707:6718 Evm.word256 <> word256BinOp def
+R6720:6728 Lem.lem_word <> bitSeqXor def
+def 6783:6792 <> word256Min
+R6805:6809 Coq.Init.Logic <> :type_scope:x_'->'_x not
+R6817:6821 Coq.Init.Logic <> :type_scope:x_'->'_x not
+R6822:6828 Evm.word256 <> word256 ind
+R6810:6816 Evm.word256 <> word256 ind
+R6798:6804 Evm.word256 <> word256 ind
+R6834:6845 Evm.word256 <> word256BinOp def
+R6848:6856 Lem.lem_word <> bitSeqMin def
+def 6912:6921 <> word256Max
+R6934:6938 Coq.Init.Logic <> :type_scope:x_'->'_x not
+R6946:6950 Coq.Init.Logic <> :type_scope:x_'->'_x not
+R6951:6957 Evm.word256 <> word256 ind
+R6939:6945 Evm.word256 <> word256 ind
+R6927:6933 Evm.word256 <> word256 ind
+R6963:6974 Evm.word256 <> word256BinOp def
+R6977:6985 Lem.lem_word <> bitSeqMax def
+def 7041:7052 <> word256Power
+R7065:7069 Coq.Init.Logic <> :type_scope:x_'->'_x not
+R7073:7077 Coq.Init.Logic <> :type_scope:x_'->'_x not
+R7078:7084 Evm.word256 <> word256 ind
+R7070:7072 Coq.Init.Datatypes <> nat ind
+R7058:7064 Evm.word256 <> word256 ind
+R7090:7101 Evm.word256 <> word256NatOp def
+R7103:7111 Lem.lem_word <> bitSeqPow def
+def 7166:7175 <> word256Asr
+R7188:7192 Coq.Init.Logic <> :type_scope:x_'->'_x not
+R7196:7200 Coq.Init.Logic <> :type_scope:x_'->'_x not
+R7201:7207 Evm.word256 <> word256 ind
+R7193:7195 Coq.Init.Datatypes <> nat ind
+R7181:7187 Evm.word256 <> word256 ind
+R7213:7224 Evm.word256 <> word256NatOp def
+R7226:7251 Lem.lem_word <> bitSeqArithmeticShiftRight def
+def 7306:7315 <> word256Lsr
+R7328:7332 Coq.Init.Logic <> :type_scope:x_'->'_x not
+R7336:7340 Coq.Init.Logic <> :type_scope:x_'->'_x not
+R7341:7347 Evm.word256 <> word256 ind
+R7333:7335 Coq.Init.Datatypes <> nat ind
+R7321:7327 Evm.word256 <> word256 ind
+R7353:7364 Evm.word256 <> word256NatOp def
+R7366:7388 Lem.lem_word <> bitSeqLogicalShiftRight def
+def 7443:7452 <> word256Lsl
+R7465:7469 Coq.Init.Logic <> :type_scope:x_'->'_x not
+R7473:7477 Coq.Init.Logic <> :type_scope:x_'->'_x not
+R7478:7484 Evm.word256 <> word256 ind
+R7470:7472 Coq.Init.Datatypes <> nat ind
+R7458:7464 Evm.word256 <> word256 ind
+R7490:7501 Evm.word256 <> word256NatOp def
+R7503:7517 Lem.lem_word <> bitSeqShiftLeft def
+inst 7531:7543 <> x17_NumNegate
+R7547:7555 Lem.lem_num <> NumNegate class
+R7557:7563 Evm.word256 <> word256 ind
+R7573:7581 Lem.lem_num <> numNegate meth
+R7588:7600 Evm.word256 <> word256Negate def
+inst 7616:7625 <> x16_NumAdd
+R7629:7634 Lem.lem_num <> NumAdd class
+R7636:7642 Evm.word256 <> word256 ind
+R7652:7657 Lem.lem_num <> numAdd meth
+R7664:7673 Evm.word256 <> word256Add def
+inst 7689:7700 <> x15_NumMinus
+R7704:7711 Lem.lem_num <> NumMinus class
+R7713:7719 Evm.word256 <> word256 ind
+R7729:7736 Lem.lem_num <> numMinus meth
+R7743:7754 Evm.word256 <> word256Minus def
+inst 7770:7780 <> x14_NumSucc
+R7784:7790 Lem.lem_num <> NumSucc class
+R7792:7798 Evm.word256 <> word256 ind
+R7808:7811 Lem.lem_num <> succ meth
+R7818:7828 Evm.word256 <> word256Succ def
+inst 7844:7854 <> x13_NumPred
+R7858:7864 Lem.lem_num <> NumPred class
+R7866:7872 Evm.word256 <> word256 ind
+R7882:7885 Lem.lem_num <> pred meth
+R7892:7902 Evm.word256 <> word256Pred def
+inst 7918:7928 <> x12_NumMult
+R7932:7938 Lem.lem_num <> NumMult class
+R7940:7946 Evm.word256 <> word256 ind
+R7956:7962 Lem.lem_num <> numMult meth
+R7969:7979 Evm.word256 <> word256Mult def
+inst 7995:8004 <> x11_NumPow
+R8008:8013 Lem.lem_num <> NumPow class
+R8015:8021 Evm.word256 <> word256 ind
+R8031:8036 Lem.lem_num <> numPow meth
+R8043:8054 Evm.word256 <> word256Power def
+inst 8070:8091 <> x10_NumIntegerDivision
+R8095:8112 Lem.lem_num <> NumIntegerDivision class
+R8114:8120 Evm.word256 <> word256 ind
+R8131:8148 Lem.lem_num <> numIntegerDivision meth
+R8155:8176 Evm.word256 <> word256IntegerDivision def
+inst 8192:8205 <> x9_NumDivision
+R8209:8219 Lem.lem_num <> NumDivision class
+R8221:8227 Evm.word256 <> word256 ind
+R8238:8248 Lem.lem_num <> numDivision meth
+R8255:8269 Evm.word256 <> word256Division def
+inst 8285:8299 <> x8_NumRemainder
+R8303:8314 Lem.lem_num <> NumRemainder class
+R8316:8322 Evm.word256 <> word256 ind
+R8333:8344 Lem.lem_num <> numRemainder meth
+R8351:8366 Evm.word256 <> word256Remainder def
+inst 8382:8393 <> x7_OrdMaxMin
+R8397:8405 Lem.lem_basic_classes <> OrdMaxMin class
+R8407:8413 Evm.word256 <> word256 ind
+R8448:8450 Lem.lem_basic_classes <> min meth
+R8424:8426 Lem.lem_basic_classes <> max meth
+R8433:8442 Evm.word256 <> word256Max def
+R8457:8466 Evm.word256 <> word256Min def
+inst 8482:8491 <> x6_WordNot
+R8495:8501 Lem.lem_word <> WordNot class
+R8503:8509 Evm.word256 <> word256 ind
+R8520:8523 Lem.lem_word <> lnot meth
+R8530:8540 Evm.word256 <> word256Lnot def
+inst 8556:8565 <> x5_WordAnd
+R8569:8575 Lem.lem_word <> WordAnd class
+R8577:8583 Evm.word256 <> word256 ind
+R8594:8604 Lem.lem_word <> conjunction meth
+R8611:8621 Evm.word256 <> word256Land def
+inst 8637:8645 <> x4_WordOr
+R8649:8654 Lem.lem_word <> WordOr class
+R8656:8662 Evm.word256 <> word256 ind
+R8673:8684 Lem.lem_word <> inclusive_or meth
+R8691:8700 Evm.word256 <> word256Lor def
+inst 8716:8725 <> x3_WordXor
+R8729:8735 Lem.lem_word <> WordXor class
+R8737:8743 Evm.word256 <> word256 ind
+R8754:8765 Lem.lem_word <> exclusive_or meth
+R8772:8782 Evm.word256 <> word256Lxor def
+inst 8798:8807 <> x2_WordLsl
+R8811:8817 Lem.lem_word <> WordLsl class
+R8819:8825 Evm.word256 <> word256 ind
+R8836:8845 Lem.lem_word <> left_shift meth
+R8852:8861 Evm.word256 <> word256Lsl def
+inst 8877:8886 <> x1_WordLsr
+R8890:8896 Lem.lem_word <> WordLsr class
+R8898:8904 Evm.word256 <> word256 ind
+R8914:8933 Lem.lem_word <> logicial_right_shift meth
+R8940:8949 Evm.word256 <> word256Lsr def
+inst 8965:8974 <> x0_WordAsr
+R8978:8984 Lem.lem_word <> WordAsr class
+R8986:8992 Evm.word256 <> word256 ind
+R9002:9023 Lem.lem_word <> arithmetic_right_shift meth
+R9030:9039 Evm.word256 <> word256Asr def
+def 9097:9106 <> word256UGT
+R9114:9120 Evm.word256 <> word256 ind
+R9129:9135 Evm.word256 <> word256 ind
+R9142:9145 Coq.Init.Datatypes <> bool ind
+R9151:9157 Lem.coqharness <> nat_gtb def
+R9181:9196 Evm.word256 <> word256ToNatural def
+R9198:9198 Evm.word256 <> b var
+R9160:9175 Evm.word256 <> word256ToNatural def
+R9177:9177 Evm.word256 <> a var
+def 9254:9263 <> word256ULT
+R9271:9277 Evm.word256 <> word256 ind
+R9286:9292 Evm.word256 <> word256 ind
+R9299:9302 Coq.Init.Datatypes <> bool ind
+R9308:9314 Lem.coqharness <> nat_ltb def
+R9338:9353 Evm.word256 <> word256ToNatural def
+R9355:9355 Evm.word256 <> b var
+R9317:9332 Evm.word256 <> word256ToNatural def
+R9334:9334 Evm.word256 <> a var
+def 9411:9420 <> word256UGE
+R9428:9434 Evm.word256 <> word256 ind
+R9443:9449 Evm.word256 <> word256 ind
+R9456:9459 Coq.Init.Datatypes <> bool ind
+R9465:9472 Lem.coqharness <> nat_gteb def
+R9496:9511 Evm.word256 <> word256ToNatural def
+R9513:9513 Evm.word256 <> b var
+R9475:9490 Evm.word256 <> word256ToNatural def
+R9492:9492 Evm.word256 <> a var

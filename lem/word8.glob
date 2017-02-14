@@ -1,0 +1,492 @@
+DIGEST 0d6d299208d02c2c53f77325a050c2bf
+FEvm.word8
+R55:59 Coq.Arith.Arith <> <> lib
+R77:80 Coq.Bool.Bool <> <> lib
+R98:101 Coq.Lists.List <> <> lib
+R119:124 Coq.Strings.String <> <> lib
+R142:151 Coq.Program.Wf <> <> lib
+R170:179 Lem.coqharness <> <> lib
+R839:852 Lem.lem_pervasives <> <> lib
+R870:883 Lem.lem_pervasives <> <> lib
+R902:909 Lem.lem_word <> <> lib
+R927:934 Lem.lem_word <> <> lib
+ind 949:953 <> word8
+constr 966:967 <> W8
+R975:980 Coq.Init.Logic <> :type_scope:x_'->'_x not
+R991:995 Coq.Init.Logic <> :type_scope:x_'->'_x not
+R996:1000 Evm.word8 <> word8 ind
+R981:984 Coq.Init.Datatypes <> list ind
+R987:990 Coq.Init.Datatypes <> bool ind
+R971:974 Coq.Init.Datatypes <> bool ind
+def 1015:1027 <> word8_default
+R1030:1034 Evm.word8 <> word8 ind
+R1040:1041 Evm.word8 <> W8 constr
+R1056:1061 Lem.coqharness <> DAEMON prfax
+R1043:1054 Lem.coqharness <> bool_default def
+def 1116:1123 <> bs_to_w8
+R1133:1143 Lem.lem_word <> bitSequence ind
+R1150:1154 Evm.word8 <> word8 ind
+R1168:1179 Lem.lem_word <> resizeBitSeq def
+R1192:1194 Evm.word8 <> seq var
+R1182:1185 Coq.Init.Datatypes <> Some constr
+R1206:1211 Lem.lem_word <> BitSeq constr
+R1222:1223 Evm.word8 <> W8 constr
+def 1286:1293 <> w8_to_bs
+R1301:1305 Evm.word8 <> word8 ind
+R1312:1322 Lem.lem_word <> bitSequence ind
+R1339:1339 Evm.word8 <> w var
+R1351:1352 Evm.word8 <> W8 constr
+R1363:1368 Lem.lem_word <> BitSeq constr
+R1371:1374 Coq.Init.Datatypes <> Some constr
+def 1443:1454 <> word8BinTest
+R1488:1492 Coq.Init.Logic <> :type_scope:x_'->'_x not
+R1504:1508 Coq.Init.Logic <> :type_scope:x_'->'_x not
+R1509:1509 Evm.word8 <> a var
+R1493:1503 Lem.lem_word <> bitSequence ind
+R1477:1487 Lem.lem_word <> bitSequence ind
+R1518:1522 Evm.word8 <> word8 ind
+R1532:1536 Evm.word8 <> word8 ind
+R1543:1543 Evm.word8 <> a var
+R1548:1552 Evm.word8 <> binop var
+R1569:1576 Evm.word8 <> w8_to_bs def
+R1578:1579 Evm.word8 <> w2 var
+R1555:1562 Evm.word8 <> w8_to_bs def
+R1564:1565 Evm.word8 <> w1 var
+def 1635:1644 <> word8BinOp
+R1667:1671 Coq.Init.Logic <> :type_scope:x_'->'_x not
+R1683:1687 Coq.Init.Logic <> :type_scope:x_'->'_x not
+R1688:1698 Lem.lem_word <> bitSequence ind
+R1672:1682 Lem.lem_word <> bitSequence ind
+R1656:1666 Lem.lem_word <> bitSequence ind
+R1708:1712 Evm.word8 <> word8 ind
+R1722:1726 Evm.word8 <> word8 ind
+R1733:1737 Evm.word8 <> word8 ind
+R1743:1750 Evm.word8 <> bs_to_w8 def
+R1753:1757 Evm.word8 <> binop var
+R1774:1781 Evm.word8 <> w8_to_bs def
+R1783:1784 Evm.word8 <> w2 var
+R1760:1767 Evm.word8 <> w8_to_bs def
+R1769:1770 Evm.word8 <> w1 var
+def 1841:1850 <> word8NatOp
+R1873:1877 Coq.Init.Logic <> :type_scope:x_'->'_x not
+R1881:1885 Coq.Init.Logic <> :type_scope:x_'->'_x not
+R1886:1896 Lem.lem_word <> bitSequence ind
+R1878:1880 Coq.Init.Datatypes <> nat ind
+R1862:1872 Lem.lem_word <> bitSequence ind
+R1906:1910 Evm.word8 <> word8 ind
+R1919:1921 Coq.Init.Datatypes <> nat ind
+R1928:1932 Evm.word8 <> word8 ind
+R1938:1945 Evm.word8 <> bs_to_w8 def
+R1948:1952 Evm.word8 <> binop var
+R1968:1968 Evm.word8 <> n var
+R1955:1962 Evm.word8 <> w8_to_bs def
+R1964:1965 Evm.word8 <> w1 var
+def 2024:2035 <> word8UnaryOp
+R2055:2059 Coq.Init.Logic <> :type_scope:x_'->'_x not
+R2060:2070 Lem.lem_word <> bitSequence ind
+R2044:2054 Lem.lem_word <> bitSequence ind
+R2079:2083 Evm.word8 <> word8 ind
+R2090:2094 Evm.word8 <> word8 ind
+R2100:2107 Evm.word8 <> bs_to_w8 def
+R2110:2111 Evm.word8 <> op var
+R2114:2121 Evm.word8 <> w8_to_bs def
+R2123:2123 Evm.word8 <> w var
+def 2180:2189 <> word8ToNat
+R2197:2201 Evm.word8 <> word8 ind
+R2208:2210 Coq.Init.Datatypes <> nat ind
+R2216:2223 Coq.ZArith.BinInt <> Zabs_nat syndef
+R2227:2246 Coq.ZArith.Zdiv <> Zmod syndef
+R2284:2288 Coq.ZArith.BinInt <> Zpred syndef
+R2291:2294 Coq.Numbers.BinNums <> Zpos constr
+R2297:2309 Coq.PArith.BinPos <> P_of_succ_nat syndef
+R2250:2266 Lem.lem_word <> integerFromBitSeq def
+R2269:2276 Evm.word8 <> w8_to_bs def
+R2278:2278 Evm.word8 <> w var
+def 2373:2382 <> word8ToInt
+R2390:2394 Evm.word8 <> word8 ind
+R2401:2401 Coq.Numbers.BinNums <> Z ind
+R2409:2425 Lem.lem_word <> integerFromBitSeq def
+R2428:2435 Evm.word8 <> w8_to_bs def
+R2437:2437 Evm.word8 <> w var
+def 2494:2504 <> word8ToUInt
+R2512:2516 Evm.word8 <> word8 ind
+R2523:2523 Coq.Numbers.BinNums <> Z ind
+R2530:2534 Coq.ZArith.BinInt <> Zpred syndef
+R2537:2540 Coq.Numbers.BinNums <> Zpos constr
+R2543:2555 Coq.PArith.BinPos <> P_of_succ_nat syndef
+R2558:2567 Evm.word8 <> word8ToNat def
+R2569:2569 Evm.word8 <> w var
+def 2628:2643 <> word8FromInteger
+R2651:2651 Coq.Numbers.BinNums <> Z ind
+R2658:2662 Evm.word8 <> word8 ind
+R2668:2675 Evm.word8 <> bs_to_w8 def
+R2678:2694 Lem.lem_word <> bitSeqFromInteger def
+R2707:2707 Evm.word8 <> i var
+R2697:2700 Coq.Init.Datatypes <> Some constr
+def 2763:2774 <> word8FromInt
+R2782:2782 Coq.Numbers.BinNums <> Z ind
+R2789:2793 Evm.word8 <> word8 ind
+R2799:2806 Evm.word8 <> bs_to_w8 def
+R2809:2825 Lem.lem_word <> bitSeqFromInteger def
+R2840:2840 Evm.word8 <> i var
+R2828:2831 Coq.Init.Datatypes <> Some constr
+def 2897:2908 <> word8FromNat
+R2916:2918 Coq.Init.Datatypes <> nat ind
+R2925:2929 Evm.word8 <> word8 ind
+R2935:2950 Evm.word8 <> word8FromInteger def
+R2954:2958 Coq.ZArith.BinInt <> Zpred syndef
+R2961:2964 Coq.Numbers.BinNums <> Zpos constr
+R2967:2979 Coq.PArith.BinPos <> P_of_succ_nat syndef
+R2981:2981 Evm.word8 <> i var
+def 3040:3055 <> word8FromNatural
+R3063:3065 Coq.Init.Datatypes <> nat ind
+R3072:3076 Evm.word8 <> word8 ind
+R3082:3097 Evm.word8 <> word8FromInteger def
+R3101:3105 Coq.ZArith.BinInt <> Zpred syndef
+R3108:3111 Coq.Numbers.BinNums <> Zpos constr
+R3114:3126 Coq.PArith.BinPos <> P_of_succ_nat syndef
+R3128:3128 Evm.word8 <> i var
+def 3187:3203 <> word8FromBoollist
+R3213:3216 Coq.Init.Datatypes <> list ind
+R3219:3222 Coq.Init.Datatypes <> bool ind
+R3230:3234 Evm.word8 <> word8 ind
+R3248:3265 Lem.lem_word <> bitSeqFromBoolList def
+R3268:3275 Coq.Lists.List <> rev def
+R3277:3279 Evm.word8 <> lst var
+R3292:3295 Coq.Init.Datatypes <> None constr
+R3300:3307 Evm.word8 <> bs_to_w8 def
+R3309:3325 Lem.lem_word <> bitSeqFromInteger def
+R3334:3338 Coq.ZArith.BinInt <> Zpred syndef
+R3341:3344 Coq.Numbers.BinNums <> Zpos constr
+R3347:3359 Coq.PArith.BinPos <> P_of_succ_nat syndef
+R3327:3330 Coq.Init.Datatypes <> None constr
+R3371:3374 Coq.Init.Datatypes <> Some constr
+R3381:3388 Evm.word8 <> bs_to_w8 def
+def 3449:3465 <> boolListFromWord8
+R3473:3477 Evm.word8 <> word8 ind
+R3484:3487 Coq.Init.Datatypes <> list ind
+R3490:3493 Coq.Init.Datatypes <> bool ind
+R3500:3507 Coq.Lists.List <> rev def
+R3510:3527 Lem.lem_word <> boolListFrombitSeq def
+R3534:3541 Evm.word8 <> w8_to_bs def
+R3543:3543 Evm.word8 <> w var
+def 3600:3615 <> word8FromNumeral
+R3623:3625 Coq.Init.Datatypes <> nat ind
+R3632:3636 Evm.word8 <> word8 ind
+R3642:3649 Evm.word8 <> bs_to_w8 def
+R3652:3668 Lem.lem_word <> bitSeqFromInteger def
+R3677:3681 Coq.ZArith.BinInt <> Zpred syndef
+R3684:3687 Coq.Numbers.BinNums <> Zpos constr
+R3690:3702 Coq.PArith.BinPos <> P_of_succ_nat syndef
+R3704:3704 Evm.word8 <> w var
+R3670:3673 Coq.Init.Datatypes <> None constr
+def 3855:3858 <> w8Eq
+R3869:3873 Coq.Init.Logic <> :type_scope:x_'->'_x not
+R3879:3883 Coq.Init.Logic <> :type_scope:x_'->'_x not
+R3884:3887 Coq.Init.Datatypes <> bool ind
+R3874:3878 Evm.word8 <> word8 ind
+R3864:3868 Evm.word8 <> word8 ind
+R3893:3921 Lem.coqharness <> classical_boolean_equivalence def
+def 3976:3981 <> w8Less
+R3991:3995 Evm.word8 <> word8 ind
+R4006:4010 Evm.word8 <> word8 ind
+R4017:4020 Coq.Init.Datatypes <> bool ind
+R4026:4037 Evm.word8 <> word8BinTest def
+R4054:4056 Evm.word8 <> bs2 var
+R4050:4052 Evm.word8 <> bs1 var
+R4039:4048 Lem.lem_word <> bitSeqLess def
+def 4111:4121 <> w8LessEqual
+R4131:4135 Evm.word8 <> word8 ind
+R4146:4150 Evm.word8 <> word8 ind
+R4157:4160 Coq.Init.Datatypes <> bool ind
+R4166:4177 Evm.word8 <> word8BinTest def
+R4199:4201 Evm.word8 <> bs2 var
+R4195:4197 Evm.word8 <> bs1 var
+R4179:4193 Lem.lem_word <> bitSeqLessEqual def
+def 4256:4264 <> w8Greater
+R4274:4278 Evm.word8 <> word8 ind
+R4289:4293 Evm.word8 <> word8 ind
+R4300:4303 Coq.Init.Datatypes <> bool ind
+R4309:4320 Evm.word8 <> word8BinTest def
+R4340:4342 Evm.word8 <> bs2 var
+R4336:4338 Evm.word8 <> bs1 var
+R4322:4334 Lem.lem_word <> bitSeqGreater def
+def 4397:4410 <> w8GreaterEqual
+R4420:4424 Evm.word8 <> word8 ind
+R4435:4439 Evm.word8 <> word8 ind
+R4446:4449 Coq.Init.Datatypes <> bool ind
+R4455:4466 Evm.word8 <> word8BinTest def
+R4491:4493 Evm.word8 <> bs2 var
+R4487:4489 Evm.word8 <> bs1 var
+R4468:4485 Lem.lem_word <> bitSeqGreaterEqual def
+def 4548:4556 <> w8Compare
+R4566:4570 Evm.word8 <> word8 ind
+R4581:4585 Evm.word8 <> word8 ind
+R4592:4599 Lem.coqharness <> ordering ind
+R4605:4616 Evm.word8 <> word8BinTest def
+R4636:4638 Evm.word8 <> bs2 var
+R4632:4634 Evm.word8 <> bs1 var
+R4618:4630 Lem.lem_word <> bitSeqCompare def
+inst 4651:4657 <> x40_Ord
+R4661:4663 Lem.lem_basic_classes <> Ord class
+R4665:4669 Evm.word8 <> word8 ind
+R4791:4804 Lem.lem_basic_classes <> isGreaterEqual meth
+R4762:4770 Lem.lem_basic_classes <> isGreater meth
+R4729:4739 Lem.lem_basic_classes <> isLessEqual meth
+R4706:4711 Lem.lem_basic_classes <> isLess meth
+R4679:4685 Lem.lem_basic_classes <> compare meth
+R4692:4700 Evm.word8 <> w8Compare def
+R4718:4723 Evm.word8 <> w8Less def
+R4746:4756 Evm.word8 <> w8LessEqual def
+R4777:4785 Evm.word8 <> w8Greater def
+R4811:4824 Evm.word8 <> w8GreaterEqual def
+inst 4840:4850 <> x39_SetType
+R4854:4860 Lem.lem_basic_classes <> SetType class
+R4862:4866 Evm.word8 <> word8 ind
+R4876:4889 Lem.lem_basic_classes <> setElemCompare meth
+R4896:4904 Evm.word8 <> w8Compare def
+def 4962:4972 <> word8Negate
+R4983:4987 Coq.Init.Logic <> :type_scope:x_'->'_x not
+R4988:4992 Evm.word8 <> word8 ind
+R4978:4982 Evm.word8 <> word8 ind
+R4998:5009 Evm.word8 <> word8UnaryOp def
+R5011:5022 Lem.lem_word <> bitSeqNegate def
+def 5077:5085 <> word8Succ
+R5096:5100 Coq.Init.Logic <> :type_scope:x_'->'_x not
+R5101:5105 Evm.word8 <> word8 ind
+R5091:5095 Evm.word8 <> word8 ind
+R5111:5122 Evm.word8 <> word8UnaryOp def
+R5124:5133 Lem.lem_word <> bitSeqSucc def
+def 5188:5196 <> word8Pred
+R5207:5211 Coq.Init.Logic <> :type_scope:x_'->'_x not
+R5212:5216 Evm.word8 <> word8 ind
+R5202:5206 Evm.word8 <> word8 ind
+R5222:5233 Evm.word8 <> word8UnaryOp def
+R5235:5244 Lem.lem_word <> bitSeqPred def
+def 5299:5307 <> word8Lnot
+R5318:5322 Coq.Init.Logic <> :type_scope:x_'->'_x not
+R5323:5327 Evm.word8 <> word8 ind
+R5313:5317 Evm.word8 <> word8 ind
+R5333:5344 Evm.word8 <> word8UnaryOp def
+R5346:5354 Lem.lem_word <> bitSeqNot def
+def 5409:5416 <> word8Add
+R5427:5431 Coq.Init.Logic <> :type_scope:x_'->'_x not
+R5437:5441 Coq.Init.Logic <> :type_scope:x_'->'_x not
+R5442:5446 Evm.word8 <> word8 ind
+R5432:5436 Evm.word8 <> word8 ind
+R5422:5426 Evm.word8 <> word8 ind
+R5452:5461 Evm.word8 <> word8BinOp def
+R5463:5471 Lem.lem_word <> bitSeqAdd def
+def 5526:5535 <> word8Minus
+R5546:5550 Coq.Init.Logic <> :type_scope:x_'->'_x not
+R5556:5560 Coq.Init.Logic <> :type_scope:x_'->'_x not
+R5561:5565 Evm.word8 <> word8 ind
+R5551:5555 Evm.word8 <> word8 ind
+R5541:5545 Evm.word8 <> word8 ind
+R5571:5580 Evm.word8 <> word8BinOp def
+R5582:5592 Lem.lem_word <> bitSeqMinus def
+def 5647:5655 <> word8Mult
+R5666:5670 Coq.Init.Logic <> :type_scope:x_'->'_x not
+R5676:5680 Coq.Init.Logic <> :type_scope:x_'->'_x not
+R5681:5685 Evm.word8 <> word8 ind
+R5671:5675 Evm.word8 <> word8 ind
+R5661:5665 Evm.word8 <> word8 ind
+R5691:5700 Evm.word8 <> word8BinOp def
+R5702:5711 Lem.lem_word <> bitSeqMult def
+def 5766:5785 <> word8IntegerDivision
+R5796:5800 Coq.Init.Logic <> :type_scope:x_'->'_x not
+R5806:5810 Coq.Init.Logic <> :type_scope:x_'->'_x not
+R5811:5815 Evm.word8 <> word8 ind
+R5801:5805 Evm.word8 <> word8 ind
+R5791:5795 Evm.word8 <> word8 ind
+R5821:5830 Evm.word8 <> word8BinOp def
+R5832:5840 Lem.lem_word <> bitSeqDiv def
+def 5895:5907 <> word8Division
+R5918:5922 Coq.Init.Logic <> :type_scope:x_'->'_x not
+R5928:5932 Coq.Init.Logic <> :type_scope:x_'->'_x not
+R5933:5937 Evm.word8 <> word8 ind
+R5923:5927 Evm.word8 <> word8 ind
+R5913:5917 Evm.word8 <> word8 ind
+R5943:5952 Evm.word8 <> word8BinOp def
+R5954:5962 Lem.lem_word <> bitSeqDiv def
+def 6017:6030 <> word8Remainder
+R6041:6045 Coq.Init.Logic <> :type_scope:x_'->'_x not
+R6051:6055 Coq.Init.Logic <> :type_scope:x_'->'_x not
+R6056:6060 Evm.word8 <> word8 ind
+R6046:6050 Evm.word8 <> word8 ind
+R6036:6040 Evm.word8 <> word8 ind
+R6066:6075 Evm.word8 <> word8BinOp def
+R6077:6085 Lem.lem_word <> bitSeqMod def
+def 6140:6148 <> word8Land
+R6159:6163 Coq.Init.Logic <> :type_scope:x_'->'_x not
+R6169:6173 Coq.Init.Logic <> :type_scope:x_'->'_x not
+R6174:6178 Evm.word8 <> word8 ind
+R6164:6168 Evm.word8 <> word8 ind
+R6154:6158 Evm.word8 <> word8 ind
+R6184:6193 Evm.word8 <> word8BinOp def
+R6195:6203 Lem.lem_word <> bitSeqAnd def
+def 6258:6265 <> word8Lor
+R6276:6280 Coq.Init.Logic <> :type_scope:x_'->'_x not
+R6286:6290 Coq.Init.Logic <> :type_scope:x_'->'_x not
+R6291:6295 Evm.word8 <> word8 ind
+R6281:6285 Evm.word8 <> word8 ind
+R6271:6275 Evm.word8 <> word8 ind
+R6301:6310 Evm.word8 <> word8BinOp def
+R6312:6319 Lem.lem_word <> bitSeqOr def
+def 6374:6382 <> word8Lxor
+R6393:6397 Coq.Init.Logic <> :type_scope:x_'->'_x not
+R6403:6407 Coq.Init.Logic <> :type_scope:x_'->'_x not
+R6408:6412 Evm.word8 <> word8 ind
+R6398:6402 Evm.word8 <> word8 ind
+R6388:6392 Evm.word8 <> word8 ind
+R6418:6427 Evm.word8 <> word8BinOp def
+R6429:6437 Lem.lem_word <> bitSeqXor def
+def 6492:6499 <> word8Min
+R6510:6514 Coq.Init.Logic <> :type_scope:x_'->'_x not
+R6520:6524 Coq.Init.Logic <> :type_scope:x_'->'_x not
+R6525:6529 Evm.word8 <> word8 ind
+R6515:6519 Evm.word8 <> word8 ind
+R6505:6509 Evm.word8 <> word8 ind
+R6535:6544 Evm.word8 <> word8BinOp def
+R6547:6555 Lem.lem_word <> bitSeqMin def
+def 6611:6618 <> word8Max
+R6629:6633 Coq.Init.Logic <> :type_scope:x_'->'_x not
+R6639:6643 Coq.Init.Logic <> :type_scope:x_'->'_x not
+R6644:6648 Evm.word8 <> word8 ind
+R6634:6638 Evm.word8 <> word8 ind
+R6624:6628 Evm.word8 <> word8 ind
+R6654:6663 Evm.word8 <> word8BinOp def
+R6666:6674 Lem.lem_word <> bitSeqMax def
+def 6730:6739 <> word8Power
+R6750:6754 Coq.Init.Logic <> :type_scope:x_'->'_x not
+R6758:6762 Coq.Init.Logic <> :type_scope:x_'->'_x not
+R6763:6767 Evm.word8 <> word8 ind
+R6755:6757 Coq.Init.Datatypes <> nat ind
+R6745:6749 Evm.word8 <> word8 ind
+R6773:6782 Evm.word8 <> word8NatOp def
+R6784:6792 Lem.lem_word <> bitSeqPow def
+def 6847:6854 <> word8Asr
+R6865:6869 Coq.Init.Logic <> :type_scope:x_'->'_x not
+R6873:6877 Coq.Init.Logic <> :type_scope:x_'->'_x not
+R6878:6882 Evm.word8 <> word8 ind
+R6870:6872 Coq.Init.Datatypes <> nat ind
+R6860:6864 Evm.word8 <> word8 ind
+R6888:6897 Evm.word8 <> word8NatOp def
+R6899:6924 Lem.lem_word <> bitSeqArithmeticShiftRight def
+def 6979:6986 <> word8Lsr
+R6997:7001 Coq.Init.Logic <> :type_scope:x_'->'_x not
+R7005:7009 Coq.Init.Logic <> :type_scope:x_'->'_x not
+R7010:7014 Evm.word8 <> word8 ind
+R7002:7004 Coq.Init.Datatypes <> nat ind
+R6992:6996 Evm.word8 <> word8 ind
+R7020:7029 Evm.word8 <> word8NatOp def
+R7031:7053 Lem.lem_word <> bitSeqLogicalShiftRight def
+def 7108:7115 <> word8Lsl
+R7126:7130 Coq.Init.Logic <> :type_scope:x_'->'_x not
+R7134:7138 Coq.Init.Logic <> :type_scope:x_'->'_x not
+R7139:7143 Evm.word8 <> word8 ind
+R7131:7133 Coq.Init.Datatypes <> nat ind
+R7121:7125 Evm.word8 <> word8 ind
+R7149:7158 Evm.word8 <> word8NatOp def
+R7160:7174 Lem.lem_word <> bitSeqShiftLeft def
+inst 7188:7200 <> x38_NumNegate
+R7204:7212 Lem.lem_num <> NumNegate class
+R7214:7218 Evm.word8 <> word8 ind
+R7228:7236 Lem.lem_num <> numNegate meth
+R7243:7253 Evm.word8 <> word8Negate def
+inst 7269:7278 <> x37_NumAdd
+R7282:7287 Lem.lem_num <> NumAdd class
+R7289:7293 Evm.word8 <> word8 ind
+R7303:7308 Lem.lem_num <> numAdd meth
+R7315:7322 Evm.word8 <> word8Add def
+inst 7338:7349 <> x36_NumMinus
+R7353:7360 Lem.lem_num <> NumMinus class
+R7362:7366 Evm.word8 <> word8 ind
+R7376:7383 Lem.lem_num <> numMinus meth
+R7390:7399 Evm.word8 <> word8Minus def
+inst 7415:7425 <> x35_NumSucc
+R7429:7435 Lem.lem_num <> NumSucc class
+R7437:7441 Evm.word8 <> word8 ind
+R7451:7454 Lem.lem_num <> succ meth
+R7461:7469 Evm.word8 <> word8Succ def
+inst 7485:7495 <> x34_NumPred
+R7499:7505 Lem.lem_num <> NumPred class
+R7507:7511 Evm.word8 <> word8 ind
+R7521:7524 Lem.lem_num <> pred meth
+R7531:7539 Evm.word8 <> word8Pred def
+inst 7555:7565 <> x33_NumMult
+R7569:7575 Lem.lem_num <> NumMult class
+R7577:7581 Evm.word8 <> word8 ind
+R7591:7597 Lem.lem_num <> numMult meth
+R7604:7612 Evm.word8 <> word8Mult def
+inst 7628:7637 <> x32_NumPow
+R7641:7646 Lem.lem_num <> NumPow class
+R7648:7652 Evm.word8 <> word8 ind
+R7662:7667 Lem.lem_num <> numPow meth
+R7674:7683 Evm.word8 <> word8Power def
+inst 7699:7720 <> x31_NumIntegerDivision
+R7724:7741 Lem.lem_num <> NumIntegerDivision class
+R7743:7747 Evm.word8 <> word8 ind
+R7758:7775 Lem.lem_num <> numIntegerDivision meth
+R7782:7801 Evm.word8 <> word8IntegerDivision def
+inst 7817:7831 <> x30_NumDivision
+R7835:7845 Lem.lem_num <> NumDivision class
+R7847:7851 Evm.word8 <> word8 ind
+R7862:7872 Lem.lem_num <> numDivision meth
+R7879:7891 Evm.word8 <> word8Division def
+inst 7907:7922 <> x29_NumRemainder
+R7926:7937 Lem.lem_num <> NumRemainder class
+R7939:7943 Evm.word8 <> word8 ind
+R7954:7965 Lem.lem_num <> numRemainder meth
+R7972:7985 Evm.word8 <> word8Remainder def
+inst 8001:8013 <> x28_OrdMaxMin
+R8017:8025 Lem.lem_basic_classes <> OrdMaxMin class
+R8027:8031 Evm.word8 <> word8 ind
+R8064:8066 Lem.lem_basic_classes <> min meth
+R8042:8044 Lem.lem_basic_classes <> max meth
+R8051:8058 Evm.word8 <> word8Max def
+R8073:8080 Evm.word8 <> word8Min def
+inst 8096:8106 <> x27_WordNot
+R8110:8116 Lem.lem_word <> WordNot class
+R8118:8122 Evm.word8 <> word8 ind
+R8133:8136 Lem.lem_word <> lnot meth
+R8143:8151 Evm.word8 <> word8Lnot def
+inst 8167:8177 <> x26_WordAnd
+R8181:8187 Lem.lem_word <> WordAnd class
+R8189:8193 Evm.word8 <> word8 ind
+R8204:8214 Lem.lem_word <> conjunction meth
+R8221:8229 Evm.word8 <> word8Land def
+inst 8245:8254 <> x25_WordOr
+R8258:8263 Lem.lem_word <> WordOr class
+R8265:8269 Evm.word8 <> word8 ind
+R8280:8291 Lem.lem_word <> inclusive_or meth
+R8298:8305 Evm.word8 <> word8Lor def
+inst 8321:8331 <> x24_WordXor
+R8335:8341 Lem.lem_word <> WordXor class
+R8343:8347 Evm.word8 <> word8 ind
+R8358:8369 Lem.lem_word <> exclusive_or meth
+R8376:8384 Evm.word8 <> word8Lxor def
+inst 8400:8410 <> x23_WordLsl
+R8414:8420 Lem.lem_word <> WordLsl class
+R8422:8426 Evm.word8 <> word8 ind
+R8437:8446 Lem.lem_word <> left_shift meth
+R8453:8460 Evm.word8 <> word8Lsl def
+inst 8476:8486 <> x22_WordLsr
+R8490:8496 Lem.lem_word <> WordLsr class
+R8498:8502 Evm.word8 <> word8 ind
+R8512:8531 Lem.lem_word <> logicial_right_shift meth
+R8538:8545 Evm.word8 <> word8Lsr def
+inst 8561:8571 <> x21_WordAsr
+R8575:8581 Lem.lem_word <> WordAsr class
+R8583:8587 Evm.word8 <> word8 ind
+R8597:8618 Lem.lem_word <> arithmetic_right_shift meth
+R8625:8632 Evm.word8 <> word8Asr def
+def 8690:8697 <> word8UGT
+R8705:8709 Evm.word8 <> word8 ind
+R8718:8722 Evm.word8 <> word8 ind
+R8729:8732 Coq.Init.Datatypes <> bool ind
+R8738:8744 Lem.coqharness <> nat_gtb def
+R8762:8771 Evm.word8 <> word8ToNat def
+R8773:8773 Evm.word8 <> b var
+R8747:8756 Evm.word8 <> word8ToNat def
+R8758:8758 Evm.word8 <> a var
