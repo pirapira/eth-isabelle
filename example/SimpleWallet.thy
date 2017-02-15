@@ -58,6 +58,85 @@ lemma add_comm_pc:
 (* sledgehammer *)
   by (simp add: semiring_normalization_rules(24))
 
+lemma seventh_pure [simp] :
+  "(rest ** a ** b ** c ** d ** e ** \<langle> P \<rangle>) s =
+  (P \<and> (rest ** a ** b ** c ** d ** e) s)"
+proof -
+  have "(rest ** a ** b ** c ** d ** e ** \<langle> P \<rangle>) s = (\<langle> P \<rangle> ** rest ** a ** b ** c ** d ** e) s"
+    by simp
+  moreover have "(\<langle> P \<rangle> ** rest ** a ** b ** c ** d ** e) s = (P \<and> (rest ** a ** b ** c ** d ** e) s)"
+    by (simp only: pure_sep)
+  ultimately show ?thesis
+    by auto
+qed
+
+lemma eighth_pure [simp] :
+  "(rest ** a ** b ** c ** d ** e ** f ** \<langle> P \<rangle>) s =
+  (P \<and> (rest ** a ** b ** c ** d ** e ** f) s)"
+proof -
+  have "(rest ** a ** b ** c ** d ** e ** f ** \<langle> P \<rangle>) s = (\<langle> P \<rangle> ** rest ** a ** b ** c ** d ** e ** f) s"
+    by simp
+  moreover have "(\<langle> P \<rangle> ** rest ** a ** b ** c ** d ** e ** f) s = (P \<and> (rest ** a ** b ** c ** d ** e ** f) s)"
+    by (simp only: pure_sep)
+  ultimately show ?thesis
+    by auto
+qed
+
+lemma ninth_pure [simp] :
+  "(rest ** a ** b ** c ** d ** e ** f ** g ** \<langle> P \<rangle>) s =
+  (P \<and> (rest ** a ** b ** c ** d ** e ** f ** g) s)"
+proof -
+  have "(rest ** a ** b ** c ** d ** e ** f ** g ** \<langle> P \<rangle>) s = (\<langle> P \<rangle> ** rest ** a ** b ** c ** d ** e ** f ** g) s"
+    by simp
+  moreover have "(\<langle> P \<rangle> ** rest ** a ** b ** c ** d ** e ** f ** g) s = (P \<and> (rest ** a ** b ** c ** d ** e ** f ** g) s)"
+    by (simp only: pure_sep)
+  ultimately show ?thesis
+    by auto
+qed
+
+lemma tenth_pure [simp] :
+  "(rest ** a ** b ** c ** d ** e ** f ** g ** h ** \<langle> P \<rangle>) s =
+  (P \<and> (rest ** a ** b ** c ** d ** e ** f ** g ** h) s)"
+proof -
+  have "(rest ** a ** b ** c ** d ** e ** f ** g ** h ** \<langle> P \<rangle>) s = (\<langle> P \<rangle> ** rest ** a ** b ** c ** d ** e ** f ** g ** h) s"
+    by simp
+  moreover have "(\<langle> P \<rangle> ** rest ** a ** b ** c ** d ** e ** f ** g ** h) s = (P \<and> (rest ** a ** b ** c ** d ** e ** f ** g ** h) s)"
+    by (simp only: pure_sep)
+  ultimately show ?thesis
+    by auto
+qed
+
+
+lemma pre_fifth_pure [simp]:
+  "triple failures (a ** b ** c ** d ** \<langle> P \<rangle>) cod post =
+   (P \<longrightarrow> triple failures (a ** b ** c ** d) cod post)"
+apply(auto simp add: triple_def)
+done
+
+
+lemma pre_sixth_pure [simp]:
+  "triple failures (a ** b ** c ** d ** e ** \<langle> P \<rangle>) cod post =
+   (P \<longrightarrow> triple failures (a ** b ** c ** d ** e) cod post)"
+apply(auto simp add: triple_def)
+done
+
+lemma pre_seventh_pure [simp]:
+  "triple failures (a ** b ** c ** d ** e ** f ** \<langle> P \<rangle>) cod post =
+   (P \<longrightarrow> triple failures (a ** b ** c ** d ** e ** f) cod post)"
+apply(auto simp add: triple_def)
+done
+
+lemma pre_eigth_pure [simp]:
+  "triple failures (a ** b ** c ** d ** e ** f ** g ** \<langle> P \<rangle>) cod post =
+   (P \<longrightarrow> triple failures (a ** b ** c ** d ** e ** f ** g) cod post)"
+apply(auto simp add: triple_def)
+done
+
+lemma pc_add [simp]:
+  "PcElm (x + y) = PcElm (y + x)"
+apply(auto)
+done
+
 lemma push0dup1_triple :
    "triple {OutOfGas} (\<langle> h \<le> 1022\<rangle> **
                        stack_height h **
@@ -86,23 +165,11 @@ apply(rule strengthen_pre)
  apply(rule weaken_post)
   apply(rule_tac h = "(Suc h)" and g = "g - Gverylow" and w = "word_rcat [0]" in dup_gas_triple)
  apply(auto simp add: word_rcat_def bin_rcat_def)
-  apply(rule leibniz)
-   apply blast
-  apply(auto)
- apply(rule add_comm_pc; simp)
-apply(rule leibniz)
- apply blast
-apply(auto)
 done
 
 lemma true_is_emp [simp] :
  "\<langle> True \<rangle> = emp"
 using pure_def emp_def apply blast
-done
-
-lemma emp_sep2 [simp] :
-  "emp ** rest = rest"
-using emp_sep apply blast
 done
 
 lemma dup1dup1_triple :
@@ -132,8 +199,6 @@ apply(rule_tac cL = "{(k, Dup 0)}" and cR = "{(k + 1, Dup 0)}" in composition)
 apply(rule_tac R = "stack h w" in frame_backward)
  apply(rule_tac h = "Suc (Suc h)" and w = w and g = "g - Gverylow" in dup_gas_triple)
  apply(auto)
- apply (simp add: commute_in_four sep_commute)
-apply (simp add: commute_in_four sep_commute)
 done
 
 lemma triple_code_eq :
@@ -152,14 +217,18 @@ lemma rotate4 :
 
 lemma first_three :
   "a ** b ** c ** d = R \<Longrightarrow> c ** b ** a ** d = R"
-proof -
- assume "a ** b ** c ** d = R"
- moreover have "a ** b ** c ** d = c ** b ** a ** d"
-  using sep_assoc sep_commute by auto
- ultimately show "c ** b ** a ** d = R"
-  by auto
+apply simp
+done
+
+
+lemma pick_third_L :
+  "c ** a ** b ** rest = R \<Longrightarrow> a ** b ** c ** rest = R"
+proof simp
 qed
-   
+
+lemma pick_thirdL:
+ "a ** b ** rest = R \<Longrightarrow> a ** b ** c ** rest = c ** R"
+  by (simp add: pick_third_L)
 
 lemma pddd_triple :
 "triple {OutOfGas} (\<langle> h \<le> 1020\<rangle> **
@@ -197,18 +266,10 @@ apply(rule_tac R = "stack h (word_rcat [0])" in frame_backward)
   apply(simp)
  apply(rule sep_functional)
   apply(simp)
- apply(rule rotate4)
+apply(rule pick_third_L)
 apply(rule sep_functional)
- (* sledgehammer *)
- apply (metis Suc3_eq_add_3 Suc_eq_plus1_left add.commute add_numeral_left numeral_One semiring_norm(2) semiring_norm(8))
-apply(rule first_three)
-apply(rule sep_functional)
- apply(simp)
-apply(rule sep_functional)
- apply(simp add: word_rcat_def bin_rcat_def)
-apply(rule sep_functional)
- apply(simp add: word_rcat_def bin_rcat_def)
-apply(rule rotate4)
+  apply (metis Suc3_eq_add_3 Suc_eq_plus1_left add.commute add_numeral_left numeral_One semiring_norm(2) semiring_norm(8))
+apply (simp add: word_rcat_def bin_rcat_def)
 done
 
 lemma abcbca :
@@ -234,7 +295,7 @@ apply(auto)
 apply(rule_tac cL = "{(k, Info ADDRESS)}" and cR = "{(k + 1, Info BALANCE)}" in composition)
   apply(auto)
  apply(rule_tac R = "balance t b ** block_number_pred bn" in frame_backward)
-  apply(rule_tac h = h and g = g and t = t in address_gas_triple)
+   apply(rule_tac h = h and g = g and t = t in address_gas_triple)
   using sep_assoc sep_commute apply auto
 apply(rule_tac R = "this_account t" in frame_backward)
  apply(rule_tac h = h and g = "g - 2" and bn = bn and a = "ucast t" and b = b in balance_gas_triple)
@@ -263,7 +324,6 @@ apply(rule_tac cL = "{(k, Info CALLER)}" and cR = "{(k + 1, Stack (PUSH_N [8, 0]
 apply(rule_tac R = "stack h (ucast c) ** caller c" in frame_backward)
   apply(rule_tac h = "Suc h" and g = "g - 2" in push_gas_triple)
  apply(auto)
- using sep_assoc sep_commute apply auto
 done
 
 lemma program_counter_comm :
@@ -286,6 +346,7 @@ lemma first_three_args :
            stack (Suc (Suc h)) (word_rcat [(8 :: byte), 0]) ** stack (Suc h) (ucast c) ** stack h b ** balance t b
            ** program_counter (6 + k) ** this_account t ** gas_pred (g - 404 - Gverylow)
            ** continuing )"
+apply(simp only: move_pureL)
 apply(auto)
 apply(rule_tac cL = "{(k, Info ADDRESS), (k + 1, Info BALANCE)}"
            and cR = "{(k + 2, Info CALLER), (k + 3, Stack (PUSH_N [8, 0]))}" in composition)
@@ -315,25 +376,11 @@ apply(rule_tac R = "balance t b ** stack h b ** block_number_pred bn ** this_acc
  apply(rule sep_functional)
   apply(simp)
  apply(rule sep_functional)
-  apply(rule program_counter_comm)
- apply(simp)
+  apply (simp add: Suc3_eq_add_3 add.commute)
 apply(rule sep_functional)
  apply(simp)
 apply(rule sep_functional)
  apply(simp)
-apply(rule sep_functional)
- apply(simp)
-apply(rule sep_functional)
- apply(simp)
-apply(rule sep_functional)
- apply(simp)
-apply(rule sep_functional)
- apply(simp)
-apply(rule sep_functional)
- apply(simp)
-apply(rule sep_functional)
-(* sledgehammer *)
-  apply (simp add: Suc3_eq_add_3 semiring_normalization_rules(24))
 apply(simp)
 done
 
@@ -386,6 +433,7 @@ lemma seven_args:
                        gas_pred (g - 404 - 5 * Gverylow) **
                        continuing
                       )"
+apply(simp only: move_pureL)
 apply(auto)
  apply(rule_tac cL = "{(k, Stack (PUSH_N [0])),
                        (k + 2, Dup 0),
@@ -636,16 +684,6 @@ proof -
   by auto
 qed
 
-lemma pick_third_L :
-  "c ** a ** b ** rest = R \<Longrightarrow> a ** b ** c ** rest = R"
-proof -
- have "c ** a ** b ** rest = a ** b ** c ** rest"
-  using first_two by presburger
- moreover assume "c ** a ** b ** rest = R"
- ultimately show "a ** b ** c ** rest = R"
-  by auto
-qed
-
 lemma pick_second_L :
   "b ** a ** rest = R \<Longrightarrow> a ** b ** rest = R"
 proof -
@@ -695,6 +733,7 @@ lemma call_with_args:
                                 , callarg_output_begin = word_rcat [0]
                                 , callarg_output_size = word_rcat [0] \<rparr>)
                       )"
+apply(simp only: move_pureL)
 apply(auto)
 apply(rule_tac cL = "{(k, Stack (PUSH_N [0])),
                        (k + 2, Dup 0),
@@ -719,57 +758,19 @@ apply(rule_tac R = "block_number_pred bn **
         and this = t and u = u
         in call_gas_triple)
  apply(simp add: word_rcat_def bin_rcat_def)
- apply(rule pick_fourth_L)
- apply(rule sep_functional)
-  apply(simp)
- apply(rule pick_third_L)
- apply(rule sep_functional)
-  apply(simp)
+ apply(rule cons_eq)
+ apply(rule cons_eq)
+ apply(rule cons_eq)
  apply(rule pick_fifth_L)
  apply(rule sep_functional)
   apply(simp)
- apply(rule pick_sixth_last_L)
- apply(rule sep_functional)
-  apply(simp)
- apply(rule pick_third_L)
- apply(rule sep_functional)
-  apply(simp)
- apply(rule pick_third_L)
- apply(rule sep_functional)
-  apply(simp)
- apply (metis abcbca)
+ apply blast
 apply(simp add: word_rcat_def bin_rcat_def M_def)
-apply(rule pick_fourth_L)
-apply(rule sep_functional)
- apply(simp)
-apply(rule pick_fifth_L)
-apply(rule sep_functional)
- apply(simp)
-apply(rule pick_fifth_L)
-apply(rule sep_functional)
- apply(simp)
-apply(rule pick_fourth_L)
-apply(rule sep_functional)
- apply(simp)
-apply(rule pick_fourth_L)
-apply(rule sep_functional)
- apply(simp)
-apply(rule pick_third_L)
-apply(rule sep_functional)
- apply(simp)
-apply(rule pick_third_L)
-apply(rule sep_functional)
- apply(simp)
-apply (metis abcbca)
 done
 
 lemma pick_secondL:
  "a ** rest = R \<Longrightarrow> a ** b ** rest = b ** R"
   by (simp add: first_two)
-
-lemma pick_thirdL:
- "a ** b ** rest = R \<Longrightarrow> a ** b ** c ** rest = c ** R"
-  by (simp add: pick_third_L)
 
 lemma sep_ac :
  "a ** b ** c = b ** a ** c"
@@ -799,6 +800,7 @@ lemma push0sload :
                        gas_pred (g - Gverylow - Gsload (unat bn)) **
                        continuing
                       )"
+apply(simp only: move_pureL)
 apply(auto)
 apply(rule_tac cL = "{(k, Stack (PUSH_N [0]))}"
            and cR = "{(k + 2, Storage SLOAD)}" in composition)
@@ -807,33 +809,13 @@ apply(rule_tac cL = "{(k, Stack (PUSH_N [0]))}"
     in frame_backward)
    apply(rule_tac h = h and g = g in push_gas_triple)
   apply(simp)
-  apply(rule pick_secondL)
-  apply(rule pick_secondL)
-  apply(rule pick_thirdL)
-  apply(auto simp: sep_commute)
- apply(rule sep_ac)
+ apply(simp)
 apply(rule_tac R = "emp" in frame_backward)
   apply(rule_tac bn = bn and h = h and w = w and g = "g - Gverylow"
         and idx = "word_rcat [0]"
         in sload_gas_triple)
- apply(simp)
- apply(rule sep_functional)
-  apply(simp)
- apply(rule pick_secondL)
- apply(rule pick_secondL)
- apply(rule pick_second_L)
- apply(rule sep_functional)
-  apply(simp add: program_counter_comm)
- apply(rule sep_functional)
-  apply (simp add: word_rcat_def bin_rcat_def)
- apply(rule sep_commute)
-apply(simp)
-apply(rule cons_eq)
-apply(rule cons_eq)
-apply(rule cons_eq)
-apply(rule cons_eq)
-apply(simp add: word_rcat_def bin_rcat_def)
-using sep_commute apply auto
+ apply(auto)
+apply(auto simp add: word_rcat_def bin_rcat_def)
 done
 
 lemma caller_eq :
@@ -850,6 +832,7 @@ lemma caller_eq :
                         program_counter (k + 2) ** caller c **
                         gas_pred (g - Gbase - Gverylow) **
                         continuing )"
+apply(simp only: move_pureL)
 apply(auto)
  apply(rule_tac cL = "{(k, Info CALLER)}"
            and cR = "{(k + 1, Arith inst_EQ)}" in composition)
@@ -857,60 +840,24 @@ apply(auto)
   apply(rule_tac R = "stack h w" in frame_backward)
     apply(rule_tac h = "Suc h" and g = g and c = c in caller_gas_triple)
    apply(simp)
-   apply(rule cons_eq)
-   apply(rule pick_secondL)
-   apply(rule pick_secondL)
-   apply(rule pick_secondL)
-   apply(rule sep_commute)
   apply(simp)
  apply(rule_tac R = "caller c" in frame_backward)
    apply(rule_tac h = h and g = "g - 2" and v = "ucast c" and w = "ucast c"
        in eq_gas_triple)
   apply(simp)
-  apply(rule cons_eq)
-  apply(rule cons_eq)
-  apply(rule pick_fifth_last_L)
-  apply(rule cons_eq)
-  apply(rule cons_eq)
-  apply(rule pick_secondL)
-  apply(rule sep_commute)
- apply(simp)
- apply(rule cons_eq)
- apply(rule cons_eq)
- apply(rule sep_functional)
-  apply(rule program_counter_comm)
- apply(rule pick_secondL)
- apply(rule sep_commute)
+ apply(auto)
 apply(rule_tac cL = "{(k, Info CALLER)}"
           and cR = "{(k + 1, Arith inst_EQ)}" in composition)
   apply(auto)
  apply(rule_tac R = "stack h w" in frame_backward)
    apply(rule_tac h = "Suc h" and g = g and c = c in caller_gas_triple)
   apply(simp)
-  apply(rule cons_eq)
-  apply(rule pick_secondL)
-  apply(rule pick_secondL)
-  apply(rule pick_secondL)
-  apply(rule sep_commute)
  apply(simp)
 apply(rule_tac R = "caller c" in frame_backward)
   apply(rule_tac h = h and g = "g - 2" and v = "ucast c" and w = "w"
       in eq_gas_triple)
  apply(simp)
- apply(rule cons_eq)
- apply(rule cons_eq)
- apply(rule pick_fifth_last_L)
- apply(rule cons_eq)
- apply(rule cons_eq)
- apply(rule pick_secondL)
- apply(rule sep_commute)
-apply(simp)
-apply(rule cons_eq)
-apply(rule cons_eq)
-apply(rule sep_functional)
- apply(rule program_counter_comm)
-apply(rule pick_secondL)
-apply(rule sep_commute)
+apply(auto)
 done
 
 lemma abccba :
@@ -944,44 +891,11 @@ apply(rule_tac cL = "{(k, Stack (PUSH_N [0])), (k + 2, Storage SLOAD)}"
  apply(rule_tac R = "caller c" in frame_backward)
    apply(rule_tac h = h and bn = bn and w = w and g = g in push0sload)
   apply(simp)
-  apply(rule cons_eq)
-  apply(rule cons_eq)
-  apply(rule cons_eq)
-  apply(rule pick_secondL)
-  apply(rule abcbca)
  apply(simp)
 apply(rule_tac R = "storage (word_rcat [0]) w ** block_number_pred bn" in frame_backward)
   apply(rule triple_code_eq)
    apply(rule_tac k = "k + 3" and h = h and w = w and c = c and g = "g - Gverylow - Gsload (unat bn)" in caller_eq)
-  apply simp
-  apply auto[1]
- apply(simp)
- apply(rule pick_secondL)
- apply(rule pick_secondL)
- apply(rule pick_second_L)
- apply(rule sep_functional)
-  apply(rule program_counter_comm)
- apply(rule pick_fifth_last_L)
- apply(rule cons_eq)
- apply(rule pick_thirdL)
- apply(rule abccba)
-apply(auto)
- apply(rule pick_secondL)
- apply(rule pick_secondL)
- apply(rule pick_secondL)
- apply(rule pick_secondL)
- apply(rule pick_third_L)
- apply(rule sep_functional)
-  apply(simp)
- apply(rule abccba)
-apply(rule pick_secondL)
-apply(rule pick_secondL)
-apply(rule pick_secondL)
-apply(rule pick_secondL)
-apply(rule pick_third_L)
-apply(rule sep_functional)
- apply(simp)
-apply(rule abccba)
+  apply auto
 done
 
 
@@ -1004,24 +918,11 @@ apply(rule_tac cL = "{(k, Stack (PUSH_N [x]))}"
   apply blast
  apply(rule_tac R = "stack h 0" in frame_backward)
    apply(rule_tac g = g and h = "Suc h" in push_gas_triple)
-  apply(simp)
-  apply(rule cons_eq)
-  apply(rule pick_secondL)
-  apply(rule pick_secondL)
-  apply(rule sep_commute)
- apply simp
+  apply(auto)
 apply(rule_tac R = "emp" in frame_backward)
   apply(rule_tac h = h and g = "g - Gverylow" and d = "(word_rcat [x])"
         in jumpi_false_gas_triple)
- apply(simp)
- apply(rule cons_eq)
- apply(rule cons_eq)
- apply(rule pick_fourth_last_L)
- apply(rule cons_eq)
- apply(rule sep_functional)
-  apply(rule program_counter_comm)
- apply(simp)
-apply(simp add: program_counter_comm)
+ apply(auto)
 done
 
 lemma pushjumpistop_false :
@@ -1038,6 +939,7 @@ lemma pushjumpistop_false :
                        program_counter (k + 3) **
                        gas_pred (g - Gverylow - Ghigh) **
                        not_continuing ** action (ContractReturn []))"
+apply(simp only: move_pureL)
 apply(auto)
 apply(rule_tac cL = "{(k, Stack (PUSH_N [x])), (k + 2, Pc JUMPI)}"
            and cR = "{(k + 3, Misc STOP)}" in composition)
@@ -1047,15 +949,7 @@ apply(rule_tac cL = "{(k, Stack (PUSH_N [x])), (k + 2, Pc JUMPI)}"
  apply(auto)
 apply(rule_tac R = "gas_pred (g - Gverylow - Ghigh)" in frame_backward)
   apply(rule_tac h = h in stop_gas_triple)
- apply(simp)
- apply(rule cons_eq)
- apply(rule cons_eq)
- apply(rule sep_commute)
-apply(simp)
-apply(rule cons_eq)
-apply(rule cons_eq)
-apply(rule pick_secondL)
-apply(rule sep_commute)
+ apply(auto)
 done
 
 lemma prefix_invalid_caller:
@@ -1077,6 +971,7 @@ lemma prefix_invalid_caller:
                        storage (word_rcat [0]) w **
                        gas_pred (g + (- Gsload (unat bn) - 2) - 2 * Gverylow - Gverylow - Ghigh) **
                        not_continuing ** action (ContractReturn []))"
+apply(simp only: move_pureL)
 apply(auto)
 apply(rule_tac cL = "{(k, Stack (PUSH_N [0])), (k + 2, Storage SLOAD),
                        (k + 3, Info CALLER), (k + 4, Arith inst_EQ)}"
@@ -1089,27 +984,9 @@ apply(rule_tac cL = "{(k, Stack (PUSH_N [0])), (k + 2, Storage SLOAD),
  apply(simp)
 apply(rule_tac R = "block_number_pred bn ** caller c ** storage (word_rcat [0]) w" in frame_backward)
   apply(rule triple_code_eq)
-  apply(rule_tac h = h and k = "k + 5" and x = x in pushjumpistop_false)
+  apply(rule_tac h = h and k = "k + 5" and x = x and g = "(g + (- Gsload (unat bn) - 2) - 2 * Gverylow)"
+        in pushjumpistop_false)
   apply(auto)
- apply(rule pick_secondL)
- apply(rule pick_secondL)
- apply(rule pick_second_L)
- apply(rule sep_functional)
-  apply(rule program_counter_comm)
- apply(rule pick_fourth_L)
- apply(rule sep_functional)
-  apply simp
- apply(rule pick_fourth_last_L)
- apply(simp)
-apply(simp)
-apply(rule pick_secondL)
-apply(rule pick_secondL)
-apply(rule pick_fourth_L)
-apply(rule cons_eq)
-apply(rule pick_fourth_L)
-apply(rule cons_eq)
-apply(rule pick_fourth_last_L)
-apply(simp)
 done
 
 lemma bintrunc_byte_uint :
@@ -1143,6 +1020,7 @@ lemma pushjumpi_true:
                        program_counter (uint d) **
                        gas_pred (g - Gverylow - Ghigh) **
                        continuing)"
+apply(simp only: move_pureL)
 apply(auto)
 apply(rule_tac cL = "{(k, Stack (PUSH_N [d]))}" 
            and cR = "{(k + 2, Pc JUMPI), ((uint (ucast d :: w256)), Pc JUMPDEST)}" in composition)
@@ -1150,24 +1028,12 @@ apply(rule_tac cL = "{(k, Stack (PUSH_N [d]))}"
  apply(rule_tac R = "stack h cond" in frame_backward)
    apply(rule_tac h = "h + 1" and g = g in push_gas_triple)
   apply(simp)
-  apply(rule cons_eq)
-  apply(rule pick_secondL)
-  apply(rule pick_secondL)
-  apply(rule sep_commute)
  apply(simp)
 apply(rule_tac R = "emp" in frame_backward)
   apply(rule triple_code_eq)
   apply(rule_tac g = "g - Gverylow" and cond = cond and h = h and k = "k + 2" and d = "ucast d" in jumpi_true_gas_triple)
   apply(simp)
- apply(simp)
- apply(rule cons_eq)
- apply(rule cons_eq)
- apply(rule pick_fourth_last_L)
- apply(rule cons_eq)
- apply(rule sep_functional)
-  apply(rule program_counter_comm)
- apply(simp)
-apply(simp)
+ apply(auto)
 done
 
 
@@ -1191,6 +1057,7 @@ lemma prefix_true:
                        gas_pred (g + (- Gsload (unat bn) - 2) - 3 * Gverylow - Ghigh) **
                        continuing
                       )"
+apply(simp only: move_pureL)
 apply(auto)
 apply(rule_tac cL = "{(k, Stack (PUSH_N [0])), (k + 2, Storage SLOAD),
                        (k + 3, Info CALLER), (k + 4, Arith inst_EQ)}"
@@ -1203,23 +1070,8 @@ apply(rule_tac cL = "{(k, Stack (PUSH_N [0])), (k + 2, Storage SLOAD),
  apply(simp)
 apply(rule_tac R = "block_number_pred bn ** caller c ** storage (word_rcat [0]) (ucast c)" in frame_backward)
   apply(rule triple_code_eq)
-  apply(rule_tac h = h and k = "k + 5" and d = d and cond = 1 in pushjumpi_true)
+  apply(rule_tac h = h and k = "k + 5" and d = d and cond = 1 and g = "g + (- Gsload (unat bn) - 2) - 2 * Gverylow" in pushjumpi_true)
   apply(auto)
- apply(rule pick_secondL)
- apply(rule pick_secondL)
- apply(rule pick_second_L)
- apply(rule sep_functional)
-  apply(rule program_counter_comm)
- apply(rule pick_fourth_L)
- apply(rule sep_functional)
-  apply(simp)
- apply(rule pick_fourth_last_L)
- apply(simp)
-apply(simp)
-apply(rule pick_secondL)
-apply(rule pick_secondL)
-apply(rule pick_fourth_last_L)
-apply(simp)
 done
 
 lemma prefix_true_over_JUMPDEST:
@@ -1242,6 +1094,7 @@ lemma prefix_true_over_JUMPDEST:
                        gas_pred (g + (- Gsload (unat bn) - 2) - 3 * Gverylow - Ghigh - Gjumpdest) **
                        continuing
                       )"
+apply(simp only: move_pureL)
 apply(auto)
 apply(rule_tac cL = "{(k, Stack (PUSH_N [0])), (k + 2, Storage SLOAD),
                        (k + 3, Info CALLER), (k + 4, Arith inst_EQ),
@@ -1257,19 +1110,8 @@ apply(rule_tac cL = "{(k, Stack (PUSH_N [0])), (k + 2, Storage SLOAD),
  apply(simp)
 apply(rule_tac R = "block_number_pred bn **
    caller c ** storage (word_rcat [0]) (ucast c)" in frame_backward)
-  apply(rule_tac h = h in jumpdest_gas_triple)
- apply(simp)
- apply(rule pick_secondL)
- apply(rule pick_secondL)
- apply(rule pick_fourth_L)
- apply(rule cons_eq)
- apply(rule pick_fourth_last_L)
- apply(simp)
-apply(simp)
-apply(rule pick_secondL)
-apply(rule pick_secondL)
-apply(rule pick_fourth_last_L)
-apply(simp)
+  apply(rule_tac h = h and g = "g + (- Gsload (unat bn) - 2) - 3 * Gverylow - Ghigh" in jumpdest_gas_triple)
+ apply(auto)
 done
 
 
@@ -1319,6 +1161,7 @@ lemma check_pass_whole:
                        caller c **
                        storage (word_rcat [0]) (ucast c)
                       )"
+apply(simp only: move_pureL)
 apply(auto)
 apply(rule_tac cL = "{(k, Stack (PUSH_N [0])), (k + 2, Storage SLOAD),
                        (k + 3, Info CALLER), (k + 4, Arith inst_EQ),
@@ -1344,33 +1187,9 @@ apply(rule_tac cL = "{(k, Stack (PUSH_N [0])), (k + 2, Storage SLOAD),
 apply(rule_tac R = "storage (word_rcat [0]) (ucast c)" in
       frame_backward)
   apply(rule_tac triple_code_eq)
-   apply(rule_tac bn = bn and  h = h and k = "uint d + 1" in call_with_args)
+   apply(rule_tac bn = bn and  h = h and k = "uint d + 1" and g = "g + (- Gsload (unat bn) - 2) - 3 * Gverylow - Ghigh - Gjumpdest" in call_with_args)
   apply(simp)
- apply(simp)
- apply(rule cons_eq)
- apply(rule pick_third_L)
- apply(rule cons_eq)
- apply(rule cons_eq)
- apply(rule cons_eq)
- apply(rule pick_fourth_L)
- apply(rule cons_eq)
- apply(rule pick_fourth_L)
- apply(rule cons_eq)
- apply(rule pick_second_L)
- apply(rule cons_eq)
- apply(rule pick_second_L)
- apply(rule cons_eq)
- apply(rule sep_commute)
-apply(simp)
-apply(rule pick_ninth_L)
-apply(rule cons_eq)
-apply(rule pick_ninth_L)
-apply(rule cons_eq)
-apply(rule cons_eq)
-apply(rule cons_eq)
-apply(rule sep_functional)
- apply(rule program_counter_comm)
-apply(simp)
+ apply(auto)
 done
 
 (* whole_concrete_program *)
@@ -1449,6 +1268,7 @@ lemma check_pass_whole_concrete:
                        caller c **
                        storage (word_rcat [0]) (ucast c)
                       )"
+apply(simp only: move_pureL)
 apply(auto)
 apply(rule triple_code_eq)
  apply(rule_tac R = "emp" in frame_backward)
