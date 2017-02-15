@@ -242,6 +242,13 @@ lemma gas_any_sep [simp] :
 apply(auto simp add: gas_any_def sep_def)
 done
 
+lemma sep_gas_any_sep [simp] :
+  "(a ** gas_any ** rest) s =
+   (\<exists> g. GasElm g \<in> s \<and> (a ** rest) (s - {GasElm g}))"
+	by simp
+
+
+
 definition caller :: "address \<Rightarrow> state_element set \<Rightarrow> bool"
 where
 "caller c s == s = {CallerElm c}"
@@ -285,6 +292,18 @@ lemma memory8_sep [simp] :
 "(memory8 idx v ** rest) s = (MemoryElm (idx, v) \<in> s \<and> rest (s - {MemoryElm (idx, v)}))"
 apply(auto simp add: memory8_def sep_def)
 done
+
+lemma sep_memory8_sep [simp] :
+"(a ** memory8 idx v ** rest) s = (MemoryElm (idx, v) \<in> s \<and> (a ** rest) (s - {MemoryElm (idx, v)}))"
+proof -
+  have "(a ** memory8 idx v ** rest) s = (memory8 idx v ** a ** rest) s"
+    by auto
+  moreover have "(memory8 idx v ** a ** rest) s = (MemoryElm (idx, v) \<in> s \<and> (a ** rest) (s - {MemoryElm (idx, v)}))"
+    by (rule memory8_sep)
+  ultimately show ?thesis
+    by auto
+qed
+
 
 fun memory_range :: "w256 \<Rightarrow> byte list \<Rightarrow> state_element set \<Rightarrow> bool"
 where
@@ -380,6 +399,11 @@ lemma contiuning_sep [simp] :
 apply(auto simp add: sep_def continuing_def)
 done
 
+lemma sep_continuing_sep [simp] :
+  "(a ** continuing ** b) s = ((ContinuingElm True) \<in> s \<and> (a ** b) (s - {ContinuingElm True}))"
+ by simp
+
+
 lemma storage_sep [simp] :
   "(storage idx w ** rest) s =
    (StorageElm (idx, w) \<in> s \<and> rest (s - {StorageElm (idx, w)}))"
@@ -401,6 +425,11 @@ lemma program_counter_sep [simp] : "(program_counter w ** rest) s =
 apply(auto simp add: sep_def program_counter_def)
 done
 
+lemma sep_program_counter_sep [simp] : "(a ** program_counter w ** rest) s =
+  (PcElm w \<in> s \<and> (a ** rest) (s - {PcElm w}))"
+	by (metis program_counter_sep set_pred.left_commute)
+
+
 lemma leibniz :
   "r (s :: state_element set) \<Longrightarrow> s = t \<Longrightarrow> r t"
 apply(auto)
@@ -417,16 +446,52 @@ apply(auto simp add: sep_def)
 apply(auto simp add: code_def)
 done
 
+lemma sep_code [simp] : "(rest ** code pairs) s =
+  ({ CodeElm(pos, i) | pos i. (pos, i) \<in> pairs } \<subseteq> s \<and> (rest (s - { CodeElm(pos, i) | pos i. (pos, i) \<in> pairs })))"
+	using code_sep by auto
+
+
+lemma sep_code_sep [simp] : "(a ** code pairs ** rest) s =
+  ({ CodeElm(pos, i) | pos i. (pos, i) \<in> pairs } \<subseteq> s \<and> ((a ** rest) (s - { CodeElm(pos, i) | pos i. (pos, i) \<in> pairs })))"
+	by (metis (no_types, lifting) code_sep set_pred.left_commute)
+
+
+lemma sep_sep_code [simp] : "(a ** b ** code pairs) s =
+  ({ CodeElm(pos, i) | pos i. (pos, i) \<in> pairs } \<subseteq> s \<and> ((a ** b) (s - { CodeElm(pos, i) | pos i. (pos, i) \<in> pairs })))"
+  (is "?L = ?R")
+proof -
+ have "?L = (a ** code pairs ** b) s"
+   by simp
+ moreover have "(a ** code pairs ** b) s = ?R"
+   by (rule sep_code_sep)
+ ultimately show ?thesis
+   by auto
+qed
+
+
 lemma gas_pred_sep [simp] : "(gas_pred g ** rest) s =
   ( GasElm g \<in> s \<and> rest (s - { GasElm g }) )"
   apply(auto simp add: sep_def gas_pred_def)
 done
+
+lemma sep_gas_pred_sep [simp] :
+  "(a ** gas_pred g ** b) s =
+   ( GasElm g \<in> s \<and> (a ** b) (s - { GasElm g } ) )"
+(* sledgehammer *)
+	by (metis gas_pred_sep set_pred.left_commute)
+
 
 lemma memory_usage_sep [simp] : 
   "(memory_usage u ** rest) s =
    (MemoryUsageElm u \<in> s \<and> rest (s - {MemoryUsageElm u}))"
 apply(auto simp add: memory_usage_def sep_def)
 done
+
+lemma sep_memory_usage_sep [simp] :
+  "(a ** memory_usage u ** rest) s =
+   (MemoryUsageElm u \<in> s \<and> (a ** rest) (s - {MemoryUsageElm u}))"
+	by (metis memory_usage_sep set_pred.left_commute)
+
 
 lemma stackHeightElmEquiv [simp] : "StackHeightElm h \<in> contexts_as_set v c =
   (length (vctx_stack v) = h)
@@ -562,6 +627,8 @@ lemma code_union_s:
 (* sledgehammer *)
 	by (simp add: sup_commute)
 
+declare sep_sep_code [simp del]
+
 lemma composition : "c = cL \<union> cR \<Longrightarrow> triple allowed p cL q \<Longrightarrow> triple allowed q cR r \<Longrightarrow> triple allowed p c r"
 apply(auto simp add: triple_def code_middle shuffle3)
 apply(drule_tac x = "co_ctx" in spec; simp)
@@ -687,6 +754,8 @@ lemma tmp01:
  apply(auto)
  done
 
+declare sep_code_sep [simp del]
+
 lemma tmp0:
        "\<forall>co_ctx. no_assertion co_ctx \<longrightarrow>
                 (\<forall>presult rest.
@@ -706,10 +775,12 @@ apply(rule tmp01)
 apply(simp)
 done
 
+declare sep_code_sep [simp]
+
 lemma preE0:
   "((\<lambda>s. \<exists>x. p x s) ** code c ** rest) s \<Longrightarrow>
    \<exists> x. (p x ** code c ** rest) s"
-apply(auto simp add: sep_def)
+apply(auto simp only: sep_def)
 	by blast
 
 lemma sep_impL :
@@ -747,6 +818,8 @@ apply(rule_tac x = u in exI)
 apply blast
 done
 
+declare sep_code_sep [simp del]
+
 lemma preE : "triple reasons (\<lambda> s. \<exists> x. p x s) c q = (\<forall> x. triple reasons (p x) c q)"
 apply(auto simp add: triple_def)
  apply(erule_tac x = co_ctx in allE)
@@ -770,6 +843,8 @@ apply(subgoal_tac "(\<exists>u. rest u \<and>
 apply(rule_tac x = u in exI)
 apply(auto)
 done
+
+declare sep_code_sep [simp]
 
 
 (** More rules to come **)
@@ -822,6 +897,8 @@ where
  @ (* beginning + length cond + length else_case + 9 + length then_case *)
  [Pc JUMPDEST]
 "
+
+declare sep_sep_code [simp]
 
 (* example of if_then_else *)
 
