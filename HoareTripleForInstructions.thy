@@ -1658,6 +1658,15 @@ apply(rule leibniz)
 apply(auto)
 done
 
+lemma sep_stack_topmost [simp] :
+  "(rest ** stack_topmost h lst) s =
+   (stack_topmost_elms h lst \<subseteq> s \<and> rest (s - stack_topmost_elms h lst))"
+apply(auto simp add: stack_topmost_def sep_def)
+apply(rule leibniz)
+ apply blast
+apply(auto)
+done
+
 lemma fourth_stack_topmost [simp] :
   "(a ** b ** c ** stack_topmost h lst ** rest) s =
    (stack_topmost_elms h lst \<subseteq> s \<and> (a ** b ** c ** rest) (s - stack_topmost_elms h lst))"
