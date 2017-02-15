@@ -834,6 +834,13 @@ lemma block_number_pred_sep [simp] :
 apply(auto simp add: sep_def block_number_pred_def)
 done
 
+
+lemma sep_block_number_pred_sep [simp] :
+  "(rest ** block_number_pred bn ** a) s =
+   ((BlockNumberElm bn \<in> s) \<and> (rest ** a) (s - {BlockNumberElm bn}))"
+apply(auto simp add: sep_def block_number_pred_def)
+done
+
 lemma block_number_elm_not_constant [simp] :
   "BlockNumberElm bn \<notin> constant_ctx_as_set co_ctx"
 apply(simp add: constant_ctx_as_set_def program_as_set_def)
@@ -2730,7 +2737,7 @@ lemma gas_gas_triple :
 apply(auto simp add: triple_def)
 apply(rule_tac x = 1 in exI)
 apply(case_tac presult; auto simp add: instruction_result_as_set_def)
- apply(simp add: gas_def  Word.wi_hom_syms(2))
+ apply(simp add: Word.wi_hom_syms(2))
 apply(rule leibniz)
  apply blast
 apply(rule  Set.equalityI; clarify)
@@ -2739,7 +2746,7 @@ apply(rule  Set.equalityI; clarify)
  apply(case_tac elm; simp)
 apply(simp)
 apply(rename_tac elm)
-apply(case_tac elm; auto simp add: gas_def Word.wi_hom_syms(2))
+apply(case_tac elm; auto simp add: Word.wi_hom_syms(2))
 done
 
 

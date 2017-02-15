@@ -410,15 +410,49 @@ lemma storage_sep [simp] :
 apply(auto simp add: sep_def storage_def)
 done
 
+lemma sep_storage [simp] :
+  "(rest ** storage idx w) s =
+   (StorageElm (idx, w) \<in> s \<and> rest (s - {StorageElm (idx, w)}))"
+apply(auto simp add: sep_def storage_def)
+done
+
+lemma sep_storage_sep [simp] :
+  "(rest ** storage idx w ** c) s =
+   (StorageElm (idx, w) \<in> s \<and> (rest ** c) (s - {StorageElm (idx, w)}))"
+apply(auto simp add: sep_def storage_def)
+done
+
 lemma stack_height_sep [simp] : "(stack_height h ** rest) s =
   (StackHeightElm h \<in> s \<and> rest (s - {StackHeightElm h})) "
 apply(auto simp add: sep_def stack_height_def)
 done
 
+lemma sep_stack_height [simp] : "(rest ** stack_height h) s =
+  (StackHeightElm h \<in> s \<and> rest (s - {StackHeightElm h})) "
+apply(auto simp add: sep_def stack_height_def)
+done
+
+lemma sep_stack_height_sep [simp] : "(a ** stack_height h ** rest) s =
+  (StackHeightElm h \<in> s \<and> (a ** rest) (s - {StackHeightElm h})) "
+apply(auto simp add: sep_def stack_height_def)
+done
+
+
 lemma stack_sep [simp] : "(stack p w ** rest) s =
   (StackElm (p, w) \<in> s \<and> rest (s - {StackElm (p, w)}))"
 apply(auto simp add: sep_def stack_def)
 done
+
+lemma sep_stack [simp] : "(rest ** stack p w) s =
+  (StackElm (p, w) \<in> s \<and> rest (s - {StackElm (p, w)}))"
+apply(auto simp add: sep_def stack_def)
+done
+
+lemma sep_stack_sep [simp] : "(a ** stack p w ** rest) s =
+  (StackElm (p, w) \<in> s \<and> (a ** rest) (s - {StackElm (p, w)}))"
+apply(auto simp add: sep_def stack_def)
+done
+
 
 lemma program_counter_sep [simp] : "(program_counter w ** rest) s =
   (PcElm w \<in> s \<and> rest (s - {PcElm w}))"
@@ -470,6 +504,11 @@ qed
 
 
 lemma gas_pred_sep [simp] : "(gas_pred g ** rest) s =
+  ( GasElm g \<in> s \<and> rest (s - { GasElm g }) )"
+  apply(auto simp add: sep_def gas_pred_def)
+done
+
+lemma sep_gas_pred [simp] : "(rest ** gas_pred g) s =
   ( GasElm g \<in> s \<and> rest (s - { GasElm g }) )"
   apply(auto simp add: sep_def gas_pred_def)
 done
