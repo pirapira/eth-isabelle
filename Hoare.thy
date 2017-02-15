@@ -459,6 +459,12 @@ lemma program_counter_sep [simp] : "(program_counter w ** rest) s =
 apply(auto simp add: sep_def program_counter_def)
 done
 
+lemma sep_program_counter [simp] : "(rest ** program_counter w) s =
+  (PcElm w \<in> s \<and> rest (s - {PcElm w}))"
+apply(auto simp add: sep_def program_counter_def)
+done
+
+
 lemma sep_program_counter_sep [simp] : "(a ** program_counter w ** rest) s =
   (PcElm w \<in> s \<and> (a ** rest) (s - {PcElm w}))"
 	by (metis program_counter_sep set_pred.left_commute)
@@ -522,6 +528,12 @@ lemma sep_gas_pred_sep [simp] :
 
 lemma memory_usage_sep [simp] : 
   "(memory_usage u ** rest) s =
+   (MemoryUsageElm u \<in> s \<and> rest (s - {MemoryUsageElm u}))"
+apply(auto simp add: memory_usage_def sep_def)
+done
+
+lemma sep_memory_usage [simp] : 
+  "(rest ** memory_usage u) s =
    (MemoryUsageElm u \<in> s \<and> rest (s - {MemoryUsageElm u}))"
 apply(auto simp add: memory_usage_def sep_def)
 done

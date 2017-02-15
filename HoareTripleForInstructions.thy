@@ -358,6 +358,12 @@ lemma caller_sep [simp]:
 apply(auto simp add: caller_def sep_def)
 done
 
+lemma sep_caller [simp]:
+  "(rest ** caller c) s =
+   (CallerElm c \<in> s \<and> rest (s - {CallerElm c}))"
+apply(auto simp add: caller_def sep_def)
+done
+
 lemma sep_caller_sep [simp]:
   "(a ** caller c ** rest) s =
    (CallerElm c \<in> s \<and> (a ** rest) (s - {CallerElm c}))"
@@ -373,6 +379,12 @@ qed
 
 lemma balance_sep [simp] :
   "(balance a b ** rest) s =
+   (BalanceElm (a, b) \<in> s \<and> rest (s - {BalanceElm (a, b)}))"
+apply(auto simp add: balance_def sep_def)
+done
+
+lemma sep_balance [simp] :
+  "(rest ** balance a b) s =
    (BalanceElm (a, b) \<in> s \<and> rest (s - {BalanceElm (a, b)}))"
 apply(auto simp add: balance_def sep_def)
 done
@@ -1151,6 +1163,12 @@ lemma sep_not_continuing_sep [simp] :
 
 lemma this_account_sep [simp] :
   "(this_account t ** rest) s =
+   (ThisAccountElm t \<in> s \<and> rest (s - {ThisAccountElm t}))"
+apply(auto simp add: this_account_def sep_def)
+done
+
+lemma sep_this_account [simp] :
+  "(rest ** this_account t) s =
    (ThisAccountElm t \<in> s \<and> rest (s - {ThisAccountElm t}))"
 apply(auto simp add: this_account_def sep_def)
 done
