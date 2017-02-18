@@ -1,7 +1,7 @@
 theory "InstructionAux" 
 
 imports Main
-  "../lem/Evm"
+  "../../lem/Evm"
 begin
 
 

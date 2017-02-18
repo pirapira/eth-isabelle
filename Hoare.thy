@@ -18,7 +18,6 @@ done
 
 (* unat (1 + (aa - 1)) = Suc (unat(aa - 1)) *)
 
-
 lemma cut_memory_dom_nat :
   "\<forall> a aa b. unat aa = n \<longrightarrow> cut_memory_dom (a, aa, b)"
 apply(induction n)
@@ -34,7 +33,6 @@ done
 termination cut_memory
 apply(auto simp add: cut_memory_dom_nat)
 done
-
 
 (* Following Magnus Myreen's thesis "Formal verification of machine-code programs" 3.2.4 *)  
 

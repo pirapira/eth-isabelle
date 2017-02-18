@@ -91,8 +91,8 @@ Definition boolListFromWord8  (w : word8 )  : list (bool ):=  List.rev (boolList
 Definition word8FromNumeral  (w : nat )  : word8 :=  bs_to_w8 (bitSeqFromInteger None ((Zpred (Zpos (P_of_succ_nat w))))).
 (* 
 
-Instance x41_Numeral : Numeral word8 := {
-   fromNumeral  :=  word8FromNumeral
+Instance x62_Numeral : Numeral word8 := {
+   fromNumeral   x :=  word8FromNumeral x
 }.
  *)
 (* [?]: removed value specification. *)
@@ -114,7 +114,7 @@ Definition w8GreaterEqual  (bs1 : word8 ) (bs2 : word8 )  : bool :=  word8BinTes
 
 Definition w8Compare  (bs1 : word8 ) (bs2 : word8 )  : ordering :=  word8BinTest bitSeqCompare bs1 bs2.
 
-Instance x40_Ord : Ord word8 := {
+Instance x61_Ord : Ord word8 := {
    compare  :=  w8Compare;
    isLess  :=  w8Less;
    isLessEqual  :=  w8LessEqual;
@@ -123,7 +123,7 @@ Instance x40_Ord : Ord word8 := {
 }.
 
 
-Instance x39_SetType : SetType word8 := {
+Instance x60_SetType : SetType word8 := {
    setElemCompare  :=  w8Compare
 }.
 
@@ -186,93 +186,93 @@ Definition word8Lsr   : word8  -> nat  -> word8 :=  word8NatOp bitSeqLogicalShif
 Definition word8Lsl   : word8  -> nat  -> word8 :=  word8NatOp bitSeqShiftLeft.
 
 
-Instance x38_NumNegate : NumNegate word8 := {
+Instance x59_NumNegate : NumNegate word8 := {
    numNegate  :=  word8Negate
 }.
 
 
-Instance x37_NumAdd : NumAdd word8 := {
+Instance x58_NumAdd : NumAdd word8 := {
    numAdd  :=  word8Add
 }.
 
 
-Instance x36_NumMinus : NumMinus word8 := {
+Instance x57_NumMinus : NumMinus word8 := {
    numMinus  :=  word8Minus
 }.
 
 
-Instance x35_NumSucc : NumSucc word8 := {
+Instance x56_NumSucc : NumSucc word8 := {
    succ  :=  word8Succ
 }.
 
 
-Instance x34_NumPred : NumPred word8 := {
+Instance x55_NumPred : NumPred word8 := {
    pred  :=  word8Pred
 }.
 
 
-Instance x33_NumMult : NumMult word8 := {
+Instance x54_NumMult : NumMult word8 := {
    numMult  :=  word8Mult
 }.
 
 
-Instance x32_NumPow : NumPow word8 := {
+Instance x53_NumPow : NumPow word8 := {
    numPow  :=  word8Power
 }.
 
 
-Instance x31_NumIntegerDivision : NumIntegerDivision word8 := { 
+Instance x52_NumIntegerDivision : NumIntegerDivision word8 := { 
    numIntegerDivision  :=  word8IntegerDivision
 }.
 
 
-Instance x30_NumDivision : NumDivision word8 := { 
+Instance x51_NumDivision : NumDivision word8 := { 
    numDivision  :=  word8Division
 }.
 
 
-Instance x29_NumRemainder : NumRemainder word8 := { 
+Instance x50_NumRemainder : NumRemainder word8 := { 
    numRemainder  :=  word8Remainder
 }.
 
 
-Instance x28_OrdMaxMin : OrdMaxMin word8 := { 
+Instance x49_OrdMaxMin : OrdMaxMin word8 := { 
    max  :=  word8Max;
    min  :=  word8Min
 }.
 
 
-Instance x27_WordNot : WordNot word8 := { 
+Instance x48_WordNot : WordNot word8 := { 
    lnot  :=  word8Lnot
 }.
 
 
-Instance x26_WordAnd : WordAnd word8 := { 
+Instance x47_WordAnd : WordAnd word8 := { 
    conjunction  :=  word8Land
 }.
 
 
-Instance x25_WordOr : WordOr word8 := { 
+Instance x46_WordOr : WordOr word8 := { 
    inclusive_or  :=  word8Lor
 }.
 
 
-Instance x24_WordXor : WordXor word8 := { 
+Instance x45_WordXor : WordXor word8 := { 
    exclusive_or  :=  word8Lxor
 }.
 
 
-Instance x23_WordLsl : WordLsl word8 := { 
+Instance x44_WordLsl : WordLsl word8 := { 
    left_shift  :=  word8Lsl
 }.
 
 
-Instance x22_WordLsr : WordLsr word8 := {
+Instance x43_WordLsr : WordLsr word8 := {
    logicial_right_shift  :=  word8Lsr
 }.
 
 
-Instance x21_WordAsr : WordAsr word8 := {
+Instance x42_WordAsr : WordAsr word8 := {
    arithmetic_right_shift  :=  word8Asr
 }.
 

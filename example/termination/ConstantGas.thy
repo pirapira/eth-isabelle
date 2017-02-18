@@ -1,7 +1,7 @@
 theory "ConstantGas" 
 
 imports 
-   "InstructionAux" "../ProgramInAvl"
+   "InstructionAux" "../../ProgramInAvl"
 
 begin
 

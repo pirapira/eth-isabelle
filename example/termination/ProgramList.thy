@@ -1,6 +1,6 @@
 theory ProgramList
 
-imports Main "../ContractSem" "../RelationalSem" "../ProgramInAvl"
+imports Main "../../ContractSem" "../../RelationalSem" "../../ProgramInAvl"
 
 begin
 

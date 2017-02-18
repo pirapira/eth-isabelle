@@ -107,7 +107,8 @@ let rec {coq} word_exp i n =
   | n+1 -> (word_exp i n * i) mod (2 ** 256)
   end
 
-
+let inline {isabelle; hol} ii x = x
+let {coq} ii x = x
 
 (* In EVM, the memory contains one byte for each machine word (offset). *)
 (* The storage contains one machine word for each machine word (index). *)
@@ -126,7 +127,13 @@ end
 declare termination_argument cut_memory_aux = automatic
 
 val cut_memory : w256 -> w256 -> memory -> list byte
-let cut_memory idx n memory = cut_memory_aux idx (word256ToNatural n) memory
+let rec {isabelle;hol} cut_memory idx n memory =
+  if n = 0 then []
+  else memory idx :: cut_memory (idx + 1) (n - 1) memory
+declare termination_argument cut_memory = manual
+
+let {coq} cut_memory idx n memory = cut_memory_aux idx (word256ToNatural n) memory
+
 
 val put_return_values_aux : memory -> list byte -> integer -> natural -> memory
 let rec put_return_values_aux orig lst b s = match s with
@@ -140,10 +147,16 @@ end
 declare termination_argument put_return_values_aux = automatic
 
 val put_return_values : memory -> list byte -> integer -> integer -> memory
-let put_return_values orig lst b s =
+let rec {isabelle; hol} put_return_values orig lst b s =
+  if s <= 0 then orig else
+  match lst with
+  | [] -> orig
+  | h :: t -> put_return_values (fun addr -> if addr = word256FromInteger b then h else orig addr) t (b + 1) (s - 1)
+  end
+declare termination_argument put_return_values = automatic
+
+let {coq} put_return_values orig lst b s =
   if s <= 0 then orig else put_return_values_aux orig lst b (naturalFromInteger s)
-
-
 
 (* The storage is modelled as a function.  For example, the empty storage *)
 (* is a function that returns zero for every index.  Initially all accounts come with *)
@@ -683,7 +696,7 @@ val Ghigh : integer
 let Ghigh = 10
 
 val magic_block : natural
-let magic_block = 2463*1000
+let inline magic_block = 2463*1000
 
 val Gextcode : natural -> integer
 let Gextcode blocknumber =
@@ -1205,7 +1218,7 @@ let constant_mark lst = lst
 (* Looking up a word from a list of bytes: *)
 val read_word_from_bytes : natural -> list byte -> w256
 let read_word_from_bytes idx lst =
-  if naturalFromNat (length lst) <= idx then 0
+  if naturalFromNat (length lst) <= idx then (0)
   else
     word_of_bytes
     (byte_list_fill_right 0 32
@@ -1225,7 +1238,7 @@ end
 val call : variable_ctx -> constant_ctx -> instruction_result
 let call v c = match v.vctx_stack with
  | e0 :: e1 :: e2 :: e3 :: e4 :: e5 :: e6 :: rest ->
-     strict_if (word256ULT (v.vctx_balance c.cctx_this) e2)
+     strict_if (word256ULT ((ii v.vctx_balance) c.cctx_this) e2)
         (fun _ -> (InstructionContinue
            (vctx_advance_pc c
              <| v with
@@ -1253,7 +1266,7 @@ end
 val delegatecall : variable_ctx -> constant_ctx -> instruction_result
 let delegatecall v c = match v.vctx_stack with
  | e0 :: e1 :: e3 :: e4 :: e5 :: e6 :: rest ->
-    if word256ULT (v.vctx_balance c.cctx_this) v.vctx_value_sent then
+    if word256ULT (ii v.vctx_balance c.cctx_this) v.vctx_value_sent then
         (InstructionContinue
            (vctx_advance_pc c
              <| v with
@@ -1281,7 +1294,7 @@ end
 val callcode : variable_ctx -> constant_ctx -> instruction_result
 let callcode v c = match v.vctx_stack with
  | e0 :: e1 :: e2 :: e3 :: e4 :: e5 :: e6 :: rest ->
-    if word256ULT (v.vctx_balance c.cctx_this) e2 then
+    if word256ULT (ii v.vctx_balance  c.cctx_this) e2 then
         (InstructionContinue
            (vctx_advance_pc c
              <| v with
@@ -1310,7 +1323,7 @@ end
 val create : variable_ctx -> constant_ctx -> instruction_result
 let create v c = match v.vctx_stack with
   | vl :: code_start :: code_len :: rest ->
-      if word256ULT (v.vctx_balance c.cctx_this) vl then
+      if word256ULT (ii v.vctx_balance c.cctx_this) vl then
         (InstructionContinue
            (vctx_advance_pc c
              <| v with
@@ -1419,8 +1432,8 @@ end
 val input_as_natural_map : list byte -> natural -> byte
 let input_as_natural_map lst (idx : natural) =
   let idx = integerFromNatural idx in
-  if 0 > idx then 0
-  else if integerFromNat (length lst) <= idx then 0
+  if 0 > idx then (0)
+  else if integerFromNat (length lst) <= idx then (0)
   else
     match List.index lst (natFromInteger idx) with
     | Nothing -> 0
@@ -1458,7 +1471,7 @@ let extcodecopy v c = match v.vctx_stack with
  | addr :: dst_start :: src_start :: len :: rest ->
      let data = cut_natural_map (word256ToNatural src_start) (word256ToNatural len)
                   (program_as_natural_map
-                    (v.vctx_ext_program (w256_to_address addr))) in
+                    (ii v.vctx_ext_program (w256_to_address addr))) in
      let new_memory = store_byte_list_memory dst_start data v.vctx_memory in
      InstructionContinue (vctx_advance_pc c
        <| v with vctx_stack = rest; vctx_memory = new_memory;
@@ -1527,9 +1540,9 @@ val suicide : variable_ctx -> constant_ctx -> instruction_result
 let suicide v c = match v.vctx_stack with
  | dst :: _ ->
      let new_balance addr =
-        if addr = c.cctx_this then 0 else
-        if addr = w256_to_address dst then v.vctx_balance c.cctx_this + v.vctx_balance addr else
-        v.vctx_balance addr in
+        if addr = c.cctx_this then (0) else
+        if addr = w256_to_address dst then ii v.vctx_balance c.cctx_this + ii v.vctx_balance addr else
+        ii v.vctx_balance addr in
      InstructionToEnvironment ContractSuicide v Nothing
  | _ -> instruction_failure_result v [TooShortStack]
 end
@@ -1742,8 +1755,8 @@ val predict_gas : inst -> variable_ctx -> constant_ctx -> integer
 let predict_gas i v c =
   C v.vctx_memory_usage (new_memory_consumption i v) (vctx_next_instruction_default v c)
     (vctx_stack_default 0 v) (vctx_stack_default 1 v) (vctx_stack_default 2 v) (vctx_stack_default 3 v)
-    (not (v.vctx_account_existence (vctx_recipient v c))) (v.vctx_storage (vctx_stack_default 0 v))
-    (vctx_stack_default 1 v) (v.vctx_gas) (word256ToNatural v.vctx_block.block_number)
+    (not (ii v.vctx_account_existence (vctx_recipient v c))) (ii v.vctx_storage (vctx_stack_default 0 v))
+    (vctx_stack_default 1 v) v.vctx_gas (word256ToNatural v.vctx_block.block_number)
 
 val check_resources : variable_ctx -> constant_ctx -> list w256 -> inst -> bool
 let check_resources v c s i =
@@ -1794,15 +1807,15 @@ let instruction_sem v c inst =
   | Info CALLER -> stack_0_1_op v c (address_to_w256 v.vctx_caller)
   | Arith ADD -> stack_2_1_op v c (fun a b -> a + b)
   | Arith SUB -> stack_2_1_op v c (fun a b -> a - b)
-  | Arith ISZERO -> stack_1_1_op v c (fun a -> if a = 0 then 1 else 0)
+  | Arith ISZERO -> stack_1_1_op v c (fun a -> if a = 0 then (1) else (0))
   | Misc CALL -> call v c
   | Misc RETURN -> ret v c
   | Misc STOP -> stop v c
   | Dup n -> general_dup n v c
   | Stack POP -> pop v c
   | Info GASLIMIT -> stack_0_1_op v c v.vctx_block.block_gaslimit
-  | Arith inst_GT -> stack_2_1_op v c (fun a b -> if word256UGT a b then 1 else 0)
-  | Arith inst_EQ -> stack_2_1_op v c (fun a b -> if a = b then 1 else 0)
+  | Arith inst_GT -> stack_2_1_op v c (fun a b -> if word256UGT a b then (1) else (0))
+  | Arith inst_EQ -> stack_2_1_op v c (fun a b -> if a = b then (1) else (0))
   | Bits inst_AND -> stack_2_1_op v c (fun a b -> a land b)
   | Bits inst_OR -> stack_2_1_op v c (fun a b -> a lor b)
   | Bits inst_XOR -> stack_2_1_op v c (fun a b -> a lxor b)
@@ -1810,7 +1823,7 @@ let instruction_sem v c inst =
   | Bits BYTE ->
       stack_2_1_op v c get_byte
   | Sarith SDIV -> stack_2_1_op v c
-       (fun n divisor -> if divisor = 0 then 0 else
+       (fun n divisor -> if divisor = 0 then (0) else
                          let divisor = sintFromW256 divisor in
                          let n = sintFromW256 n in
                          let min_int : integer = ~ (2 ** 255) in
@@ -1828,7 +1841,7 @@ let instruction_sem v c inst =
                               word256FromInteger (n div divisor))
                            )
   | Sarith SMOD -> stack_2_1_op v c
-       (fun n divisor -> if divisor = 0 then 0 else
+       (fun n divisor -> if divisor = 0 then (0) else
                          let divisor = sintFromW256 divisor in
                          let n = sintFromW256 n in
                          if divisor < 0 then
@@ -1844,26 +1857,26 @@ let instruction_sem v c inst =
                               word256FromInteger (n mod divisor))
                            )
   | Sarith SGT -> stack_2_1_op v c
-       (fun elm0 elm1 -> if elm0 > elm1 then 1 else 0)
+       (fun elm0 elm1 -> if elm0 > elm1 then (1) else (0))
   | Sarith SLT -> stack_2_1_op v c
-       (fun elm0 elm1 -> if elm0 < elm1 then 1 else 0)
+       (fun elm0 elm1 -> if elm0 < elm1 then (1) else (0))
   | Sarith SIGNEXTEND -> stack_2_1_op v c signextend
   | Arith MUL -> stack_2_1_op v c
        (fun a b -> a * b)
   | Arith DIV -> stack_2_1_op v c
-       (fun a divisor -> (if divisor = 0 then 0 else word256FromInteger ((uint a) div (uint divisor))))
+       (fun a divisor -> (if divisor = 0 then (0) else word256FromInteger ((uint a) div (uint divisor))))
   | Arith MOD -> stack_2_1_op v c
-       (fun a divisor -> (if divisor = 0 then 0 else
+       (fun a divisor -> (if divisor = 0 then (0) else
             word256FromInteger ((uint a) mod (uint divisor))
         ))
   | Arith ADDMOD -> stack_3_1_op v c
        (fun a b divisor ->
-           (if divisor = 0 then 0 else word256FromInteger ((uint a + uint b) mod (uint divisor))))
+           (if divisor = 0 then (0) else word256FromInteger ((uint a + uint b) mod (uint divisor))))
   | Arith MULMOD -> stack_3_1_op v c
        (fun a b divisor ->
-           (if divisor = 0 then 0 else word256FromInteger ((uint a * uint b) mod (uint divisor))))
-  | Arith EXP -> stack_2_1_op v c (fun a exponent -> word256FromInteger (word_exp (word256ToInteger a) (word256ToNatural exponent)))
-  | Arith inst_LT -> stack_2_1_op v c (fun arg0 arg1 -> if word256UGT arg1 arg0 then 1 else 0)
+           (if divisor = 0 then (0) else word256FromInteger ((uint a * uint b) mod (uint divisor))))
+  | Arith EXP -> stack_2_1_op v c (fun a exponent -> word256FromInteger (word_exp (uint a) (word256ToNatural exponent)))
+  | Arith inst_LT -> stack_2_1_op v c (fun arg0 arg1 -> if word256UGT arg1 arg0 then (1) else (0))
   | Arith SHA3 -> sha3 v c
   | Info ADDRESS -> stack_0_1_op v c (address_to_w256 c.cctx_this)
   | Info BALANCE -> stack_1_1_op v c (fun addr -> v.vctx_balance (w256_to_address addr))
@@ -1872,7 +1885,7 @@ let instruction_sem v c inst =
   | Info CODESIZE -> stack_0_1_op v c (word256FromInteger c.cctx_program.program_length)
   | Info GASPRICE -> stack_0_1_op v c v.vctx_block.block_gasprice
   | Info EXTCODESIZE -> stack_1_1_op v c
-       (fun arg -> word256FromInteger (v.vctx_ext_program (w256_to_address arg)).program_length)
+       (fun arg -> word256FromInteger (ii v.vctx_ext_program (w256_to_address arg)).program_length)
   | Info BLOCKHASH -> stack_1_1_op v c v.vctx_block.block_blockhash
   | Info COINBASE -> stack_0_1_op v c (address_to_w256 v.vctx_block.block_coinbase)
   | Info TIMESTAMP -> stack_0_1_op v c v.vctx_block.block_timestamp
@@ -1927,13 +1940,13 @@ let next_state stopper c pr =
      match vctx_next_instruction v c with
       | Nothing -> InstructionToEnvironment (ContractFail [ShouldNotHappen]) v Nothing
       | Just i ->
-        if check_resources v c (v.vctx_stack) i then
+        if check_resources v c v.vctx_stack i then
           instruction_sem v c i
         else
           InstructionToEnvironment (ContractFail
               (match inst_stack_numbers i with
                | (consumed, produced) ->
-                 (if (intFromNat (length (v.vctx_stack)) + produced - consumed <= 1024) then [] else [TooLongStack])
+                 (if (intFromNat (length v.vctx_stack) + produced - consumed <= 1024) then [] else [TooLongStack])
                   ++ (if predict_gas i v c <= v.vctx_gas then [] else [OutOfGas])
                end
               ))
@@ -2003,7 +2016,7 @@ val build_vctx_failed : account_state -> maybe variable_ctx
 let build_vctx_failed a = match a.account_ongoing_calls with
  | [] -> Nothing
  | (recovered,_,_) :: _ ->
-      if is_call_like (a.account_code.program_content (recovered.vctx_pc - 1)) then
+      if is_call_like ((ii a.account_code).program_content (ii recovered.vctx_pc - 1)) then
       Just (<| recovered with vctx_stack = 0 :: recovered.vctx_stack |>) (* 0 is pushed, indicating failure*)
       else Nothing
 end
@@ -2066,7 +2079,7 @@ let empty_memory = (fun _ -> 0)
 
 indreln [build_vctx_called : account_state -> call_env -> variable_ctx -> bool]
   vctx_called : forall bal a env origin ext block gas existence.
-    word256ToNatural block.block_number >= 2463000 && (* only the newest version of EVM matters *)
+    word256ToNatural block.block_number >= 2463*1000 && (* only the newest version of EVM matters *)
     bal a.account_address = a.account_balance ==>
     build_vctx_called a env
  <| vctx_stack = []; (* The stack is initialized for every invocation *)
@@ -2107,7 +2120,7 @@ vctx_returned:
           v_storage v_balance v_caller v_value v_data v_init_storage v_init_balance
           v_origin v_ext_program v_ext_program' v_block v_gas v_gas' mem_start mem_size
           r rest whichever v_ex v_ex' v_touched v_logs.
-   (is_call_like (a_code.program_content (v_pc - 1))) &&
+   (is_call_like (ii a_code.program_content (v_pc - 1))) &&
    (word256UGE new_bal a_bal) ==> (* the balance might have increased *)
    build_vctx_returned
 

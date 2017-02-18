@@ -70,8 +70,8 @@ Definition BD  (lst : list (word8 ))  : nat :=  BD_rev (List.rev lst).
 (* [?]: removed value specification. *)
 
 Definition r_b  (lst : list (word8 ))  : list (word8 ):=  match ( lst) with 
- | [] => [word8FromNumeral128]
- | [k] => if w8Less k(word8FromNumeral 128) then [k] else [word8FromNumeral129; k]
+ | [] => [word8FromNumeral 128]
+ | [k] => if w8Less k(word8FromNumeral 128) then [k] else [word8FromNumeral 129; k]
  | lst =>
    if nat_ltb (List.length lst)( 56) then word8FromNat ( Coq.Init.Peano.plus( 128) (List.length lst)) :: lst
     else word8FromNat ( Coq.Init.Peano.plus( 183) (List.length (BE (List.length lst)))) ::  (@ List.app _)(BE (List.length lst)) lst

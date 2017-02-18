@@ -91,7 +91,7 @@ Definition boolListFromWord4  (w : word4 )  : list (bool ):=  List.rev (boolList
 Definition word4FromNumeral  (w : nat )  : word4 :=  bs_to_w4 (bitSeqFromInteger None ((Zpred (Zpos (P_of_succ_nat w))))).
 (* 
 
-Instance x83_Numeral : Numeral word4 := {
+Instance x104_Numeral : Numeral word4 := {
    fromNumeral  :=  word4FromNumeral
 }.
  *)
@@ -114,7 +114,7 @@ Definition w4GreaterEqual  (bs1 : word4 ) (bs2 : word4 )  : bool :=  word4BinTes
 
 Definition w4Compare  (bs1 : word4 ) (bs2 : word4 )  : ordering :=  word4BinTest bitSeqCompare bs1 bs2.
 
-Instance x82_Ord : Ord word4 := {
+Instance x103_Ord : Ord word4 := {
    compare  :=  w4Compare;
    isLess  :=  w4Less;
    isLessEqual  :=  w4LessEqual;
@@ -123,7 +123,7 @@ Instance x82_Ord : Ord word4 := {
 }.
 
 
-Instance x81_SetType : SetType word4 := {
+Instance x102_SetType : SetType word4 := {
    setElemCompare  :=  w4Compare
 }.
 
@@ -186,93 +186,93 @@ Definition word4Lsr   : word4  -> nat  -> word4 :=  word4NatOp bitSeqLogicalShif
 Definition word4Lsl   : word4  -> nat  -> word4 :=  word4NatOp bitSeqShiftLeft.
 
 
-Instance x80_NumNegate : NumNegate word4 := {
+Instance x101_NumNegate : NumNegate word4 := {
    numNegate  :=  word4Negate
 }.
 
 
-Instance x79_NumAdd : NumAdd word4 := {
+Instance x100_NumAdd : NumAdd word4 := {
    numAdd  :=  word4Add
 }.
 
 
-Instance x78_NumMinus : NumMinus word4 := {
+Instance x99_NumMinus : NumMinus word4 := {
    numMinus  :=  word4Minus
 }.
 
 
-Instance x77_NumSucc : NumSucc word4 := {
+Instance x98_NumSucc : NumSucc word4 := {
    succ  :=  word4Succ
 }.
 
 
-Instance x76_NumPred : NumPred word4 := {
+Instance x97_NumPred : NumPred word4 := {
    pred  :=  word4Pred
 }.
 
 
-Instance x75_NumMult : NumMult word4 := {
+Instance x96_NumMult : NumMult word4 := {
    numMult  :=  word4Mult
 }.
 
 
-Instance x74_NumPow : NumPow word4 := {
+Instance x95_NumPow : NumPow word4 := {
    numPow  :=  word4Power
 }.
 
 
-Instance x73_NumIntegerDivision : NumIntegerDivision word4 := { 
+Instance x94_NumIntegerDivision : NumIntegerDivision word4 := { 
    numIntegerDivision  :=  word4IntegerDivision
 }.
 
 
-Instance x72_NumDivision : NumDivision word4 := { 
+Instance x93_NumDivision : NumDivision word4 := { 
    numDivision  :=  word4Division
 }.
 
 
-Instance x71_NumRemainder : NumRemainder word4 := { 
+Instance x92_NumRemainder : NumRemainder word4 := { 
    numRemainder  :=  word4Remainder
 }.
 
 
-Instance x70_OrdMaxMin : OrdMaxMin word4 := { 
+Instance x91_OrdMaxMin : OrdMaxMin word4 := { 
    max  :=  word4Max;
    min  :=  word4Min
 }.
 
 
-Instance x69_WordNot : WordNot word4 := { 
+Instance x90_WordNot : WordNot word4 := { 
    lnot  :=  word4Lnot
 }.
 
 
-Instance x68_WordAnd : WordAnd word4 := { 
+Instance x89_WordAnd : WordAnd word4 := { 
    conjunction  :=  word4Land
 }.
 
 
-Instance x67_WordOr : WordOr word4 := { 
+Instance x88_WordOr : WordOr word4 := { 
    inclusive_or  :=  word4Lor
 }.
 
 
-Instance x66_WordXor : WordXor word4 := { 
+Instance x87_WordXor : WordXor word4 := { 
    exclusive_or  :=  word4Lxor
 }.
 
 
-Instance x65_WordLsl : WordLsl word4 := { 
+Instance x86_WordLsl : WordLsl word4 := { 
    left_shift  :=  word4Lsl
 }.
 
 
-Instance x64_WordLsr : WordLsr word4 := {
+Instance x85_WordLsr : WordLsr word4 := {
    logicial_right_shift  :=  word4Lsr
 }.
 
 
-Instance x63_WordAsr : WordAsr word4 := {
+Instance x84_WordAsr : WordAsr word4 := {
    arithmetic_right_shift  :=  word4Asr
 }.
 

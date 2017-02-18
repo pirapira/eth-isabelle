@@ -93,7 +93,7 @@ Definition word256FromNumeral  (w : nat )  : word256 :=  bs_to_w256 (bitSeqFromI
 (* 
 
 Instance x20_Numeral : Numeral word256 := {
-   fromNumeral  :=  word256FromNumeral
+   fromNumeral   x :=  word256FromNumeral x
 }.
  *)
 (* [?]: removed value specification. *)

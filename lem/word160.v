@@ -88,7 +88,7 @@ Definition boolListFromWord160  (w : word160 )  : list (bool ):=  List.rev (bool
 Definition word160FromNumeral  (w : nat )  : word160 :=  bs_to_w160 (bitSeqFromInteger None ((Zpred (Zpos (P_of_succ_nat w))))).
 (* 
 
-Instance x62_Numeral : Numeral word160 := {
+Instance x83_Numeral : Numeral word160 := {
    fromNumeral  :=  word160FromNumeral
 }.
  *)
@@ -111,7 +111,7 @@ Definition w160GreaterEqual  (bs1 : word160 ) (bs2 : word160 )  : bool :=  word1
 
 Definition w160Compare  (bs1 : word160 ) (bs2 : word160 )  : ordering :=  word160BinTest bitSeqCompare bs1 bs2.
 
-Instance x61_Ord : Ord word160 := {
+Instance x82_Ord : Ord word160 := {
    compare  :=  w160Compare;
    isLess  :=  w160Less;
    isLessEqual  :=  w160LessEqual;
@@ -120,7 +120,7 @@ Instance x61_Ord : Ord word160 := {
 }.
 
 
-Instance x60_SetType : SetType word160 := {
+Instance x81_SetType : SetType word160 := {
    setElemCompare  :=  w160Compare
 }.
 
@@ -183,93 +183,93 @@ Definition word160Lsr   : word160  -> nat  -> word160 :=  word160NatOp bitSeqLog
 Definition word160Lsl   : word160  -> nat  -> word160 :=  word160NatOp bitSeqShiftLeft.
 
 
-Instance x59_NumNegate : NumNegate word160 := {
+Instance x80_NumNegate : NumNegate word160 := {
    numNegate  :=  word160Negate
 }.
 
 
-Instance x58_NumAdd : NumAdd word160 := {
+Instance x79_NumAdd : NumAdd word160 := {
    numAdd  :=  word160Add
 }.
 
 
-Instance x57_NumMinus : NumMinus word160 := {
+Instance x78_NumMinus : NumMinus word160 := {
    numMinus  :=  word160Minus
 }.
 
 
-Instance x56_NumSucc : NumSucc word160 := {
+Instance x77_NumSucc : NumSucc word160 := {
    succ  :=  word160Succ
 }.
 
 
-Instance x55_NumPred : NumPred word160 := {
+Instance x76_NumPred : NumPred word160 := {
    pred  :=  word160Pred
 }.
 
 
-Instance x54_NumMult : NumMult word160 := {
+Instance x75_NumMult : NumMult word160 := {
    numMult  :=  word160Mult
 }.
 
 
-Instance x53_NumPow : NumPow word160 := {
+Instance x74_NumPow : NumPow word160 := {
    numPow  :=  word160Power
 }.
 
 
-Instance x52_NumIntegerDivision : NumIntegerDivision word160 := { 
+Instance x73_NumIntegerDivision : NumIntegerDivision word160 := { 
    numIntegerDivision  :=  word160IntegerDivision
 }.
 
 
-Instance x51_NumDivision : NumDivision word160 := { 
+Instance x72_NumDivision : NumDivision word160 := { 
    numDivision  :=  word160Division
 }.
 
 
-Instance x50_NumRemainder : NumRemainder word160 := { 
+Instance x71_NumRemainder : NumRemainder word160 := { 
    numRemainder  :=  word160Remainder
 }.
 
 
-Instance x49_OrdMaxMin : OrdMaxMin word160 := { 
+Instance x70_OrdMaxMin : OrdMaxMin word160 := { 
    max  :=  word160Max;
    min  :=  word160Min
 }.
 
 
-Instance x48_WordNot : WordNot word160 := { 
+Instance x69_WordNot : WordNot word160 := { 
    lnot  :=  word160Lnot
 }.
 
 
-Instance x47_WordAnd : WordAnd word160 := { 
+Instance x68_WordAnd : WordAnd word160 := { 
    conjunction  :=  word160Land
 }.
 
 
-Instance x46_WordOr : WordOr word160 := { 
+Instance x67_WordOr : WordOr word160 := { 
    inclusive_or  :=  word160Lor
 }.
 
 
-Instance x45_WordXor : WordXor word160 := { 
+Instance x66_WordXor : WordXor word160 := { 
    exclusive_or  :=  word160Lxor
 }.
 
 
-Instance x44_WordLsl : WordLsl word160 := { 
+Instance x65_WordLsl : WordLsl word160 := { 
    left_shift  :=  word160Lsl
 }.
 
 
-Instance x43_WordLsr : WordLsr word160 := {
+Instance x64_WordLsr : WordLsr word160 := {
    logicial_right_shift  :=  word160Lsr
 }.
 
 
-Instance x42_WordAsr : WordAsr word160 := {
+Instance x63_WordAsr : WordAsr word160 := {
    arithmetic_right_shift  :=  word160Asr
 }.
 

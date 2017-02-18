@@ -29,36 +29,31 @@ Open Scope string_scope.
 Require Import lem_pervasives.
 Require Export lem_pervasives.
 
-Require Import lem_word.
-Require Export lem_word.
-
 Require Import word8.
 Require Export word8.
 
 Require Import word256.
 Require Export word256.
 
+Require Import word64.
+Require Export word64.
 
-(*
-definition "rotl64 (x :: 64 word) n = (word_rotl n x :: 64 word)"
-*)
-
-Definition word64 : Type :=  Z .
-Definition word64_default: word64  := Z_default.
 (* [?]: removed value specification. *)
 
-Definition rotl64  (w : Z ) (n : nat )  : Z :=  ( w).
+Definition rotl64  (w : word64 ) (n : nat )  : word64 :=  word64Lor ( word64Lsr w ( Coq.Init.Peano.minus( 64) n)) ( word64Lsl w n).
 (* [?]: removed value specification. *)
 
-Definition big   : Z :=  ((Zpred (Zpos (P_of_succ_nat 1)))).
+Definition big   : word64 :=  word64Lsl(word64FromNumeral 1)( 63).
 (* [?]: removed value specification. *)
 
-Definition keccakf_randc   : list (Z ):=  [].
-(*
-[(Zpred (Zpos (P_of_succ_nat 1)));
-(Zpred (Zpos (P_of_succ_nat 32898))); big; big;(Zpred (Zpos (P_of_succ_nat 32907)));(Zpred (Zpos (P_of_succ_nat 2147483649))); big; big;(Zpred (Zpos (P_of_succ_nat 138)));(Zpred (Zpos (P_of_succ_nat 136)));(Zpred (Zpos (P_of_succ_nat 2147516425)));(Zpred (Zpos (P_of_succ_nat 2147483658)));(Zpred (Zpos (P_of_succ_nat 2147516555))); big; big; big; big; big;(Zpred (Zpos (P_of_succ_nat 32778))); big; big; big;(Zpred (Zpos (P_of_succ_nat 2147483649))); big]
-.*)
+Definition two31   : word64 :=  word64Lsl(word64FromNumeral 1)( 31).
+(* [?]: removed value specification. *)
 
+Definition two15   : word64 :=  word64Lsl(word64FromNumeral 1)( 15).
+(* [?]: removed value specification. *)
+
+Definition keccakf_randc   : list (word64 ):=  [word64FromNumeral 1; word64Lor(word64FromNumeral 130) two15; word64Lor (word64Lor(word64FromNumeral 138) big) two15; word64Lor (word64Lor (word64Lor(word64FromNumeral 0) big) two31) two15; word64Lor(word64FromNumeral 139) two15; word64Lor(word64FromNumeral 1) two31; word64Lor (word64Lor (word64Lor(word64FromNumeral 129) big) two31) two15; word64Lor (word64Lor(word64FromNumeral 9) big) two15;word64FromNumeral 138;word64FromNumeral 136; word64Lor (word64Lor(word64FromNumeral 9) two31) two15;  word64Lor(word64FromNumeral 10) two31; word64Lor (word64Lor(word64FromNumeral 139) two31) two15; word64Lor(word64FromNumeral 139) big; word64Lor (word64Lor(word64FromNumeral 137) big) two15; word64Lor (word64Lor(word64FromNumeral 3) big) two15; word64Lor (word64Lor(word64FromNumeral 2) big) two15; word64Lor(word64FromNumeral 128) big; word64Lor(word64FromNumeral 10) two15; word64Lor (word64Lor(word64FromNumeral 10) big) two31; word64Lor (word64Lor (word64Lor(word64FromNumeral 129) big) two31) two15; word64Lor (word64Lor(word64FromNumeral 128) big) two15; word64Lor(word64FromNumeral 1) two31; word64Lor (word64Lor (word64Lor(word64FromNumeral 8) big) two31) two15]
+.
 (* [?]: removed value specification. *)
 
 Definition keccakf_rotc   : list (nat ):=  [ 1; 3; 6; 10; 15; 21; 28; 36; 45; 55; 2; 14; 27; 41; 56; 8; 25; 43; 62; 18; 39; 61; 20; 44]
@@ -69,9 +64,9 @@ Definition keccakf_piln   : list (nat ):=  [ 10; 7; 11; 17; 18; 3; 5; 16; 8; 21;
 .
 (* [?]: removed value specification. *)
 
-Definition get  (lst : list (Z )) (n : nat )  : Z :=  match ( index lst n) with 
+Definition get  (lst : list (word64 )) (n : nat )  : word64 :=  match ( index lst n) with 
  | Some x => x
- | None =>(Zpred (Zpos (P_of_succ_nat 0)))
+ | None =>word64FromNumeral 0
 end.
 (* [?]: removed value specification. *)
 
@@ -81,24 +76,30 @@ Definition get_n  (lst : list (nat )) (n : nat )  : nat :=  match ( index lst n)
 end.
 (* [?]: removed value specification. *)
 
-Definition setf  (lst : list (Z )) (n : nat ) (w : Z )  : list (Z ):= 
-  if nat_ltb (List.length lst) n then  (@ List.app _) ((@ List.app _)lst (genlist (fun  _ : nat  =>(Zpred (Zpos (P_of_succ_nat 0)))) ( Coq.Init.Peano.minus (Coq.Init.Peano.minus(List.length lst) n)( 1)))) [w]
+Definition setf  (lst : list (word64 )) (n : nat ) (w : word64 )  : list (word64 ):= 
+  if nat_ltb (List.length lst) n then  (@ List.app _) ((@ List.app _)lst (genlist (fun  _ : nat  =>word64FromNumeral 0) ( Coq.Init.Peano.minus (Coq.Init.Peano.minus(List.length lst) n)( 1)))) [w]
   else  (@ List.app _) ((@ List.app _)(take n lst) [w]) (drop (Coq.Init.Peano.plus n( 1)) lst).
 (* [?]: removed value specification. *)
 
-Definition theta1  (i : nat ) (st : list (word64 ))  : Z :=  (get st ( Coq.Init.Peano.plus i( 20))).
+Definition theta1  (i : nat ) (st : list (word64 ))  : word64 :=  word64Lxor (word64Lxor (word64Lxor (word64Lxor
+  (get st i)
+  (get st ( Coq.Init.Peano.plus i( 5))))
+  (get st ( Coq.Init.Peano.plus i( 10))))
+  (get st ( Coq.Init.Peano.plus i( 15))))
+  (get st ( Coq.Init.Peano.plus i( 20))).
 (* [?]: removed value specification. *)
 
-Definition theta_t  (i : nat ) (bc : list (word64 ))  : Z :=  (rotl64 (get bc ( Coq.Numbers.Natural.Peano.NPeano.modulo( Coq.Init.Peano.plus i( 1))( 5)))( 1)).
+Definition theta_t  (i : nat ) (bc : list (word64 ))  : word64 :=  word64Lxor
+  (get bc ( Coq.Numbers.Natural.Peano.NPeano.modulo( Coq.Init.Peano.plus i( 4))( 5))) (rotl64 (get bc ( Coq.Numbers.Natural.Peano.NPeano.modulo( Coq.Init.Peano.plus i( 1))( 5)))( 1)).
 (* [?]: removed value specification. *)
 
-Definition theta  (st : list (word64 ))  : list (Z ):= 
+Definition theta  (st : list (word64 ))  : list (word64 ):= 
   let bc := genlist (fun (i : nat ) => theta1 i st)( 5) in
   let t := genlist (fun (i : nat ) => theta_t i bc)( 5) in
-  genlist (fun (ji : nat ) => (get t ( Coq.Numbers.Natural.Peano.NPeano.modulo ji( 5))))( 25).
+  genlist (fun (ji : nat ) => word64Lxor (get st ji) (get t ( Coq.Numbers.Natural.Peano.NPeano.modulo ji( 5))))( 25).
 (* [?]: removed value specification. *)
 
-Definition rho_pi_inner  (t_st : (Z *list (word64 )) % type) (i : nat )  : (Z *list (word64 )) % type:= 
+Definition rho_pi_inner  (t_st : (word64 *list (word64 )) % type) (i : nat )  : (word64 *list (word64 )) % type:= 
   let j := get_n keccakf_piln i in
   let bc := get ((@ snd _ _) t_st) j in
   (bc, setf ((@ snd _ _) t_st) j (rotl64 ((@ fst _ _) t_st) (get_n keccakf_rotc i))).
@@ -110,19 +111,19 @@ Definition rho_pi_changes  (i : nat ) (t_st : (word64 *list (word64 )) % type)  
 Definition rho_pi  (st : list (word64 ))  : list (word64 ):=  (@ snd _ _) (rho_pi_changes( 24) (get st( 1), st)).
 (* [?]: removed value specification. *)
 
-Definition chi_for_j  (st_slice : list (word64 ))  : list (Z ):= 
-  genlist (fun (i : nat ) => ( (get st_slice ( Coq.Numbers.Natural.Peano.NPeano.modulo( Coq.Init.Peano.plus i( 2))( 5)))))( 5).
+Definition chi_for_j  (st_slice : list (word64 ))  : list (word64 ):= 
+  genlist (fun (i : nat ) => word64Lxor (get st_slice i) ( word64Land(word64Lnot (get st_slice ( Coq.Numbers.Natural.Peano.NPeano.modulo( Coq.Init.Peano.plus i( 1))( 5)))) (get st_slice ( Coq.Numbers.Natural.Peano.NPeano.modulo( Coq.Init.Peano.plus i( 2))( 5)))))( 5).
 (* [?]: removed value specification. *)
 
 Definition filterI {a : Type}  (lst : list a) (pred : nat  -> bool )  : list a:= 
   List.map (@ fst _ _) (List.filter (fun (p : (a*nat ) % type) => pred ((@ snd _ _) p)) (zip lst (genlist (fun (i : nat ) => i) (List.length lst)))).
 (* [?]: removed value specification. *)
 
-Definition chi  (st : list (Z ))  : list (Z ):= 
+Definition chi  (st : list (word64 ))  : list (word64 ):= 
   lem_list.concat (genlist (fun (j : nat ) => chi_for_j (filterI st (fun (i : nat ) => nat_lteb (Coq.Init.Peano.mult j( 5)) i && nat_lteb i (Coq.Init.Peano.plus(Coq.Init.Peano.mult j( 5))( 5)))))( 5)).
 (* [?]: removed value specification. *)
 
-Definition iota  (r : nat ) (st : list (word64 ))  : list (word64 ):=  setf st( 0) ( (get keccakf_randc r)).
+Definition iota  (r : nat ) (st : list (word64 ))  : list (word64 ):=  setf st( 0) ( word64Lxor(get st( 0)) (get keccakf_randc r)).
 (* [?]: removed value specification. *)
 
 Definition for_inner  (st : list (word64 )) (r : nat )  : list (word64 ):=  iota r (chi (rho_pi (theta st))).
@@ -133,20 +134,18 @@ Definition byte : Type :=  word8 .
 Definition byte_default: byte  := word8_default.
 (* [?]: removed value specification. *)
 
-(*
-Program Fixpoint boolList64_inner  (num : Z ) (rest : nat )  : list (bool ):= 
-  if beq_nat rest( 0) then []
-  else
-    let checked := ( Coq.ZArith.Zpower.Zpower_nat((Zpred (Zpos (P_of_succ_nat 2)))) ( Coq.Init.Peano.minus rest( 1))) in
-    let quo := Coq.ZArith.Zdiv.Zdiv num checked in
-    let taken := Coq.ZArith.BinInt.Zmult quo checked in
-    ( negb (Z.eqb quo((Zpred (Zpos (P_of_succ_nat 0)))))) :: boolList64_inner ( Coq.ZArith.BinInt.Zminus num taken) ( Coq.Init.Peano.minus rest( 1)).
+Program Fixpoint boolList64_inner  (num : word64 ) (rest : nat )  : list (bool ):=  match ( rest) with 
+ | 0 => []
+ |S (rest) =>
+    let checked := word64Power(word64FromNumeral 2) rest in
+    let quo := word64Division num checked in
+    let taken := word64Mult quo checked in
+    ( unsafe_structural_inequality quo(word64FromNumeral 0)) :: boolList64_inner ( word64Minus num taken) rest
+end.
 (* [?]: removed value specification. *)
 
-Definition boolListFromWord64  (w : Z )  : list (bool ):=  boolList64_inner w( 64).
-*)
+Definition boolListFromWord640  (w : word64 )  : list (bool ):=  boolList64_inner w( 64).
 (* [?]: removed value specification. *)
-Definition boolListFromWord64  (w : Z )  : list (bool ):=  [].
 
 Program Fixpoint word_rsplit_aux  (lst : list (bool )) (n : nat )  : list (word8 ):=  match ( n) with 
  | 0 => []
@@ -154,20 +153,20 @@ Program Fixpoint word_rsplit_aux  (lst : list (bool )) (n : nat )  : list (word8
 end.
 (* [?]: removed value specification. *)
 
-Definition word_rsplit  (w : Z )  : list (byte ):=  word_rsplit_aux (boolListFromWord64 w)( 8).
+Definition word_rsplit  (w : word64 )  : list (byte ):=  word_rsplit_aux (boolListFromWord640 w)( 8).
 (* [?]: removed value specification. *)
 
-Program Fixpoint word64FromBoollist  (lst : list (bool ))  : Z :=  match ( lst) with 
- | true :: lst => Coq.ZArith.BinInt.Zplus((Zpred (Zpos (P_of_succ_nat 1)))) (Coq.ZArith.BinInt.Zmult((Zpred (Zpos (P_of_succ_nat 2)))) (word64FromBoollist lst))
- | false :: lst => Coq.ZArith.BinInt.Zmult((Zpred (Zpos (P_of_succ_nat 2)))) (word64FromBoollist lst)
- | [] =>(Zpred (Zpos (P_of_succ_nat 0)))
+Program Fixpoint word64FromBoollist0  (lst : list (bool ))  : word64 :=  match ( lst) with 
+ | true :: lst => word64Add(word64FromNumeral 1) (word64Mult(word64FromNumeral 2) (word64FromBoollist0 lst))
+ | false :: lst => word64Mult(word64FromNumeral 2) (word64FromBoollist0 lst)
+ | [] =>word64FromNumeral 0
 end.
 (* [?]: removed value specification. *)
 
-Definition word_rcat_k  (lst : list (word8 ))  : Z :=  word64FromBoollist (lem_list.concat (List.map boolListFromWord8 lst)).
+Definition word_rcat_k  (lst : list (word8 ))  : word64 :=  word64FromBoollist0 (lem_list.concat (List.map boolListFromWord8 lst)).
 (* [?]: removed value specification. *)
 
-Definition invert_endian  (w : Z )  : Z :=  word_rcat_k (List.rev (word_rsplit w)).
+Definition invert_endian  (w : word64 )  : word64 :=  word_rcat_k (List.rev (word_rsplit w)).
 (* [?]: removed value specification. *)
 
 Definition keccakf  (st : list (word64 ))  : list (word64 ):=  List.fold_left for_inner (genlist (fun (i : nat ) => i) keccakf_rounds) st.
@@ -176,10 +175,10 @@ Definition mdlen    :  nat :=  Coq.Numbers.Natural.Peano.NPeano.div( 256)( 8).
 Definition rsiz    :  nat :=  Coq.Init.Peano.minus( 200) (Coq.Init.Peano.mult mdlen( 2)).
 (* [?]: removed value specification. *)
 
-Definition word8_to_word64  (w : word8 )  : Z :=  (Zpred (Zpos (P_of_succ_nat (word8ToNat w)))).
+Definition word8_to_word64  (w : word8 )  : word64 :=  word64FromNat (word8ToNat w).
 (* [?]: removed value specification. *)
 
-Definition update_byte  (i : word8 ) (p : nat ) (st : list (word64 ))  : list (word64 ):=  setf st ( Coq.Numbers.Natural.Peano.NPeano.div p( 8)) ( ( (word8_to_word64 i))).
+Definition update_byte  (i : word8 ) (p : nat ) (st : list (word64 ))  : list (word64 ):=  setf st ( Coq.Numbers.Natural.Peano.NPeano.div p( 8)) ( word64Lxor(get st ( Coq.Numbers.Natural.Peano.NPeano.div p( 8))) ( word64Lsl(word8_to_word64 i) ( Coq.Init.Peano.mult( 8) ( Coq.Numbers.Natural.Peano.NPeano.modulo p( 8))))).
 (* [?]: removed value specification. *)
 
 Program Fixpoint sha3_update  (lst : list (word8 )) (pos : nat ) (st : list (word64 ))  : (nat *list (word64 )) % type:=  match ( lst) with 
@@ -194,9 +193,9 @@ Definition keccak_final  (p : nat ) (st : list (word64 ))  : list (word8 ):=
    let st0 := update_byte(word8FromNumeral 1) p st in
    let st1 := update_byte(word8FromNumeral 128) ( Coq.Init.Peano.minus rsiz( 1)) st0 in
    let st2 := take( 4) (keccakf st1) in
-   lem_list.concat (List.map (fun (x : Z ) => List.rev (word_rsplit x)) st2).
+   lem_list.concat (List.map (fun (x : word64 ) => List.rev (word_rsplit x)) st2).
 
-Definition initial_st    :  list  word64 :=  genlist (fun  _ : nat  =>(Zpred (Zpos (P_of_succ_nat 0))))( 25).
+Definition initial_st    :  list  word64 :=  genlist (fun  _ : nat  =>word64FromNumeral 0)( 25).
 
 Definition initial_pos    :  nat :=  0.
 (* [?]: removed value specification. *)

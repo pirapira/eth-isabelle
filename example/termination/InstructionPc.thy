@@ -1,7 +1,7 @@
 theory "InstructionPc" 
 
 imports 
-   "InstructionAux" "../ProgramInAvl"
+   "InstructionAux" "../../ProgramInAvl"
 
 begin
 

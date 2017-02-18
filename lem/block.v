@@ -59,7 +59,7 @@ Notation "{[ r 'with' 'tr_data' := e ]}" := ({| tr_data := e; tr_from := tr_from
 Definition transaction_default: transaction  := {| tr_from := address_default; tr_to := DAEMON; tr_gas_limit := w256_default; tr_gas_price := w256_default; tr_nonce := w256_default; tr_data := DAEMON |}.
 
 Definition world_state : Type :=  address  ->  account_state .
-Definition world_state_default: world_state  := (fun (x101 :  address ) => account_state_default).
+Definition world_state_default: world_state  := (fun (x122 :  address ) => account_state_default).
 
 Record log_item : Type := {
   log_address : address ;

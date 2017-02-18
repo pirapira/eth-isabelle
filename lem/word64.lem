@@ -1,0 +1,290 @@
+(*
+  Copyright 2016 Sami Mäkelä
+
+   Licensed under the Apache License, Version 2.0 (the "License");
+   you may not use this file except in compliance with the License.
+   You may obtain a copy of the License at
+
+       http://www.apache.org/licenses/LICENSE-2.0
+
+   Unless required by applicable law or agreed to in writing, software
+   distributed under the License is distributed on an "AS IS" BASIS,
+   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+   See the License for the specific language governing permissions and
+   limitations under the License.
+*)
+
+open import Pervasives
+open import Word
+
+type word64 = W64 of bool * list bool
+declare isabelle target_rep type word64 = `word` 64
+
+(* perhaps should truncate here? *)
+val bs_to_w64 : bitSequence -> word64
+let bs_to_w64 seq = match resizeBitSeq (Just 64) seq with
+ | BitSeq _ s b -> W64 s b
+end
+declare isabelle target_rep function bs_to_w64 = (fun w -> `word_of_int` (integerFromBitSeq w))
+
+val w64_to_bs : word64 -> bitSequence
+let w64_to_bs (W64 s b) = BitSeq (Just 64) s b
+
+val word64BinTest : forall 'a. (bitSequence -> bitSequence -> 'a) -> word64 -> word64 -> 'a
+let word64BinTest binop w1 w2 = binop (w64_to_bs w1) (w64_to_bs w2)
+
+val word64BinOp : (bitSequence -> bitSequence -> bitSequence) -> word64 -> word64 -> word64
+let word64BinOp binop w1 w2 = bs_to_w64 (binop (w64_to_bs w1) (w64_to_bs w2))
+
+val word64NatOp : (bitSequence -> nat -> bitSequence) -> word64 -> nat -> word64
+let word64NatOp binop w1 n = bs_to_w64 (binop (w64_to_bs w1) n)
+
+val word64UnaryOp : (bitSequence -> bitSequence) -> word64 -> word64
+let word64UnaryOp op w = bs_to_w64 (op (w64_to_bs w))
+
+val size64 : integer
+let size64 = 2 ** 64
+
+val word64ToInteger : word64 -> integer
+let word64ToInteger w = integerFromBitSeq (w64_to_bs w)
+declare isabelle target_rep function word64ToInteger = `sint`
+
+val word64ToNatural : word64 -> natural
+let word64ToNatural w = naturalFromInteger ((word64ToInteger w) mod size64)
+declare isabelle target_rep function word64ToNatural = `unat`
+
+declare isabelle target_rep function w64_to_bs = (fun w -> bitSeqFromInteger (Just 64) (word64ToInteger w))
+
+val word64FromInteger : integer -> word64
+let word64FromInteger i = bs_to_w64 (bitSeqFromInteger (Just 64) i)
+declare isabelle target_rep function word64FromInteger = (fun i -> `word_of_int` (intFromInteger i))
+
+val word64FromInt : int -> word64
+let word64FromInt i = bs_to_w64 (bitSeqFromInteger (Just 64) (integerFromInt i))
+declare isabelle target_rep function word64FromInt = `word_of_int`
+
+val word64FromNatural : natural -> word64
+let word64FromNatural i = word64FromInteger (integerFromNatural i)
+
+val word64FromNat : nat -> word64
+let word64FromNat i = word64FromInteger (integerFromNat i)
+
+val word64FromBoollist : list bool -> word64
+let word64FromBoollist lst = match bitSeqFromBoolList (List.reverse lst) with
+ | Nothing -> bs_to_w64 0
+ | Just a -> bs_to_w64 a
+end
+declare isabelle target_rep function word64FromBoollist = `of_bl`
+
+val boolListFromWord64 : word64 -> list bool
+let boolListFromWord64 w = List.reverse (boolListFrombitSeq 64 (w64_to_bs w))
+declare isabelle target_rep function boolListFromWord64 = `to_bl`
+
+val word64FromNumeral : numeral -> word64
+let word64FromNumeral w = bs_to_w64 (fromNumeral w)
+
+instance (Numeral word64)
+  let fromNumeral x = word64FromNumeral x
+end
+
+val w64Eq : word64 -> word64 -> bool
+let w64Eq = unsafe_structural_equality
+
+val w64Less : word64 -> word64 -> bool
+let w64Less bs1 bs2 = word64BinTest (<) bs1 bs2
+
+val w64LessEqual : word64 -> word64 -> bool
+let w64LessEqual bs1 bs2 = word64BinTest (<=) bs1 bs2
+
+val w64Greater : word64 -> word64 -> bool
+let w64Greater bs1 bs2 = word64BinTest (>) bs1 bs2
+
+val w64GreaterEqual : word64 -> word64 -> bool
+let w64GreaterEqual bs1 bs2 = word64BinTest (>=) bs1 bs2
+
+val w64Compare : word64 -> word64 -> ordering
+let w64Compare bs1 bs2 = word64BinTest compare bs1 bs2
+
+instance (Ord word64)
+  let compare = w64Compare
+  let (<) = w64Less
+  let (<=) = w64LessEqual
+  let (>) = w64Greater
+  let (>=) = w64GreaterEqual
+end
+
+instance (SetType word64)
+  let setElemCompare = w64Compare
+end
+
+val word64Negate : word64 -> word64
+let word64Negate = word64UnaryOp ~
+
+val word64Succ : word64 -> word64
+let word64Succ = word64UnaryOp succ
+
+val word64Pred : word64 -> word64
+let word64Pred = word64UnaryOp pred
+
+val word64Lnot : word64 -> word64
+let word64Lnot = word64UnaryOp lnot
+
+val word64Add : word64 -> word64 -> word64
+let word64Add = word64BinOp (+)
+
+val word64Minus : word64 -> word64 -> word64
+let word64Minus = word64BinOp (-)
+
+val word64Mult : word64 -> word64 -> word64
+let word64Mult = word64BinOp ( * )
+
+val word64IntegerDivision : word64 -> word64 -> word64
+let word64IntegerDivision = word64BinOp (/)
+
+val word64Division : word64 -> word64 -> word64
+let word64Division = word64BinOp (div)
+
+val word64Remainder : word64 -> word64 -> word64
+let word64Remainder = word64BinOp (mod)
+
+val word64Land : word64 -> word64 -> word64
+let word64Land = word64BinOp (land)
+
+val word64Lor : word64 -> word64 -> word64
+let word64Lor = word64BinOp (lor)
+
+val word64Lxor : word64 -> word64 -> word64
+let word64Lxor = word64BinOp (lxor)
+
+val word64Min : word64 -> word64 -> word64
+let word64Min = word64BinOp (min)
+
+val word64Max : word64 -> word64 -> word64
+let word64Max = word64BinOp (max)
+
+val word64Power : word64 -> nat -> word64
+let word64Power = word64NatOp ( ** )
+
+val word64Asr : word64 -> nat -> word64
+let word64Asr = word64NatOp (asr)
+
+val word64Lsr : word64 -> nat -> word64
+let word64Lsr = word64NatOp (lsr)
+
+val word64Lsl : word64 -> nat -> word64
+let word64Lsl = word64NatOp (lsl)
+
+declare isabelle target_rep function word64Lnot w = (`NOT` w)
+declare isabelle target_rep function word64Lor = infix `OR`
+declare isabelle target_rep function word64Lxor = infix `XOR`
+declare isabelle target_rep function word64Land = infix `AND`
+declare isabelle target_rep function word64Lsl = infix `<<`
+declare isabelle target_rep function word64Lsr = infix `>>`
+declare isabelle target_rep function word64Asr = infix `>>>`
+
+
+instance (NumNegate word64)
+  let ~ = word64Negate
+end
+
+instance (NumAdd word64)
+  let (+) = word64Add
+end
+
+instance (NumMinus word64)
+  let (-) = word64Minus
+end
+
+instance (NumSucc word64)
+  let succ = word64Succ
+end
+
+instance (NumPred word64)
+  let pred = word64Pred
+end
+
+instance (NumMult word64)
+  let ( * ) = word64Mult
+end
+
+instance (NumPow word64)
+  let ( ** ) = word64Power
+end
+
+instance ( NumIntegerDivision word64) 
+  let (div) = word64IntegerDivision
+end
+
+instance ( NumDivision word64 ) 
+  let (/) = word64Division
+end
+
+instance (NumRemainder word64) 
+  let (mod) = word64Remainder
+end
+
+instance (OrdMaxMin word64) 
+  let max = word64Max
+  let min = word64Min
+end
+
+instance (WordNot word64) 
+  let lnot = word64Lnot
+end
+
+instance (WordAnd word64) 
+  let (land) = word64Land
+end
+
+instance (WordOr word64) 
+  let (lor) = word64Lor
+end
+
+instance (WordXor word64) 
+  let (lxor) = word64Lxor
+end
+
+instance (WordLsl word64) 
+  let (lsl) = word64Lsl
+end
+
+instance (WordLsr word64)
+  let (lsr) = word64Lsr
+end
+
+instance (WordAsr word64)
+  let (asr) = word64Asr
+end
+
+val word64UGT : word64 -> word64 -> bool
+let word64UGT a b = word64ToNatural a > word64ToNatural b
+declare isabelle target_rep function word64UGT = infix `>`
+
+val word64ULT : word64 -> word64 -> bool
+let word64ULT a b = word64ToNatural a < word64ToNatural b
+declare isabelle target_rep function word64ULT = infix `<`
+
+val word64UGE : word64 -> word64 -> bool
+let word64UGE a b = word64ToNatural a >= word64ToNatural b
+declare isabelle target_rep function word64UGE = infix `>=`
+
+declare isabelle target_rep function word64FromNumeral n = ((`word_of_int` n) : word64)
+declare isabelle target_rep function w64Less = `word_sless`
+declare isabelle target_rep function w64LessEqual = `word_sle`
+declare isabelle target_rep function w64Greater x y = w64Less y x
+declare isabelle target_rep function w64GreaterEqual x y = w64LessEqual y x
+declare isabelle target_rep function w64Compare = genericCompare w64Less w64Eq
+
+declare isabelle target_rep function word64Negate i = `-` i
+declare isabelle target_rep function word64Add = infix `+`
+declare isabelle target_rep function word64Minus = infix `-`
+declare isabelle target_rep function word64Succ n = n + 1
+declare isabelle target_rep function word64Pred n = n - 1
+declare isabelle target_rep function word64Mult = infix `*`
+declare isabelle target_rep function word64Power = infix `^`
+declare isabelle target_rep function word64Division = infix `div`
+declare isabelle target_rep function word64IntegerDivision = infix `div`
+declare isabelle target_rep function word64Remainder = infix `mod`
+declare isabelle target_rep function word64Min = `min`
+declare isabelle target_rep function word64Max = `max`
+

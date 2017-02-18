@@ -108,8 +108,7 @@ Program Fixpoint word_exp  (i : Z ) (n : nat )  : Z :=
   | 0 =>(Zpred (Zpos (P_of_succ_nat 1)))
   |S (n) => Coq.ZArith.Zdiv.Zmod ( Coq.ZArith.BinInt.Zmult(word_exp i n) i) ( Coq.ZArith.Zpower.Zpower_nat((Zpred (Zpos (P_of_succ_nat 2))))( 256))
   end.
-
-
+Definition ii {a : Type}  (x : a)  : a:=  x.
 
 (* In EVM, the memory contains one byte for each machine word (offset). *)
 (* The storage contains one machine word for each machine word (index). *)
@@ -117,9 +116,9 @@ Program Fixpoint word_exp  (i : Z ) (n : nat )  : Z :=
 (* The storage is persistent for an account. *)
 
 Definition memory : Type :=  w256  ->  byte .
-Definition memory_default: memory  := (fun (x16 :  w256 ) => byte_default).
+Definition memory_default: memory  := (fun (x121 :  w256 ) => byte_default).
 Definition storage : Type :=  w256  ->  w256 .
-Definition storage_default: storage  := (fun (x15 :  w256 ) => w256_default).
+Definition storage_default: storage  := (fun (x120 :  w256 ) => w256_default).
 (* [?]: removed value specification. *)
 
 Program Fixpoint cut_memory_aux  (idx : word256 ) (n : nat ) (memory1 : word256  -> word8 )  : list (word8 ):=  match ( n) with 
@@ -127,6 +126,7 @@ Program Fixpoint cut_memory_aux  (idx : word256 ) (n : nat ) (memory1 : word256 
   | S (n) => memory1 idx :: cut_memory_aux ( word256Add idx(word256FromNumeral 1)) n memory1
 end.
 (* [?]: removed value specification. *)
+
 
 Definition cut_memory  (idx : word256 ) (n : word256 ) (memory1 : w256  -> byte )  : list (byte ):=  cut_memory_aux idx (word256ToNatural n) memory1.
 (* [?]: removed value specification. *)
@@ -140,6 +140,7 @@ Program Fixpoint put_return_values_aux  (orig : word256  -> word8 ) (lst : list 
   end
 end.
 (* [?]: removed value specification. *)
+
 
 Definition put_return_values  (orig : w256  -> byte ) (lst : list (byte )) (b : Z ) (s : Z )  : w256  -> byte := 
   if int_lteb s((Zpred (Zpos (P_of_succ_nat 0)))) then orig else put_return_values_aux orig lst b (Zabs_nat s).
@@ -171,7 +172,7 @@ Notation "{[ r 'with' 'aenv_storage_at_call' := e ]}" := ({| aenv_storage_at_cal
 Notation "{[ r 'with' 'aenv_balance_at_call' := e ]}" := ({| aenv_balance_at_call := e; aenv_stack := aenv_stack r; aenv_memory := aenv_memory r; aenv_storage := aenv_storage r; aenv_balance := aenv_balance r; aenv_caller := aenv_caller r; aenv_value_sent := aenv_value_sent r; aenv_data_sent := aenv_data_sent r; aenv_storage_at_call := aenv_storage_at_call r; aenv_this := aenv_this r; aenv_origin := aenv_origin r |}).
 Notation "{[ r 'with' 'aenv_this' := e ]}" := ({| aenv_this := e; aenv_stack := aenv_stack r; aenv_memory := aenv_memory r; aenv_storage := aenv_storage r; aenv_balance := aenv_balance r; aenv_caller := aenv_caller r; aenv_value_sent := aenv_value_sent r; aenv_data_sent := aenv_data_sent r; aenv_storage_at_call := aenv_storage_at_call r; aenv_balance_at_call := aenv_balance_at_call r; aenv_origin := aenv_origin r |}).
 Notation "{[ r 'with' 'aenv_origin' := e ]}" := ({| aenv_origin := e; aenv_stack := aenv_stack r; aenv_memory := aenv_memory r; aenv_storage := aenv_storage r; aenv_balance := aenv_balance r; aenv_caller := aenv_caller r; aenv_value_sent := aenv_value_sent r; aenv_data_sent := aenv_data_sent r; aenv_storage_at_call := aenv_storage_at_call r; aenv_balance_at_call := aenv_balance_at_call r; aenv_this := aenv_this r |}).
-Definition aenv_default: aenv  := {| aenv_stack := DAEMON; aenv_memory := memory_default; aenv_storage := storage_default; aenv_balance := (fun (x13 :  address ) => w256_default); aenv_caller := address_default; aenv_value_sent := w256_default; aenv_data_sent := DAEMON; aenv_storage_at_call := storage_default; aenv_balance_at_call := (fun (x14 :  address ) => w256_default); aenv_this := address_default; aenv_origin := address_default |}.
+Definition aenv_default: aenv  := {| aenv_stack := DAEMON; aenv_memory := memory_default; aenv_storage := storage_default; aenv_balance := (fun (x118 :  address ) => w256_default); aenv_caller := address_default; aenv_value_sent := w256_default; aenv_data_sent := DAEMON; aenv_storage_at_call := storage_default; aenv_balance_at_call := (fun (x119 :  address ) => w256_default); aenv_this := address_default; aenv_origin := address_default |}.
 
 (* @{term aenv_balance} field keeps track of the balance of all accounts because the contract *)
 (* under verification can send some Eth to other accounts.  To capture the effect of this, I chose to *)
@@ -512,12 +513,12 @@ Definition stack_inst_default: stack_inst  := POP.
 (* [?]: removed value specification. *)
 
 Definition stack_inst_code  (inst1 : stack_inst )  : list (word8 ):=  match ( inst1) with 
-| POP => [word8FromNumeral80]
+| POP => [word8FromNumeral 80]
 | PUSH_N lst =>
-     if nat_ltb (List.length lst)( 1) then [word8FromNumeral96;word8FromNumeral 0] (* this case should not exist *)
-     else if nat_gtb (List.length lst)( 32) then [word8FromNumeral96;word8FromNumeral 0] (* this case should not exist *)
+     if nat_ltb (List.length lst)( 1) then [word8FromNumeral 96;word8FromNumeral 0] (* this case should not exist *)
+     else if nat_gtb (List.length lst)( 32) then [word8FromNumeral 96;word8FromNumeral 0] (* this case should not exist *)
      else  (@ List.app _)[ word8Add(byteFromNat (List.length lst))(word8FromNumeral 95)] lst
-| CALLDATALOAD => [word8FromNumeral53]
+| CALLDATALOAD => [word8FromNumeral 53]
 end.
 (* [?]: removed value specification. *)
 
@@ -626,7 +627,7 @@ Definition inst_default: inst  := Unknown byte_default.
 (* subsection {* Annotation  *} *)
 
 Definition annotation : Type :=  aenv  ->  bool .
-Definition annotation_default: annotation  := (fun (x12 :  aenv ) => bool_default).
+Definition annotation_default: annotation  := (fun (x117 :  aenv ) => bool_default).
 
 (* subsection {* The Whole Instruction Set *} *)
 
@@ -639,7 +640,7 @@ end.
 (* [?]: removed value specification. *)
 
 Definition inst_code  (inst1 : inst )  : list (word8 ):=  match ( inst1) with 
-| Unknown byte1 => [byte1]
+| Unknown byte2 => [byte2]
 | Bits b => [bits_inst_code b]
 | Sarith s => [sarith_inst_code s]
 | Arith a => [arith_inst_code a]
@@ -693,19 +694,19 @@ Definition Gmid   : Z := (Zpred (Zpos (P_of_succ_nat 8))).
 Definition Ghigh   : Z := (Zpred (Zpos (P_of_succ_nat 10))).
 (* [?]: removed value specification. *)
 
-Definition magic_block   : nat := Coq.Init.Peano.mult( 2463)( 1000).
+(* [?]: removed top-level value definition. *)
 (* [?]: removed value specification. *)
 
 Definition Gextcode  (blocknumber : nat )  : Z := 
-  if nat_gteb blocknumber magic_block then(Zpred (Zpos (P_of_succ_nat 700))) else(Zpred (Zpos (P_of_succ_nat 20))).
+  if nat_gteb blocknumber (Coq.Init.Peano.mult( 2463)( 1000)) then(Zpred (Zpos (P_of_succ_nat 700))) else(Zpred (Zpos (P_of_succ_nat 20))).
 (* [?]: removed value specification. *)
 
 Definition Gbalance  (blocknumber : nat )  : Z := 
-  if nat_gteb blocknumber magic_block then(Zpred (Zpos (P_of_succ_nat 400))) else(Zpred (Zpos (P_of_succ_nat 20))).
+  if nat_gteb blocknumber (Coq.Init.Peano.mult( 2463)( 1000)) then(Zpred (Zpos (P_of_succ_nat 400))) else(Zpred (Zpos (P_of_succ_nat 20))).
 (* [?]: removed value specification. *)
 
 Definition Gsload  (blocknumber : nat )  : Z := 
-  if nat_gteb blocknumber magic_block then(Zpred (Zpos (P_of_succ_nat 200))) else(Zpred (Zpos (P_of_succ_nat 50))).
+  if nat_gteb blocknumber (Coq.Init.Peano.mult( 2463)( 1000)) then(Zpred (Zpos (P_of_succ_nat 200))) else(Zpred (Zpos (P_of_succ_nat 50))).
 (* [?]: removed value specification. *)
 
 Definition Gjumpdest   : Z := (Zpred (Zpos (P_of_succ_nat 1))).
@@ -724,7 +725,7 @@ Definition Rsuicide   : Z := (Zpred (Zpos (P_of_succ_nat 24000))).
 (* [?]: removed value specification. *)
 
 Definition Gsuicide  (blocknumber : nat )  : Z := 
-  if nat_gteb blocknumber magic_block then(Zpred (Zpos (P_of_succ_nat 5000))) else(Zpred (Zpos (P_of_succ_nat 0))).
+  if nat_gteb blocknumber (Coq.Init.Peano.mult( 2463)( 1000)) then(Zpred (Zpos (P_of_succ_nat 5000))) else(Zpred (Zpos (P_of_succ_nat 0))).
 (* [?]: removed value specification. *)
 
 Definition Gcreate   : Z := (Zpred (Zpos (P_of_succ_nat 32000))).
@@ -734,7 +735,7 @@ Definition Gcodedeposit   : Z := (Zpred (Zpos (P_of_succ_nat 200))).
 (* [?]: removed value specification. *)
 
 Definition Gcall  (blocknumber : nat )  : Z := 
-  if nat_gteb blocknumber magic_block then(Zpred (Zpos (P_of_succ_nat 700))) else(Zpred (Zpos (P_of_succ_nat 40))).
+  if nat_gteb blocknumber (Coq.Init.Peano.mult( 2463)( 1000)) then(Zpred (Zpos (P_of_succ_nat 700))) else(Zpred (Zpos (P_of_succ_nat 40))).
 (* [?]: removed value specification. *)
 
 Definition Gcallvalue   : Z := (Zpred (Zpos (P_of_succ_nat 9000))).
@@ -827,7 +828,7 @@ Notation "{[ r 'with' 'callenv_caller' := e ]}" := ({| callenv_caller := e; call
 Notation "{[ r 'with' 'callenv_timestamp' := e ]}" := ({| callenv_timestamp := e; callenv_gaslimit := callenv_gaslimit r; callenv_value := callenv_value r; callenv_data := callenv_data r; callenv_caller := callenv_caller r; callenv_blocknum := callenv_blocknum r; callenv_balance := callenv_balance r |}).
 Notation "{[ r 'with' 'callenv_blocknum' := e ]}" := ({| callenv_blocknum := e; callenv_gaslimit := callenv_gaslimit r; callenv_value := callenv_value r; callenv_data := callenv_data r; callenv_caller := callenv_caller r; callenv_timestamp := callenv_timestamp r; callenv_balance := callenv_balance r |}).
 Notation "{[ r 'with' 'callenv_balance' := e ]}" := ({| callenv_balance := e; callenv_gaslimit := callenv_gaslimit r; callenv_value := callenv_value r; callenv_data := callenv_data r; callenv_caller := callenv_caller r; callenv_timestamp := callenv_timestamp r; callenv_blocknum := callenv_blocknum r |}).
-Definition call_env_default: call_env  := {| callenv_gaslimit := w256_default; callenv_value := w256_default; callenv_data := DAEMON; callenv_caller := address_default; callenv_timestamp := w256_default; callenv_blocknum := w256_default; callenv_balance := (fun (x11 :  address ) => w256_default) |}.
+Definition call_env_default: call_env  := {| callenv_gaslimit := w256_default; callenv_value := w256_default; callenv_data := DAEMON; callenv_caller := address_default; callenv_timestamp := w256_default; callenv_blocknum := w256_default; callenv_balance := (fun (x116 :  address ) => w256_default) |}.
 
 (* After our contract calls accounts, the environment can make those accounts *)
 (* return into our contracts.  The return value is not under control of our current *)
@@ -840,7 +841,7 @@ Record return_result : Type := {
 }.
 Notation "{[ r 'with' 'return_data' := e ]}" := ({| return_data := e; return_balance := return_balance r |}).
 Notation "{[ r 'with' 'return_balance' := e ]}" := ({| return_balance := e; return_data := return_data r |}).
-Definition return_result_default: return_result  := {| return_data := DAEMON; return_balance := (fun (x10 :  address ) => w256_default) |}.
+Definition return_result_default: return_result  := {| return_data := DAEMON; return_balance := (fun (x115 :  address ) => w256_default) |}.
 
 (* Even our account's balance (and its storage) might have changed at this moment. *)
 (* @{typ return_result} type is also used when our contract returns, as we will see. *)
@@ -926,7 +927,7 @@ Record program : Type := {
 Notation "{[ r 'with' 'program_content' := e ]}" := ({| program_content := e; program_length := program_length r; program_annotation := program_annotation r |}).
 Notation "{[ r 'with' 'program_length' := e ]}" := ({| program_length := e; program_content := program_content r; program_annotation := program_annotation r |}).
 Notation "{[ r 'with' 'program_annotation' := e ]}" := ({| program_annotation := e; program_content := program_content r; program_length := program_length r |}).
-Definition program_default: program  := {| program_content := (fun (x8 :  Z ) => DAEMON); program_length := Z_default; program_annotation := (fun (x9 :  Z ) => DAEMON) |}.
+Definition program_default: program  := {| program_content := (fun (x113 :  Z ) => DAEMON); program_length := Z_default; program_annotation := (fun (x114 :  Z ) => DAEMON) |}.
 (* [?]: removed value specification. *)
 
 Definition empty_program   : program :=  {|program_content := (fun  _ : Z  => None);program_length :=((Zpred (Zpos (P_of_succ_nat 0))));program_annotation := (fun  _ : Z  => [])
@@ -979,7 +980,7 @@ Notation "{[ r 'with' 'block_number' := e ]}" := ({| block_number := e; block_bl
 Notation "{[ r 'with' 'block_difficulty' := e ]}" := ({| block_difficulty := e; block_blockhash := block_blockhash r; block_coinbase := block_coinbase r; block_timestamp := block_timestamp r; block_number := block_number r; block_gaslimit := block_gaslimit r; block_gasprice := block_gasprice r |}).
 Notation "{[ r 'with' 'block_gaslimit' := e ]}" := ({| block_gaslimit := e; block_blockhash := block_blockhash r; block_coinbase := block_coinbase r; block_timestamp := block_timestamp r; block_number := block_number r; block_difficulty := block_difficulty r; block_gasprice := block_gasprice r |}).
 Notation "{[ r 'with' 'block_gasprice' := e ]}" := ({| block_gasprice := e; block_blockhash := block_blockhash r; block_coinbase := block_coinbase r; block_timestamp := block_timestamp r; block_number := block_number r; block_difficulty := block_difficulty r; block_gaslimit := block_gaslimit r |}).
-Definition block_info_default: block_info  := {| block_blockhash := (fun (x7 :  w256 ) => w256_default); block_coinbase := address_default; block_timestamp := w256_default; block_number := w256_default; block_difficulty := w256_default; block_gaslimit := w256_default; block_gasprice := w256_default |}.
+Definition block_info_default: block_info  := {| block_blockhash := (fun (x112 :  w256 ) => w256_default); block_coinbase := address_default; block_timestamp := w256_default; block_number := w256_default; block_difficulty := w256_default; block_gaslimit := w256_default; block_gasprice := w256_default |}.
 
 
 (* A log entry is something like this. *)
@@ -1034,7 +1035,7 @@ Notation "{[ r 'with' 'vctx_gas' := e ]}" := ({| vctx_gas := e; vctx_stack := vc
 Notation "{[ r 'with' 'vctx_account_existence' := e ]}" := ({| vctx_account_existence := e; vctx_stack := vctx_stack r; vctx_memory := vctx_memory r; vctx_memory_usage := vctx_memory_usage r; vctx_storage := vctx_storage r; vctx_pc := vctx_pc r; vctx_balance := vctx_balance r; vctx_caller := vctx_caller r; vctx_value_sent := vctx_value_sent r; vctx_data_sent := vctx_data_sent r; vctx_storage_at_call := vctx_storage_at_call r; vctx_balance_at_call := vctx_balance_at_call r; vctx_origin := vctx_origin r; vctx_ext_program := vctx_ext_program r; vctx_block := vctx_block r; vctx_gas := vctx_gas r; vctx_touched_storage_index := vctx_touched_storage_index r; vctx_logs := vctx_logs r |}).
 Notation "{[ r 'with' 'vctx_touched_storage_index' := e ]}" := ({| vctx_touched_storage_index := e; vctx_stack := vctx_stack r; vctx_memory := vctx_memory r; vctx_memory_usage := vctx_memory_usage r; vctx_storage := vctx_storage r; vctx_pc := vctx_pc r; vctx_balance := vctx_balance r; vctx_caller := vctx_caller r; vctx_value_sent := vctx_value_sent r; vctx_data_sent := vctx_data_sent r; vctx_storage_at_call := vctx_storage_at_call r; vctx_balance_at_call := vctx_balance_at_call r; vctx_origin := vctx_origin r; vctx_ext_program := vctx_ext_program r; vctx_block := vctx_block r; vctx_gas := vctx_gas r; vctx_account_existence := vctx_account_existence r; vctx_logs := vctx_logs r |}).
 Notation "{[ r 'with' 'vctx_logs' := e ]}" := ({| vctx_logs := e; vctx_stack := vctx_stack r; vctx_memory := vctx_memory r; vctx_memory_usage := vctx_memory_usage r; vctx_storage := vctx_storage r; vctx_pc := vctx_pc r; vctx_balance := vctx_balance r; vctx_caller := vctx_caller r; vctx_value_sent := vctx_value_sent r; vctx_data_sent := vctx_data_sent r; vctx_storage_at_call := vctx_storage_at_call r; vctx_balance_at_call := vctx_balance_at_call r; vctx_origin := vctx_origin r; vctx_ext_program := vctx_ext_program r; vctx_block := vctx_block r; vctx_gas := vctx_gas r; vctx_account_existence := vctx_account_existence r; vctx_touched_storage_index := vctx_touched_storage_index r |}).
-Definition variable_ctx_default: variable_ctx  := {| vctx_stack := DAEMON; vctx_memory := memory_default; vctx_memory_usage := Z_default; vctx_storage := storage_default; vctx_pc := Z_default; vctx_balance := (fun (x3 :  address ) => w256_default); vctx_caller := address_default; vctx_value_sent := w256_default; vctx_data_sent := DAEMON; vctx_storage_at_call := storage_default; vctx_balance_at_call := (fun (x4 :  address ) => w256_default); vctx_origin := address_default; vctx_ext_program := (fun (x5 :  address ) => program_default); vctx_block := block_info_default; vctx_gas := Z_default; vctx_account_existence := (fun (x6 :  address ) => bool_default); vctx_touched_storage_index := DAEMON; vctx_logs := DAEMON |}.
+Definition variable_ctx_default: variable_ctx  := {| vctx_stack := DAEMON; vctx_memory := memory_default; vctx_memory_usage := Z_default; vctx_storage := storage_default; vctx_pc := Z_default; vctx_balance := (fun (x108 :  address ) => w256_default); vctx_caller := address_default; vctx_value_sent := w256_default; vctx_data_sent := DAEMON; vctx_storage_at_call := storage_default; vctx_balance_at_call := (fun (x109 :  address ) => w256_default); vctx_origin := address_default; vctx_ext_program := (fun (x110 :  address ) => program_default); vctx_block := block_info_default; vctx_gas := Z_default; vctx_account_existence := (fun (x111 :  address ) => bool_default); vctx_touched_storage_index := DAEMON; vctx_logs := DAEMON |}.
 
 (* The constant context contains information that is rather stable. *)
 Record constant_ctx : Type := {
@@ -1189,7 +1190,7 @@ Definition constant_mark  (lst : list (byte ))  : list (byte ):=  lst.
 (* [?]: removed value specification. *)
 
 Definition read_word_from_bytes  (idx : nat ) (lst : list (word8 ))  : word256 := 
-  if nat_lteb ( (List.length lst)) idx thenword256FromNumeral 0
+  if nat_lteb ( (List.length lst)) idx then (word256FromNumeral 0)
   else
     word_of_bytes
     (byte_list_fill_right(word8FromNumeral 0)( 32)
@@ -1207,10 +1208,10 @@ end.
 
 Definition call  (v : variable_ctx ) (c : constant_ctx )  : instruction_result :=  match ((vctx_stack v)) with 
  | e0 :: e1 :: e2 :: e3 :: e4 :: e5 :: e6 :: rest =>
-     strict_if (word256ULT ((vctx_balancev)(cctx_this c)) e2)
+     strict_if (word256ULT ((ii(vctx_balance v))(cctx_this c)) e2)
         (fun  _ : bool  => (InstructionContinue
            (vctx_advance_pc c
-             {[ v with vctx_stack := (word256FromNumeral0 :: rest)
+             {[ v with vctx_stack := (word256FromNumeral 0 :: rest)
               ]}
            )))
        (fun  _ : bool  => InstructionToEnvironment (ContractCall
@@ -1224,10 +1225,10 @@ end.
 
 Definition delegatecall  (v : variable_ctx ) (c : constant_ctx )  : instruction_result :=  match ((vctx_stack v)) with 
  | e0 :: e1 :: e3 :: e4 :: e5 :: e6 :: rest =>
-    if word256ULT ((vctx_balancev)(cctx_this c))(vctx_value_sent v) then
+    if word256ULT (ii(vctx_balance v)(cctx_this c))(vctx_value_sent v) then
         (InstructionContinue
            (vctx_advance_pc c
-             {[ v with vctx_stack := (word256FromNumeral0 :: rest)
+             {[ v with vctx_stack := (word256FromNumeral 0 :: rest)
               ]}
            ))
      else
@@ -1243,10 +1244,10 @@ end.
 
 Definition callcode  (v : variable_ctx ) (c : constant_ctx )  : instruction_result :=  match ((vctx_stack v)) with 
  | e0 :: e1 :: e2 :: e3 :: e4 :: e5 :: e6 :: rest =>
-    if word256ULT ((vctx_balancev)(cctx_this c)) e2 then
+    if word256ULT (ii(vctx_balance v)(cctx_this  c)) e2 then
         (InstructionContinue
            (vctx_advance_pc c
-             {[ v with vctx_stack := (word256FromNumeral0 :: rest)
+             {[ v with vctx_stack := (word256FromNumeral 0 :: rest)
               ]}
            ))
      else
@@ -1261,10 +1262,10 @@ end.
 
 Definition create  (v : variable_ctx ) (c : constant_ctx )  : instruction_result :=  match ((vctx_stack v)) with 
   | vl :: code_start :: code_len :: rest =>
-      if word256ULT ((vctx_balancev)(cctx_this c)) vl then
+      if word256ULT (ii(vctx_balance v)(cctx_this c)) vl then
         (InstructionContinue
            (vctx_advance_pc c
-             {[ v with vctx_stack := (word256FromNumeral0 :: rest)
+             {[ v with vctx_stack := (word256FromNumeral 0 :: rest)
               ]}
            ))
       else
@@ -1366,8 +1367,8 @@ end.
 
 Definition input_as_natural_map  (lst : list (word8 ))  (idx : nat )  : word8 := 
   let idx := (Zpred (Zpos (P_of_succ_nat idx))) in
-  if int_gtb((Zpred (Zpos (P_of_succ_nat 0)))) idx thenword8FromNumeral 0
-  else if int_lteb ((Zpred (Zpos (P_of_succ_nat (List.length lst))))) idx thenword8FromNumeral 0
+  if int_gtb((Zpred (Zpos (P_of_succ_nat 0)))) idx then (word8FromNumeral 0)
+  else if int_lteb ((Zpred (Zpos (P_of_succ_nat (List.length lst))))) idx then (word8FromNumeral 0)
   else
     match ( lem_list.index lst (Zabs_nat ( idx))) with 
     | None =>word8FromNumeral 0
@@ -1402,7 +1403,7 @@ Definition extcodecopy  (v : variable_ctx ) (c : constant_ctx )  : instruction_r
  | addr :: dst_start :: src_start :: len :: rest =>
      let data := cut_natural_map (word256ToNatural src_start) (word256ToNatural len)
                   (program_as_natural_map
-                    ((vctx_ext_programv) (w256_to_address addr))) in
+                    (ii(vctx_ext_program v) (w256_to_address addr))) in
      let new_memory := store_byte_list_memory dst_start data(vctx_memory v) in
      InstructionContinue (vctx_advance_pc c  
   {[ {[
@@ -1470,9 +1471,9 @@ end.
 Definition suicide  (v : variable_ctx ) (c : constant_ctx )  : instruction_result :=  match ((vctx_stack v)) with 
  | dst :: _ =>
      let new_balance := (fun (addr : word160 ) =>
-        if classical_boolean_equivalence addr(cctx_this c) thenword256FromNumeral 0 else
-        if classical_boolean_equivalence addr (w256_to_address dst) then word256Add ((vctx_balancev)(cctx_this c)) ((vctx_balancev) addr) else(vctx_balance
-        v) addr) in
+        if classical_boolean_equivalence addr(cctx_this c) then (word256FromNumeral 0) else
+        if classical_boolean_equivalence addr (w256_to_address dst) then word256Add (ii(vctx_balance v)(cctx_this c)) (ii(vctx_balance v) addr) else
+        ii(vctx_balance v) addr) in
      InstructionToEnvironment ContractSuicide v None
  | _ => instruction_failure_result v [TooShortStack]
 end.
@@ -1485,7 +1486,7 @@ Definition Csstore  (orig : word256 ) (newer : word256 )  : Z :=  if negb ( clas
 (* [?]: removed value specification. *)
 
 Definition Csuicide  (recipient_empty : bool ) (blocknumber : nat )  : Z :=  Coq.ZArith.BinInt.Zplus  
-(Gsuicide blocknumber) (if recipient_empty && nat_gteb blocknumber magic_block then Gnewaccount else(Zpred (Zpos (P_of_succ_nat 0)))).
+(Gsuicide blocknumber) (if recipient_empty && nat_gteb blocknumber (Coq.Init.Peano.mult( 2463)( 1000)) then Gnewaccount else(Zpred (Zpos (P_of_succ_nat 0)))).
 (* [?]: removed value specification. *)
 
 Definition Cnew  (value1 : word256 ) (emp : bool )  : Z :=  if emp && negb ( classical_boolean_equivalence value1(word256FromNumeral 0)) then Gnewaccount else(Zpred (Zpos (P_of_succ_nat 0))).
@@ -1653,8 +1654,8 @@ Definition new_memory_consumption  (i : inst ) (v : variable_ctx )  : Z :=
 Definition predict_gas  (i : inst ) (v : variable_ctx ) (c : constant_ctx )  : Z := 
   C(vctx_memory_usage v) (new_memory_consumption i v) (vctx_next_instruction_default v c)
     (vctx_stack_default((Zpred (Zpos (P_of_succ_nat 0)))) v) (vctx_stack_default((Zpred (Zpos (P_of_succ_nat 1)))) v) (vctx_stack_default((Zpred (Zpos (P_of_succ_nat 2)))) v) (vctx_stack_default((Zpred (Zpos (P_of_succ_nat 3)))) v)
-    (negb ((vctx_account_existencev) (vctx_recipient v c))) ((vctx_storagev) (vctx_stack_default((Zpred (Zpos (P_of_succ_nat 0)))) v))
-    (vctx_stack_default((Zpred (Zpos (P_of_succ_nat 1)))) v) ((vctx_gasv)) (word256ToNatural(block_number(vctx_block v))).
+    (negb (ii(vctx_account_existence v) (vctx_recipient v c))) (ii(vctx_storage v) (vctx_stack_default((Zpred (Zpos (P_of_succ_nat 0)))) v))
+    (vctx_stack_default((Zpred (Zpos (P_of_succ_nat 1)))) v)(vctx_gas v) (word256ToNatural(block_number(vctx_block v))).
 (* [?]: removed value specification. *)
 
 Definition check_resources  (v : variable_ctx ) (c : constant_ctx ) (s : list (word256 )) (i : inst )  : bool := 
@@ -1702,15 +1703,15 @@ Definition instruction_sem  (v : variable_ctx ) (c : constant_ctx ) (inst1 : ins
   | Info CALLER => stack_0_1_op v c (address_to_w256(vctx_caller v))
   | Arith ADD => stack_2_1_op v c (fun (a : word256 ) (b : word256 ) => word256Add a b)
   | Arith SUB => stack_2_1_op v c (fun (a : word256 ) (b : word256 ) => word256Minus a b)
-  | Arith ISZERO => stack_1_1_op v c (fun (a : word256 ) => if classical_boolean_equivalence a(word256FromNumeral 0) thenword256FromNumeral 1 elseword256FromNumeral 0)
+  | Arith ISZERO => stack_1_1_op v c (fun (a : word256 ) => if classical_boolean_equivalence a(word256FromNumeral 0) then (word256FromNumeral 1) else (word256FromNumeral 0))
   | Misc CALL => call v c
   | Misc RETURN => ret v c
   | Misc STOP => stop v c
   | Dup n => general_dup n v c
   | Stack POP => pop v c
   | Info GASLIMIT => stack_0_1_op v c(block_gaslimit(vctx_block v))
-  | Arith inst_GT => stack_2_1_op v c (fun (a : word256 ) (b : word256 ) => if word256UGT a b thenword256FromNumeral 1 elseword256FromNumeral 0)
-  | Arith inst_EQ => stack_2_1_op v c (fun (a : word256 ) (b : word256 ) => if classical_boolean_equivalence a b thenword256FromNumeral 1 elseword256FromNumeral 0)
+  | Arith inst_GT => stack_2_1_op v c (fun (a : word256 ) (b : word256 ) => if word256UGT a b then (word256FromNumeral 1) else (word256FromNumeral 0))
+  | Arith inst_EQ => stack_2_1_op v c (fun (a : word256 ) (b : word256 ) => if classical_boolean_equivalence a b then (word256FromNumeral 1) else (word256FromNumeral 0))
   | Bits inst_AND => stack_2_1_op v c (fun (a : word256 ) (b : word256 ) => word256Land a b)
   | Bits inst_OR => stack_2_1_op v c (fun (a : word256 ) (b : word256 ) => word256Lor a b)
   | Bits inst_XOR => stack_2_1_op v c (fun (a : word256 ) (b : word256 ) => word256Lxor a b)
@@ -1718,7 +1719,7 @@ Definition instruction_sem  (v : variable_ctx ) (c : constant_ctx ) (inst1 : ins
   | Bits BYTE =>
       stack_2_1_op v c get_byte
   | Sarith SDIV => stack_2_1_op v c
-       (fun (n : word256 ) (divisor : word256 ) => if classical_boolean_equivalence divisor(word256FromNumeral 0) thenword256FromNumeral 0 else
+       (fun (n : word256 ) (divisor : word256 ) => if classical_boolean_equivalence divisor(word256FromNumeral 0) then (word256FromNumeral 0) else
                          let divisor := sintFromW256 divisor in
                          let n := sintFromW256 n in
                          let min_int : Z  := (Coq.ZArith.BinInt.Zminus Z0 ( Coq.ZArith.Zpower.Zpower_nat((Zpred (Zpos (P_of_succ_nat 2))))( 255))) in
@@ -1736,7 +1737,7 @@ Definition instruction_sem  (v : variable_ctx ) (c : constant_ctx ) (inst1 : ins
                               word256FromInteger ( Coq.ZArith.Zdiv.Zdiv n divisor))
                            )
   | Sarith SMOD => stack_2_1_op v c
-       (fun (n : word256 ) (divisor : word256 ) => if classical_boolean_equivalence divisor(word256FromNumeral 0) thenword256FromNumeral 0 else
+       (fun (n : word256 ) (divisor : word256 ) => if classical_boolean_equivalence divisor(word256FromNumeral 0) then (word256FromNumeral 0) else
                          let divisor := sintFromW256 divisor in
                          let n := sintFromW256 n in
                          if int_ltb divisor((Zpred (Zpos (P_of_succ_nat 0)))) then
@@ -1752,26 +1753,26 @@ Definition instruction_sem  (v : variable_ctx ) (c : constant_ctx ) (inst1 : ins
                               word256FromInteger ( Coq.ZArith.Zdiv.Zmod n divisor))
                            )
   | Sarith SGT => stack_2_1_op v c
-       (fun (elm0 : word256 ) (elm1 : word256 ) => if w256Greater elm0 elm1 thenword256FromNumeral 1 elseword256FromNumeral 0)
+       (fun (elm0 : word256 ) (elm1 : word256 ) => if w256Greater elm0 elm1 then (word256FromNumeral 1) else (word256FromNumeral 0))
   | Sarith SLT => stack_2_1_op v c
-       (fun (elm0 : word256 ) (elm1 : word256 ) => if w256Less elm0 elm1 thenword256FromNumeral 1 elseword256FromNumeral 0)
+       (fun (elm0 : word256 ) (elm1 : word256 ) => if w256Less elm0 elm1 then (word256FromNumeral 1) else (word256FromNumeral 0))
   | Sarith SIGNEXTEND => stack_2_1_op v c signextend
   | Arith MUL => stack_2_1_op v c
        (fun (a : word256 ) (b : word256 ) => word256Mult a b)
   | Arith DIV => stack_2_1_op v c
-       (fun (a : word256 ) (divisor : word256 ) => (if classical_boolean_equivalence divisor(word256FromNumeral 0) thenword256FromNumeral 0 else word256FromInteger ( Coq.ZArith.Zdiv.Zdiv(uint a) (uint divisor))))
+       (fun (a : word256 ) (divisor : word256 ) => (if classical_boolean_equivalence divisor(word256FromNumeral 0) then (word256FromNumeral 0) else word256FromInteger ( Coq.ZArith.Zdiv.Zdiv(uint a) (uint divisor))))
   | Arith MOD => stack_2_1_op v c
-       (fun (a : word256 ) (divisor : word256 ) => (if classical_boolean_equivalence divisor(word256FromNumeral 0) thenword256FromNumeral 0 else
+       (fun (a : word256 ) (divisor : word256 ) => (if classical_boolean_equivalence divisor(word256FromNumeral 0) then (word256FromNumeral 0) else
             word256FromInteger ( Coq.ZArith.Zdiv.Zmod(uint a) (uint divisor))
         ))
   | Arith ADDMOD => stack_3_1_op v c
        (fun (a : word256 ) (b : word256 ) (divisor : word256 ) =>
-           (if classical_boolean_equivalence divisor(word256FromNumeral 0) thenword256FromNumeral 0 else word256FromInteger ( Coq.ZArith.Zdiv.Zmod( Coq.ZArith.BinInt.Zplus(uint a) (uint b)) (uint divisor))))
+           (if classical_boolean_equivalence divisor(word256FromNumeral 0) then (word256FromNumeral 0) else word256FromInteger ( Coq.ZArith.Zdiv.Zmod( Coq.ZArith.BinInt.Zplus(uint a) (uint b)) (uint divisor))))
   | Arith MULMOD => stack_3_1_op v c
        (fun (a : word256 ) (b : word256 ) (divisor : word256 ) =>
-           (if classical_boolean_equivalence divisor(word256FromNumeral 0) thenword256FromNumeral 0 else word256FromInteger ( Coq.ZArith.Zdiv.Zmod( Coq.ZArith.BinInt.Zmult(uint a) (uint b)) (uint divisor))))
-  | Arith EXP => stack_2_1_op v c (fun (a : word256 ) (exponent : word256 ) => word256FromInteger (word_exp (word256ToInteger a) (word256ToNatural exponent)))
-  | Arith inst_LT => stack_2_1_op v c (fun (arg0 : word256 ) (arg1 : word256 ) => if word256UGT arg1 arg0 thenword256FromNumeral 1 elseword256FromNumeral 0)
+           (if classical_boolean_equivalence divisor(word256FromNumeral 0) then (word256FromNumeral 0) else word256FromInteger ( Coq.ZArith.Zdiv.Zmod( Coq.ZArith.BinInt.Zmult(uint a) (uint b)) (uint divisor))))
+  | Arith EXP => stack_2_1_op v c (fun (a : word256 ) (exponent : word256 ) => word256FromInteger (word_exp (uint a) (word256ToNatural exponent)))
+  | Arith inst_LT => stack_2_1_op v c (fun (arg0 : word256 ) (arg1 : word256 ) => if word256UGT arg1 arg0 then (word256FromNumeral 1) else (word256FromNumeral 0))
   | Arith SHA3 => sha3 v c
   | Info ADDRESS => stack_0_1_op v c (address_to_w256(cctx_this c))
   | Info BALANCE => stack_1_1_op v c (fun (addr : word256 ) =>(vctx_balance v) (w256_to_address addr))
@@ -1780,7 +1781,7 @@ Definition instruction_sem  (v : variable_ctx ) (c : constant_ctx ) (inst1 : ins
   | Info CODESIZE => stack_0_1_op v c (word256FromInteger(program_length(cctx_program c)))
   | Info GASPRICE => stack_0_1_op v c(block_gasprice(vctx_block v))
   | Info EXTCODESIZE => stack_1_1_op v c
-       (fun (arg : word256 ) => word256FromInteger(program_length ((vctx_ext_programv) (w256_to_address arg))))
+       (fun (arg : word256 ) => word256FromInteger(program_length (ii(vctx_ext_program v) (w256_to_address arg))))
   | Info BLOCKHASH => stack_1_1_op v c(block_blockhash(vctx_block v))
   | Info COINBASE => stack_0_1_op v c (address_to_w256(block_coinbase(vctx_block v)))
   | Info TIMESTAMP => stack_0_1_op v c(block_timestamp(vctx_block v))
@@ -1804,7 +1805,7 @@ Definition instruction_sem  (v : variable_ctx ) (c : constant_ctx ) (inst1 : ins
   | Misc SUICIDE => suicide v c
   | Misc DELEGATECALL => delegatecall v c
   | Info GAS => stack_0_1_op v c ( word256Minus(gas v)(word256FromNumeral 2))
-  | Memory MSIZE => stack_0_1_op v c ( word256Mult(word256FromNumeral32) (word256FromInteger(vctx_memory_usage v)))
+  | Memory MSIZE => stack_0_1_op v c ( word256Mult(word256FromNumeral 32) (word256FromInteger(vctx_memory_usage v)))
   end).
 (* [?]: removed value specification. *)
 
@@ -1824,14 +1825,14 @@ Definition next_state  (stopper : instruction_result  -> unit ) (c : constant_ct
      match ( vctx_next_instruction v c) with 
       | None => InstructionToEnvironment (ContractFail [ShouldNotHappen]) v None
       | Some i =>
-        if check_resources v c ((vctx_stackv)) i then
+        if check_resources v c(vctx_stack v) i then
           instruction_sem v c i
         else
           InstructionToEnvironment (ContractFail
               (match ( inst_stack_numbers i) with 
                | (consumed,  produced) =>
                  
-                  (@ List.app _)(if ( int_lteb (Coq.ZArith.BinInt.Zminus (Coq.ZArith.BinInt.Zplus((Zpred (Zpos (P_of_succ_nat (List.length ((vctx_stackv))))))) produced) consumed)((Zpred (Zpos (P_of_succ_nat 1024))))) then [] else [TooLongStack]) (if int_lteb (predict_gas i v c)(vctx_gas v) then [] else [OutOfGas])
+                  (@ List.app _)(if ( int_lteb (Coq.ZArith.BinInt.Zminus (Coq.ZArith.BinInt.Zplus((Zpred (Zpos (P_of_succ_nat (List.length(vctx_stack v)))))) produced) consumed)((Zpred (Zpos (P_of_succ_nat 1024))))) then [] else [TooLongStack]) (if int_lteb (predict_gas i v c)(vctx_gas v) then [] else [OutOfGas])
                end
               ))
               v None
@@ -1884,7 +1885,7 @@ Definition is_call_like  (i : option (inst ) )  : bool :=  ( (maybeEqualBy class
 Definition build_vctx_failed  (a : account_state )  : option (variable_ctx ) :=  match ((account_ongoing_calls a)) with 
  | [] => None
  | (recovered, _, _) :: _ =>
-      if is_call_like ((program_content(account_codea)) ( Coq.ZArith.BinInt.Zminus(vctx_pcrecovered)((Zpred (Zpos (P_of_succ_nat 1)))))) then
+      if is_call_like ((program_content(ii(account_code a))) ( Coq.ZArith.BinInt.Zminus(ii(vctx_pc recovered))((Zpred (Zpos (P_of_succ_nat 1)))))) then
       Some ({[ recovered with vctx_stack :=word256FromNumeral 0 ::(vctx_stack recovered)  ]}) (* 0 is pushed, indicating failure*)
       else None
 end.
@@ -1913,7 +1914,7 @@ Definition update_account_state  (prev : account_state ) (act : contract_action 
                                    |  _ => bal(account_address prev) end)  ]} with account_storage := st  ]}.
 
 Definition contract_behavior : Type := ( contract_action  * (account_state  ->  bool )) % type.
-Definition contract_behavior_default: contract_behavior  := (contract_action_default, (fun (x2 : account_state ) => bool_default)).
+Definition contract_behavior_default: contract_behavior  := (contract_action_default, (fun (x107 : account_state ) => bool_default)).
 
 Record response_to_environment : Type := {
   when_called : call_env  ->  contract_behavior ;
@@ -1923,20 +1924,20 @@ Record response_to_environment : Type := {
 Notation "{[ r 'with' 'when_called' := e ]}" := ({| when_called := e; when_returned := when_returned r; when_failed := when_failed r |}).
 Notation "{[ r 'with' 'when_returned' := e ]}" := ({| when_returned := e; when_called := when_called r; when_failed := when_failed r |}).
 Notation "{[ r 'with' 'when_failed' := e ]}" := ({| when_failed := e; when_called := when_called r; when_returned := when_returned r |}).
-Definition response_to_environment_default: response_to_environment  := {| when_called := (fun (x0 :  call_env ) => contract_behavior_default); when_returned := (fun (x1 :  return_result ) => contract_behavior_default); when_failed := contract_behavior_default |}.
+Definition response_to_environment_default: response_to_environment  := {| when_called := (fun (x105 :  call_env ) => contract_behavior_default); when_returned := (fun (x106 :  return_result ) => contract_behavior_default); when_failed := contract_behavior_default |}.
 (* [?]: removed value specification. *)
 
 Definition empty_memory   : word256  -> word8 :=  (fun  _ : word256  =>word8FromNumeral 0).
 Inductive build_vctx_called: (account_state) -> (call_env) -> (variable_ctx) -> Prop :=
-  | vctx_called: forall bal a env origin ext block gas0 existence, ( nat_gteb    
-(word256ToNatural(block_number block))( 2463000):Prop) -> ( classical_boolean_equivalence    
+  | vctx_called: forall bal a env origin ext block0 gas0 existence, ( nat_gteb    
+(word256ToNatural(block_number block0))(Coq.Init.Peano.mult( 2463)( 1000)):Prop) -> ( classical_boolean_equivalence    
 ( (* only the newest version of EVM matters *)bal(account_address a))(account_balance a):Prop) -> build_vctx_called   a  env 
  {|vctx_stack := [];vctx_memory := empty_memory;vctx_memory_usage :=((Zpred (Zpos (P_of_succ_nat 0))));vctx_storage :=(account_storage a);vctx_pc :=((Zpred (Zpos (P_of_succ_nat 0))));vctx_balance := (fun  (addr:address ) =>
                          if classical_boolean_equivalence addr(account_address a)
-                           then word256Add (bal(account_address a))(callenv_value env) else bal addr);vctx_caller :=(callenv_caller env);vctx_value_sent :=(callenv_value env);vctx_data_sent :=(callenv_data env);vctx_storage_at_call :=(account_storage a);vctx_balance_at_call := bal;vctx_origin := origin;vctx_ext_program := ext;vctx_block := block;vctx_gas := gas0;vctx_account_existence := existence;vctx_touched_storage_index := [];vctx_logs := []
+                           then word256Add (bal(account_address a))(callenv_value env) else bal addr);vctx_caller :=(callenv_caller env);vctx_value_sent :=(callenv_value env);vctx_data_sent :=(callenv_data env);vctx_storage_at_call :=(account_storage a);vctx_balance_at_call := bal;vctx_origin := origin;vctx_ext_program := ext;vctx_block := block0;vctx_gas := gas0;vctx_account_existence := existence;vctx_touched_storage_index := [];vctx_logs := []
    |}.
 Inductive build_vctx_returned: (account_state) -> (return_result) -> (variable_ctx) -> Prop :=
-  | vctx_returned: forall a_code v_pc new_bal a_bal a_addr a_storage v_stack v_memory v_memory_usage v_storage v_balance v_caller v_value v_data v_init_storage v_init_balance v_origin v_ext_program v_ext_program' v_block v_gas v_gas' mem_start mem_size r rest whichever v_ex v_ex' v_touched v_logs, (is_call_like ((program_contenta_code) ( Coq.ZArith.BinInt.Zminus v_pc((Zpred (Zpos (P_of_succ_nat 1)))))):Prop) -> (word256UGE new_bal a_bal:Prop) -> build_vctx_returned  
+  | vctx_returned: forall a_code v_pc new_bal a_bal a_addr a_storage v_stack v_memory v_memory_usage v_storage v_balance v_caller v_value v_data v_init_storage v_init_balance v_origin v_ext_program v_ext_program' v_block v_gas v_gas' mem_start mem_size r rest whichever v_ex v_ex' v_touched v_logs, (is_call_like (ii(program_content a_code) ( Coq.ZArith.BinInt.Zminus v_pc((Zpred (Zpos (P_of_succ_nat 1)))))):Prop) -> (word256UGE new_bal a_bal:Prop) -> build_vctx_returned  
 
      (* here is the first argument *)
      {|account_address := a_addr (* all elements are spelled out for performance *)
