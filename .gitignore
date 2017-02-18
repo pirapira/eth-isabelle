@@ -1,5 +1,6 @@
 *~
 *#
+*.bak
 lem/*.vo
 lem/*.d
 lem/*.glob
@@ -17,12 +18,15 @@ lem/Word256.thy
 lem/Word256Auxiliary.thy
 lem/Word8.thy
 lem/Word4.thy
+lem/Word32*.thy
+lem/Word64*.thy
 lem/Word8Auxiliary.thy
 lem/Word4Auxiliary.thy
 lem/*.tex
 lem/*.log
 lem/*.pdf
 lem/*.aux
+lem/*.v
 lem/keccak.ml
 lem/evm.ml
 lem/word4.ml
