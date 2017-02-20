@@ -29,6 +29,8 @@ lem/*.aux
 lem/*.v
 lem/keccak.ml
 lem/evm.ml
+lem/word64.ml
+lem/word32.ml
 lem/word4.ml
 lem/word8.ml
 lem/word160.ml
