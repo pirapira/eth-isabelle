@@ -84,7 +84,7 @@ val word8FromNumeral : numeral -> word8
 let word8FromNumeral w = bs_to_w8 (fromNumeral w)
 
 instance (Numeral word8)
-  let fromNumeral x = word8FromNumeral x
+  let fromNumeral x = (word8FromNumeral x)
 end
 
 val w8Eq : word8 -> word8 -> bool

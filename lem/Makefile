@@ -56,13 +56,13 @@ vo_to_obj = $(addsuffix .o,\
 
 COQLIBS?=\
   -R "." Evm\
-  -R "/home/sami/lem/coq-lib/" Lem
+  -R "/usr/local/share/lem/coq-lib/" Lem
 COQCHKLIBS?=\
   -R "." Evm\
-  -R "/home/sami/lem/coq-lib/" Lem
+  -R "/usr/local/share/lem/coq-lib/" Lem
 COQDOCLIBS?=\
   -R "." Evm\
-  -R "/home/sami/lem/coq-lib/" Lem
+  -R "/usr/local/share/lem/coq-lib/" Lem
 
 ##########################
 #                        #

@@ -84,7 +84,7 @@ val word256FromNumeral : numeral -> word256
 let word256FromNumeral w = bs_to_w256 (fromNumeral w)
 
 instance (Numeral word256)
-  let fromNumeral x = word256FromNumeral x
+  let fromNumeral x = (word256FromNumeral x)
 end
 
 val w256Eq : word256 -> word256 -> bool
