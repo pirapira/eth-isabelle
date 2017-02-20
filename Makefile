@@ -36,6 +36,9 @@ lem-pdf: lem/Evm-use_inc.pdf lem/Block-use_inc.pdf lem/Keccak-use_inc.pdf lem/Rl
 
 lem-ocaml: lem/evm.ml lem/word256.ml lem/word160.ml lem/word8.ml lem/keccak.ml lem/word4.ml
 
+lem-coq:
+	lem -coq lem/*.lem
+
 lem/block.lem: lem/evm.lem
 	touch lem/block.lem
 
