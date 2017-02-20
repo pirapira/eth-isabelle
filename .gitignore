@@ -27,6 +27,7 @@ lem/*.log
 lem/*.pdf
 lem/*.aux
 lem/*.v
+tester/lem
 lem/keccak.ml
 lem/evm.ml
 lem/word64.ml
