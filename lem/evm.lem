@@ -86,13 +86,13 @@ let rec log2 x =
 declare coq target_rep function log2 = `Z.log2`
 
 val log256floor : integer -> integer
-let rec {isabelle; hol} log256floor x =
+let rec {isabelle; hol; ocaml} log256floor x =
   if x <= 255 then 0
   else 1 + log256floor (x / 256)
 let {coq} log256floor x = log2 x / 8
 
 val word_exp : integer -> natural -> integer
-let rec {isabelle;hol} word_exp i n =
+let rec {isabelle;hol;ocaml} word_exp i n =
   match n with
   | 0 -> 1
   | _ ->
@@ -124,7 +124,7 @@ end
 declare termination_argument cut_memory_aux = automatic
 
 val cut_memory : w256 -> w256 -> memory -> list byte
-let rec {isabelle;hol} cut_memory idx n memory =
+let rec {isabelle;hol;ocaml} cut_memory idx n memory =
   if n = 0 then []
   else memory idx :: cut_memory (idx + 1) (n - 1) memory
 declare termination_argument cut_memory = manual
@@ -144,7 +144,7 @@ end
 declare termination_argument put_return_values_aux = automatic
 
 val put_return_values : memory -> list byte -> integer -> integer -> memory
-let rec {isabelle; hol} put_return_values orig lst b s =
+let rec {isabelle; hol;ocaml} put_return_values orig lst b s =
   if s <= 0 then orig else
   match lst with
   | [] -> orig
