@@ -1705,8 +1705,8 @@ let new_memory_consumption i v =
   | _ -> v.vctx_memory_usage
   end
 
-val predict_gas : inst -> variable_ctx -> constant_ctx -> integer
-let predict_gas i v c =
+val meter_gas : inst -> variable_ctx -> constant_ctx -> integer
+let meter_gas i v c =
   C v.vctx_memory_usage (new_memory_consumption i v) (vctx_next_instruction_default v c)
     (vctx_stack_default 0 v) (vctx_stack_default 1 v) (vctx_stack_default 2 v) (vctx_stack_default 3 v)
     (not (v.vctx_account_existence (vctx_recipient v c))) (v.vctx_storage (vctx_stack_default 0 v))
@@ -1717,7 +1717,7 @@ let check_resources v c s i =
   match inst_stack_numbers i with
   | (consumed, produced) ->
     (intFromNat (length s) + produced - consumed <= 1024) &&
-    predict_gas i v c <= v.vctx_gas
+    meter_gas i v c <= v.vctx_gas
   end
 
 val subtract_gas : integer -> instruction_result -> instruction_result
@@ -1760,7 +1760,7 @@ let signextend len w =
 (* on the execution environments. *)
 val instruction_sem : variable_ctx -> constant_ctx -> inst -> instruction_result
 let instruction_sem v c inst =
-  subtract_gas (predict_gas inst v c)
+  subtract_gas (meter_gas inst v c)
   (match inst with
   | Stack (PUSH_N lst) -> stack_0_1_op v c (word_of_bytes (constant_mark lst))
   | Unknown _ -> instruction_failure_result v
