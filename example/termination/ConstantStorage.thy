@@ -1,13 +1,15 @@
 theory "ConstantStorage" 
 
 imports 
-   "InstructionAux" "../ProgramInAvl"
+   "InstructionAux" "../../ProgramInAvl"
 
 begin
 
 declare stack_1_1_op_def [simp del]
 declare jump_def [simp del]
+(*
 declare cut_memory.simps [simp del]
+*)
 
 theorem lemma_stack_2_1_op :
 "stack_2_1_op v c f = InstructionContinue nv \<Longrightarrow>

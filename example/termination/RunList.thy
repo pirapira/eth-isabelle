@@ -6,7 +6,7 @@ imports
 
 begin
 
-declare cut_memory.simps [simp del]
+(* declare cut_memory.simps [simp del] *)
 
 definition p_length :: "inst list \<Rightarrow> nat" where
 "p_length lst = length (program_list_of_lst lst)"

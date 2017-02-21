@@ -4,7 +4,7 @@ imports Main "../../ContractSem" "../../RelationalSem" "../../ProgramInAvl"
 
 begin
 
-declare cut_memory.simps [simp del]
+(* declare cut_memory.simps [simp del] *)
 
 (* Instead of map, make a list first *)
 fun  program_list_of_lst  :: "inst list \<Rightarrow> inst list"  where 

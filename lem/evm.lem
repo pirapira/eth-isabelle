@@ -124,13 +124,12 @@ end
 declare termination_argument cut_memory_aux = automatic
 
 val cut_memory : w256 -> w256 -> memory -> list byte
-let rec {isabelle;hol;ocaml} cut_memory idx n memory =
+(*let rec {isabelle;hol;ocaml} cut_memory idx n memory =
   if n = 0 then []
   else memory idx :: cut_memory (idx + 1) (n - 1) memory
 declare termination_argument cut_memory = manual
-
-let {coq} cut_memory idx n memory = cut_memory_aux idx (word256ToNatural n) memory
-
+*)
+let cut_memory idx n memory = cut_memory_aux idx (word256ToNatural n) memory
 
 val put_return_values_aux : memory -> list byte -> integer -> natural -> memory
 let rec put_return_values_aux orig lst b s = match s with
@@ -144,15 +143,15 @@ end
 declare termination_argument put_return_values_aux = automatic
 
 val put_return_values : memory -> list byte -> integer -> integer -> memory
-let rec {isabelle; hol;ocaml} put_return_values orig lst b s =
+(*let rec {isabelle; hol;ocaml} put_return_values orig lst b s =
   if s <= 0 then orig else
   match lst with
   | [] -> orig
   | h :: t -> put_return_values (fun addr -> if addr = word256FromInteger b then h else orig addr) t (b + 1) (s - 1)
   end
 declare termination_argument put_return_values = automatic
-
-let {coq} put_return_values orig lst b s =
+*)
+let put_return_values orig lst b s =
   if s <= 0 then orig else put_return_values_aux orig lst b (naturalFromInteger s)
 
 (* The storage is modelled as a function.  For example, the empty storage *)
@@ -1612,7 +1611,7 @@ let Ccall mu0 mu1 mu2 emp remaining_gas blocknumber = Cgascap mu0 mu1 emp remain
 (* However, it takes the next instruction, the four topmost stack elements,
    a boolean indicating emptiness of the recipient, an original word of sstore, a new word of sstore, and the remaining gas of the caller. *)
 val thirdComponentOfC : inst -> w256 -> w256 -> w256 -> w256 -> bool -> w256 -> w256 -> integer -> natural -> integer
-let thirdComponentOfC i s0 s1 s2 s3 recipient_empty orig_val new_val remaining_gas blocknumber =
+let thirdComponentOfC i s0 s1 s2 s3 recipient_empty orig_val new_val remaining_gas = fun blocknumber ->
   match i with
   | Storage SSTORE -> Csstore orig_val new_val
   | Arith EXP -> Gexp + if s1 = 0 then 0 else Gexpbyte * (1 + log256floor (uint s1))

@@ -81,7 +81,7 @@ apply(cases "get_pc (program_content (cctx_program c)
 apply auto
 done
 
-declare cut_memory.simps [simp del]
+(* declare cut_memory.simps [simp del] *)
 
 theorem no_modify_gas :
   "instruction_aux v c inst = InstructionContinue nv \<Longrightarrow>
@@ -266,9 +266,9 @@ lemma third_component_stop :
   "no_spend_gas inst \<Longrightarrow>
   thirdComponentOfC inst s0 s1 s2 s3 recipient_empty orig new_val remaining_gas blocknumber \<ge> 0"
 apply(cases inst)
-apply (auto simp:thirdComponentOfC.simps)
+apply (auto )
 apply(cases "get_misc (Some inst)")
-apply (auto simp:thirdComponentOfC.simps Csuicide_def)
+apply (auto simp: Csuicide_def)
 done
 
 lemma uint_pos : "uint x \<ge> 0"
@@ -396,45 +396,36 @@ lemma third_component :
   "\<not> no_spend_gas inst \<Longrightarrow>
    thirdComponentOfC inst s0 s1 s2 s3 recipient_empty orig new_val remaining_gas blocknumber > 0"
 apply (cases inst)
-apply (auto simp:thirdComponentOfC.simps)
+apply (auto)
 apply (cases "get_bits (Some inst)")
-apply (auto simp:thirdComponentOfC.simps)
+apply (auto)
 apply (cases "get_sarith (Some inst)")
-apply (auto simp:thirdComponentOfC.simps)
+apply (auto)
+defer
 defer
 apply (cases "get_info (Some inst)")
-apply (auto simp:thirdComponentOfC.simps)
+apply (auto)
 apply (cases "get_memory (Some inst)")
-apply (auto simp:thirdComponentOfC.simps)
+apply (auto)
 apply(auto simp:simple_mem simple_mem2 simple_mem3)
 apply (cases "get_storage (Some inst)")
-apply (auto simp:thirdComponentOfC.simps)
+apply (auto)
 apply(simp add:Csstore_def)
 apply (cases "get_pc (Some inst)")
-apply (auto simp:thirdComponentOfC.simps)
+apply (auto)
 apply (cases "get_stack inst")
-apply (auto simp:thirdComponentOfC.simps)
+apply (auto)
 apply (cases "get_log (Some inst)")
-apply (auto simp:thirdComponentOfC.simps arith_log)
+apply (auto simp:arith_log)
 apply (cases "get_misc (Some inst)")
-apply (auto simp:thirdComponentOfC.simps lemma_gascap
+apply (auto simp: lemma_gascap
   Cxfer_def Cnew_def misc_calc)
 apply (cases "get_arith (Some inst)")
-apply (simp add:thirdComponentOfC.simps)
-apply (simp add:thirdComponentOfC.simps)
-apply (simp add:thirdComponentOfC.simps)
-apply (simp add:thirdComponentOfC.simps)
-apply (simp add:thirdComponentOfC.simps)
-apply (simp add:thirdComponentOfC.simps)
-apply (simp add:thirdComponentOfC.simps)
-defer
-apply (simp add:thirdComponentOfC.simps)
-apply (simp add:thirdComponentOfC.simps)
-apply (simp add:thirdComponentOfC.simps)
-apply (simp add:thirdComponentOfC.simps)
-apply (simp add:thirdComponentOfC.simps)
-apply(simp add:sha3_calc)
+apply (auto)
+apply (cases "get_arith (Some inst)")
+apply (auto)
 apply (auto simp:exp_calc)
+apply(simp add:sha3_calc)
 done
 
 lemma foo : assumes a:"0 \<le> vctx_memory_usage v"
@@ -502,6 +493,8 @@ lemma third_component2 :
    thirdComponentOfC inst s0 s1 s2 s3 recipient_empty orig new_val remaining_gas blocknumber \<ge> 0"
 using third_component
   by (simp add: dual_order.order_iff_strict)
+
+declare thirdComponentOfC_def [simp del]
 
 lemma lemma_predict : 
   "0 \<le> vctx_memory_usage v \<Longrightarrow>
