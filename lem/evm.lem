@@ -1945,7 +1945,7 @@ let next_state stopper c pr =
               (match inst_stack_numbers i with
                | (consumed, produced) ->
                  (if (intFromNat (length v.vctx_stack) + produced - consumed <= 1024) then [] else [TooLongStack])
-                  ++ (if predict_gas i v c <= v.vctx_gas then [] else [OutOfGas])
+                  ++ (if meter_gas i v c <= v.vctx_gas then [] else [OutOfGas])
                end
               ))
               v Nothing
