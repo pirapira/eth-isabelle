@@ -80,6 +80,236 @@ Z.add_b2z_double_div2: forall (a0 : bool) (a : Z), (Z.b2z a0 + 2 * a) / 2 = a
 
 (* need relation between testbit and mod two_power_nat *)
 
+Search Z.testbit.
+
+(*
+Z.testbit_spec':
+  forall a n : Z, 0 <= n -> Z.b2z (Z.testbit a n) = (a / 2 ^ n) mod 2
+*)
+
+Lemma modmud : forall n a, n > 0 -> a mod n = a - n*(a/n).
+intros.
+rewrite (Z.div_mod a n) at 2; try omega.
+Qed.
+
+
+Check Zmult_gt_0_compat.
+
+(*
+Z.div_mod
+     : forall a b : Z, b <> 0 -> a = b * (a / b) + a mod b
+*)
+Lemma collect : forall a n m, n > 0 -> m > 0 ->
+ a mod n + n*((a/n) mod m) = a mod (n*m).
+intros.
+replace (a mod n) with (a-n*(a/n)); try rewrite modmud; auto.
+replace (a mod (n*m)) with (a-n*m*(a/(n*m))); try rewrite modmud; auto.
+rewrite Z.div_div; try omega.
+ring.
+apply Zmult_gt_0_compat; trivial.
+Qed.
+
+Check Z.testbit.
+
+Search (Fin.t _ -> nat).
+
+Lemma finite_empty : Fin.t 0 -> False.
+intros.
+inversion H.
+Qed.
+
+(*
+Lemma split_fin : forall n (k:Fin.t (S n)),
+ (k = Fin.F1 \/ exists k0, k = Fin.FS k0).
+intros.
+set (vv := Fin.to_nat k).
+set (v := proj1_sig vv).
+assert (v = O \/ exists v0, v = S v0).
+case v;auto.
+intros.
+right.
+exists n0; trivial.
+elim H; clear H; intros.
+left.
+assert (proj1_sig vv = O); trivial.
+assert (Fin.of_nat_lt (proj2_sig vv) = k).
+apply Fin.of_nat_to_nat_inv.
+rewrite <- H1.
+case vv.
+assert (vv = exist _ O (proj2_sig vv)).
+case vv; trivial.
+setoid_rewrite H0 in H2.
+cbv.
+Search proj1_sig.
+Check EqdepFacts.eq_dep.
+
+inversion H0.
+*)
+
+Search List.nth.
+
+Lemma vector_list_cons : forall A n (tl:Vector.t A n) a,
+   Vector.to_list (a :: tl) = (a :: Vector.to_list tl)%list.
+trivial.
+Qed.
+
+Lemma to_binary_testbit : forall (n:nat) (k:nat) a,
+  (k < n)%nat ->
+  Z.testbit a (Z.of_nat k) =
+  List.nth k (Vector.to_list (Z_to_binary n a)) false.
+induction n; intros.
+inversion H.
+replace (Vector.to_list (Z_to_binary (S n) a))
+  with (Z.odd a :: Vector.to_list (Z_to_binary n (Z.div2 a)))%list;trivial.
+assert (forall k0, (k0 < k)%nat -> Z.testbit (Z.div2 a) (Z.of_nat k0) =
+        List.nth k0 (Vector.to_list (Z_to_binary n (Z.div2 a))) false).
+intros.
+apply IHn; auto; try omega.
+assert (k=O \/ exists k0, k = S k0).
+case k; eauto.
+elim H1; clear H1 IHn; intros.
+rewrite H1.
+trivial.
+elim H1; clear H1; intros.
+rewrite H1.
+replace (List.nth (S x)
+  (Z.odd a :: Vector.to_list (Z_to_binary n (Z.div2 a))) false) with
+  (List.nth x (Vector.to_list (Z_to_binary n (Z.div2 a))) false); trivial.
+rewrite <- H0; try omega.
+rewrite Z.div2_spec.
+rewrite Z.shiftr_spec.
+replace (Z.of_nat (S x)) with (Z.of_nat x + 1); trivial.
+rewrite Nat2Z.inj_succ.
+omega.
+apply Nat2Z.is_nonneg.
+Qed.
+
+Lemma bvector_destruct : forall n (w:Bvector (S n)), exists h tl, w = h ::tl.
+intros.
+Check Vector.tl.
+exists (Vector.hd w).
+exists (Vector.tl w).
+apply Vector.eta.
+Qed.
+
+Lemma bvector_empty : forall (w:Bvector 0), w = [].
+apply VectorDef.case0; trivial.
+Qed.
+
+
+Lemma bvector_to_list_eq :
+  forall n (v w:Bvector n),
+  Vector.to_list v = Vector.to_list w ->
+  v = w.
+induction n; intros.
+rewrite bvector_empty.
+rewrite (bvector_empty v).
+trivial.
+elim (bvector_destruct _ v); intros.
+elim H0; clear H0; intros.
+elim (bvector_destruct _ w); intros.
+elim H1; clear H1; intros.
+rewrite H0; rewrite H0 in H; clear H0.
+rewrite H1; rewrite H1 in H; clear H1.
+rewrite !vector_list_cons in H.
+inversion H.
+assert (x0 = x2).
+apply IHn; trivial.
+rewrite H0; trivial.
+Qed.
+
+
+Search Vector.to_list.
+Search List.nth.
+
+Lemma list_nth_eq :
+  forall A n def (v w:list A),
+  length v = n -> length w = n ->
+  (forall k, (k < n)%nat -> List.nth k v def = List.nth k w def) ->
+  v = w.
+induction n; intros.
+Search (length _ = O).
+rewrite List.length_zero_iff_nil in H, H0.
+rewrite H; rewrite H0; trivial.
+Search (length _ = (S _)).
+destruct v.
+inversion H.
+destruct w.
+inversion H0.
+
+assert (a=a0 /\ v = w).
+split.
+assert (List.nth O (a :: v) def = List.nth O (a0 :: w) def).
+apply H1; omega.
+simpl in H2; assumption.
+apply (IHn def v w); intros; auto.
+assert (List.nth (S k) (a :: v) def = List.nth (S k) (a0 :: w) def).
+apply H1; omega.
+trivial.
+elim H2; clear H2; intros.
+rewrite H2; rewrite H3; trivial.
+Qed.
+
+Lemma vector_empty : forall A (w:Vector.t A 0), w = [].
+intro.
+apply (VectorDef.case0); trivial.
+Qed.
+
+Lemma vector_destruct : forall A n (w:Vector.t A (S n)), exists h tl, w = h ::tl.
+intros.
+exists (Vector.hd w).
+exists (Vector.tl w).
+apply Vector.eta.
+Qed.
+
+Lemma vector_to_list_eq :
+  forall A n (v w:Vector.t A n),
+  Vector.to_list v = Vector.to_list w ->
+  v = w.
+induction n; intros.
+rewrite vector_empty.
+rewrite (vector_empty _ v).
+trivial.
+elim (vector_destruct _ _ v); intros.
+elim H0; clear H0; intros.
+elim (vector_destruct _ _ w); intros.
+elim H1; clear H1; intros.
+rewrite H0; rewrite H0 in H; clear H0.
+rewrite H1; rewrite H1 in H; clear H1.
+rewrite !vector_list_cons in H.
+inversion H.
+assert (x0 = x2).
+apply IHn; trivial.
+rewrite H0; trivial.
+Qed.
+
+
+
+Lemma to_list_length : forall A n (v : Vector.t A n),
+  length (Vector.to_list v) = n.
+intros.
+induction n.
+rewrite (vector_empty _ v).
+trivial.
+elim (vector_destruct _ _ v); intros.
+elim H; clear H; intros.
+rewrite H; clear H.
+rewrite !vector_list_cons; simpl.
+rewrite IHn; trivial.
+Qed.
+
+Lemma to_binary_testbit_eq : forall n a b,
+  (forall k, 0 <= k < Z.of_nat n -> Z.testbit a k = Z.testbit b k) ->
+  Z_to_binary n a = Z_to_binary n b.
+intros.
+apply bvector_to_list_eq.
+apply (list_nth_eq bool n false); intros.
+apply to_list_length.
+apply to_list_length.
+rewrite <- !to_binary_testbit; trivial.
+rewrite H; trivial.
+omega.
+Qed.
 
 Lemma div2_mod2 : forall n a,
    (Z.div2 a mod two_power_nat n) mod 2 = Z.div2 (a mod (2*Z.of_nat n)) mod 2.
