@@ -438,7 +438,47 @@ Lemma mod_extra : forall a b n,
   a mod 2 = b mod 2.
 intros.
 rewrite !two_power_succ in H.
+eapply mod_mul_actual_eq; try omega; try eassumption.
+apply two_power_pos.
+Qed.
 
+Lemma two_power_zdiv : forall a k,
+ a / two_power_nat (S k) = Z.div2 (a / two_power_nat k).
+intros.
+rewrite Z.div2_div.
+rewrite two_power_succ.
+rewrite Z.div_div; try omega.
+replace (two_power_nat k * 2) with (2 * two_power_nat k); ring.
+assert (two_power_nat k > 0).
+apply two_power_pos.
+omega.
+Qed.
+
+Lemma mod_down_iter : forall k n a b,
+  a mod two_power_nat (n + k) = b mod two_power_nat (n + k) ->
+  (a/two_power_nat k) mod two_power_nat n = (b/two_power_nat k) mod two_power_nat n.
+induction k; intros.
+replace (n+O)%nat with n in H; try omega.
+replace (two_power_nat 0) with 1; simpl.
+rewrite !Z.div_1_r; trivial.
+trivial.
+rewrite !two_power_zdiv.
+apply mod_down.
+apply IHk.
+replace (S n + k)%nat with (n + S k)%nat; trivial.
+omega.
+Qed.
+
+Lemma testbits_from_mod : forall a b n k,
+a mod two_power_nat n = b mod two_power_nat n ->
+(0 <= k < n)%nat ->
+(a / two_power_nat k) mod 2 = (b / two_power_nat k) mod 2.
+intros.
+eapply mod_extra.
+eapply mod_down_iter.
+replace n with (S (n-k-1) + k)%nat in H; try eassumption.
+omega.
+Qed.
 
 (* testbit condition should be equivalent with mod 2**n *)
 Lemma testbits_mod : forall n a b,
@@ -476,44 +516,88 @@ omega.
 apply Z.b2z_inj.
 rewrite !Z.testbit_spec'; try omega.
 
-Search Z.testbit.
+replace (2 ^ k) with (two_power_nat (Z.to_nat k)).
+eapply testbits_from_mod.
+eassumption.
+split.
+omega.
 
+replace (S n) with (Z.to_nat (Z.of_nat (S n))).
 
-Lemma div2_mod2 : forall n a,
-   (Z.div2 a mod two_power_nat n) mod 2 = Z.div2 (a mod (2*Z.of_nat n)) mod 2.
-intros.
-Search Z.shiftl.
-assert ((exists b, 2*b=a \/ 2*b+1=a)).
-admit.
-elim H; clear H; intros.
-elim H; clear H; intros;rewrite <- H; clear H.
-simpl.
-induction n; intros.
-simpl.
-admit.
-simpl.
+apply Z2Nat.inj_lt; try omega.
+
+rewrite Nat2Z.id; trivial.
+
+rewrite two_power_nat_equiv.
+rewrite Z2Nat.id; omega.
+Qed.
 
 Lemma to_binary_mod : forall n a b,
   a mod (two_power_nat n) = b mod (two_power_nat n) ->
   Z_to_binary n a = Z_to_binary n b.
+intros.
+apply to_binary_testbit_eq.
+apply testbits_mod.
+trivial.
+Qed.
+
+Lemma binary_value_small : forall n x,
+  binary_value n x < two_power_nat n.
 induction n; intros.
-simpl; reflexivity.
-rewrite (Zmod2_twice a).
-rewrite (Zmod2_twice b).
 simpl.
-case (Zmod2 b).
-case (Zmod2 a).
-simpl.
-Search (_ mod _ = _ mod _).
+apply Z.gt_lt.
+apply two_power_pos.
+elim (bvector_destruct _ x); intros.
+elim H; clear H; intros.
+rewrite H.
+rewrite binary_value_Sn.
+rewrite two_power_succ.
+set (H2 := (IHn x1)).
+assert (bit_value x0 < 2).
+unfold bit_value.
+case x0; omega.
+Search (?a * _ + _ < ?a * _).
+replace (bit_value x0 + 2 * binary_value n x1) with
+   (2 * binary_value n x1 + bit_value x0).
+case x0.
+unfold bit_value.
+apply Z.double_above.
+omega.
+unfold bit_value.
+omega.
+omega.
+Qed.
 
-a mod two_power_nat (S n) = b mod two_power_nat (S n) ->
-(Z.div2 a) mod two_power_nat n = (Z.div2 b) mod two_power_nat n
+Lemma binary_value_mod : forall n a,
+  binary_value n (Z_to_binary n (a mod two_power_nat n)) = a mod two_power_nat n.
+intros.
+Search (binary_value).
+apply Z_to_binary_to_Z.
+Search (0 <= _ mod _).
+apply Z.le_ge.
+apply Z_mod_lt.
+apply two_power_pos.
+apply Z_mod_lt.
+apply two_power_pos.
+Qed.
 
-Variable k : nat.
-Variable a b : Bvector k.
+(* now we get the correct formula for converting to bvector and back *)
+Lemma bvector_and_back : forall n a,
+  binary_value n (Z_to_binary n a) = a mod (two_power_nat n).
+intros.
+(* set (b := (a-two_power_nat n*(a/two_power_nat n)) mod (two_power_nat n)). *)
+replace (binary_value n (Z_to_binary n a)) with
+  (binary_value n (Z_to_binary n (a mod two_power_nat n))).
+apply binary_value_mod.
 
+replace (Z_to_binary n a) with (Z_to_binary n (a mod two_power_nat n));auto.
+apply to_binary_mod.
 
-
+apply Z.mod_mod.
+assert (two_power_nat n > 0).
+apply two_power_pos.
+omega.
+Qed.
 
 
 
