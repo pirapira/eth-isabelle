@@ -62,6 +62,18 @@ rewrite Zmod_0_l in H1.
 assumption.
 Qed.
 
+Lemma mod_mul_actual_eq : forall a b n m,
+  n > 0 -> m > 0 ->
+  a mod (n*m) = b mod (n*m) ->
+  a mod n = b mod n.
+intros.
+apply mod_zero_minus; trivial.
+eapply mod_mul_eq; trivial.
+eapply H0.
+apply mod_minus_zero; trivial.
+apply Zmult_gt_0_compat; auto.
+Qed.
+
 Eval cbv in (-1 mod 2).
 
 Lemma div2_cancel : forall a, Z.div2 (2*a) = a.
@@ -310,6 +322,162 @@ rewrite <- !to_binary_testbit; trivial.
 rewrite H; trivial.
 omega.
 Qed.
+
+Check collect.
+
+(*
+collect
+     : forall a n m : Z,
+       n > 0 -> m > 0 -> a mod n + n * ((a / n) mod m) = a mod (n * m)
+*)
+
+Lemma two_power_succ : forall n, two_power_nat (S n) = 2 * two_power_nat n.
+intro.
+rewrite !two_power_nat_equiv.
+rewrite Nat2Z.inj_succ.
+Search (_ ^(Z.succ _)).
+rewrite Z.pow_succ_r; trivial.
+omega.
+Qed.
+
+Lemma two_power_pos : forall n, two_power_nat n > 0.
+intros.
+rewrite two_power_nat_equiv.
+apply Z.lt_gt.
+apply Z.pow_pos_nonneg; try omega.
+Qed.
+
+Lemma mod_combine : forall a b n,
+  a mod 2 = b mod 2 ->
+  Z.div2 a mod (two_power_nat n) = Z.div2 b mod (two_power_nat n) ->
+  a mod two_power_nat (S n) = b mod two_power_nat (S n).
+intros.
+rewrite !two_power_succ.
+rewrite <- !collect; try omega; try apply two_power_pos.
+rewrite !Zdiv2_div in H0.
+rewrite H0; rewrite H; trivial.
+Qed.
+
+Lemma mod_sameness : forall n m a b,
+  n > 0 ->
+  a mod n + n * m = b mod n + n * m ->
+  a mod n = b mod n.
+intros.
+rewrite !modmud; trivial.
+rewrite !modmud in H0; trivial.
+omega.
+Qed.
+
+Lemma mul_sameness : forall n m1 m2 a b,
+  n > 0 ->
+  0 <= a < n ->
+  0 <= b < n ->
+  a + n * m1 = b + n * m2 ->
+  m1 = m2.
+intros.
+assert (a = n * m2 - n*m1 + b).
+omega.
+replace (n * m2 - n*m1) with (n*(m2-m1)) in H3; try ring.
+assert (m2-m1 = a/n).
+eapply Zdiv_unique.
+apply H1.
+assumption.
+replace (a/n) with 0 in H4; try omega.
+Search (_/_ = 0).
+rewrite Z.div_small; omega.
+Qed.
+
+(*
+Theorem Zdiv_unique:
+ forall a b q r, 0 <= r < b ->
+   a = b*q + r -> q = a/b.
+*)
+
+Lemma mod_sameness2 : forall n m1 m2 a b,
+  n > 0 ->
+  a mod n + n * m1 = b mod n + n * m2 ->
+  m1 = m2.
+intros.
+assert (0 <= a mod n < n).
+apply Z_mod_lt; omega.
+assert (0 <= b mod n < n).
+apply Z_mod_lt; omega.
+eapply mul_sameness; try apply H0; trivial.
+Qed.
+
+Lemma mod_sameness3 : forall n m1 m2 a b,
+  n > 0 ->
+  a mod n + n * m1 = b mod n + n * m2 ->
+  a mod n = b mod n.
+intros.
+assert (m1 = m2).
+eapply mod_sameness2; eassumption.
+rewrite H1 in H0.
+eapply mod_sameness; eassumption.
+Qed.
+
+Lemma mod_down : forall a b n,
+  a mod two_power_nat (S n) = b mod two_power_nat (S n) ->
+  Z.div2 a mod two_power_nat n = Z.div2 b mod two_power_nat n.
+intros.
+rewrite !two_power_succ in H.
+rewrite <- !collect in H; try omega; try apply two_power_pos.
+Search Z.div2.
+rewrite !Z.div2_div.
+assert (a mod 2 = b mod 2).
+eapply (mod_sameness3 2 ((a / 2) mod two_power_nat n)).
+
+
+omega.
+eassumption.
+omega.
+Qed.
+
+Lemma mod_extra : forall a b n,
+  a mod two_power_nat (S n) = b mod two_power_nat (S n) ->
+  a mod 2 = b mod 2.
+intros.
+rewrite !two_power_succ in H.
+
+
+(* testbit condition should be equivalent with mod 2**n *)
+Lemma testbits_mod : forall n a b,
+  (forall k, 0 <= k < Z.of_nat n -> Z.testbit a k = Z.testbit b k) <->
+  a mod two_power_nat n = b mod two_power_nat n.
+induction n; intros.
+rewrite two_power_nat_equiv.
+simpl.
+split; intros.
+rewrite !modmud; try omega.
+rewrite !Z.mul_1_l.
+rewrite !Z.div_1_r.
+omega.
+omega.
+split; intros.
+apply mod_combine.
+assert (Z.testbit a 0 = Z.testbit b 0).
+apply H.
+split; try omega.
+rewrite Nat2Z.inj_succ.
+omega.
+
+rewrite <- !Z.bit0_mod.
+rewrite H0.
+trivial.
+
+apply IHn; intros.
+
+rewrite !Z.div2_spec.
+rewrite !Z.shiftr_spec; try omega.
+apply H.
+rewrite Nat2Z.inj_succ.
+omega.
+
+apply Z.b2z_inj.
+rewrite !Z.testbit_spec'; try omega.
+
+Search Z.testbit.
+
 
 Lemma div2_mod2 : forall n a,
    (Z.div2 a mod two_power_nat n) mod 2 = Z.div2 (a mod (2*Z.of_nat n)) mod 2.
