@@ -161,8 +161,10 @@ let put_return_values orig lst b s =
 val empty_storage : storage
 let empty_storage _ = 0
 
+
+
 type aenv = <|
-  aenv_stack : list w256;
+  aenv_stack : list (w256);
   aenv_memory : memory;
   aenv_storage : storage;
   aenv_balance : address -> w256;

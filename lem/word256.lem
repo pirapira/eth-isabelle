@@ -14,10 +14,9 @@
    limitations under the License.
 *)
 
+open {coq} `helper`
 open import Pervasives
 open import Word
-open import {coq} `Bvector`
-open import {coq} `Zdigits`
 
 type word256 = W256 of bool * list bool
 declare isabelle target_rep type word256 = `word` 256

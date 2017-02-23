@@ -88,7 +88,8 @@ COQMKTOP?="$(COQBIN)coqmktop"
 #                    #
 ######################
 
-VFILES:=keccak.v\
+VFILES:=helper.v\
+  keccak.v\
   evm.v\
   word160.v\
   word256.v\
