@@ -691,20 +691,20 @@ let Gmid = 8
 val Ghigh : integer
 let Ghigh = 10
 
-val magic_block : natural
-let inline magic_block = 2463*1000
+val eip150_block : natural
+let inline eip150_block = 2463*1000
 
 val Gextcode : natural -> integer
 let Gextcode blocknumber =
-  if blocknumber >= magic_block then 700 else 20
+  if blocknumber >= eip150_block then 700 else 20
 
 val Gbalance : natural -> integer
 let Gbalance blocknumber =
-  if blocknumber >= magic_block then 400 else 20
+  if blocknumber >= eip150_block then 400 else 20
 
 val Gsload : natural -> integer
 let Gsload blocknumber =
-  if blocknumber >= magic_block then 200 else 50
+  if blocknumber >= eip150_block then 200 else 50
 
 val Gjumpdest : integer
 let Gjumpdest = 1
@@ -723,7 +723,7 @@ let Rsuicide = 24000
 
 val Gsuicide : natural -> integer
 let Gsuicide blocknumber =
-  if blocknumber >= magic_block then 5000 else 0
+  if blocknumber >= eip150_block then 5000 else 0
 
 val Gcreate : integer
 let Gcreate = 32000
@@ -733,7 +733,7 @@ let Gcodedeposit = 200
 
 val Gcall : natural -> integer
 let Gcall blocknumber =
-  if blocknumber >= magic_block then 700 else 40
+  if blocknumber >= eip150_block then 700 else 40
 
 val Gcallvalue : integer
 let Gcallvalue = 9000
@@ -1560,7 +1560,7 @@ let Csstore orig newer = if not (newer = 0) && orig = 0 then Gsset else Gsreset
 (* However, it takes a boolean indicating new account creation. *)
 val Csuicide : bool -> natural -> integer
 let Csuicide recipient_empty blocknumber =
-  Gsuicide blocknumber + (if recipient_empty && blocknumber >= magic_block then Gnewaccount else 0)
+  Gsuicide blocknumber + (if recipient_empty && blocknumber >= eip150_block then Gnewaccount else 0)
 
 (* Cnew is the funciton denoted as C_\text{\tiny NEW} in the yellow paper.*)
 (* However, it takes the sent value and a boolean indicating emptiness of the recipient. *)
@@ -2075,7 +2075,7 @@ let empty_memory = (fun _ -> 0)
 
 indreln [build_vctx_called : account_state -> call_env -> variable_ctx -> bool]
   vctx_called : forall bal a env origin ext block gas existence.
-    word256ToNatural block.block_number >= 2463*1000 && (* only the newest version of EVM matters *)
+    word256ToNatural block.block_number >= eip150_block && (* only the newest version of EVM matters *)
     bal a.account_address = a.account_balance ==>
     build_vctx_called a env
  <| vctx_stack = []; (* The stack is initialized for every invocation *)
