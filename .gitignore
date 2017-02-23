@@ -57,6 +57,7 @@ lem/.hollogs
 tester/*.native
 tester/_build
 output/
+simplewallet/
 tester/coverage/
 tester/bisect*.out
 *.marks

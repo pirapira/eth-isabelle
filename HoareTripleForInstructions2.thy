@@ -330,12 +330,12 @@ done
 
 lemma contract_action_not_vctx [simp] :
   "ContractActionElm x19 \<notin> variable_ctx_as_set x1"
-apply(simp add: variable_ctx_as_set_def ext_program_as_set_def)
+apply(simp add: variable_ctx_as_set_def ext_program_as_set_def balance_as_set_def)
 done
 
 lemma continuing_not_vctx [simp] :
   "ContinuingElm b \<notin> variable_ctx_as_set v"
-apply(simp add: variable_ctx_as_set_def ext_program_as_set_def)
+apply(simp add: variable_ctx_as_set_def ext_program_as_set_def balance_as_set_def)
 done
 
 lemma vctx_gas_changed [simp] :
@@ -419,11 +419,20 @@ lemma balance_gas_triple :
 apply(auto simp add: triple_def)
 apply(rule_tac x = 1 in exI)
 apply(simp)
-apply(case_tac presult)
-  apply(simp)
-  apply(case_tac "vctx_stack x1"; simp)
- apply(simp add: instruction_result_as_set_def)
+apply(case_tac presult; simp)
+apply(case_tac "vctx_stack x1"; simp)
+apply(rule leibniz)
+ apply blast
 apply(simp add: instruction_result_as_set_def)
+apply(rule Set.equalityI)
+ apply(clarsimp)
+ apply(rename_tac elm; case_tac elm; simp)
+ apply(case_tac x2; simp)
+ apply(case_tac "aa = length list"; simp)
+apply(clarsimp)
+apply(rename_tac elm; case_tac elm; simp)
+apply(case_tac " fst x2 < Suc (length list)"; simp)
+apply(case_tac "(rev list @ [a]) ! fst x2 = snd x2"; simp)
 done
 
 
@@ -473,10 +482,31 @@ apply(auto simp add: triple_def)
  apply(rule_tac x = 1 in exI)
  apply(simp add: instruction_result_as_set_def)
  apply(case_tac presult; auto simp add: failed_for_reasons_def
-       instruction_result_as_set_def) (* takes too much time *)
+       instruction_result_as_set_def)
+ apply(rule leibniz)
+  apply blast
+ apply(rule Set.equalityI)
+  apply(clarsimp)
+  apply(rename_tac elm; case_tac elm; simp)
+  apply(case_tac "fst x2 < length ta"; simp)
+ apply(clarsimp)
+ apply(rename_tac elm; case_tac elm; simp)
+ apply(case_tac "fst x2 < length ta"; simp)
+ apply(case_tac "rev ta ! fst x2 = snd x2 "; simp)
+ apply(auto)
 apply(rule_tac x = 1 in exI)
 apply(case_tac presult; auto simp add: failed_for_reasons_def
       instruction_result_as_set_def)
+apply(rule leibniz)
+ apply blast
+apply(rule Set.equalityI)
+ apply(clarsimp)
+ apply(rename_tac elm; case_tac elm; simp)
+ apply(case_tac "fst x2 < length ta"; simp)
+apply(clarsimp)
+apply(rename_tac elm; case_tac elm; simp)
+apply(case_tac "fst x2 < Suc (Suc (length ta))"; simp)
+apply auto
 done
 
 lemma tmp1 [simp]:
@@ -526,6 +556,15 @@ apply(simp add: triple_def)
 apply(clarify)
 apply(rule_tac x = "1" in exI)
 apply(case_tac presult; auto simp add: instruction_result_as_set_def)
+apply(rule leibniz)
+ apply blast
+apply(rule Set.equalityI)
+ apply(clarsimp)
+ apply(rename_tac elm; case_tac elm; simp)
+ apply(case_tac "fst x2 < length ta"; simp)
+apply(clarsimp)
+apply(rename_tac elm; case_tac elm; simp)
+apply(case_tac "fst x2 < Suc (Suc (length ta))"; auto)
 done
 
 
@@ -552,6 +591,15 @@ apply(simp add: triple_def)
 apply(clarify)
 apply(rule_tac x = "1" in exI)
 apply(case_tac presult; auto simp add: instruction_result_as_set_def)
+apply(rule leibniz)
+ apply blast
+apply(rule Set.equalityI)
+ apply(clarsimp)
+ apply(rename_tac elm; case_tac elm; simp)
+ apply(case_tac "fst x2 < length ta"; simp)
+apply(clarsimp)
+apply(rename_tac elm; case_tac elm; simp)
+apply(case_tac "fst x2 < Suc (Suc (length ta))"; auto)
 done
 
 

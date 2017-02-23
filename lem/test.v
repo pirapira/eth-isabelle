@@ -3,8 +3,6 @@ Require Import Bvector.
 Require Import Zdigits.
 Require Import ZArith.
 
-Section test.
-
 Search (_ mod _).
 
 Open Scope Z.
@@ -599,7 +597,48 @@ apply two_power_pos.
 omega.
 Qed.
 
+(* *)
 
+Section Cyclic.
 
+Variable n : nat.
+
+Definition to_Z a := binary_value n a.
+
+Definition from_Z a := Z_to_binary n a.
+
+Definition wB := two_power_nat n.
+
+Definition add (a b: Bvector n) := from_Z (to_Z a + to_Z b).
+
+Hint Rewrite bvector_and_back : stuff.
+Hint Unfold to_Z from_Z wB add : stuff.
+
+Lemma add_spec : forall a b, to_Z (add a b) = (to_Z a + to_Z b) mod wB.
+intros.
+repeat autounfold with stuff; autorewrite with stuff.
+trivial.
+Qed.
+
+Lemma add_comm : forall a b, add a b = add b a.
+intros.
+repeat autounfold with stuff.
+rewrite Z.add_comm.
+trivial.
+Qed.
+
+Lemma add_assoc : forall a b c, add a (add b c) = add (add a b) c.
+intros.
+repeat autounfold with stuff.
+autorewrite with stuff.
+apply to_binary_mod.
+Search ((_ + _) mod _).
+rewrite Zplus_mod_idemp_l.
+rewrite Zplus_mod_idemp_r.
+replace (binary_value n a + (binary_value n b + binary_value n c)) with
+  (binary_value n a + binary_value n b + binary_value n c); trivial; ring.
+Qed.
+
+End Cyclic.
 
 
