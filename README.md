@@ -71,6 +71,7 @@ $ sh measure_coverage.sh
 * `make doc` produces `output/document.pdf` as well as `lem/*.pdf`.
 * `make lem-thy` compiles the Lem sources into Isabelle/HOL
 * `make lem-hol` compiles the Lem sources into HOL4
+* `make lem-coq; cd lem; make` compiles the Lem sources into Coq (and then compiles the Coq sources)
 * `make lem-pdf` compiles some of the Lem sources into PDF through LaTeX
 * `make all-isabelle` checks all Isabelle/HOL sources (but not the ones compiled from Lem)
 * `make` does everything above

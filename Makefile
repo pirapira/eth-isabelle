@@ -1,6 +1,6 @@
 .PHONY: all all-isabelle light-isabelle deed clean clean-pdf clean-thy clean-ocaml clean-hol lem-thy lem-pdf lem-hol lem-ocaml doc
 
-all: all-isabelle deed lem-thy lem-pdf lem-ocaml lem-hol doc
+all: all-isabelle deed lem-thy lem-pdf lem-ocaml lem-hol lem-coq doc
 
 clean: clean-pdf clean-thy clean-ocaml clean-hol
 
