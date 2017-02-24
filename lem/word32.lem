@@ -1,0 +1,290 @@
+(*
+  Copyright 2016 Sami Mäkelä
+
+   Licensed under the Apache License, Version 2.0 (the "License");
+   you may not use this file except in compliance with the License.
+   You may obtain a copy of the License at
+
+       http://www.apache.org/licenses/LICENSE-2.0
+
+   Unless required by applicable law or agreed to in writing, software
+   distributed under the License is distributed on an "AS IS" BASIS,
+   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+   See the License for the specific language governing permissions and
+   limitations under the License.
+*)
+
+open import Pervasives
+open import Word
+
+type word32 = W32 of bool * list bool
+declare isabelle target_rep type word32 = `word` 32
+
+(* perhaps should truncate here? *)
+val bs_to_w32 : bitSequence -> word32
+let bs_to_w32 seq = match resizeBitSeq (Just 32) seq with
+ | BitSeq _ s b -> W32 s b
+end
+declare isabelle target_rep function bs_to_w32 = (fun w -> `word_of_int` (integerFromBitSeq w))
+
+val w32_to_bs : word32 -> bitSequence
+let w32_to_bs (W32 s b) = BitSeq (Just 32) s b
+
+val word32BinTest : forall 'a. (bitSequence -> bitSequence -> 'a) -> word32 -> word32 -> 'a
+let word32BinTest binop w1 w2 = binop (w32_to_bs w1) (w32_to_bs w2)
+
+val word32BinOp : (bitSequence -> bitSequence -> bitSequence) -> word32 -> word32 -> word32
+let word32BinOp binop w1 w2 = bs_to_w32 (binop (w32_to_bs w1) (w32_to_bs w2))
+
+val word32NatOp : (bitSequence -> nat -> bitSequence) -> word32 -> nat -> word32
+let word32NatOp binop w1 n = bs_to_w32 (binop (w32_to_bs w1) n)
+
+val word32UnaryOp : (bitSequence -> bitSequence) -> word32 -> word32
+let word32UnaryOp op w = bs_to_w32 (op (w32_to_bs w))
+
+val size32 : integer
+let size32 = 2 ** 32
+
+val word32ToInteger : word32 -> integer
+let word32ToInteger w = integerFromBitSeq (w32_to_bs w)
+declare isabelle target_rep function word32ToInteger = `sint`
+
+val word32ToNatural : word32 -> natural
+let word32ToNatural w = naturalFromInteger ((word32ToInteger w) mod size32)
+declare isabelle target_rep function word32ToNatural = `unat`
+
+declare isabelle target_rep function w32_to_bs = (fun w -> bitSeqFromInteger (Just 32) (word32ToInteger w))
+
+val word32FromInteger : integer -> word32
+let word32FromInteger i = bs_to_w32 (bitSeqFromInteger (Just 32) i)
+declare isabelle target_rep function word32FromInteger = (fun i -> `word_of_int` (intFromInteger i))
+
+val word32FromInt : int -> word32
+let word32FromInt i = bs_to_w32 (bitSeqFromInteger (Just 32) (integerFromInt i))
+declare isabelle target_rep function word32FromInt = `word_of_int`
+
+val word32FromNatural : natural -> word32
+let word32FromNatural i = word32FromInteger (integerFromNatural i)
+
+val word32FromNat : nat -> word32
+let word32FromNat i = word32FromInteger (integerFromNat i)
+
+val word32FromBoollist : list bool -> word32
+let word32FromBoollist lst = match bitSeqFromBoolList (List.reverse lst) with
+ | Nothing -> bs_to_w32 0
+ | Just a -> bs_to_w32 a
+end
+declare isabelle target_rep function word32FromBoollist = `of_bl`
+
+val boolListFromWord32 : word32 -> list bool
+let boolListFromWord32 w = List.reverse (boolListFrombitSeq 32 (w32_to_bs w))
+declare isabelle target_rep function boolListFromWord32 = `to_bl`
+
+val word32FromNumeral : numeral -> word32
+let word32FromNumeral w = bs_to_w32 (fromNumeral w)
+
+instance (Numeral word32)
+  let fromNumeral x = word32FromNumeral x
+end
+
+val w32Eq : word32 -> word32 -> bool
+let w32Eq = unsafe_structural_equality
+
+val w32Less : word32 -> word32 -> bool
+let w32Less bs1 bs2 = word32BinTest (<) bs1 bs2
+
+val w32LessEqual : word32 -> word32 -> bool
+let w32LessEqual bs1 bs2 = word32BinTest (<=) bs1 bs2
+
+val w32Greater : word32 -> word32 -> bool
+let w32Greater bs1 bs2 = word32BinTest (>) bs1 bs2
+
+val w32GreaterEqual : word32 -> word32 -> bool
+let w32GreaterEqual bs1 bs2 = word32BinTest (>=) bs1 bs2
+
+val w32Compare : word32 -> word32 -> ordering
+let w32Compare bs1 bs2 = word32BinTest compare bs1 bs2
+
+instance (Ord word32)
+  let compare = w32Compare
+  let (<) = w32Less
+  let (<=) = w32LessEqual
+  let (>) = w32Greater
+  let (>=) = w32GreaterEqual
+end
+
+instance (SetType word32)
+  let setElemCompare = w32Compare
+end
+
+val word32Negate : word32 -> word32
+let word32Negate = word32UnaryOp ~
+
+val word32Succ : word32 -> word32
+let word32Succ = word32UnaryOp succ
+
+val word32Pred : word32 -> word32
+let word32Pred = word32UnaryOp pred
+
+val word32Lnot : word32 -> word32
+let word32Lnot = word32UnaryOp lnot
+
+val word32Add : word32 -> word32 -> word32
+let word32Add = word32BinOp (+)
+
+val word32Minus : word32 -> word32 -> word32
+let word32Minus = word32BinOp (-)
+
+val word32Mult : word32 -> word32 -> word32
+let word32Mult = word32BinOp ( * )
+
+val word32IntegerDivision : word32 -> word32 -> word32
+let word32IntegerDivision = word32BinOp (/)
+
+val word32Division : word32 -> word32 -> word32
+let word32Division = word32BinOp (div)
+
+val word32Remainder : word32 -> word32 -> word32
+let word32Remainder = word32BinOp (mod)
+
+val word32Land : word32 -> word32 -> word32
+let word32Land = word32BinOp (land)
+
+val word32Lor : word32 -> word32 -> word32
+let word32Lor = word32BinOp (lor)
+
+val word32Lxor : word32 -> word32 -> word32
+let word32Lxor = word32BinOp (lxor)
+
+val word32Min : word32 -> word32 -> word32
+let word32Min = word32BinOp (min)
+
+val word32Max : word32 -> word32 -> word32
+let word32Max = word32BinOp (max)
+
+val word32Power : word32 -> nat -> word32
+let word32Power = word32NatOp ( ** )
+
+val word32Asr : word32 -> nat -> word32
+let word32Asr = word32NatOp (asr)
+
+val word32Lsr : word32 -> nat -> word32
+let word32Lsr = word32NatOp (lsr)
+
+val word32Lsl : word32 -> nat -> word32
+let word32Lsl = word32NatOp (lsl)
+
+declare isabelle target_rep function word32Lnot w = (`NOT` w)
+declare isabelle target_rep function word32Lor = infix `OR`
+declare isabelle target_rep function word32Lxor = infix `XOR`
+declare isabelle target_rep function word32Land = infix `AND`
+declare isabelle target_rep function word32Lsl = infix `<<`
+declare isabelle target_rep function word32Lsr = infix `>>`
+declare isabelle target_rep function word32Asr = infix `>>>`
+
+
+instance (NumNegate word32)
+  let ~ = word32Negate
+end
+
+instance (NumAdd word32)
+  let (+) = word32Add
+end
+
+instance (NumMinus word32)
+  let (-) = word32Minus
+end
+
+instance (NumSucc word32)
+  let succ = word32Succ
+end
+
+instance (NumPred word32)
+  let pred = word32Pred
+end
+
+instance (NumMult word32)
+  let ( * ) = word32Mult
+end
+
+instance (NumPow word32)
+  let ( ** ) = word32Power
+end
+
+instance ( NumIntegerDivision word32) 
+  let (div) = word32IntegerDivision
+end
+
+instance ( NumDivision word32 ) 
+  let (/) = word32Division
+end
+
+instance (NumRemainder word32) 
+  let (mod) = word32Remainder
+end
+
+instance (OrdMaxMin word32) 
+  let max = word32Max
+  let min = word32Min
+end
+
+instance (WordNot word32) 
+  let lnot = word32Lnot
+end
+
+instance (WordAnd word32) 
+  let (land) = word32Land
+end
+
+instance (WordOr word32) 
+  let (lor) = word32Lor
+end
+
+instance (WordXor word32) 
+  let (lxor) = word32Lxor
+end
+
+instance (WordLsl word32) 
+  let (lsl) = word32Lsl
+end
+
+instance (WordLsr word32)
+  let (lsr) = word32Lsr
+end
+
+instance (WordAsr word32)
+  let (asr) = word32Asr
+end
+
+val word32UGT : word32 -> word32 -> bool
+let word32UGT a b = word32ToNatural a > word32ToNatural b
+declare isabelle target_rep function word32UGT = infix `>`
+
+val word32ULT : word32 -> word32 -> bool
+let word32ULT a b = word32ToNatural a < word32ToNatural b
+declare isabelle target_rep function word32ULT = infix `<`
+
+val word32UGE : word32 -> word32 -> bool
+let word32UGE a b = word32ToNatural a >= word32ToNatural b
+declare isabelle target_rep function word32UGE = infix `>=`
+
+declare isabelle target_rep function word32FromNumeral n = ((`word_of_int` n) : word32)
+declare isabelle target_rep function w32Less = `word_sless`
+declare isabelle target_rep function w32LessEqual = `word_sle`
+declare isabelle target_rep function w32Greater x y = w32Less y x
+declare isabelle target_rep function w32GreaterEqual x y = w32LessEqual y x
+declare isabelle target_rep function w32Compare = genericCompare w32Less w32Eq
+
+declare isabelle target_rep function word32Negate i = `-` i
+declare isabelle target_rep function word32Add = infix `+`
+declare isabelle target_rep function word32Minus = infix `-`
+declare isabelle target_rep function word32Succ n = n + 1
+declare isabelle target_rep function word32Pred n = n - 1
+declare isabelle target_rep function word32Mult = infix `*`
+declare isabelle target_rep function word32Power = infix `^`
+declare isabelle target_rep function word32Division = infix `div`
+declare isabelle target_rep function word32IntegerDivision = infix `div`
+declare isabelle target_rep function word32Remainder = infix `mod`
+declare isabelle target_rep function word32Min = `min`
+declare isabelle target_rep function word32Max = `max`
+

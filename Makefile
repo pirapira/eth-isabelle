@@ -28,17 +28,20 @@ deed: document/output.pdf
 document/output.pdf: ContractSem.thy RelationalSem.thy example/Deed.thy document/root.tex lem/Evm.thy lem/Word256.thy lem/Word160.thy lem/Word8.thy lem/Keccak.thy
 	sh document_generation.sh
 
+lem-thy: lem/Block.thy lem/Evm.thy lem/Keccak.thy lem/Rlp.thy lem/Word160.thy lem/Word256.thy lem/Word8.thy lem/Keccak.thy lem/Word4.thy lem/Word64.thy lem/Word32.thy
+
 simplewallet: document/simplewallet.pdf
 document/simplewallet.pdf: ContractSem.thy RelationalSem.thy example/Deed.thy simple_wallet_document/root.tex lem/Evm.thy lem/Word256.thy lem/Word160.thy lem/Word8.thy lem/Keccak.thy
 	sh wallet_generation.sh
-
-lem-thy: lem/Block.thy lem/Evm.thy lem/Keccak.thy lem/Rlp.thy lem/Word160.thy lem/Word256.thy lem/Word8.thy lem/Keccak.thy lem/Word4.thy
 
 lem-hol: lem/blockScript.sml lem/evmScript.sml lem/keccakScript.sml lem/rlpScript.sml lem/word160Script.sml lem/word256Script.sml lem/word8Script.sml lem/keccakScript.sml lem/word4Script.sml
 
 lem-pdf: lem/Evm-use_inc.pdf lem/Block-use_inc.pdf lem/Keccak-use_inc.pdf lem/Rlp-use_inc.pdf
 
-lem-ocaml: lem/evm.ml lem/word256.ml lem/word160.ml lem/word8.ml lem/keccak.ml lem/word4.ml
+lem-ocaml: lem/evm.ml lem/word256.ml lem/word160.ml lem/word8.ml lem/keccak.ml lem/word4.ml lem/word64.ml lem/word32.ml
+
+lem-coq:
+	lem -coq lem/*.lem
 
 lem/block.lem: lem/evm.lem
 	touch lem/block.lem
@@ -90,6 +93,12 @@ lem/word160Script.sml: lem/word160.lem
 
 lem/word8.ml: lem/word8.lem
 	lem -ocaml lem/word8.lem
+
+lem/word32.ml: lem/word32.lem
+	lem -ocaml lem/word32.lem
+
+lem/word64.ml: lem/word64.lem
+	lem -ocaml lem/word64.lem
 
 lem/word4.ml: lem/word4.lem
 	lem -ocaml lem/word4.lem
@@ -150,3 +159,9 @@ lem/Word8.thy: lem/word8.lem
 
 lem/Word4.thy: lem/word4.lem
 	lem -isa lem/word4.lem
+
+lem/Word64.thy: lem/word64.lem
+	lem -isa lem/word64.lem
+
+lem/Word32.thy: lem/word32.lem
+	lem -isa lem/word32.lem

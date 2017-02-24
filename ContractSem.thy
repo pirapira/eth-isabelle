@@ -54,7 +54,7 @@ declare
   for_inner_def [simp]
   keccakf_rounds_def [simp]
   word_rsplit_aux.psimps [simp]
-  word64FromBoollist.psimps [simp]
+(*  word64FromBoollist.psimps [simp] *)
   word_rcat_def [simp]
   invert_endian_def [simp]
   keccakf_def [simp]
@@ -319,7 +319,7 @@ declare Gzero_def [simp]
         L_def [simp]
         Ccallgas_def [simp]
         Ccall_def [simp]
-        thirdComponentOfC.simps [simp]
+        thirdComponentOfC_def [simp]
         vctx_next_instruction_default_def [simp]
         vctx_recipient_def [simp]
         vctx_stack_default_def [simp]
@@ -379,7 +379,7 @@ done
 
 (* unat (1 + (aa - 1)) = Suc (unat(aa - 1)) *)
 
-
+(*
 lemma cut_memory_dom_nat :
   "\<forall> a aa b. unat aa = n \<longrightarrow> cut_memory_dom (a, aa, b)"
 apply(induction n)
@@ -395,5 +395,6 @@ done
 termination cut_memory
 apply(auto simp add: cut_memory_dom_nat)
 done
+*)
 
 end

@@ -14,15 +14,13 @@
 (* limitations under the License. *)
 
 open import Pervasives
-open import Word
 open import Word8
 open import Word256
+open import Word64
 
 (*
 definition "rotl64 (x :: 64 word) n = (word_rotl n x :: 64 word)"
 *)
-
-type word64 = int64
 
 val rotl64 : word64 -> nat -> word64
 let rotl64 w n = (w lsr (64 - n)) lor (w lsl n)
@@ -30,16 +28,22 @@ let rotl64 w n = (w lsr (64 - n)) lor (w lsl n)
 val big : word64
 let big = 1 lsl 63
 
+val two31 : word64
+let two31 = 1 lsl 31
+
+val two15 : word64
+let two15 = 1 lsl 15
+
 val keccakf_randc : list word64
 let keccakf_randc = [
-        0X0000000000000001; 0X0000000000008082; 0X000000000000808a lor big;
-        0X0000000080008000 lor big; 0X000000000000808b; 0X0000000080000001;
-        0X0000000080008081 lor big; 0X0000000000008009 lor big; 0X000000000000008a;
-        0X0000000000000088; 0X0000000080008009; 0X000000008000000a;
-        0X000000008000808b; 0X000000000000008b lor big; 0X0000000000008089 lor big;
-        0X0000000000008003 lor big; 0X0000000000008002 lor big; 0X0000000000000080 lor big;
-        0X000000000000800a; 0X000000008000000a lor big; 0X0000000080008081 lor big;
-        0X0000000000008080 lor big; 0X0000000080000001; 0X0000000080008008 lor big
+        0X0000000000000001; 0X0000000000000082 lor two15; 0X000000000000008a lor big lor two15;
+        0X0000000000000000 lor big lor two31 lor two15; 0X000000000000008b lor two15; 0X0000000000000001 lor two31;
+        0X0000000000000081 lor big lor two31 lor two15; 0X0000000000000009 lor big lor two15; 0X000000000000008a;
+        0X0000000000000088; 0X0000000000000009 lor two31 lor two15; 0X000000000000000a  lor two31;
+        0X000000000000008b lor two31 lor two15; 0X000000000000008b lor big; 0X0000000000000089 lor big lor two15;
+        0X0000000000000003 lor big lor two15; 0X0000000000000002 lor big lor two15; 0X0000000000000080 lor big;
+        0X000000000000000a lor two15; 0X000000000000000a lor big lor two31; 0X0000000000000081 lor big lor two31 lor two15;
+        0X0000000000000080 lor big lor two15; 0X0000000000000001 lor two31; 0X0000000000000008 lor big lor two31 lor two15
 ]
 
 val keccakf_rotc : list nat
@@ -124,18 +128,21 @@ let keccakf_rounds : nat = 24
 
 type byte = word8
 
+(*
 val boolList64_inner : word64 -> nat -> list bool
-let rec boolList64_inner num rest =
-  if rest = 0 then []
-  else
-    let checked = (2 ** (rest - 1)) in
+let rec boolList64_inner num rest = match rest with
+ | 0 -> []
+ | rest+1 ->
+    let checked = 2 ** rest in
     let quo = num / checked in
     let taken = quo * checked in
-    (quo <> 0) :: boolList64_inner (num - taken) (rest - 1)
+    (quo <> 0) :: boolList64_inner (num - taken) rest
+end
 
 val boolListFromWord64 : word64 -> list bool
 let boolListFromWord64 w = boolList64_inner w 64
 declare isabelle target_rep function boolListFromWord64 = `to_bl`
+*)
 
 val word_rsplit_aux : list bool -> nat -> list byte
 let rec word_rsplit_aux lst n = match n with
@@ -148,12 +155,14 @@ val word_rsplit : word64 -> list byte
 let word_rsplit w = word_rsplit_aux (boolListFromWord64 w) 8
 declare isabelle target_rep function word_rsplit = `word_rsplit`
 
+(*
 val word64FromBoollist : list bool -> word64
 let rec word64FromBoollist lst = match lst with
  | true :: lst -> 1 + 2 * word64FromBoollist lst
  | false :: lst -> 2 * word64FromBoollist lst
  | [] -> 0
 end
+*)
 
 val word_rcat_k : list byte -> word64
 let word_rcat_k lst = word64FromBoollist (List.concat (map boolListFromWord8 lst))
@@ -168,7 +177,7 @@ let mdlen : nat = 256 div 8
 let rsiz : nat = 200 - mdlen * 2
 
 val word8_to_word64 : byte -> word64
-let word8_to_word64 w = int64FromNat (word8ToNat w)
+let word8_to_word64 w = word64FromNat (word8ToNat w)
 
 val update_byte : byte -> nat -> list word64 -> list word64
 let update_byte i p st = setf st (p div 8) ((get st (p div 8)) lxor ((word8_to_word64 i) lsl (8 * (p mod 8))))
@@ -219,3 +228,5 @@ declare isabelle target_rep function word_of_bytes = `Word.word_rcat`
 
 val keccak : list byte -> Word256.word256
 let keccak input = word_of_bytes (keccak' input)
+
+

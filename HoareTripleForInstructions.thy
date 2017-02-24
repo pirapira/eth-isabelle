@@ -1207,15 +1207,43 @@ lemma sep_action_sep [simp] :
 
 lemma cut_memory_head:
  "cut_memory b (n + 1) m = a # lst \<Longrightarrow> m b = a"
-apply(simp add: cut_memory.psimps)
-apply(split if_splits; simp)
+apply(simp add: cut_memory_aux.simps cut_memory_def)
+apply(cases "unat (n+1)")
+apply(simp add: cut_memory_aux.simps cut_memory_def)
+apply(simp add: cut_memory_aux.simps cut_memory_def)
 done
 
+(*
 declare cut_memory.simps [simp del]
+*)
+
+lemma my_unat_suc : "unat (n::256 word) = x \<Longrightarrow> unat (n+1) > 0 \<Longrightarrow>
+  unat (n+1) = x+1"
+  by (metis Suc_eq_plus1 add.commute neq0_conv unatSuc unat_eq_zero)
+
+
+lemma cut_memory_aux :
+"cut_memory_aux b (Suc n) m = m b # cut_memory_aux (b+1) n m"
+apply(simp add:cut_memory_aux.simps)
+done
 
 lemma cut_memory_S1 :
   "cut_memory b (n + 1) m = [] \<or> cut_memory b (n + 1) m = m b # cut_memory (b + 1) n m"
-apply(simp add: cut_memory.simps)
+apply(simp add: cut_memory_def)
+apply(cases "unat (n + 1)")
+apply(simp add:cut_memory_aux.simps)
+apply(cases "unat n")
+apply(simp add:cut_memory_aux.simps)
+  apply (simp add: cut_memory_aux.simps(1) unat_eq_zero)
+
+apply(simp add:cut_memory_aux.simps)
+apply(cases "unat (n + 1)")
+apply(simp)
+apply(subst (asm) my_unat_suc)
+apply(simp add:cut_memory_aux.simps)
+apply(auto)
+apply(subst cut_memory_aux)
+apply(auto)
 done
 
 lemma cut_memory_tail:
@@ -1232,14 +1260,21 @@ qed
 
 lemma cut_memory_zero [simp] :
 "cut_memory b 0 m = []"
-apply(simp add: cut_memory.simps)
+apply(simp add: cut_memory_aux.simps cut_memory_def)
 done
 
+(*
 lemma cut_memory_cons0 :
   "(cut_memory b (n + 1) m = a # lst) =
    (n + 1 \<noteq> 0 \<and> m b = a \<and> cut_memory (b + 1) n m = lst)"
 apply(auto simp add: cut_memory_head cut_memory_tail)
-apply(simp add: cut_memory.simps)
+apply(simp add: cut_memory_aux.simps cut_memory_def)
+apply(cases "unat n")
+apply(cases "unat (n+1)")
+apply(simp add: cut_memory_aux.simps cut_memory_def)
+  using unat_eq_zero apply auto[1]
+apply(simp add: cut_memory_aux.simps cut_memory_def)
+
 done
 
 lemma cut_memory_cons1 :
@@ -1248,10 +1283,30 @@ lemma cut_memory_cons1 :
 apply(simp only: cut_memory_cons0)
 apply(simp)
 done
+*)
+
+lemma cut_memory_aux_cons [simp] :
+  "(cut_memory_aux b (Suc n) m = a # lst) =
+   (m b = a \<and> cut_memory_aux (b + 1) n m = lst)"
+apply(simp add: cut_memory_aux.simps cut_memory_def)
+done
+
+lemma unat_minus_one2 : "unat x = Suc n \<Longrightarrow> unat (x - 1) = n"
+  by (metis diff_Suc_1 nat.simps(3) unat_eq_zero unat_minus_one)
 
 lemma cut_memory_cons [simp] :
   "(cut_memory b n m = a # lst) =
    (n \<noteq> 0 \<and> m b = a \<and> cut_memory (b + 1) (n - 1) m = lst)"
+apply(auto simp:cut_memory_def cut_memory_aux.simps)
+apply(cases "unat n", auto simp:cut_memory_aux.simps)
+apply(cases "unat n", auto simp:cut_memory_aux.simps unat_minus_one)
+apply(cases "unat n", auto simp:cut_memory_aux.simps)
+apply (metis diff_Suc_1 nat.simps(3) unat_eq_zero unat_minus_one)
+apply(cases "unat n", auto simp:cut_memory_aux.simps)
+apply (metis unat_eq_zero )
+done
+
+(*
 proof -
  have "(cut_memory b n m = a # lst) = (cut_memory b (n - 1 + 1) m = a # lst)"
    by simp
@@ -1262,6 +1317,7 @@ proof -
    (n \<noteq> 0 \<and> m b = a \<and> cut_memory (b + 1) (n - 1) m = lst)"
    by blast
 qed
+*)
 
 lemma sep_memory8 :
   "(rest ** memory8 b a) s ==
@@ -1332,7 +1388,7 @@ declare predict_gas_def [simp]
         C_def [simp] Cmem_def [simp]
         Gmemory_def [simp]
         new_memory_consumption.simps [simp]
-        thirdComponentOfC.simps [simp]
+        thirdComponentOfC_def [simp]
         subtract_gas.simps [simp]
         vctx_next_instruction_default_def [simp]
         stack_2_1_op_def [simp]

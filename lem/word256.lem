@@ -14,11 +14,13 @@
    limitations under the License.
 *)
 
+open {coq} `helper`
 open import Pervasives
 open import Word
 
 type word256 = W256 of bool * list bool
 declare isabelle target_rep type word256 = `word` 256
+declare coq target_rep type word256 = (`Bvector` 256)
 
 (* perhaps should truncate here? *)
 val bs_to_w256 : bitSequence -> word256
@@ -26,6 +28,7 @@ let bs_to_w256 seq = match resizeBitSeq (Just 256) seq with
  | BitSeq _ s b -> W256 s b
 end
 declare isabelle target_rep function bs_to_w256 = (fun w -> `word_of_int` (integerFromBitSeq w))
+declare coq target_rep function bs_to_w256 = (fun w -> `Z_to_two_compl` `255` (integerFromBitSeq w))
 
 val w256_to_bs : word256 -> bitSequence
 let w256_to_bs (W256 s b) = BitSeq (Just 256) s b
@@ -48,12 +51,15 @@ let size256 = 2 ** 256
 val word256ToInteger : word256 -> integer
 let word256ToInteger w = integerFromBitSeq (w256_to_bs w)
 declare isabelle target_rep function word256ToInteger = `sint`
+declare coq target_rep function word256ToInteger = `two_compl_value` `255`
+
+declare isabelle target_rep function w256_to_bs = (fun w -> bitSeqFromInteger (Just 256) (word256ToInteger w))
+declare coq target_rep function w256_to_bs = (fun w -> bitSeqFromInteger (Just 256) (word256ToInteger w))
+
 
 val word256ToNatural : word256 -> natural
 let word256ToNatural w = naturalFromInteger ((word256ToInteger w) mod size256)
 declare isabelle target_rep function word256ToNatural = `unat`
-
-declare isabelle target_rep function w256_to_bs = (fun w -> bitSeqFromInteger (Just 256) (word256ToInteger w))
 
 val word256FromInteger : integer -> word256
 let word256FromInteger i = bs_to_w256 (bitSeqFromInteger (Just 256) i)
@@ -84,7 +90,7 @@ val word256FromNumeral : numeral -> word256
 let word256FromNumeral w = bs_to_w256 (fromNumeral w)
 
 instance (Numeral word256)
-  let fromNumeral = word256FromNumeral
+  let fromNumeral x = (word256FromNumeral x)
 end
 
 val w256Eq : word256 -> word256 -> bool
