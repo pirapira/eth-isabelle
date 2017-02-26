@@ -40,6 +40,7 @@ script:
 - make lem-ocaml
 - make lem-thy
 - make lem-hol
+- make lem-coq
 # - cd lem
 # - ../HOL/bin/Holmake evmTheory.uo
 # - cd -
