@@ -2833,11 +2833,103 @@ apply(case_tac elm; auto simp add: Word.wi_hom_syms(2))
 done
 
 
-lemma sload_advance [simp] :
-"       program_content (cctx_program co_ctx) (vctx_pc x1) = Some (Storage SLOAD) \<Longrightarrow>
+lemma storage_inst_advance [simp] :
+"       program_content (cctx_program co_ctx) (vctx_pc x1) = Some (Storage m) \<Longrightarrow>
        k = vctx_pc x1 \<Longrightarrow>
        vctx_pc (vctx_advance_pc co_ctx x1) = vctx_pc x1 + 1"
 apply(simp add: vctx_advance_pc_def inst_size_def inst_code.simps)
+done
+
+
+lemma update_storage_preserves_pc [simp] :
+"vctx_pc
+  (vctx_update_storage idx new x1) =
+ vctx_pc x1"
+apply(simp add: vctx_update_storage_def)
+done
+
+lemma update_storage_updates [simp] :
+"vctx_storage (vctx_update_storage idx new x1) idx = new"
+apply(simp add: vctx_update_storage_def)
+done
+
+lemma update_storage_preserves_gas [simp] :
+  "vctx_gas (vctx_update_storage idx new x1) = vctx_gas x1"
+apply(simp add: vctx_update_storage_def)
+done
+
+lemma default_zero [simp] :
+  "vctx_stack x1 = idx # ta \<Longrightarrow>
+   vctx_stack_default 0 x1 = idx"
+apply(simp add: vctx_stack_default_def)
+done
+
+lemma default_one [simp] :
+  "vctx_stack x1 = idx # y # ta \<Longrightarrow>
+   vctx_stack_default 1 x1 = y"
+apply(simp add: vctx_stack_default_def)
+done
+
+lemma rev_append_look_up [simp] :
+  "(rev ta @ lst) ! pos = val =
+   ((pos < length ta \<and> rev ta ! pos = val) \<or>
+    (length ta \<le> pos \<and> lst ! (pos - length ta) = val))"
+apply (simp add: nth_append)
+done
+
+lemma pair_snd_eq [simp] : 
+ "x3 \<noteq> (idx, snd x3) =
+  (fst x3 \<noteq> idx)"
+apply (case_tac x3; auto)
+done
+
+
+lemma some_list_gotcha :
+  "       rev ta ! fst x2 = snd x2 \<longrightarrow> \<not> fst x2 < length ta \<Longrightarrow>
+       x2 \<noteq> (Suc (length ta), idx) \<Longrightarrow>
+       x2 \<noteq> (length ta, new) \<Longrightarrow>
+       (fst x2 < length ta \<and> rev ta ! fst x2 = snd x2 \<or>
+        length ta \<le> fst x2 \<and> [new, idx] ! (fst x2 - length ta) = snd x2) \<and>
+       fst x2 < Suc (Suc (length ta)) \<Longrightarrow>
+       elm = StackElm x2 \<Longrightarrow> False"
+apply(case_tac x2; auto)
+ apply(case_tac "a - length ta"; simp)
+ apply(rename_tac smaller)
+ apply(case_tac smaller; simp)
+apply(case_tac "a - length ta"; simp)
+apply(rename_tac smaller)
+apply(case_tac smaller; simp)
+done
+
+
+lemma sstore_gas_triple :
+  "triple {OutOfGas}
+          (\<langle> h \<le> 1024\<rangle>
+           ** stack_height (h + 2)
+           ** stack (h + 1) idx
+           ** stack h new
+           ** program_counter k ** storage idx old
+           ** gas_pred g ** continuing)
+          {(k, Storage SSTORE)}
+          (stack_height h
+           ** program_counter (k + 1) ** storage idx new **
+           gas_pred (g - Csstore old new) ** continuing)"
+apply(auto simp add: triple_def)
+apply(rule_tac x = 1 in exI)
+apply(case_tac presult; auto simp add: instruction_result_as_set_def sstore_def)
+apply(rule leibniz)
+ apply blast
+apply(rule Set.equalityI; clarify)
+ apply(rename_tac elm)
+ apply(simp add: vctx_update_storage_def)
+ apply(case_tac elm; simp)
+ using some_list_gotcha apply blast
+ apply(split if_splits; simp)
+apply(rename_tac elm)
+apply(simp add: vctx_update_storage_def)
+apply(case_tac elm; simp)
+ apply auto[1]
+apply(split if_splits; simp)
 done
 
 
