@@ -739,7 +739,7 @@ let Gblockhash = 20
 (* with the following information. *)
 
 type call_env = <|
-  callenv_gaslimit : w256; (* the current block's gas limit *)
+  callenv_gaslimit : w256; (* the current invocation's gas limit *)
   callenv_value : w256; (* the amount of Eth sent along*)
   callenv_data : list byte; (* the data sent along *)
   callenv_caller : address; (* the caller's address *)
