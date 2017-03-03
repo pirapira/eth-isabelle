@@ -771,8 +771,8 @@ stays the same or becomes empty.  It also proves that no annotations fail, but
 there are no annotations anyway. *}
 
 lemma check_resources_split [split] :
-"P (if check_resources v con s i then X else something a b c d e) =
- (\<not> (\<not> check_resources v con s i \<and> \<not> P (something a b c d e) \<or> check_resources v con s i \<and> \<not> P X ))"
+"P (if check_resources v con s i then X else something a b c) =
+ (\<not> (\<not> check_resources v con s i \<and> \<not> P (something a b c) \<or> check_resources v con s i \<and> \<not> P X ))"
 apply(simp only: if_splits(2))
 apply(auto)
 done
@@ -785,10 +785,15 @@ done
 termination store_byte_list_memory by lexicographic_order
 
 lemma cut_memory_more :
-  " (n :: nat) > 0 \<Longrightarrow>
-    cut_memory idx n memory
-     = memory idx # cut_memory (idx + word_of_int 1) (n - 1) memory"
-apply(case_tac n; simp)
+  " n > 0 \<Longrightarrow>
+    cut_memory_aux idx n memory
+     = memory idx # cut_memory_aux (idx + word_of_int 1) (n - 1) memory"
+apply(case_tac n; simp add: cut_memory_aux.simps)
+done
+
+lemma cut_memory_aux_zero [simp] :
+  "cut_memory_aux y 0 f = []"
+apply(simp add: cut_memory_aux.simps)
 done
 
 lemma cut_memory_stored [simp] :
@@ -800,7 +805,7 @@ lemma cut_memory_stored [simp] :
    = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
                                   0, 0, 0, 0, 96]
    "
-apply(simp add: cut_memory.simps empty_memory_def cut_memory_more)
+apply(simp add: cut_memory_def empty_memory_def cut_memory_more)
 done
 
 lemma reading_ninty_six [simp] :
