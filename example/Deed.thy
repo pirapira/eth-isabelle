@@ -2477,7 +2477,6 @@ apply(auto)
 done
 
 
-(*
 lemma deed_only_registrar_can_spend :
 "pre_post_conditions
 
@@ -3757,6 +3756,7 @@ apply(drule deed_inv.cases; auto)
    apply(simp add: postcondition_pack_def deed_inv.simps deed_postcondition_def)
   apply(case_tac steps; auto)
   apply(simp add: postcondition_pack_def deed_inv.simps deed_postcondition_def)
+  apply(simp add: postcondition_pack_def deed_inv.simps deed_postcondition_def)
  apply(case_tac steps; auto)
 apply(drule star_case; auto)
 apply(case_tac steps; auto)
@@ -3768,6 +3768,5 @@ Most of the rest is spent on following the proofs of the last two lemmata.
 Currently it's dealing with out-of-gas failures that can happen at any step.
 This needs to be abstracted away.
 *}
-*)
 
 end
