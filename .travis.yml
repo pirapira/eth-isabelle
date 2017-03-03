@@ -34,7 +34,7 @@ before_install:
 # - cd HOL
 # - echo 'val polymllibdir = "/usr/local/lib"' > tools-poly/poly-includes.ML
 # - poly < tools/smart-configure.sml
-# - bin/build -j 2 -nograph
+# - bin/build -j 2
 # - cd -
 script:
 - make lem-ocaml

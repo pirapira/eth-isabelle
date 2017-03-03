@@ -49,6 +49,7 @@ lem/keccakScript.sml
 lem/evmScript.sml
 lem/word4Script.sml
 lem/word8Script.sml
+lem/word64Script.sml
 lem/word160Script.sml
 lem/word256Script.sml
 lem/blockScript.sml
