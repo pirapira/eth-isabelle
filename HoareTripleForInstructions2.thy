@@ -239,6 +239,11 @@ lemma not_appended [dest] :
 apply(auto)
 done
 
+lemma not_first [simp] :
+  "((cond # lst) ! n \<noteq> cond) = ((n \<noteq> 0) \<and> lst ! (n - 1) \<noteq> cond)"
+apply(case_tac n; auto)
+done
+
 lemma invalid_jumpi_gas_triple :
    "triple {OutOfGas} (\<langle> h \<le> 1022 \<and> cond \<noteq> 0 \<and> i \<noteq> Pc JUMPDEST \<rangle> **
                        stack_height (h + 2) **
@@ -431,8 +436,7 @@ apply(rule Set.equalityI)
  apply(case_tac "aa = length list"; simp)
 apply(clarsimp)
 apply(rename_tac elm; case_tac elm; simp)
-apply(case_tac " fst x2 < Suc (length list)"; simp)
-apply(case_tac "(rev list @ [a]) ! fst x2 = snd x2"; simp)
+apply(case_tac " fst x2 < Suc (length list)"; auto)
 done
 
 
@@ -564,7 +568,7 @@ apply(rule Set.equalityI)
  apply(case_tac "fst x2 < length ta"; simp)
 apply(clarsimp)
 apply(rename_tac elm; case_tac elm; simp)
-apply(case_tac "fst x2 < Suc (Suc (length ta))"; auto)
+apply auto
 done
 
 
@@ -598,8 +602,8 @@ apply(rule Set.equalityI)
  apply(rename_tac elm; case_tac elm; simp)
  apply(case_tac "fst x2 < length ta"; simp)
 apply(clarsimp)
-apply(rename_tac elm; case_tac elm; simp)
-apply(case_tac "fst x2 < Suc (Suc (length ta))"; auto)
+apply(rename_tac elm; case_tac elm; auto)
+
 done
 
 

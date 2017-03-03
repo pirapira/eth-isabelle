@@ -1679,6 +1679,7 @@ apply(drule star_case; auto)
      apply(case_tac nata; auto) [1]
      apply(case_tac nata; auto) [1]
      apply(case_tac nata; auto) [1]
+      apply(simp add: no_assertion_failure_post_def)
      apply(simp add: no_assertion_failure_post_def)
     apply(case_tac nata; auto) [1]
     apply(case_tac nata; auto) [1]
