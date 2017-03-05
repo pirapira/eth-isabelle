@@ -1,9 +1,10 @@
-### 0.0.2 (not released yet)
+### 0.0.2 (2017-02-27)
 
-Plan:
- * Some simple Hoare logic-like development in Isabelle/HOL
+Features:
+ * Coq extraction; again thanks Sami Mäkelä for the tireless efforts
+ * Termination proof in `example/ConstantGas.thy`
 
-### 0.0.1 (not relased yet)
+### 0.0.1 (2017-01-04)
 
 Features:
  * EVM definition in Lem with all instructions; thanks Sami Mäkelä for the porting and bug spottings.
