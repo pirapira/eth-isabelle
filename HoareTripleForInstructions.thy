@@ -1384,7 +1384,7 @@ declare sep_memory8_sep [simp]
 
 (****** specifying each instruction *******)
 
-declare predict_gas_def [simp]
+declare meter_gas_def [simp]
         C_def [simp] Cmem_def [simp]
         Gmemory_def [simp]
         new_memory_consumption.simps [simp]
@@ -1653,7 +1653,7 @@ done
 declare memory_range_elms.simps [simp del]
 declare memory_range_elms.psimps [simp del]
 
-declare predict_gas_def [simp del]
+declare meter_gas_def [simp del]
 declare misc_inst_numbers.simps [simp]
 
 definition triple_alt ::
@@ -1895,11 +1895,11 @@ lemma call_new_balance [simp] :
       "v \<le> fund \<Longrightarrow>
        ThisAccountElm this \<in> instruction_result_as_set co_ctx (InstructionContinue x1) \<Longrightarrow>
        vctx_balance x1 this = fund \<Longrightarrow>
-       predict_gas (Misc CALL) x1 co_ctx \<le> vctx_gas x1 \<Longrightarrow>
+       meter_gas (Misc CALL) x1 co_ctx \<le> vctx_gas x1 \<Longrightarrow>
        vctx_stack x1 = g # r # v # in_begin # in_size # out_begin # out_size # tf \<Longrightarrow>
        BalanceElm (this, fund - v)
        \<in> instruction_result_as_set co_ctx
-           (subtract_gas (predict_gas (Misc CALL) x1 co_ctx) (call x1 co_ctx))"
+           (subtract_gas (meter_gas (Misc CALL) x1 co_ctx) (call x1 co_ctx))"
 apply(clarify)
 apply(auto simp add: call_def failed_for_reasons_def)
 apply(simp add: instruction_result_as_set_def)
@@ -2193,7 +2193,7 @@ done
 lemma call_memory_no_change [simp] :
   "x \<in> memory_range_elms in_begin input \<Longrightarrow>
    x \<in> instruction_result_as_set co_ctx
-         (subtract_gas (predict_gas (Misc CALL) x1 co_ctx) (call x1 co_ctx)) =
+         (subtract_gas (meter_gas (Misc CALL) x1 co_ctx) (call x1 co_ctx)) =
   (x \<in> instruction_result_as_set co_ctx (InstructionContinue x1))"
 apply(simp add: call_def)
 apply(case_tac "vctx_stack x1"; simp)
@@ -2781,7 +2781,7 @@ apply(case_tac presult; simp)
 apply(clarify)
 apply(simp add: call_def)
 apply(case_tac "vctx_balance x1 (cctx_this co_ctx) < v"; simp)
-apply(rule_tac x = "vctx_gas x1 - predict_gas (Misc CALL) x1 co_ctx" in exI)
+apply(rule_tac x = "vctx_gas x1 - meter_gas (Misc CALL) x1 co_ctx" in exI)
 apply(simp add: instruction_result_as_set_def)
 apply(simp add: sep_memory_range_sep sep_memory_range failed_for_reasons_def)
 apply(rule leibniz)
@@ -2806,7 +2806,7 @@ declare stack_height_sep [simp]
 declare stack_sep [simp]
 declare balance_sep [simp]
 declare program_counter_sep [simp]
-declare predict_gas_def [simp]
+declare meter_gas_def [simp]
 declare gas_def [simp]
 
 
