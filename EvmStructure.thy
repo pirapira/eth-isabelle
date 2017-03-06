@@ -1105,6 +1105,56 @@ apply (subst alloc_zero_split2)
 apply auto
 done
 
+definition htable :: "w256 \<Rightarrow> (w256 * w256) list \<Rightarrow> set_pred" where
+"htable t m = alloc_zero t m ** mapping t m"
+
+lemma set_table :
+  "triple {OutOfGas}
+    (\<langle> h \<le> 1024 \<rangle> **
+     stack (h+1) (hash2 table key) **
+     stack h v **
+     stack_height (h+2) **
+     htable table m **
+     program_counter k **
+     gas_pred g **
+     continuing)
+    {(k, Storage SSTORE)}
+    (htable table (add key v m) **
+     program_counter (k+1) **
+     gas_pred (g - Csstore (get key m) v) **
+     stack_height h **
+     continuing)" (is "triple _ ?pre _ ?post")
+proof -
+  have good_pre: "?pre =
+     (\<langle> h \<le> 1024 \<rangle> **
+     stack (h+1) (hash2 table key) **
+     stack h v **
+     stack_height (h+2) **
+     (mapping table m ** perhaps_alloc table key m) **
+     program_counter k **
+     gas_pred g **
+     continuing) **
+     alloc_zero table (add key v m)"
+     (is "?pre = ?presmall ** _")
+     apply (subst htable_def) apply (subst alloc_table) apply (auto) done
+  have good_post: "?post = (
+     mapping table (add key v m) **
+     program_counter (k+1) **
+     gas_pred (g - Csstore (get key m) v) **
+     stack_height h **
+     continuing) **
+     alloc_zero table (add key v m)"
+     (is "_ = ?postsmall ** _")
+     apply (subst htable_def) apply (auto) done
+  have "triple {OutOfGas} ?presmall {(k, Storage SSTORE)} ?postsmall"
+   using set_storage by force
+  then have "triple {OutOfGas} (?presmall ** alloc_zero table (add key v m))
+      {(k, Storage SSTORE)} (?postsmall ** alloc_zero table (add key v m))"
+    by (rule frame)
+  then show ?thesis using good_pre and good_post by simp
+qed
+
+
 (*
 lemma set_storage :
   "triple {OutOfGas}
