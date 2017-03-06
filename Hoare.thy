@@ -16,25 +16,6 @@ apply(drule not_at_least_one)
 apply(simp)
 done
 
-(* unat (1 + (aa - 1)) = Suc (unat(aa - 1)) *)
-
-(*
-lemma cut_memory_dom_nat :
-  "\<forall> a aa b. unat aa = n \<longrightarrow> cut_memory_dom (a, aa, b)"
-apply(induction n)
- apply(clarify)
- apply(rule cut_memory.domintros)
- apply(simp add: unat_eq_0 uint_0_iff)
-apply(clarify)
-apply(rule cut_memory.domintros)
-apply(drule unat_suc)
-apply(auto)
-done
-
-termination cut_memory
-apply(auto simp add: cut_memory_dom_nat)
-done
-*)
 
 (* Following Magnus Myreen's thesis "Formal verification of machine-code programs" 3.2.4 *)  
 
@@ -189,7 +170,7 @@ proof -
 qed
 
 
-definition emp :: "state_element set \<Rightarrow> bool"
+definition emp :: "set_pred"
   where
     "emp s == (s = {})"
 
@@ -198,6 +179,70 @@ lemma sep_emp [simp] :
 apply(simp add: emp_def sep_def)
 done
 
+(*
+definition sep_add :: "set_pred \<Rightarrow> set_pred \<Rightarrow> set_pred" where
+  "sep_add p q == (\<lambda> s. (p s \<or> q s) \<and> \<not> (p s \<and> q s))"
+
+definition sep_add :: "set_pred \<Rightarrow> set_pred \<Rightarrow> set_pred" where
+  "sep_add p q == (\<lambda> s. p s \<noteq> q s)"
+
+
+*)
+
+definition sep_add :: "set_pred \<Rightarrow> set_pred \<Rightarrow> set_pred" where
+  "sep_add p q == (\<lambda> s. p s \<or> q s)"
+
+
+notation sep_add (infixr "##" 59)
+
+lemma sep_distr : "a ** (b ## c) = (a**b) ## (a**c)"
+apply (simp add: sep_add_def sep_def)
+apply blast
+done
+
+lemma sep_add_assoc [simp]: "(a ## b) ## c = a ## (b ## c)"
+  by (simp add: sep_add_def)
+
+lemma sep_add_commute [simp]: "(a ## b) = (b ## a)"
+  by (simp add: sep_add_def) blast
+
+definition zero :: "set_pred" where
+  "zero == (\<lambda>s. False)"
+
+lemma zero_add [simp]: "(a ## zero) = a"
+  by (simp add: sep_add_def zero_def)
+
+(*
+definition inv :: "set_pred \<Rightarrow> set_pred" where
+  "inv p == p"
+
+lemma inv_zero [simp]: "(a ## inv a) = zero"
+  by (simp add: sep_add_def zero_def inv_def)
+*)
+
+(*
+lemma sep_add_assoc [simp]: "(a ## b) ## c = a ## (b ## c)"
+  by (simp add: sep_add_def) blast
+
+lemma sep_add_commute [simp]: "(a ## b) = (b ## a)"
+  by (simp add: sep_add_def) blast
+
+definition inv :: "set_pred \<Rightarrow> set_pred" where
+  "inv p == p"
+
+definition zero :: "set_pred" where
+  "zero == (\<lambda>s. False)"
+
+lemma zero_add [simp]: "(a ## zero) = a"
+  by (simp add: sep_add_def zero_def)
+
+lemma inv_zero [simp]: "(a ## inv a) = zero"
+  by (simp add: sep_add_def zero_def inv_def)
+
+lemma fun_ext : "(\<forall>a. f a = g a) \<Longrightarrow> f = g"
+apply auto
+done
+*)
 
 interpretation set_pred : comm_monoid
    "sep :: set_pred \<Rightarrow> set_pred \<Rightarrow> set_pred"
