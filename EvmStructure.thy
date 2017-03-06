@@ -203,16 +203,18 @@ fun assoc :: "(w256*w256) list \<Rightarrow> set_pred" where
   "assoc [] = emp"
 | "assoc ((key,a)#xs) = storage key a ** assoc xs"
 
-(*
-fun mapping :: "w256 \<Rightarrow> (w256*w256) list \<Rightarrow> set_pred" where
-  "mapping ind [] = emp"
-| "mapping ind ((key,a)#tll) = (case super_hash key a of
-    None \<Rightarrow> mapping ind tll (* what is the correct way to handle? *)
-  | Some h \<Rightarrow> storage h a ** mapping ind tll)"
-*)
+definition hash_pair :: "w256 \<Rightarrow> w256*w256 \<Rightarrow> w256*w256" where
+"hash_pair table p = (hash2 table (fst p), snd p)"
 
+definition hash_pair_z :: "w256 \<Rightarrow> w256*w256 \<Rightarrow> w256*w256" where
+"hash_pair_z table p = (hash2 table (fst p), 0)"
+
+(*
 definition mapping :: "w256 \<Rightarrow> (w256*w256) list \<Rightarrow> set_pred" where
 "mapping ind lst = assoc (map (\<lambda>p. (hash2 ind (fst p), snd p)) lst)"
+*)
+definition mapping :: "w256 \<Rightarrow> (w256*w256) list \<Rightarrow> set_pred" where
+"mapping ind lst = assoc (map (hash_pair ind) lst)"
 
 fun get :: "w256 \<Rightarrow> (w256*w256) list \<Rightarrow> w256" where
   "get k [] = 0"
@@ -226,6 +228,13 @@ fun remove :: "w256 \<Rightarrow> (w256*w256) list \<Rightarrow> (w256*w256) lis
   "remove k [] = []"
 | "remove k ((ok,ov)#xs) =
    (if k = ok then xs else (ok,ov)#remove k xs)"
+
+(*
+fun remove :: "w256 \<Rightarrow> (w256*w256) list \<Rightarrow> (w256*w256) list" where
+  "remove k [] = []"
+| "remove k ((ok,ov)#xs) =
+   (if k = ok then remove k xs else (ok,ov)#remove k xs)"
+*)
 
 (*
 fun add :: "w256 \<Rightarrow> w256 \<Rightarrow> (w256*w256) list \<Rightarrow> (w256*w256) list" where
@@ -254,7 +263,7 @@ lemma stored_hash_from_mapping :
     mapping ind mp =
     mapping ind (remove k mp) ** storage (hash2 ind k) (get k mp)"
 apply (induction mp)
-apply(auto simp:mapping_def)
+apply(auto simp:mapping_def hash_pair_def)
 done
 
 lemma minus_test : "a - {x} - {y} = a - {y} - {x}"
@@ -264,7 +273,7 @@ done
 lemma mapping_cons :
    "mapping ind ((k,v)#mp) = storage (hash2 ind k) v ** mapping ind mp"
 apply (induction mp)
-apply(auto simp:mapping_def minus_test)
+apply(auto simp:mapping_def minus_test hash_pair_def)
 done
 
 lemma set_storage1 :
@@ -595,15 +604,18 @@ definition assoc_set ::
 
 definition mapping_set ::
   "w256 \<Rightarrow> (w256*w256) list \<Rightarrow> state_element set" where
-"mapping_set table m =
-   assoc_set (map (\<lambda>p. (hash2 table (fst p), snd p)) m)"
+"mapping_set table m = assoc_set (map (hash_pair table) m)"
+
+definition mapping_set_z ::
+  "w256 \<Rightarrow> (w256*w256) list \<Rightarrow> state_element set" where
+"mapping_set_z table m = assoc_set (map (hash_pair_z table) m)"
 (*
    {StorageElm (hash2 table a,b) | a b. (a,b) \<in> set m}"
 *)
 
 definition mapping_zero ::
    "w256 \<Rightarrow> (w256*w256) list \<Rightarrow> state_element set" where
-"mapping_zero table m = zero_table table - mapping_set table m"
+"mapping_zero table m = zero_table table - mapping_set_z table m"
 
 definition alloc_zero ::
    "w256 \<Rightarrow> (w256*w256) list \<Rightarrow> set_pred" where
@@ -613,7 +625,7 @@ lemma start_table : "alloc_zero_table t = alloc_zero t [] **
                      mapping t []"
 apply(auto simp:alloc_zero_table_def alloc_zero_def sep_def
   mapping_def mapping_zero_def mapping_set_def emp_def
-  assoc_set_def)
+  assoc_set_def mapping_set_z_def)
 done
 
 (* does not work because may have several times
@@ -696,6 +708,16 @@ using easy [of "(a,b)" m fst]
 apply auto
 done
 
+lemma cannot_add_same_key :
+  "a \<in> set (map fst m) \<Longrightarrow>
+   diff_keys ((a,b)#m) \<Longrightarrow> False"
+apply (subst (asm) diff_keys_def)
+apply (subst (asm) helper)
+apply (rule card_set_cons [of "a" "map fst m"])
+using easy [of "(a,b)" m fst]
+apply auto
+done
+
 lemma assoc_as_set :
    "diff_keys m \<Longrightarrow> assoc m s = (s = assoc_set m)"
 apply (induction m arbitrary:s)
@@ -714,23 +736,374 @@ apply auto
 using cannot_add_same
 apply fastforce
 done
+done
+done
+(*
+lemma inj_keys :
+   "card (set (map fst m)) =
+    card (set (map (fst \<circ> hash_pair table) m))"
+apply (induction 
+apply(auto)
+using card_bij_eq [of "fst"]
+apply (rule card_bij_eq)
+apply (auto)
+*)
+
+lemma hp_simp : "fst \<circ> hash_pair t = hash2 t \<circ> fst"
+apply(auto simp:hash_pair_def)
+done
+
+lemma hp_simp2 : "fst (hash_pair t (a, b)) = hash2 t a"
+apply(auto simp:hash_pair_def)
+done
+
+lemma easy2 : "aa \<notin> fst ` set m \<Longrightarrow> (aa, b) \<in> set m \<Longrightarrow> False"
+  by (simp add: rev_image_eqI)
 
 lemma mapping_as_set :
   "diff_keys m \<Longrightarrow> 
    mapping t m s = (s = mapping_set t m)"
 apply(simp add:mapping_def mapping_set_def emp_def)
-using assoc_as_set
+apply (rule assoc_as_set)
+(*
+apply (subst diff_keys_def)
+apply (subst (asm) diff_keys_def)
+*)
+apply (induction m)
+apply auto
+subgoal for a b m
+apply (cases "a \<in> set (map fst m)")
+using cannot_add_same_key [of a m b]
+apply fastforce
 
-apply(simp add:mapping_set_def)
+using diff_keys_cons [of a b m]
+apply(auto)
+apply(auto simp:diff_keys_def hp_simp hp_simp2)
+apply (cases "hash2 t a \<in> (hash2 t \<circ> fst) ` set m")
+defer
+using card_insert_alt2 [of "(hash2 t \<circ> fst) ` set m"]
+apply simp
+apply auto
+subgoal for aa b
+using hash_inj2 [of t a t aa]
+apply auto
+  by (simp add: rev_image_eqI)
+done
+done
+
+lemma remove_key :
+  "diff_keys m \<Longrightarrow> a \<notin> fst ` set (remove a m)"
+apply (induction m)
+apply auto
+subgoal for aa b m ba
+using diff_keys_cons [of aa b m]
+apply simp
+apply (cases "a=aa")
+apply auto
+using cannot_add_same_key [of aa m b]
+  using easy2 apply force
+using easy2 apply force
+done
+done
+
+lemma nothing_to_remove :
+  "a \<notin> fst ` set m \<Longrightarrow> remove a m = m"
+apply (induction m)
+apply auto
+done
+
+lemma diff_keys_more :
+   "diff_keys l \<Longrightarrow> a \<notin> fst ` set l \<Longrightarrow> diff_keys ((a,b)#l)"
+apply (simp add:diff_keys_def)
+done
+
+lemma card_insert_alt3 :
+"finite s \<Longrightarrow>
+   k \<notin> s \<Longrightarrow>
+   card (insert k s) = Suc (card s)"
+apply(auto)
+done
+(*
+lemma card_set_cons :
+    "p \<in> set m \<Longrightarrow>
+    card (set (p # m)) = length (p # m) \<Longrightarrow>
+    False"
+apply(simp add:Set.insert_absorb)
+using card_length [of m]
+apply arith
+done
+*)
+lemma diff_keys_get :
+   "diff_keys ((a,b)#m) \<Longrightarrow> a \<in> fst ` set m \<Longrightarrow> False"
+apply (subst (asm) diff_keys_def)
+apply(simp add:Set.insert_absorb)
+using card_length [of "map fst m"]
+apply auto
+done
+
+lemma shuffle_diff_keys:
+   assumes "diff_keys ((a1,b1) # (a2,b2) # m)"
+   shows "diff_keys ((a1,b1)#m)"
+proof -
+  have "diff_keys ((a2,b2)#m)" using assms and diff_keys_cons
+    by auto
+  then have a: "diff_keys m" using diff_keys_cons
+    by auto
+  have "a1 \<notin> fst ` set ((a2,b2)#m)" using assms and
+    diff_keys_get by fastforce
+  then have "a1 \<notin> fst ` set m" by force
+  then show ?thesis using a and diff_keys_more by auto
+qed
+
+lemma more_remove :
+  "diff_keys ((aa, b) # m) \<Longrightarrow>
+   aa \<notin> fst ` set (remove a m)"
+apply (induction m)
+apply simp
+subgoal for ab m
+using shuffle_diff_keys [of aa b "fst ab" "snd ab" m]
+apply simp
+apply (induction ab)
+apply auto[1]
+apply (rule cannot_add_same_key)
+apply (auto)
+using easy2
+apply force
+apply (auto simp: diff_keys_def)
+done
+done
+
+lemma diff_keys_remove1 :
+  "diff_keys m \<Longrightarrow>
+   a \<notin> fst ` set m \<Longrightarrow>
+   diff_keys (remove a m)"
+apply (auto simp: nothing_to_remove)
+done
+
+lemma diff_keys_remove :
+  "diff_keys m \<Longrightarrow>
+   diff_keys (remove a m)"
+apply (induction m)
+apply(simp)
+apply auto
+apply (simp add:diff_keys_cons)
+apply (simp add:diff_keys_cons)
+subgoal for aa b m
+using more_remove [of aa b m]
+using diff_keys_more
+apply force
+done
+done
+
+(* this is not useful, does not tell anything
+   about distinctness *)
+lemma remove_from_set : "set (remove a m) \<subseteq> set m"
+apply (induction m)
+apply(simp)
+subgoal for aa m
+apply (cases "a=fst aa")
+apply(simp)
+
+apply (induction aa)
+apply(simp)
+apply(auto)
+
+apply (induction aa)
+apply(simp)
+apply (auto)
+done
+done
+
+lemma union_fst : "m1 \<subseteq> m2 \<Longrightarrow> fst ` m1 \<subseteq> fst ` m2"
+apply (auto)
+done
+
+lemma disjoint_card :
+  "finite m1 \<Longrightarrow> finite s \<Longrightarrow> m1 \<inter> s = {} \<Longrightarrow>
+   card (m1 \<union> s) = card m1 + card s"
+apply (auto simp:Finite_Set.card_Un_disjoint)
+done
+
+(*
+lemma cardi_union :
+   "set m1 \<subseteq> set m2 \<Longrightarrow>
+    length m2 = card (set m2) \<Longrightarrow>
+    length m1 \<le> length m2"
+
+lemma diff_keys_union :
+   "fst ` set m2 = fst ` set m1 \<union> s \<Longrightarrow>
+    fst ` set m1 \<inter> s = {} \<Longrightarrow>
+    diff_keys m2 \<Longrightarrow>
+    diff_keys m1"
+apply (simp add:diff_keys_def)
+apply (auto simp:Finite_Set.card_Un_disjoint)
+
+apply (cases "length m2 > length m1 + card s")
+using card_length [of m]
+
+lemma diff_keys_subset : "set m1 \<subseteq> set m2 \<Longrightarrow> diff_keys m2 \<Longrightarrow> diff_keys m1"
+
+lemma diff_keys_subset : "set m1 \<subseteq> set m2 \<Longrightarrow> diff_keys m2 \<Longrightarrow> diff_keys m1"
+apply (cases "m1 = m2")
+apply(auto simp:diff_keys_def)
+*)
+
+lemma diff_keys_add :
+  "diff_keys m \<Longrightarrow> diff_keys (add a b m)"
+apply(auto)
+apply (cases "a \<in> fst ` set m")
+defer
+apply (simp add:diff_keys_def nothing_to_remove)
+apply (rule diff_keys_more)
+apply (rule diff_keys_remove)
+apply simp
+apply (rule remove_key)
+apply simp
+done
+
+(*
+lemma f1 :
+  "x \<notin> mapping_zero t m \<Longrightarrow>
+   x \<in> mapping_set t (add a b m) \<Longrightarrow>
+   x \<in> mapping_set t m"
+apply (auto simp:mapping_set_def assoc_set_def
+  mapping_zero_def zero_table_def hash_pair_def)
+apply force
+defer
+apply force
+
+lemma f1 : "mem a m \<Longrightarrow>
+       StorageElm (hash2 t key, 0)
+       \<notin> mapping_set t m \<Longrightarrow>
+       StorageElm (hash2 t key, 0)
+       \<in> mapping_set t
+           (add a b m) \<Longrightarrow>
+       False"
+*)
+
+(*
+lemma foo : "mapping t (add a b m) = mapping t m ** perhaps_alloc t a m"
+*)
+
+lemma add_mapping_set :
+  "mem a m \<Longrightarrow> fst ` (set m) = fst ` (set (add a b m))"
+apply (induction m)
+apply (simp)
+apply (auto)
+apply force
+defer
+apply force
+subgoal for aa b m aaa ba
+apply (cases "a = aa")
+apply force
+apply force
+done
+subgoal for aa b m aaa ba
+apply (cases "a = aa")
+apply force
+apply force
+done
+done
+
+lemma hp_unfold : "(hash2 t key, b) = hash_pair t (key,b)"
+apply (simp add:hash_pair_def)
+done
+
+lemma hp_z_unfold : "(hash2 t key, 0) = hash_pair_z t (key,b)"
+apply (simp add:hash_pair_z_def)
+done
+
+lemma storage_simp :
+ "(StorageElm (hash2 t key, 0) \<in> mapping_set_z t m) =
+  (key \<in> fst ` (set m))"
+apply (auto simp:mapping_set_z_def assoc_set_def hash_pair_z_def)
+using hash_inj2
+apply force
+subgoal for b
+using Set.imageI [of "(key,b)" "set m" "hash_pair_z t"]
+apply (subst hp_z_unfold)
+apply force
+done
+done
+
+declare add.simps [simp del]
+(*
+lemma storage_imp :
+ "StorageElm (hash2 t key, 0) \<in> mapping_set t m \<Longrightarrow>
+  (key \<in> fst ` (set m))"
+using storage_simp
+apply force
+done
+*)
+
+lemma add_mapping_set2 :
+  "mem a m \<Longrightarrow> fst ` (set (add a b m)) = fst ` (set m)"
+using add_mapping_set
+apply simp
+done
+
+lemma alloc_zero_mem :
+  "mem a m \<Longrightarrow>
+   mapping_zero t (add a b m) = mapping_zero t m"
+apply(auto simp:alloc_zero_table_def alloc_zero_def sep_def
+  emp_def zero_table_def mapping_zero_def)
+apply (auto simp:storage_simp)
+apply (auto simp:add_mapping_set2)
+apply force
+using add_mapping_set
+apply force
+done
+
+lemma mem_as_set : "\<not> mem aa m \<Longrightarrow> (aa, b) \<in> set m \<Longrightarrow> False"
+apply (induction m)
+apply (auto)
+done
+
+lemma alloc_zero_split : 
+  "alloc_zero t m = alloc_zero t (add a b m) ** perhaps_alloc t a m"
+apply(auto simp:alloc_zero_table_def alloc_zero_def sep_def
+  emp_def zero_table_def perhaps_alloc_def)
+apply(rule s)
+apply (simp add:alloc_zero_mem)
+apply(auto)[1]
+apply(rule s)
+apply (simp add:add_not_mem)
+apply (auto)
+apply (rule exI [of "_" "{StorageElm (hash2 t a, 0)}"])
+
+apply (auto simp:mapping_zero_def mapping_set_z_def
+   hash_pair_z_def assoc_set_def storage_def)
+apply (simp add:zero_table_def)
+apply auto
+defer
+apply (simp add:zero_table_def)
+apply auto
+subgoal for aa b
+using hash_inj2 [of t a t aa]
+apply auto
+using mem_as_set
+apply force
+done
+subgoal for aa b
+using hash_inj2 [of t a t aa]
+apply auto
+using mem_as_set
+apply force
+done
+done
+
+lemma alloc_zero_split2 : 
+  "alloc_zero t (add a b m) ** perhaps_alloc t a m = alloc_zero t m"
+using alloc_zero_split
+apply simp
+done
 
 lemma alloc_table :
    "alloc_zero t m ** mapping t m =
-    alloc_zero t (p#m) ** mapping t (p#m)"
-apply(auto simp:alloc_zero_table_def alloc_zero_def sep_def
-  emp_def
-  zero_table_def)
-apply(rule s)
-apply(auto)
+    mapping t m ** (alloc_zero t (add a b m) ** perhaps_alloc t a m)"
+apply (subst alloc_zero_split2)
+apply auto
+done
 
 (*
 lemma set_storage :
