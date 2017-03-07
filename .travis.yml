@@ -34,12 +34,13 @@ before_install:
 # - cd HOL
 # - echo 'val polymllibdir = "/usr/local/lib"' > tools-poly/poly-includes.ML
 # - poly < tools/smart-configure.sml
-# - bin/build -j 2 -nograph
+# - bin/build -j 2
 # - cd -
 script:
 - make lem-ocaml
 - make lem-thy
 - make lem-hol
+- make lem-coq
 # - cd lem
 # - ../HOL/bin/Holmake evmTheory.uo
 # - cd -
