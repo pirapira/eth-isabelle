@@ -124,11 +124,6 @@ end
 declare termination_argument cut_memory_aux = automatic
 
 val cut_memory : w256 -> w256 -> memory -> list byte
-(*let rec {isabelle;hol;ocaml} cut_memory idx n memory =
-  if n = 0 then []
-  else memory idx :: cut_memory (idx + 1) (n - 1) memory
-declare termination_argument cut_memory = manual
-*)
 let cut_memory idx n memory = cut_memory_aux idx (word256ToNatural n) memory
 
 val put_return_values_aux : memory -> list byte -> integer -> natural -> memory
@@ -143,14 +138,6 @@ end
 declare termination_argument put_return_values_aux = automatic
 
 val put_return_values : memory -> list byte -> integer -> integer -> memory
-(*let rec {isabelle; hol;ocaml} put_return_values orig lst b s =
-  if s <= 0 then orig else
-  match lst with
-  | [] -> orig
-  | h :: t -> put_return_values (fun addr -> if addr = word256FromInteger b then h else orig addr) t (b + 1) (s - 1)
-  end
-declare termination_argument put_return_values = automatic
-*)
 let put_return_values orig lst b s =
   if s <= 0 then orig else put_return_values_aux orig lst b (naturalFromInteger s)
 
@@ -1015,6 +1002,7 @@ type variable_ctx = <|
 type constant_ctx = <|
   cctx_program : program; (* the code in the account under verification. *)
   cctx_this : address; (* the address of the account under verification. *)
+  cctx_hash_filter : list byte -> bool;
 |>
 
 (* subsection {* The Result of an Instruction *} *)
@@ -1526,9 +1514,11 @@ end
 val sha3 : variable_ctx -> constant_ctx -> instruction_result
 let sha3 v c = match v.vctx_stack with
  | start :: len :: rest ->
+      let lst = cut_memory start len v.vctx_memory in
+      if not (c.cctx_hash_filter lst) then instruction_failure_result v [OutOfGas] else
       InstructionContinue (
         vctx_advance_pc c
-           <| v with vctx_stack = keccak (cut_memory start len v.vctx_memory) :: rest;
+           <| v with vctx_stack = keccak lst :: rest;
                      vctx_memory_usage = M v.vctx_memory_usage start len |>)
  | _ -> instruction_failure_result v [TooShortStack]
 end
@@ -1998,7 +1988,7 @@ type account_state = <|
 
 val build_cctx : account_state -> constant_ctx
 let build_cctx a =
-  <| cctx_program = a.account_code; cctx_this = a.account_address |>
+  <| cctx_program = a.account_code; cctx_this = a.account_address; cctx_hash_filter = (fun _ -> true) |>
 
 (* Next we turn to the case where the environment returns back to the account after the account has *)
 (* called an account.  In this case, the account should contain one ongoing execution that is waiting *)

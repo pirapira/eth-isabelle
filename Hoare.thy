@@ -410,8 +410,22 @@ definition code :: "(int * inst) set \<Rightarrow> state_element set \<Rightarro
   where
     "code f s == s = { CodeElm(pos, i) | pos i. (pos, i) \<in> f }"
 
+axiomatization hash2 :: "w256 \<Rightarrow> w256 \<Rightarrow> w256" where
+hash_inj :
+    "hash2 b v1 = hash2 c v2 \<Longrightarrow> b = c \<or> hash2 b v1 = 0"
+and hash_inj2 :
+   "hash2 b v1 = hash2 c v2 \<Longrightarrow> v1 = v2  \<or> hash2 b v1 = 0"
+and hash_compat :
+   "hash2 a b \<noteq> 0 \<Longrightarrow> hash2 a b = keccak (word_rsplit a@ word_rsplit b)"
+
+definition magic_filter :: "8 word list \<Rightarrow> bool" where
+"magic_filter lst = (\<forall> a b.
+   (lst = word_rsplit a @ word_rsplit b) \<longrightarrow>
+   hash2 a b \<noteq> 0)"
+
 definition no_assertion :: "constant_ctx \<Rightarrow> bool"
-  where "no_assertion c == (\<forall> pos. program_annotation (cctx_program c) pos = [])"
+  where "no_assertion c == (\<forall> pos. program_annotation (cctx_program c) pos = [])
+    \<and> cctx_hash_filter c = magic_filter"
 
 definition failed_for_reasons :: "failure_reason set \<Rightarrow> instruction_result \<Rightarrow> bool"
 where

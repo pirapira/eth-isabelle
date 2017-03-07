@@ -4,7 +4,309 @@ imports  "lem/Evm" "Hoare" "HoareTripleForInstructions"
 
 begin
 
+definition memory :: "w256 \<Rightarrow> w256 \<Rightarrow> set_pred" where
+"memory ind w = memory_range ind (word_rsplit w)"
 
+
+lemma memory_range_elms_cut_memory2 :
+  "length lst = unat in_size \<Longrightarrow> 
+   memory_range_elms in_begin lst \<subseteq> variable_ctx_as_set x1 \<Longrightarrow>
+   cut_memory in_begin in_size (vctx_memory x1) = lst"
+using memory_range_elms_cut_memory by force
+
+lemma word_length : "length (word_rsplit (w::w256) :: 8 word list) = 32"
+apply(rule length_word_rsplit_even_size)
+apply(auto simp:word_size)
+done
+
+lemma word_32 : "unat (32::w256) = 32"
+apply auto
+done
+
+lemma memory_word_meaning :
+  "memory_range_elms memaddr (word_rsplit (table::w256))
+          \<subseteq> variable_ctx_as_set v \<Longrightarrow>
+   cut_memory memaddr 32 (vctx_memory v) = word_rsplit table"
+apply (rule memory_range_elms_cut_memory2)
+apply auto
+apply (auto simp:word_length)
+done
+
+lemma helper :
+  assumes a:" cut_memory_aux (addr+1) x mem @
+           cut_memory_aux
+            ((addr+1) + word_of_int (int x)) y mem =
+           cut_memory_aux (addr+1) (x + y) mem"
+  shows "cut_memory_aux (addr + 1) x mem @
+       cut_memory_aux
+        (addr + word_of_int (1 + int x)) y mem =
+       cut_memory_aux (addr + 1) (x + y) mem"
+proof -
+  have a: "addr + word_of_int (1 + int x) =
+       (addr+1) + word_of_int (int x)"
+    by (metis (no_types, hide_lams) add.assoc of_nat_Suc word_of_nat) 
+  show ?thesis by (subst a) (rule assms)
+qed
+
+lemma cut_memory_aux :
+  "cut_memory_aux addr x mem @
+   cut_memory_aux (addr+word_of_int (int x)) y mem =
+   cut_memory_aux addr (x+y) mem"
+apply (induction x arbitrary:addr)
+apply(auto simp:cut_memory_aux.simps)
+using helper
+apply force
+done
+
+lemma cut_memory_append :
+  "cut_memory addr x mem @ cut_memory (addr+x) y mem =
+   cut_memory addr (x+y) mem"
+apply (induction y)
+apply(auto)
+
+(*
+definition memory :: "w256 \<Rightarrow> w256 \<Rightarrow> set_pred" where
+"memory ind w = memory_range ind [
+   (word_rsplit w)!0,
+   (word_rsplit w)!1,
+   (word_rsplit w)!2,
+   (word_rsplit w)!3,
+   (word_rsplit w)!4,
+   (word_rsplit w)!5,
+   (word_rsplit w)!6,
+   (word_rsplit w)!7,
+   (word_rsplit w)!8,
+   (word_rsplit w)!9,
+   (word_rsplit w)!10,
+   (word_rsplit w)!11,
+   (word_rsplit w)!12,
+   (word_rsplit w)!13,
+   (word_rsplit w)!14,
+   (word_rsplit w)!15,
+   (word_rsplit w)!16,
+   (word_rsplit w)!17,
+   (word_rsplit w)!18,
+   (word_rsplit w)!19,
+   (word_rsplit w)!20,
+   (word_rsplit w)!21,
+   (word_rsplit w)!22,
+   (word_rsplit w)!23,
+   (word_rsplit w)!24,
+   (word_rsplit w)!25,
+   (word_rsplit w)!26,
+   (word_rsplit w)!27,
+   (word_rsplit w)!28,
+   (word_rsplit w)!29,
+   (word_rsplit w)!30,
+   (word_rsplit w)!31
+]"
+*)
+
+lemma sep_memory_range2 :
+"      unat (len_word :: w256) = length input \<Longrightarrow>
+       (rest ** memory_range begin_word input) s =
+       ((memory_range_elms begin_word input \<subseteq> s) \<and> rest (s - memory_range_elms begin_word input)) 
+"
+using sep_memory_range by force
+
+lemma sep_memory [simp] :
+  "((rest ** memory a w)) s =
+   (memory_range_elms a (word_rsplit w) \<subseteq> s \<and>
+   rest (s - memory_range_elms a (word_rsplit w)))"
+apply (subst memory_def)
+apply (rule sep_memory_range2)
+apply (auto simp:word_length)
+apply (rule word_32)
+done
+
+lemma sep_memory2 [simp] :
+  "(rest ** memory a w) s ==
+   memory_range_elms a (word_rsplit w) \<subseteq> s \<and>
+   rest (s - memory_range_elms a (word_rsplit w))"
+using sep_memory
+apply force
+done
+
+lemma sep_memory3 [simp] :
+  "(memory a w ** rest) s ==
+   memory_range_elms a (word_rsplit w) \<subseteq> s \<and>
+   rest (s - memory_range_elms a (word_rsplit w))"
+using sep_memory
+apply force
+done
+
+lemma sep_memory4 [simp] :
+  "((rest1 ** memory a w ** rest) s) =
+   (memory_range_elms a (word_rsplit w) \<subseteq> s \<and>
+   (rest1 ** rest) (s - memory_range_elms a (word_rsplit w)))"
+proof -
+  have a : "rest1 ** memory a w ** rest = (rest1 ** rest) ** memory a w"
+    by auto
+  then show ?thesis by
+   (subst a) (rule sep_memory)
+qed
+
+(* declare memory_def [simp]
+ declare memory_range.simps [simp]
+ *)
+
+declare meter_gas_def [simp del]
+
+lemma subtract_gas_annotation :
+ "subtract_gas x res = InstructionAnnotationFailure \<Longrightarrow>
+  res = InstructionAnnotationFailure"
+apply(cases res)
+apply(auto)
+done
+
+lemma sha_annotation :
+  "sha3 v c = InstructionAnnotationFailure \<Longrightarrow> False"
+apply (auto simp:sha3_def)
+apply(cases "vctx_stack v")
+apply(simp)
+apply(cases "tl (vctx_stack v)")
+apply(simp)
+apply(simp)
+apply auto
+apply (case_tac "\<not> cctx_hash_filter c (cut_memory a aa (vctx_memory v))")
+apply auto
+done
+
+lemma subtract_gas_environment :
+   "subtract_gas x res =
+     InstructionToEnvironment act v opt \<Longrightarrow>
+    res = InstructionToEnvironment act
+      (v\<lparr> vctx_gas := vctx_gas v + x \<rparr>) opt"
+apply(cases res)
+apply(auto)
+done
+
+lemma sha_env :
+  "length (vctx_stack v) \<ge> 2 \<Longrightarrow>
+   sha3 v c = InstructionToEnvironment act nv opt \<Longrightarrow>
+   act = ContractFail [OutOfGas]"
+apply (auto simp:sha3_def)
+apply(cases "vctx_stack v")
+apply(simp)
+apply(cases "tl (vctx_stack v)")
+apply(simp)
+apply(simp)
+apply auto
+apply (case_tac "\<not> cctx_hash_filter c (cut_memory a aa (vctx_memory v))")
+apply auto
+done
+
+lemma sha_fail_helper :
+  assumes a:"subtract_gas x (sha3 v c) =
+       InstructionToEnvironment act nv opt"
+  and   b:"length (vctx_stack v) \<ge> 2"
+  shows "failed_for_reasons {OutOfGas}
+        (InstructionToEnvironment act nv opt)"
+proof -
+  have "act = ContractFail [OutOfGas]" using 
+    subtract_gas_environment and sha_env and a
+    and b  by fastforce
+  then show ?thesis by auto
+qed
+
+lemma subtract_gas_continue :
+   "subtract_gas x res = InstructionContinue v \<Longrightarrow>
+    res = InstructionContinue
+      (v\<lparr> vctx_gas := vctx_gas v + x \<rparr>)"
+apply(cases res)
+apply(auto)
+done
+
+lemma sha_continue :
+  "sha3 v c = InstructionContinue nv \<Longrightarrow>
+   nv = vctx_advance_pc c v\<lparr>
+      vctx_stack :=
+        keccak (cut_memory (hd (vctx_stack v))
+            (hd (tl (vctx_stack v))) (vctx_memory v)) #
+        tl (tl (vctx_stack v)),
+      vctx_memory_usage :=
+        M (vctx_memory_usage v) (hd (vctx_stack v))
+          (hd (tl (vctx_stack v)))  \<rparr>"
+apply (auto simp:sha3_def)
+apply(cases "vctx_stack v")
+apply(simp)
+apply(cases "tl (vctx_stack v)")
+apply(simp)
+apply(simp)
+apply auto
+apply (case_tac "\<not> cctx_hash_filter c (cut_memory a aa (vctx_memory v))")
+apply (auto)
+done
+
+lemma sha_continue_helper :
+  "subtract_gas x (sha3 v c) = InstructionContinue nv \<Longrightarrow>
+   nv = vctx_advance_pc c v\<lparr>
+      vctx_gas := vctx_gas v - x,
+      vctx_stack :=
+        keccak (cut_memory (hd (vctx_stack v))
+            (hd (tl (vctx_stack v))) (vctx_memory v)) #
+        tl (tl (vctx_stack v)),
+      vctx_memory_usage :=
+        M (vctx_memory_usage v) (hd (vctx_stack v))
+          (hd (tl (vctx_stack v)))  \<rparr>"
+apply (cases "sha3 v c")
+apply(auto)
+using sha_continue
+apply force
+done
+
+(*** need hoare triple for sha  *)
+lemma hash2_gas_triple :
+  "triple {OutOfGas}
+     (\<langle> h \<le> 1022 \<rangle> **
+       stack (h+1) 64 **
+       stack h memaddr **
+       stack_height (h+2) **
+       program_counter k **
+       memory memaddr table ** memory (memaddr+32) key **
+       gas_pred g **
+       continuing)
+     {(k, Arith SHA3)}
+    (\<langle> hash2 table key \<noteq> 0 \<rangle> **
+     stack_height (h + 1) **
+     stack h (hash2 table key) **
+     memory memaddr table ** memory (memaddr+32) key **
+     program_counter (k + 1) **
+     gas_pred (g - Gsha3 - Gsha3word * 2) ** continuing )"
+apply(auto simp add: triple_def)
+apply(rule_tac x = 1 in exI)
+apply(case_tac presult)
+defer
+apply simp
+apply simp
+apply simp
+apply(case_tac
+"subtract_gas
+          (meter_gas (Arith SHA3) x1 co_ctx)
+          (sha3 x1 co_ctx)")
+defer
+apply simp
+using subtract_gas_annotation sha_annotation
+apply fastforce
+apply simp
+using sha_fail_helper apply simp
+apply simp
+subgoal for co_ctx presult rest x1 x1a
+using sha_continue_helper
+   [of "(meter_gas (Arith SHA3) x1 co_ctx)"
+       x1 co_ctx x1a]
+apply simp
+apply(auto simp add: instruction_result_as_set_def)
+
+
+
+(*
+apply (simp)
+; auto simp add: instruction_result_as_set_def)
+apply(rule leibniz)
+ apply blast
+apply auto
+*)
 lemma s : "(\<forall>x. f x = g x) \<Longrightarrow> f = g"
 apply(auto)
 done
@@ -12,14 +314,6 @@ done
 fun storage_array :: "w256 \<Rightarrow> w256 list \<Rightarrow> set_pred" where
 "storage_array ind [] = emp"
 | "storage_array ind (a#b) = storage ind a ** storage_array (ind+1) b"
-
-axiomatization hash2 :: "w256 \<Rightarrow> w256 \<Rightarrow> w256" where
-hash_inj :
-    "hash2 b v1 = hash2 c v2 \<Longrightarrow> b = c \<or> hash2 b v1 = 0"
-and hash_inj2 :
-   "hash2 b v1 = hash2 c v2 \<Longrightarrow> v1 = v2  \<or> hash2 b v1 = 0"
-and hash_compat :
-   "hash2 a b \<noteq> 0 \<Longrightarrow> hash2 a b = keccak (word_rsplit a@ word_rsplitb)"
 
 fun assoc :: "(w256*w256) list \<Rightarrow> set_pred" where
   "assoc [] = emp"
