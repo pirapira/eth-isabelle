@@ -3172,7 +3172,5 @@ apply(rename_tac elm; case_tac elm; simp)
 apply(auto)
 done *)
 
-oops
-
 
 end
