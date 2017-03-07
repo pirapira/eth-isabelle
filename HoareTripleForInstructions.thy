@@ -2960,5 +2960,217 @@ apply(rename_tac pair)
 apply(case_tac pair; auto)
 done
 
+lemma pos_length_head_exists [simp] :
+  "n < length lst \<Longrightarrow>
+   index lst 0 = Some (lst ! 0)"
+apply(case_tac lst; auto)
+done
+
+lemma rev_lookup :
+  "k < length lst \<Longrightarrow>
+   rev lst ! (length lst - Suc k) = lst ! k"
+apply(simp add: List.rev_nth)
+done
+
+
+lemma list_swap_usage :
+  "n < length lst \<Longrightarrow>
+   rev lst ! (length lst - Suc 0) = w \<Longrightarrow>
+   rev lst ! (length lst - Suc n) = v \<Longrightarrow>
+   list_swap n lst = Some ([v] @ take (n - 1) (drop 1 lst) @ [w] @ (drop (n + 1) lst))"
+apply(subgoal_tac "0 < length lst")
+ apply(simp add: rev_lookup list_swap_def)
+apply auto
+done
+
+lemma small_min [simp] :
+  "Suc n < h \<Longrightarrow>
+   min (h - Suc 0) n = n"
+apply auto
+done
+
+lemma sucsuc_minus_two [simp] :
+  "h > 1 \<Longrightarrow>
+   Suc (Suc (h - 2)) = h"
+apply auto
+done
+
+
+lemma swap_advance [simp] :
+ "program_content (cctx_program co_ctx) (vctx_pc x1) = Some (Swap n) \<Longrightarrow>
+  vctx_pc (vctx_advance_pc co_ctx x1) = vctx_pc x1 + 1"
+apply(simp add: vctx_advance_pc_def inst_size_def inst_code.simps)
+done
+
+lemma minus_one_bigger [simp] :
+  "h > 1 \<Longrightarrow>
+   h - Suc (Suc n) \<noteq> h - Suc 0"
+apply auto
+done
+
+
+lemma storage_elm_kept_by_gas_update [simp]:
+ "StorageElm x3
+  \<in> instruction_result_as_set co_ctx (InstructionContinue
+     (x1\<lparr>vctx_gas := g - Gverylow\<rparr>)) =
+  (StorageElm x3 \<in> instruction_result_as_set co_ctx (InstructionContinue x1))"
+apply(simp add: instruction_result_as_set_def)
+done
+
+lemma storage_elm_kept_by_stack_updaate [simp] :
+  "StorageElm x3 \<in> instruction_result_as_set co_ctx (InstructionContinue (x1\<lparr>vctx_stack := s\<rparr>))
+ = (StorageElm x3 \<in> instruction_result_as_set co_ctx (InstructionContinue x1))"
+apply(simp add: instruction_result_as_set_def)
+done
+
+lemma advance_pc_keeps_storage_elm [simp] :
+  "StorageElm x3 \<in> instruction_result_as_set co_ctx (InstructionContinue (vctx_advance_pc co_ctx x1)) =
+  (StorageElm x3 \<in> instruction_result_as_set co_ctx (InstructionContinue x1))"
+apply(simp add: instruction_result_as_set_def)
+done
+
+lemma rev_drop [simp] :
+"a < length lst - n \<Longrightarrow>
+ rev (drop n lst) ! a = rev lst ! a"
+	by (simp add: rev_drop)
+
+lemma less_than_minus_two [simp] :
+  "1 < h \<Longrightarrow>
+   a < h - Suc (Suc (unat n)) \<Longrightarrow> a < Suc (h - 2)"
+apply auto
+done
+
+lemma suc_minus_two [simp] :
+  "1 < h \<Longrightarrow>
+   Suc (h - 2) = h - Suc 0"
+apply auto
+done
+
+lemma minus_one_two [simp] :
+ "1 < h \<Longrightarrow>
+  h - Suc 0 \<noteq> h - Suc (Suc n)"
+apply auto
+done
+
+lemma minus_two_or_less [simp] :
+  "a < h - Suc n \<Longrightarrow>  a < h - Suc 0"
+apply auto
+done
+
+lemma min_right [simp] :
+ "(n :: nat) \<le> m \<Longrightarrow> min m n = n"
+apply (simp add: min_def)
+done
+
+
+lemma rev_take_nth [simp] :
+  "n \<le> length lst \<Longrightarrow>
+   k < n \<Longrightarrow>
+   rev (take n lst) ! k =  lst ! (n - k - 1)"
+apply(simp add: List.rev_nth)
+done
+
+lemma tmp001:
+"length lst = h \<Longrightarrow>
+Suc (unat n) < h \<Longrightarrow>
+unat n \<le> length (drop 1 lst)"
+apply auto
+done
+
+lemma tmp000: "
+a \<noteq> h - Suc 0 \<Longrightarrow> \<not> a < h - Suc (Suc (unat n)) \<Longrightarrow> a \<noteq> h - Suc (Suc (unat n)) \<Longrightarrow> 
+a < h \<Longrightarrow> (Suc (a + unat n) - h) < unat n
+"
+apply auto
+done
+
+lemma tmp002:
+ "a \<noteq> h - Suc 0 \<Longrightarrow> a < h
+   \<Longrightarrow> Suc (h - Suc (Suc a)) = h - Suc a"
+apply auto
+done
+
+
+lemma take_drop_nth [simp] :
+  "length (vctx_stack x1) = h \<Longrightarrow>
+   Suc (unat n) < h \<Longrightarrow>
+   a \<noteq> h - Suc 0 \<Longrightarrow> \<not> a < h - Suc (Suc (unat n)) \<Longrightarrow> a \<noteq> h - Suc (Suc (unat n)) \<Longrightarrow>
+   a < h \<Longrightarrow>
+   rev (take (unat n) (drop (Suc 0) (vctx_stack x1))) ! (Suc (a + unat n) - h) = rev (vctx_stack x1) ! a"
+apply(simp add: tmp000 tmp001 tmp002 List.rev_nth)
+done
+
+lemma swap_gas_triple :
+   "triple {OutOfGas} (\<langle> h \<le> 1024 \<and> Suc (unat n) < h \<rangle> **
+                       stack_height h **
+                       stack (h - 1) w **
+                       stack (h - (unat n) - 2) v **
+                       program_counter k **
+                       gas_pred g **
+                       continuing
+                      )
+
+                      {(k, Swap n)}
+                      (stack_height h **
+                       stack (h - 1) v **
+                       stack (h - (unat n) - 2) w **
+                       program_counter (k + 1) **
+                       gas_pred (g - Gverylow) **
+                       continuing
+                      )"
+apply(simp add: triple_def)
+apply clarify
+apply(rule_tac x = 1 in exI)
+apply(case_tac presult)
+  defer
+  apply(simp add: instruction_result_as_set_def)
+ apply(simp add: instruction_result_as_set_def)
+apply(simp add: swap_def list_swap_usage swap_inst_numbers_def)
+apply(rule impI)
+apply(rule leibniz)
+ apply blast
+apply(rule  Set.equalityI)
+ apply(simp add: Set.subset_iff)
+ apply(rule allI)
+ apply(rename_tac elm)
+ apply(case_tac elm; simp add: instruction_result_as_set_def)
+ apply(rename_tac pair)
+ apply(case_tac pair; simp)
+ apply(case_tac "a = h - Suc 0"; simp)
+ apply(case_tac "a < h - Suc (Suc (unat n))"; simp)
+ apply(case_tac "a = h - Suc (Suc (unat n))"; simp)
+  apply blast
+ apply auto[1]
+apply(simp add: Set.subset_iff)
+apply(rule allI)
+apply(rename_tac elm)
+apply(case_tac elm; simp add: instruction_result_as_set_def)
+ apply(rename_tac pair; case_tac pair)
+ apply simp
+ apply(case_tac "a = h - Suc 0"; simp)
+ apply(case_tac "a < h - Suc 0"; simp)
+  apply(case_tac "a = h - Suc (Suc (unat n))"; simp)
+   apply blast
+  apply(case_tac "a < h - Suc (Suc (unat n))"; simp)
+   apply linarith
+  apply(simp add: tmp000 tmp001 tmp002 List.rev_nth)
+  apply linarith
+ apply auto[1]
+apply auto[1]
+done
+
+(* the rest should be just one goal
+apply(rule leibniz)
+ apply blast
+apply(rule Set.equalityI)
+ apply(clarify)
+ apply(simp)
+ apply(rename_tac elm; case_tac elm; simp)
+apply(clarify)
+apply(simp)
+apply(rename_tac elm; case_tac elm; simp)
+apply(auto)
+done *)
+
 
 end
