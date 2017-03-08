@@ -443,6 +443,69 @@ proof -
      using a memory_range_elms_cut_memory
      by force
 qed
+
+lemma many_such_cases :
+ "contexts_as_set
+           (v\<lparr>vctx_pc := pca, vctx_gas := gasa,
+                 vctx_stack := stacka,
+                 vctx_memory_usage := memu \<rparr>) c =
+  (contexts_as_set v c -
+     stack_as_set (vctx_stack v) -
+     {PcElm (vctx_pc v),
+      GasElm (vctx_gas v),
+      MemoryUsageElm (vctx_memory_usage v)})
+  \<union> {PcElm pca,
+      GasElm gasa,
+      MemoryUsageElm memu} \<union> stack_as_set stacka"
+apply(auto simp add: contexts_as_set_def variable_ctx_as_set_def stack_as_set_def ext_program_as_set_def
+       balance_as_set_def)
+done
+
+lemma sort_out_sets :
+ "vctx_stack x1 = memaddr # 64 # ta \<Longrightarrow>
+  stack_new = stack_new2 \<Longrightarrow>
+  memu = memu2 \<Longrightarrow>
+  newgas = newgas2 \<Longrightarrow>
+  contexts_as_set x1 co_ctx -
+          {GasElm (vctx_gas x1)} -
+          {MemoryUsageElm (vctx_memory_usage x1)} -
+          {PcElm (vctx_pc x1)} -
+          {StackElm (Suc (length ta), memaddr)} -
+          {StackHeightElm
+            (Suc (Suc (length ta)))} -
+          memory_range_elms memaddr memstuff -
+          {CodeElm (vctx_pc x1, Arith SHA3)} -
+          {StackElm (length ta, 64)} =
+          insert (PcElm (vctx_pc x1 + 1))
+           (insert
+             (GasElm newgas)
+             (insert
+               (MemoryUsageElm memu)
+               (contexts_as_set x1 co_ctx -
+                stack_as_set (memaddr # 64 # ta) -
+                {PcElm (vctx_pc x1),
+                 GasElm (vctx_gas x1),
+                 MemoryUsageElm
+                  (vctx_memory_usage x1)} \<union>
+                stack_as_set (stack_new # ta)))) -
+          {StackHeightElm (Suc (length ta))} -
+          {PcElm (vctx_pc x1 + 1)} -
+          {StackElm (length ta, stack_new2)} -
+          memory_range_elms memaddr memstuff -
+          {CodeElm (vctx_pc x1, Arith SHA3)} -
+          {MemoryUsageElm memu2} -
+          {GasElm newgas2}"
+apply(auto simp add: contexts_as_set_def variable_ctx_as_set_def stack_as_set_def ext_program_as_set_def
+       balance_as_set_def)
+  by (metis (no_types, hide_lams) One_nat_def diff_diff_left diff_is_0_eq' length_Cons less_Suc_eq_le list.size(4) nth_Cons_0 nth_non_equal_first_eq)
+
+lemma set_eq_dirs :
+   "(\<And> x. x \<in> a \<Longrightarrow> x \<in> b) \<Longrightarrow>
+    (\<And> x. x \<in> b \<Longrightarrow> x \<in> a) \<Longrightarrow>
+    a = b"
+apply auto
+done
+
   
 (*** need hoare triple for sha  *)
 lemma hash2_gas_triple :
@@ -522,21 +585,27 @@ apply force
 apply (simp add:meter_gas_def)
 apply(rule leibniz)
  apply blast
+apply (simp add:vctx_advance_pc_def many_such_cases)
+apply (simp add:meter_gas_def)
+
+apply (rule sort_out_sets)
 apply auto
 
 
-(*
-using magic_hash_property [of co_ctx x1 memaddr ta table key]
-apply (rule magic_hash_property)
 
-
-apply (simp)
-; auto simp add: instruction_result_as_set_def)
-apply(rule leibniz)
- apply blast
+apply (simp add:cut_memory_works)
+apply (rule sym)
+apply (rule hash_compat)
 apply auto
-*)
-
+apply (rule_tac
+ magic_hash_property [of co_ctx x1 memaddr _ table key])
+apply auto
+using cut_memory_works
+apply force
+using subtract_gas_continue
+apply force
+done
+done
 
 fun storage_array :: "w256 \<Rightarrow> w256 list \<Rightarrow> set_pred" where
 "storage_array ind [] = emp"
@@ -889,9 +958,6 @@ definition alloc_zero_table :: "w256 \<Rightarrow> set_pred" where
 
 definition alloc_zero_tables :: "w256 \<Rightarrow> w256 \<Rightarrow> set_pred" where
 "alloc_zero_tables t1 t2 = (\<lambda>st. st = zero_table t1 \<union> zero_table t2)"
-
-definition memory :: "w256 \<Rightarrow> w256 \<Rightarrow> set_pred" where
-"memory ind w = memory_range ind (word_rsplit w)"
 
 
 lemma separate_table :
