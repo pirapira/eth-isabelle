@@ -48,7 +48,7 @@ proof -
   show ?thesis by (subst a) (rule assms)
 qed
 
-lemma cut_memory_aux :
+lemma cut_memory_aux_append :
   "cut_memory_aux addr x mem @
    cut_memory_aux (addr+word_of_int (int x)) y mem =
    cut_memory_aux addr (x+y) mem"
@@ -58,11 +58,79 @@ using helper
 apply force
 done
 
+lemma word_of_nat : "word_of_int (int (unat x)) = x"
+  by (metis uint_nat word_of_int_uint)
+
+lemma unat_add_smaller : "unat (x+y) \<le> unat x + unat y"
+  by (smt add_diff_cancel_right' le_diff_conv trans_le_add2 un_ui_le unat_sub_if_size)
+
+lemma unat_uint_smaller : "uint x \<le> int (unat x)"
+  by (simp add: uint_nat)
+
+lemma int_unat_add :
+   "int (unat x) + int (unat y) = int (unat x + unat y)"
+  by simp
+
+lemma int_inj : "int x = int y \<Longrightarrow> x = y"
+apply auto
+done
+
+lemma unat_add_aux :
+   assumes a:"unat (x::w256) + unat (y::w256) < 2 ^ 256"
+   shows "int (unat x + unat y) =
+          uint (word_of_int (int (unat x + unat y))::w256)"
+proof -
+  have b:"uint (word_of_int (int (unat x + unat y))::w256) =
+        int (unat x + unat y) mod 2^256" 
+        by (auto simp:uint_word_of_int)
+  have "int (unat x + unat y) < 2^256" using a
+    by auto
+  then show ?thesis using b
+    by (simp add: semiring_numeral_div_class.mod_less)
+qed
+
+lemma unat_fold : "int (unat x) = uint x"
+apply (auto simp:uint_nat)
+done
+
+lemma unat_add :
+   "unat (x::w256) + unat (y::w256) < 2^256 \<Longrightarrow>
+    unat (x+y) = unat x + unat y"
+apply (subst word_add_def)
+apply (subst uint_nat)
+apply (subst uint_nat)
+apply (subst int_unat_add)
+apply (rule int_inj)
+apply (subst unat_fold)
+using unat_add_aux by simp
+
 lemma cut_memory_append :
-  "cut_memory addr x mem @ cut_memory (addr+x) y mem =
+  "unat x + unat y < 2^256 \<Longrightarrow>
+   cut_memory addr x mem @ cut_memory (addr+x) y mem =
    cut_memory addr (x+y) mem"
-apply (induction y)
+apply (simp add:cut_memory_def)
+apply (subst unat_add [of x y])
+apply auto
+using cut_memory_aux_append [of addr "unat x" mem "unat y"]
+and word_of_nat [of x]
+apply force
+done
+
+lemma s : "(\<forall>x. f x = g x) \<Longrightarrow> f = g"
 apply(auto)
+done
+
+lemma word_of_inc : "word_of_int (1 + x) = 1 + word_of_int x"
+  by (metis one_word.abs_eq wi_hom_add)
+
+lemma memory_append :
+   "memory_range x l1 **
+      memory_range (x+(word_of_int (int (length l1))::w256)) l2 =
+    memory_range x (l1@l2)"
+apply (induction l1 arbitrary:x)
+apply auto
+apply (subst word_of_inc)
+  by (metis (no_types, hide_lams) add.assoc)
 
 (*
 definition memory :: "w256 \<Rightarrow> w256 \<Rightarrow> set_pred" where
@@ -109,6 +177,12 @@ lemma sep_memory_range2 :
 "
 using sep_memory_range by force
 
+definition tk :: "byte list \<Rightarrow> byte list" where
+"tk lst = take (2^255) lst"
+
+definition memory_ran :: "w256 \<Rightarrow> byte list \<Rightarrow> set_pred" where
+"memory_ran addr lst = memory_range addr (tk lst)"
+
 lemma sep_memory [simp] :
   "((rest ** memory a w)) s =
    (memory_range_elms a (word_rsplit w) \<subseteq> s \<and>
@@ -119,6 +193,31 @@ apply (auto simp:word_length)
 apply (rule word_32)
 done
 
+lemma foo_large :
+   "x < 2^256 \<Longrightarrow>
+    unat (word_of_int (int x)::w256) = x"
+proof -
+  assume "x < 2 ^ 256"
+  then have "int x = uint (word_of_int (int x)::256 word)"
+    by (metis (no_types) less_imp_of_nat_less numeral_pow of_nat_0_le_iff of_nat_numeral semiring_numeral_div_class.mod_less word_of_int_mod)
+  then show ?thesis
+    by (metis (full_types) nat_int.Rep_eqD uint_nat)
+qed
+
+lemma sep_memory_ran [simp] :
+  "((rest ** memory_ran a w)) s =
+   (memory_range_elms a (tk w) \<subseteq> s \<and>
+   rest (s - memory_range_elms a (tk w)))"
+apply(subst tk_def)
+apply(subst tk_def)
+apply (subst memory_ran_def)
+apply(subst tk_def)
+apply (rule sep_memory_range2)
+apply (auto simp:word_length)
+apply (rule foo_large)
+apply (auto)
+done
+
 lemma sep_memory2 [simp] :
   "(rest ** memory a w) s ==
    memory_range_elms a (word_rsplit w) \<subseteq> s \<and>
@@ -127,12 +226,26 @@ using sep_memory
 apply force
 done
 
+lemma sep_memory_ran2 [simp] :
+  "(rest ** memory_ran a w) s ==
+   memory_range_elms a (tk w) \<subseteq> s \<and>
+   rest (s - memory_range_elms a (tk w))"
+apply auto
+done
+
 lemma sep_memory3 [simp] :
   "(memory a w ** rest) s ==
    memory_range_elms a (word_rsplit w) \<subseteq> s \<and>
    rest (s - memory_range_elms a (word_rsplit w))"
 using sep_memory
 apply force
+done
+
+lemma sep_memory_ran3 [simp] :
+  "(memory_ran a w ** rest) s ==
+   memory_range_elms a (tk w) \<subseteq> s \<and>
+   rest (s - memory_range_elms a (tk w))"
+apply auto
 done
 
 lemma sep_memory4 [simp] :
@@ -145,6 +258,27 @@ proof -
   then show ?thesis by
    (subst a) (rule sep_memory)
 qed
+
+lemma sep_memory_ran4 [simp] :
+  "((rest1 ** memory_ran a w ** rest) s) =
+   (memory_range_elms a (tk w) \<subseteq> s \<and>
+   (rest1 ** rest) (s - memory_range_elms a (tk w)))"
+proof -
+  have a : "rest1 ** memory_ran a w ** rest =
+     (rest1 ** rest) ** memory_ran a w"
+    by auto
+  then show ?thesis by
+   (subst a) (rule sep_memory_ran)
+qed
+
+declare memory_range_elms.simps [simp]
+
+(*
+lemma sep_memoryrange4 [simp] :
+  "((rest1 ** memory_range a w ** rest) s) =
+   (memory_range_elms a w \<subseteq> s \<and>
+   (rest1 ** rest) (s - memory_range_elms a w))"
+*)
 
 (* declare memory_def [simp]
  declare memory_range.simps [simp]
@@ -255,24 +389,91 @@ using sha_continue
 apply force
 done
 
+lemma rsplit_length :
+ "32 = (word_of_int
+     (int (length (word_rsplit (w::w256)::byte list)))::w256)"
+  using word_length by auto
+
+
+lemma hash_memory_split :
+  "memory addr table ** memory (addr+32) key =
+   memory_range addr (word_rsplit table @ word_rsplit key)"
+apply (simp add:memory_def)
+apply (subst rsplit_length)
+using memory_append [of addr "word_rsplit table"
+                        "word_rsplit key"]
+apply auto
+done
+
+lemma simp_len [simp] :
+   "length ((word_rsplit (table::w256) :: byte list) @
+            (word_rsplit (key::w256) :: byte list)) = 64"
+apply (auto simp:word_length)
+done
+
+lemma tk_simp [simp] :
+   "tk (word_rsplit table @ word_rsplit key) =
+   word_rsplit (table::w256) @ word_rsplit (key::w256)"
+apply (auto simp:tk_def word_length)
+done
+
+lemma magic_hash_property :
+  "no_assertion c \<Longrightarrow>
+   vctx_stack v = addr # 64 # blah \<Longrightarrow>
+   cut_memory addr 64 (vctx_memory v) =
+      word_rsplit table @ word_rsplit key \<Longrightarrow>
+   sha3 v c = InstructionContinue nv \<Longrightarrow>
+   hash2 table key = 0 \<Longrightarrow> False"
+apply(auto simp:sha3_def)
+apply (case_tac "\<not> cctx_hash_filter c
+    (word_rsplit table @ word_rsplit key)")
+apply(auto simp:no_assertion_def magic_filter_def)
+done
+
+lemma cut_memory_works :
+  assumes a:"memory_range_elms addr
+           (word_rsplit table @ word_rsplit key)
+          \<subseteq> variable_ctx_as_set v"
+  shows "cut_memory addr 64 (vctx_memory v) =
+    word_rsplit (table::w256) @ word_rsplit (key::w256)"
+proof -
+   have "length (word_rsplit (table::w256) @ word_rsplit (key::w256) :: byte list) = 64"
+     by (auto simp:word_length)
+   then show ?thesis
+     using a memory_range_elms_cut_memory
+     by force
+qed
+  
 (*** need hoare triple for sha  *)
 lemma hash2_gas_triple :
   "triple {OutOfGas}
      (\<langle> h \<le> 1022 \<rangle> **
-       stack (h+1) 64 **
-       stack h memaddr **
+       stack (h+1) memaddr **
+       stack h 64 **
        stack_height (h+2) **
-       program_counter k **
-       memory memaddr table ** memory (memaddr+32) key **
+       program_counter k **   
+       memory_usage memu **
+(*
+       memory memaddr table **
+       memory (memaddr+32) key **
+*)
+       memory_ran memaddr
+        (word_rsplit table @ word_rsplit key) **
        gas_pred g **
        continuing)
      {(k, Arith SHA3)}
     (\<langle> hash2 table key \<noteq> 0 \<rangle> **
      stack_height (h + 1) **
      stack h (hash2 table key) **
-     memory memaddr table ** memory (memaddr+32) key **
+     memory_ran memaddr (word_rsplit table @ word_rsplit key) **
+     memory_usage (M memu memaddr 64) **
      program_counter (k + 1) **
-     gas_pred (g - Gsha3 - Gsha3word * 2) ** continuing )"
+     gas_pred (g - Gsha3 - Gsha3word * 2 + Cmem memu -
+               Cmem (M memu memaddr 64)) **
+     continuing )"
+(*
+apply(auto simp add: triple_def)
+*)
 apply(auto simp add: triple_def)
 apply(rule_tac x = 1 in exI)
 apply(case_tac presult)
@@ -300,16 +501,42 @@ apply(auto simp add: instruction_result_as_set_def)
 
 
 
+apply (simp add:cut_memory_works)
+apply (rule sym)
+apply (rule hash_compat)
+apply auto
+apply (rule_tac
+ magic_hash_property [of co_ctx x1 memaddr _ table key])
+apply auto
+using cut_memory_works
+apply force
+using subtract_gas_continue
+apply force
+apply (rule_tac
+ magic_hash_property [of co_ctx x1 memaddr _ table key])
+apply auto
+using cut_memory_works
+apply force
+using subtract_gas_continue
+apply force
+apply (simp add:meter_gas_def)
+apply(rule leibniz)
+ apply blast
+apply auto
+
+
 (*
+using magic_hash_property [of co_ctx x1 memaddr ta table key]
+apply (rule magic_hash_property)
+
+
 apply (simp)
 ; auto simp add: instruction_result_as_set_def)
 apply(rule leibniz)
  apply blast
 apply auto
 *)
-lemma s : "(\<forall>x. f x = g x) \<Longrightarrow> f = g"
-apply(auto)
-done
+
 
 fun storage_array :: "w256 \<Rightarrow> w256 list \<Rightarrow> set_pred" where
 "storage_array ind [] = emp"
