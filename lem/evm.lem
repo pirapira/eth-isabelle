@@ -1370,11 +1370,19 @@ end
 
 (* A utility function for storing a list of bytes in the memory: *)
 val store_byte_list_memory : w256 -> list byte -> memory -> memory
+let store_byte_list_memory pos lst orig p = match index lst (natFromNatural (word256ToNatural (p-pos))) with
+ | Just e -> e
+ | Nothing -> orig p
+end
+(* if unat (p-pos) >= 0 && unat (p-pos) < length lst then  else orig p *)
+(*
 let rec store_byte_list_memory pos lst orig = match lst with
  | [] -> orig
  | h :: t ->
      store_byte_list_memory (pos + 1) t (fun p -> if pos = p then h else orig p)
 end
+declare termination_argument store_byte_list_memory = automatic
+*)
 
 (* Using the function above, it is straightforward to store a byte in the memory. *)
 val store_word_memory : w256 -> w256 -> memory -> memory

@@ -193,7 +193,7 @@ apply (auto simp:word_length)
 apply (rule word_32)
 done
 
-lemma foo_large :
+lemma unat_word_of_nat :
    "x < 2^256 \<Longrightarrow>
     unat (word_of_int (int x)::w256) = x"
 proof -
@@ -214,7 +214,7 @@ apply (subst memory_ran_def)
 apply(subst tk_def)
 apply (rule sep_memory_range2)
 apply (auto simp:word_length)
-apply (rule foo_large)
+apply (rule unat_word_of_nat)
 apply (auto)
 done
 
@@ -287,6 +287,239 @@ lemma mload_inst [simp] :
    "inst_size (Memory MLOAD) = 1"
 apply (auto simp:inst_size_def inst_code.simps)
 done
+
+(* nothing will work properly because everything is mod 2^256 *)
+
+definition store_bytes :: "w256 \<Rightarrow> byte list \<Rightarrow> memory \<Rightarrow> memory" where
+"store_bytes a lst mem = (\<lambda>i.
+   if unat (i - a) \<ge> 0 \<and> unat (i - a) < length lst then
+    lst!unat(i-a) 
+   else mem i)"
+
+
+lemma store_get [simp] :
+"unat a < length lst \<Longrightarrow>
+ store_bytes addr lst mem (addr+a) = lst!unat a"
+apply (auto simp:store_bytes_def)
+done
+
+definition store_word :: "w256 \<Rightarrow> w256 \<Rightarrow> memory \<Rightarrow> memory" where
+"store_word pos vl mem = store_bytes pos (word_rsplit vl) mem"
+
+lemma aux1 :
+"(x \<in> memory_range_elms (addr+1)
+                 lst \<Longrightarrow>
+           \<exists>a. x =
+               MemoryElm
+                (addr + 1 +
+                 word_of_int (int a),
+                 lst ! a) \<and>
+               a < length lst) \<Longrightarrow>
+       x \<in> memory_range_elms (addr + 1)
+             lst \<Longrightarrow>
+       \<exists>aa. x =
+            MemoryElm
+             (addr + word_of_int (int aa),
+              (a # lst) ! aa) \<and>
+            aa < Suc (length lst)"
+apply auto
+subgoal for aa
+apply (rule_tac exI[of _ "aa+1"])
+apply auto
+  by (simp add: word_of_inc)
+done
+
+lemma get_good_mem_elem_nat :
+  "x \<in> memory_range_elms addr lst \<Longrightarrow>
+   \<exists>a. x = MemoryElm (addr+(word_of_int (int a)::w256), lst!a) \<and>
+       a < length lst"
+apply (induction lst arbitrary:addr)
+apply auto
+apply (rule exI[of _ 0])
+apply auto
+using aux1
+apply force
+done
+
+lemma get_good_mem_elem :
+  assumes a:"x \<in> memory_range_elms addr lst"
+    and b:"length lst < 2^256"
+  shows "\<exists>a. x = MemoryElm (addr+a, lst!unat a) \<and> unat a < length lst"
+proof -
+from a have "\<exists>n. x = MemoryElm (addr+(word_of_int (int n)::w256), lst!n)
+  \<and> n < length lst"
+  using get_good_mem_elem_nat by auto
+then obtain n where
+   c:"x = MemoryElm (addr+(word_of_int (int n)), lst!n) \<and>
+    n < length lst" by auto
+then have "n < 2^256" using b by auto
+then have "x = MemoryElm (addr + (word_of_int (int n)::w256),
+           lst ! unat (word_of_int (int n)::w256)) \<and>
+           unat (word_of_int (int n)::w256) < length lst" using b and c
+   by (auto simp:unat_word_of_nat)
+then show ?thesis by force
+qed
+
+lemma memory_contra :
+assumes a:"x \<in> memory_range_elms addr (word_rsplit (w::w256))"
+and b:"\<forall>a. x \<noteq>
+        MemoryElm
+         (a, store_bytes addr (word_rsplit w) mem a)"
+shows "False"
+proof -
+from a have "\<exists>a. x = MemoryElm (addr+a, (word_rsplit w)!unat a) \<and>
+                 unat a < 32"
+using get_good_mem_elem and word_length by force
+then obtain a where
+   aa:"x = MemoryElm (addr+a, (word_rsplit w)!unat a) \<and> unat a < 32" by auto
+then have "x = MemoryElm (addr+a,
+     store_bytes addr (word_rsplit w) mem (addr+a))"
+  using store_get and word_length by force
+then show False using b by force
+qed
+
+lemma memory_was_changed :
+       "x \<in> memory_range_elms memaddr
+             (word_rsplit w) \<Longrightarrow>
+       x \<in> contexts_as_set
+             (x1\<lparr>vctx_pc := vctx_pc x1 + 1,
+                   vctx_stack := ta,
+                   vctx_memory :=
+                     store_word memaddr w (vctx_memory x1),
+                   vctx_memory_usage := memu\<rparr>)
+             co_ctx"
+apply(auto simp add: contexts_as_set_def variable_ctx_as_set_def stack_as_set_def ext_program_as_set_def
+       balance_as_set_def store_word_memory_def
+      store_byte_list_memory.simps store_word_def)
+using memory_contra [of x memaddr w "vctx_memory x1"]
+ by auto
+
+(*
+
+lemma store_get :
+"length lst < unat (b::w256) \<Longrightarrow>
+  unat a < length lst \<Longrightarrow>
+ store_byte_list_memory addr lst mem (addr+a) = lst!unat a"
+apply (induction lst arbitrary:addr mem a)
+apply (auto simp:store_byte_list_memory.simps)
+
+
+lemma store_memory_range :
+   assumes a : "(MemoryElm (memaddr, a)
+           \<in> memory_range_elms (memaddr+1)
+               lst \<Longrightarrow>
+           a =
+           store_byte_list_memory (memaddr+1)
+            lst (\<lambda>p. if memaddr = p then a
+             else mem p) memaddr)"
+  shows "x = MemoryElm (memaddr, a) \<Longrightarrow>
+       a =
+       store_byte_list_memory (memaddr + 1)
+        lst
+        (\<lambda>p. if memaddr = p then a
+             else mem p)
+        memaddr"
+apply (rule a)
+
+lemma store_shift :
+  "store_byte_list_memory addr lst mem (addr+a) ="
+
+lemma simple_foo :
+"length lst < unat (b::w256) \<Longrightarrow>
+ store_byte_list_memory (addr + 1)
+        lst
+        (\<lambda>p. if addr = p then a else mem p) addr = a"
+
+lemma store_get_aux :
+    "(\<And>addr mem a.
+           unat a < length lst \<Longrightarrow>
+           store_byte_list_memory addr lst
+            mem (addr + a) =
+           lst ! unat a) \<Longrightarrow>
+       unat aa < Suc (length lst) \<Longrightarrow>
+       store_byte_list_memory (addr + 1)
+        lst
+        (\<lambda>p. if addr = p then a else mem p)
+        (addr + aa) =
+       (a # lst) ! unat aa"
+
+lemma store_memory_range :
+  "length lst = unat (b::w256) \<Longrightarrow>
+   x \<in> memory_range_elms addr lst \<Longrightarrow>
+   x = MemoryElm (addr+a, lst!unat a) \<Longrightarrow>
+   lst!unat a = store_byte_list_memory addr lst mem (addr+a)"
+apply (induction lst arbitrary:addr mem a)
+apply (auto simp:store_byte_list_memory.simps)
+
+apply (drule)
+
+subgoal for a lst memaddr mem
+apply (cases "mem_addr = p")
+
+
+
+*)
+
+(*
+lemma store_memory_range :
+  "length lst = unat (b::w256) \<Longrightarrow>
+   x \<in> memory_range_elms addr lst \<Longrightarrow>
+   x = MemoryElm (addr+a, lst!unat a) \<Longrightarrow>
+   store_byte_list_memory addr lst mem (addr+a) = lst!unat a"
+
+lemma memory_was_changed :
+       "x \<in> memory_range_elms memaddr
+             (word_rsplit w) \<Longrightarrow>
+       x \<in> contexts_as_set
+             (x1\<lparr>vctx_pc := vctx_pc x1 + 1,
+                   vctx_stack := ta,
+                   vctx_memory :=
+                     store_word_memory memaddr w (vctx_memory x1),
+                   vctx_memory_usage := memu\<rparr>)
+             co_ctx"
+apply(auto simp add: contexts_as_set_def variable_ctx_as_set_def stack_as_set_def ext_program_as_set_def
+       balance_as_set_def store_word_memory_def
+      store_byte_list_memory.simps)
+
+
+*)
+
+
+lemma mstore_inst [simp] :
+   "inst_size (Memory MSTORE) = 1"
+apply (auto simp:inst_size_def inst_code.simps)
+done
+
+lemma mstore_gas_triple :
+  "triple {OutOfGas}
+     (\<langle> h \<le> 1022 \<rangle> **
+       stack (h+1) memaddr **
+       stack h v **
+       stack_height (h+2) **
+       program_counter k **   
+       memory_usage memu **
+       memory memaddr old_v **
+       gas_pred g **
+       continuing)
+     {(k, Memory MSTORE)}
+    (stack_height h **
+     memory memaddr v **
+     memory_usage (M memu memaddr 32) **
+     program_counter (k + 1) **
+     gas_pred (g - Gverylow + Cmem memu -
+               Cmem (M memu memaddr 32)) **
+     continuing )"
+apply(auto simp add: triple_def)
+apply(rule_tac x = 1 in exI)
+(* apply(case_tac presult) *)
+apply(case_tac presult;
+   auto simp add: meter_gas_def mstore_def
+        memory_inst_numbers.simps    
+        instruction_result_as_set_def vctx_advance_pc_def)
+apply (rule leibniz)
+apply blast
+apply auto
+
 
 lemma memory_not_changed :
   "memory_range_elms memaddr (word_rsplit (w::w256))
