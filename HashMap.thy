@@ -273,16 +273,6 @@ qed
 
 declare memory_range_elms.simps [simp]
 
-(*
-lemma sep_memoryrange4 [simp] :
-  "((rest1 ** memory_range a w ** rest) s) =
-   (memory_range_elms a w \<subseteq> s \<and>
-   (rest1 ** rest) (s - memory_range_elms a w))"
-*)
-
-(* declare memory_def [simp]
- declare memory_range.simps [simp]
- *)
 
 declare meter_gas_def [simp del]
 
@@ -291,6 +281,134 @@ lemma subtract_gas_annotation :
   res = InstructionAnnotationFailure"
 apply(cases res)
 apply(auto)
+done
+
+lemma mload_inst [simp] :
+   "inst_size (Memory MLOAD) = 1"
+apply (auto simp:inst_size_def inst_code.simps)
+done
+
+lemma memory_not_changed :
+  "memory_range_elms memaddr (word_rsplit (w::w256))
+       \<subseteq> variable_ctx_as_set x1 \<Longrightarrow>
+   xa \<in> memory_range_elms memaddr (word_rsplit (w::w256)) \<Longrightarrow>
+   xa \<in> contexts_as_set
+           (x1\<lparr>vctx_pc := new_pc,
+                 vctx_stack := new_stack,
+                 vctx_memory_usage := memu\<rparr>)
+           co_ctx"
+apply(auto simp add: contexts_as_set_def variable_ctx_as_set_def stack_as_set_def ext_program_as_set_def
+       balance_as_set_def)
+done
+
+lemma read_split : "read_word_from_bytes 0 (word_rsplit w) = w"
+by (auto simp:word_length byte_list_fill_right_def
+         read_word_from_bytes_def word_rcat_rsplit)
+
+lemma memory_works :
+ assumes a:"memory_range_elms memaddr (word_rsplit (w::w256))
+       \<subseteq> variable_ctx_as_set x1"
+ shows "read_word_from_bytes 0
+        (cut_memory memaddr 32 (vctx_memory x1)) = w"
+proof -
+   have "length (word_rsplit (w::w256):: byte list) = 32"
+     by (auto simp:word_length)
+   then have "cut_memory memaddr 32 (vctx_memory x1) =
+              word_rsplit w"
+     using a memory_range_elms_cut_memory
+     by force
+   then show ?thesis by (auto simp:read_split)
+qed
+
+lemma set_dir1 :
+  "vctx_stack x1 = memaddr # t \<Longrightarrow>
+   x \<noteq> StackHeightElm (Suc (length t)) \<Longrightarrow>
+   x \<noteq> CodeElm (vctx_pc x1, Memory MLOAD) \<Longrightarrow>
+       x \<notin> memory_range_elms memaddr
+             (word_rsplit v) \<Longrightarrow>
+       x \<noteq> StackElm (length t, memaddr) \<Longrightarrow>
+       x \<noteq> PcElm (vctx_pc x1) \<Longrightarrow>
+       x \<in> contexts_as_set x1 co_ctx \<Longrightarrow>
+       x \<noteq>
+       MemoryUsageElm
+        (vctx_memory_usage x1) \<Longrightarrow>
+       x \<noteq> GasElm (vctx_gas x1) \<Longrightarrow>
+       x \<noteq> GasElm newgas \<Longrightarrow>
+       x \<noteq> ContinuingElm True \<Longrightarrow>
+       x \<in> contexts_as_set
+             (x1\<lparr>vctx_pc := vctx_pc x1 + 1,
+                   vctx_stack := nstack # t,
+                   vctx_memory_usage := memu\<rparr>)
+             co_ctx"
+apply(auto simp add: contexts_as_set_def variable_ctx_as_set_def stack_as_set_def ext_program_as_set_def
+       balance_as_set_def)
+done
+
+lemma set_dir2 :
+  "vctx_stack x1 = memaddr # t \<Longrightarrow>
+   memu = memu2 \<Longrightarrow>
+   newpc = newpc2 \<Longrightarrow>
+   nstack = nstack2 \<Longrightarrow>
+   x \<noteq> GasElm newgas  \<Longrightarrow>
+   x \<noteq> MemoryUsageElm memu \<Longrightarrow>
+       x \<noteq>
+       CodeElm
+        (vctx_pc x1, Memory MLOAD) \<Longrightarrow>
+       x \<noteq> PcElm newpc2 \<Longrightarrow>
+       x \<noteq>
+       StackHeightElm (Suc (length t)) \<Longrightarrow>
+       x \<notin> memory_range_elms memaddr
+             (word_rsplit v) \<Longrightarrow>
+       x \<noteq> StackElm (length t, nstack2) \<Longrightarrow>
+       x \<in> contexts_as_set
+             (x1\<lparr>vctx_pc := newpc,
+                   vctx_stack :=
+                     nstack #
+                     t,
+                   vctx_memory_usage :=
+                     memu2\<rparr>)
+             co_ctx \<Longrightarrow>
+       x \<noteq> ContinuingElm True \<Longrightarrow>
+       x \<noteq> GasElm (vctx_gas x1) \<Longrightarrow>
+       x \<in> contexts_as_set x1 co_ctx"
+apply(auto simp add: contexts_as_set_def variable_ctx_as_set_def stack_as_set_def ext_program_as_set_def
+       balance_as_set_def)
+done
+
+lemma mload_gas_triple :
+  "triple {OutOfGas}
+     (\<langle> h \<le> 1023 \<rangle> **
+       stack h memaddr **
+       stack_height (h+1) **
+       program_counter k **   
+       memory_usage memu **
+       memory memaddr v **
+       gas_pred g **
+       continuing)
+     {(k, Memory MLOAD)}
+    (stack_height (h + 1) **
+     stack h v **
+     memory memaddr v **
+     memory_usage (M memu memaddr 32) **
+     program_counter (k + 1) **
+     gas_pred (g - Gverylow + Cmem memu -
+               Cmem (M memu memaddr 32)) **
+     continuing )"
+apply(auto simp add: triple_def)
+apply(rule_tac x = 1 in exI)
+(* apply(case_tac presult) *)
+apply(case_tac presult;
+   auto simp add: meter_gas_def mload_def
+        memory_inst_numbers.simps    
+        instruction_result_as_set_def vctx_advance_pc_def
+        memory_not_changed memory_works)
+apply (rule leibniz)
+apply blast
+apply auto
+apply (rule set_dir1)
+apply auto
+apply (rule set_dir2)
+apply auto
 done
 
 lemma sha_annotation :
