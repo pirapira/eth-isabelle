@@ -789,7 +789,9 @@ lemma discard_check_resources [dest!] :
 apply(auto)
 done
 
+(*
 termination store_byte_list_memory by lexicographic_order
+*)
 
 lemma cut_memory_more :
   " n > 0 \<Longrightarrow>
@@ -812,7 +814,8 @@ lemma cut_memory_stored [simp] :
    = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
                                   0, 0, 0, 0, 96]
    "
-apply(simp add: cut_memory_def empty_memory_def cut_memory_more)
+apply(simp add: cut_memory_def empty_memory_def cut_memory_more
+  store_byte_list_memory_def)
 done
 
 lemma reading_ninty_six [simp] :
@@ -824,8 +827,10 @@ done
 
 declare read_word_from_bytes_def [simp del]
 
+(*
 declare store_byte_list_memory.simps [simp del]
 declare store_byte_list_memory.psimps [simp del]
+*)
 
 lemma deed_keeps_invariant :
 "no_assertion_failure deed_inv"

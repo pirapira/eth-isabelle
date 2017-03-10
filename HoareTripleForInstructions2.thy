@@ -1,6 +1,7 @@
 theory HoareTripleForInstructions2
 
 imports Main "./HoareTripleForInstructions"
+"./HoareTripleForStorage"
 
 begin
 
