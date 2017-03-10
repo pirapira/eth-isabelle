@@ -404,42 +404,6 @@ lemma mstore_inst [simp] :
 apply (auto simp:inst_size_def inst_code.simps)
 done
 
-lemma mstore_gas_triple :
-  "triple {OutOfGas}
-     (\<langle> h \<le> 1022 \<rangle> **
-       stack (h+1) memaddr **
-       stack h v **
-       stack_height (h+2) **
-       program_counter k **   
-       memory_usage memu **
-       memory memaddr old_v **
-       gas_pred g **
-       continuing)
-     {(k, Memory MSTORE)}
-    (stack_height h **
-     memory memaddr v **
-     memory_usage (M memu memaddr 32) **
-     program_counter (k + 1) **
-     gas_pred (g - Gverylow + Cmem memu -
-               Cmem (M memu memaddr 32)) **
-     continuing )"
-apply(auto simp add: triple_def)
-apply(rule_tac x = 1 in exI)
-(* apply(case_tac presult) *)
-apply(case_tac presult;
-   auto simp add: meter_gas_def mstore_def
-        memory_inst_numbers.simps    
-        instruction_result_as_set_def vctx_advance_pc_def)
-apply simp
-apply (rule memory_was_changed)
-apply auto
-
-defer
-apply (rule leibniz)
-apply blast
-defer
-apply (auto simp:vctx_stack_default_def)[1]
-apply simp
 
 declare memory_as_set_def [simp del]
 
@@ -447,6 +411,14 @@ lemma asd2 [simp]:
    "memory_range_elms memaddr lst
        \<subseteq> variable_ctx_as_set v \<Longrightarrow>
    memory_range_elms memaddr lst \<subseteq> memory_as_set (vctx_memory v)"
+apply(auto simp add: contexts_as_set_def variable_ctx_as_set_def stack_as_set_def ext_program_as_set_def
+       balance_as_set_def)
+done
+
+lemma asd2_was_bad [simp]:
+   "memory_range_elms memaddr lst \<subseteq> memory_as_set (vctx_memory v)
+    \<Longrightarrow> memory_range_elms memaddr lst
+       \<subseteq> variable_ctx_as_set v"
 apply(auto simp add: contexts_as_set_def variable_ctx_as_set_def stack_as_set_def ext_program_as_set_def
        balance_as_set_def)
 done
@@ -459,78 +431,6 @@ lemma asd_1 :
        idx = length ta"
   using le_less_Suc_eq apply fastforce
 done
-
-lemma plz_sort_it_out :
- "vctx_stack x1 = memaddr # v # ta \<Longrightarrow>
-  memu = memu2 \<Longrightarrow>
-  newmem = store_word_memory memaddr v (vctx_memory x1) \<Longrightarrow>
-  newgas = newgas2 \<Longrightarrow>
-  new_pc = new_pc2 \<Longrightarrow>
-(*
-  memory_range_elms memaddr
-        (word_rsplit old_v)
-       \<subseteq> variable_ctx_as_set x1 \<Longrightarrow>
-*)
-  memory_range_elms memaddr
-        (word_rsplit old_v)
-       \<subseteq> memory_as_set (vctx_memory x1) \<Longrightarrow>
-  contexts_as_set x1 co_ctx -
-       {GasElm (vctx_gas x1)} -
-       {MemoryUsageElm (vctx_memory_usage x1)} -
-       {PcElm (vctx_pc x1)} -
-       memory_range_elms memaddr
-        (word_rsplit (old_v::w256)) -
-       {StackElm (length ta, v)} -
-       {StackElm
-         (Suc (length ta), memaddr)} -
-       {CodeElm
-         (vctx_pc x1, Memory MSTORE)} -
-       {StackHeightElm
-         (Suc (Suc (length ta)))} =
-       insert
-        (GasElm
-          newgas2)
-        (insert (ContinuingElm True)
-          (contexts_as_set
-            (x1\<lparr>vctx_pc := new_pc2,
-                  vctx_stack := ta,
-                  vctx_memory :=
-                    newmem,
-                  vctx_memory_usage :=
-                    memu2\<rparr>)
-            co_ctx -
-           {GasElm (vctx_gas x1)})) -
-       {ContinuingElm True} -
-       {StackHeightElm (length ta)} -
-       memory_range_elms memaddr (word_rsplit (new_v::w256)) -
-       {PcElm new_pc} -
-       {CodeElm
-         (vctx_pc x1, Memory MSTORE)} -
-       {MemoryUsageElm memu} -
-       {GasElm newgas}"
-apply (auto)
-apply(auto simp add: contexts_as_set_def variable_ctx_as_set_def stack_as_set_def ext_program_as_set_def
-       balance_as_set_def)[1]
-using le_less_Suc_eq apply fastforce
-using asd_1 apply fastforce
-using le_less_Suc_eq apply fastforce
-proof -
-  fix idx :: nat
-  assume a1: "idx < Suc (Suc (length ta))"
-  assume a2: "[v, memaddr] ! (idx - length ta) \<noteq> memaddr"
-  assume "\<not> idx < length ta"
-  then have f3: "\<forall>w. [w] ! (idx - length ta - 1) = (rev ta @ [[w] ! (idx - length ta - 1), w]) ! idx"
-    by (metis over_one_rev')
-  { assume "\<exists>w. [w::256 word] ! (idx - length ta - 1) \<noteq> w"
-    then have "idx \<le> length ta"
-      using f3 a1 by (metis (no_types) not_less_eq over_two_rev)
-    then have "[v, memaddr] ! (idx - length ta) = v"
-      by simp }
-  then show "[v, memaddr] ! (idx - length ta) = v"
-    using a2 by (metis (no_types) nth_non_equal_first_eq)
-next
-
-
 
 (*
   using le_less_Suc_eq apply fastforce
@@ -741,7 +641,13 @@ lemma stuff_aux :
 
 apply (auto simp:word_length)
   apply (simp add: HashMap.word_of_nat)
+using cut_index [of "a - memaddr" "(word_rsplit v::byte list)" 
+                   "vctx_memory x1" memaddr]
+and word_length
+apply auto
+done
 
+(*
 lemma get_knowledge :
   "x = MemoryElm (a, vctx_memory x1 a) \<Longrightarrow>
    unat (a - memaddr) < length lst \<Longrightarrow>
@@ -750,14 +656,26 @@ lemma get_knowledge :
    vctx_memory x1 a = lst ! unat (a-memaddr)"
 apply (auto simp:memory_as_set_def range_elms_def
   store_word_memory_def  store_byte_list_memory_def)
+*)
 
-lemma cut_stuff :
+declare asd2 [simp del]
+
+lemma cut_stuff2 :
 "length lst = 32 \<Longrightarrow>
   memory_range_elms memaddr lst \<subseteq>
    variable_ctx_as_set x1 \<Longrightarrow>
   cut_memory memaddr 32 (vctx_memory x1) = lst"
-using memory_range_elms_cut_memory
-apply force
+using memory_range_elms_cut_memory 
+apply auto
+done
+
+lemma cut_stuff :
+"length lst = 32 \<Longrightarrow>
+  memory_range_elms memaddr lst \<subseteq>
+   memory_as_set (vctx_memory (x1::variable_ctx)) \<Longrightarrow>
+  cut_memory memaddr 32 (vctx_memory x1) = lst"
+using asd2_was_bad [of memaddr lst x1]
+apply auto
 done
 
 lemma stuff :
@@ -774,36 +692,305 @@ apply (auto simp:memory_as_set_def range_elms_def
 subgoal for a
 apply (cases "unat (a-memaddr) < 32")
 apply (auto simp:word_length)
+using stuff_aux
+apply force
+done
+done
 
+declare word_length [simp add]
+declare unat_word_of_nat [simp add]
 
 (*
-lemma extract_memory_range :
-  "unat (len::w256) = length lst \<Longrightarrow>
-  MemoryElm (a, v) \<in> range_elms memaddr lst \<Longrightarrow>
-  (a \<ge> memaddr \<and> a < memaddr + len) \<or>
-  (a < memaddr + len \<and> memaddr + len \<le> memaddr)"
-apply (auto simp: range_elms_def)
-
-
-subgoal for i
-proof -
-  assume a1: "unat len = length lst"
-  assume a2: "a = memaddr + word_of_int (int i)"
-  assume a3: "i < length lst"
-  assume a4: "\<not> memaddr + word_of_int (int i) < memaddr + len"
-  have f5: "\<forall>w wa. (w::256 word) + wa = word_of_int (int (unat w + unat wa))"
-    by (simp add: Word.word_of_nat word_arith_nat_add)
-  then have f6: "word_of_int (int (unat memaddr + unat (word_of_int (int i)::256 word))) = a"
-    using a2 by presburger
-  then have "\<forall>w. \<not> a < memaddr \<or> w < a - memaddr \<or> \<not> word_of_int (int (unat memaddr + unat w)) < a"
-    using f5 by (metis (no_types) add_diff_cancel_left' less_trans plus_le_left_cancel_wrap)
-  then show "memaddr \<le> memaddr + word_of_int (int i)"
-    using f6 f5 a4 a3 a1 by (metis (no_types) Suc_diff_Suc Word.word_of_nat add_diff_cancel_left' cancel_comm_monoid_add_class.diff_cancel le_unat_uoi less_trans linorder_cases nat.simps(3) not_less unat_mono)
-qed
-defer
-  apply (metis (no_types, hide_lams) Word.word_of_nat le_unat_uoi less_imp_le not_less word_le_nat_alt word_plus_mono_right2)
-  apply (metis (mono_tags, hide_lams) Word.word_of_nat \<open>\<And>i. \<lbrakk>unat len = length lst; a = memaddr + word_of_int (int i); v = lst ! i; i < length lst; \<not> memaddr + word_of_int (int i) < memaddr + len\<rbrakk> \<Longrightarrow> memaddr \<le> memaddr + word_of_int (int i)\<close> le_unat_uoi less_imp_le not_less plus_le_left_cancel_nowrap word_less_nat_alt)
+lemma memory_lookup :
+  "MemoryElm (i,x) \<in> memory_as_set (vctx_memory x1) \<Longrightarrow>
+   x = vctx_memory x1 i"
 *)
+
+lemma work_on_it2 :
+"cut_memory memaddr 32 (vctx_memory x1) =
+     (word_rsplit (old_v::w256))  \<Longrightarrow>
+    x \<notin> memory_range_elms memaddr
+          (word_rsplit old_v) \<Longrightarrow>
+    x \<in> memory_range_elms memaddr
+          (word_rsplit (new_v::w256)) \<Longrightarrow>
+    x \<in> memory_as_set (vctx_memory x1) \<Longrightarrow>
+    False"
+apply (auto simp:range_elms_eq range_elms_def memory_as_set_def)
+subgoal for i
+using cut_index [of "word_of_int (int i)"
+     "(word_rsplit old_v::byte list)" 
+                   "vctx_memory x1" memaddr]
+apply auto
+done
+done
+
+
+declare HashMap.word_of_nat [simp add]
+
+(*
+lemma one_more_obstacle :
+"cut_memory memaddr 32 (vctx_memory x1) =
+     (word_rsplit (old_v::w256))  \<Longrightarrow>
+  x \<notin> memory_range_elms memaddr (word_rsplit (v::w256)) \<Longrightarrow>
+ x \<in> memory_range_elms memaddr
+               (word_rsplit old_v) \<Longrightarrow>
+         x \<in> memory_as_set
+               (store_word_memory memaddr v
+                 (vctx_memory x1)) \<Longrightarrow>
+         False"
+apply (auto simp:range_elms_eq range_elms_def memory_as_set_def
+store_word_memory_def)
+done
+*)
+
+lemma work_on_it :
+"memory_range_elms memaddr
+     (word_rsplit (old_v::w256))
+    \<subseteq> memory_as_set (vctx_memory x1) \<Longrightarrow>
+    x \<notin> memory_range_elms memaddr
+          (word_rsplit old_v) \<Longrightarrow>
+    x \<in> memory_range_elms memaddr
+          (word_rsplit (new_v::w256)) \<Longrightarrow>
+    x \<in> memory_as_set (vctx_memory (x1::variable_ctx)) \<Longrightarrow>
+    False"
+apply (rule work_on_it2[of memaddr x1 old_v])
+apply auto
+done
+
+lemma one_more_obstacle :
+" memory_range_elms memaddr
+          (word_rsplit (old_v::w256))
+         \<subseteq> memory_as_set (vctx_memory (x1::variable_ctx)) \<Longrightarrow>
+  x \<notin> memory_range_elms memaddr (word_rsplit (v::w256)) \<Longrightarrow>
+ x \<in> memory_range_elms memaddr
+               (word_rsplit old_v) \<Longrightarrow>
+         x \<in> memory_as_set
+               (store_word_memory memaddr v
+                 (vctx_memory x1)) \<Longrightarrow>
+         False"
+apply (auto simp:range_elms_eq range_elms_def memory_as_set_def
+store_word_memory_def)
+done
+
+
+lemma stuff2 :
+"memory_range_elms memaddr (word_rsplit (old_v::w256)) \<subseteq>
+   memory_as_set (vctx_memory (x1::variable_ctx)) \<Longrightarrow>
+ x \<notin> memory_range_elms memaddr (word_rsplit (old_v::w256)) \<Longrightarrow>
+ x \<notin> memory_as_set
+      (store_word_memory memaddr v (vctx_memory x1)) \<Longrightarrow>
+ x \<in> memory_as_set (vctx_memory x1) \<Longrightarrow>
+ False"
+apply (rule stuff[of memaddr x1 old_v])
+apply auto
+done
+
+lemma still_left2 :
+  "cut_memory memaddr 32 (vctx_memory x1) =
+     (word_rsplit (old_v::w256)) \<Longrightarrow>
+   x \<notin> memory_range_elms memaddr
+               (word_rsplit (v::w256)) \<Longrightarrow>
+  x \<notin> memory_as_set
+               (vctx_memory x1) \<Longrightarrow>   
+  x \<in> memory_as_set
+               (store_word_memory memaddr v
+                 (vctx_memory x1)) \<Longrightarrow>
+  False"
+apply (simp add:range_elms_eq)
+apply (auto simp:memory_as_set_def range_elms_def
+  store_word_memory_def  store_byte_list_memory_def)
+subgoal for a
+apply (cases "unat (a-memaddr) < 32")
+apply auto
+done
+done
+
+lemma still_left :
+  "memory_range_elms memaddr
+          (word_rsplit (old_v::w256))
+         \<subseteq> memory_as_set (vctx_memory x1) \<Longrightarrow>
+   x \<notin> memory_range_elms memaddr
+               (word_rsplit (v::w256)) \<Longrightarrow>
+  x \<notin> memory_as_set
+               (vctx_memory x1) \<Longrightarrow>   
+  x \<in> memory_as_set
+               (store_word_memory memaddr v
+                 (vctx_memory (x1::variable_ctx))) \<Longrightarrow>
+  False"
+apply (rule still_left2 [of memaddr x1 old_v])
+apply (auto)
+done
+
+lemma range_not_in_constant [simp] :
+ "x \<in> memory_range_elms memaddr lst \<Longrightarrow>
+    x \<in> constant_ctx_as_set co_ctx \<Longrightarrow> False"
+apply (induction lst arbitrary:memaddr)
+apply(auto simp add: contexts_as_set_def variable_ctx_as_set_def stack_as_set_def ext_program_as_set_def
+       balance_as_set_def)
+done
+
+lemma other_similar :
+"memory_range_elms memaddr
+          (word_rsplit (old_v::w256))
+         \<subseteq> memory_as_set (vctx_memory x1) \<Longrightarrow>
+         x \<notin> memory_range_elms memaddr
+               (word_rsplit old_v) \<Longrightarrow>
+         x \<in> contexts_as_set x1 co_ctx \<Longrightarrow>
+         x \<in> memory_range_elms memaddr
+               (word_rsplit (v::w256)) \<Longrightarrow>
+         False"
+apply(auto simp add: contexts_as_set_def variable_ctx_as_set_def stack_as_set_def ext_program_as_set_def
+       balance_as_set_def)
+apply (rule range_not_in_constant[of x memaddr _ co_ctx])
+apply auto
+apply (rule work_on_it)
+apply auto
+done
+
+
+
+
+lemma plz_sort_it_out :
+ "vctx_stack x1 = memaddr # v # ta \<Longrightarrow>
+  memu = memu2 \<Longrightarrow>
+  newmem = store_word_memory memaddr v (vctx_memory x1) \<Longrightarrow>
+  newgas = newgas2 \<Longrightarrow>
+  new_pc = new_pc2 \<Longrightarrow>
+(*
+  memory_range_elms memaddr
+        (word_rsplit old_v)
+       \<subseteq> variable_ctx_as_set x1 \<Longrightarrow>
+*)
+  memory_range_elms memaddr
+        (word_rsplit old_v)
+       \<subseteq> memory_as_set (vctx_memory x1) \<Longrightarrow>
+  contexts_as_set x1 co_ctx -
+       {GasElm (vctx_gas x1)} -
+       {MemoryUsageElm (vctx_memory_usage x1)} -
+       {PcElm (vctx_pc x1)} -
+       memory_range_elms memaddr
+        (word_rsplit (old_v::w256)) -
+       {StackElm (length ta, v)} -
+       {StackElm
+         (Suc (length ta), memaddr)} -
+       {CodeElm
+         (vctx_pc x1, Memory MSTORE)} -
+       {StackHeightElm
+         (Suc (Suc (length ta)))} =
+       insert
+        (GasElm
+          newgas2)
+        (insert (ContinuingElm True)
+          (contexts_as_set
+            (x1\<lparr>vctx_pc := new_pc2,
+                  vctx_stack := ta,
+                  vctx_memory :=
+                    newmem,
+                  vctx_memory_usage :=
+                    memu2\<rparr>)
+            co_ctx -
+           {GasElm (vctx_gas x1)})) -
+       {ContinuingElm True} -
+       {StackHeightElm (length ta)} -
+       memory_range_elms memaddr (word_rsplit (v::w256)) -
+       {PcElm new_pc} -
+       {CodeElm
+         (vctx_pc x1, Memory MSTORE)} -
+       {MemoryUsageElm memu} -
+       {GasElm newgas}"
+apply (auto)
+apply(auto simp add: contexts_as_set_def variable_ctx_as_set_def stack_as_set_def ext_program_as_set_def
+       balance_as_set_def)[1]
+using le_less_Suc_eq apply fastforce
+using asd_1 apply fastforce
+using le_less_Suc_eq apply fastforce
+subgoal for idx
+proof -
+  fix idx :: nat
+  assume a1: "idx < Suc (Suc (length ta))"
+  assume a2: "[v, memaddr] ! (idx - length ta) \<noteq> memaddr"
+  assume "\<not> idx < length ta"
+  then have f3: "\<forall>w. [w] ! (idx - length ta - 1) = (rev ta @ [[w] ! (idx - length ta - 1), w]) ! idx"
+    by (metis over_one_rev')
+  { assume "\<exists>w. [w::256 word] ! (idx - length ta - 1) \<noteq> w"
+    then have "idx \<le> length ta"
+      using f3 a1 by (metis (no_types) not_less_eq over_two_rev)
+    then have "[v, memaddr] ! (idx - length ta) = v"
+      by simp }
+  then show "[v, memaddr] ! (idx - length ta) = v"
+    using a2 by (metis (no_types) nth_non_equal_first_eq)
+next
+qed
+using stuff2 [of memaddr old_v x1 _ v]
+apply force
+using other_similar [of memaddr old_v x1 _ co_ctx v]
+apply force
+apply(auto simp add: contexts_as_set_def variable_ctx_as_set_def stack_as_set_def ext_program_as_set_def
+       balance_as_set_def)[1]
+using still_left [of memaddr old_v x1 _ v]
+apply force
+apply(auto simp add: contexts_as_set_def variable_ctx_as_set_def stack_as_set_def ext_program_as_set_def
+       balance_as_set_def)[1]
+apply (rule range_not_in_constant[of _ memaddr _ co_ctx])
+apply auto
+apply (auto simp:range_elms_eq range_elms_def memory_as_set_def
+store_word_memory_def)
+done
+
+lemma final_nightmare :
+"memory_range_elms memaddr
+        (word_rsplit old_v)
+       \<subseteq> variable_ctx_as_set x1 \<Longrightarrow>
+ x \<in> memory_range_elms memaddr
+             (word_rsplit old_v) \<Longrightarrow>
+ x \<in> memory_as_set (vctx_memory x1)"
+apply(auto simp add: contexts_as_set_def variable_ctx_as_set_def stack_as_set_def ext_program_as_set_def
+       balance_as_set_def)
+done
+
+lemma mstore_gas_triple :
+  "triple {OutOfGas}
+     (\<langle> h \<le> 1022 \<rangle> **
+       stack (h+1) memaddr **
+       stack h v **
+       stack_height (h+2) **
+       program_counter k **   
+       memory_usage memu **
+       memory memaddr old_v **
+       gas_pred g **
+       continuing)
+     {(k, Memory MSTORE)}
+    (stack_height h **
+     memory memaddr v **
+     memory_usage (M memu memaddr 32) **
+     program_counter (k + 1) **
+     gas_pred (g - Gverylow + Cmem memu -
+               Cmem (M memu memaddr 32)) **
+     continuing )"
+apply(auto simp add: triple_def)
+apply(rule_tac x = 1 in exI)
+(* apply(case_tac presult) *)
+apply(case_tac presult;
+   auto simp add: meter_gas_def mstore_def
+        memory_inst_numbers.simps    
+        instruction_result_as_set_def vctx_advance_pc_def)
+apply (rule memory_was_changed)
+apply auto
+
+defer
+apply (rule leibniz)
+apply blast
+defer
+apply (auto simp:vctx_stack_default_def)[1]
+
+apply (rule plz_sort_it_out)
+
+apply auto
+apply (simp add:vctx_stack_default_def)
+using final_nightmare
+by fastforce
+
+declare memory_as_set_def [simp add]
 
 lemma memory_not_changed :
   "memory_range_elms memaddr (word_rsplit (w::w256))
@@ -819,7 +1006,7 @@ apply(auto simp add: contexts_as_set_def variable_ctx_as_set_def stack_as_set_de
 done
 
 lemma read_split : "read_word_from_bytes 0 (word_rsplit w) = w"
-by (auto simp:word_length byte_list_fill_right_def
+by (auto simp:byte_list_fill_right_def
          read_word_from_bytes_def word_rcat_rsplit)
 
 lemma memory_works :
@@ -829,7 +1016,7 @@ lemma memory_works :
         (cut_memory memaddr 32 (vctx_memory x1)) = w"
 proof -
    have "length (word_rsplit (w::w256):: byte list) = 32"
-     by (auto simp:word_length)
+     by auto
    then have "cut_memory memaddr 32 (vctx_memory x1) =
               word_rsplit w"
      using a memory_range_elms_cut_memory
