@@ -4,6 +4,96 @@ imports Main "./HoareTripleForInstructions"
 
 begin
 
+lemma tmp001:
+"length lst = h \<Longrightarrow>
+Suc (unat n) < h \<Longrightarrow>
+unat n \<le> length (drop 1 lst)"
+apply auto
+done
+
+lemma tmp000: "
+a \<noteq> h - Suc 0 \<Longrightarrow> \<not> a < h - Suc (Suc (unat n)) \<Longrightarrow> a \<noteq> h - Suc (Suc (unat n)) \<Longrightarrow> 
+a < h \<Longrightarrow> (Suc (a + unat n) - h) < unat n
+"
+apply auto
+done
+
+lemma tmp002:
+ "a \<noteq> h - Suc 0 \<Longrightarrow> a < h
+   \<Longrightarrow> Suc (h - Suc (Suc a)) = h - Suc a"
+apply auto
+done
+
+
+lemma take_drop_nth [simp] :
+  "length (vctx_stack x1) = h \<Longrightarrow>
+   Suc (unat n) < h \<Longrightarrow>
+   a \<noteq> h - Suc 0 \<Longrightarrow> \<not> a < h - Suc (Suc (unat n)) \<Longrightarrow> a \<noteq> h - Suc (Suc (unat n)) \<Longrightarrow>
+   a < h \<Longrightarrow>
+   rev (take (unat n) (drop (Suc 0) (vctx_stack x1))) ! (Suc (a + unat n) - h) = rev (vctx_stack x1) ! a"
+apply(simp add: tmp000 tmp001 tmp002 List.rev_nth)
+done
+
+lemma swap_gas_triple :
+   "triple {OutOfGas} (\<langle> h \<le> 1024 \<and> Suc (unat n) < h \<rangle> **
+                       stack_height h **
+                       stack (h - 1) w **
+                       stack (h - (unat n) - 2) v **
+                       program_counter k **
+                       gas_pred g **
+                       continuing
+                      )
+
+                      {(k, Swap n)}
+                      (stack_height h **
+                       stack (h - 1) v **
+                       stack (h - (unat n) - 2) w **
+                       program_counter (k + 1) **
+                       gas_pred (g - Gverylow) **
+                       continuing
+                      )"
+apply(simp add: triple_def)
+apply clarify
+apply(rule_tac x = 1 in exI)
+apply(case_tac presult)
+  defer
+  apply(simp add: instruction_result_as_set_def)
+ apply(simp add: instruction_result_as_set_def)
+apply(simp add: swap_def list_swap_usage swap_inst_numbers_def)
+apply(rule impI)
+apply(rule leibniz)
+ apply blast
+apply(rule  Set.equalityI)
+ apply(simp add: Set.subset_iff)
+ apply(rule allI)
+ apply(rename_tac elm)
+ apply(case_tac elm; simp add: instruction_result_as_set_def)
+ apply(rename_tac pair)
+ apply(case_tac pair; simp)
+ apply(case_tac "a = h - Suc 0"; simp)
+ apply(case_tac "a < h - Suc (Suc (unat n))"; simp)
+ apply(case_tac "a = h - Suc (Suc (unat n))"; simp)
+  apply blast
+ apply auto[1]
+apply(simp add: Set.subset_iff)
+apply(rule allI)
+apply(rename_tac elm)
+apply(case_tac elm; simp add: instruction_result_as_set_def)
+ apply(rename_tac pair; case_tac pair)
+ apply simp
+ apply(case_tac "a = h - Suc 0"; simp)
+ apply(case_tac "a < h - Suc 0"; simp)
+  apply(case_tac "a = h - Suc (Suc (unat n))"; simp)
+   apply blast
+  apply(case_tac "a < h - Suc (Suc (unat n))"; simp)
+   apply linarith
+  apply(simp add: tmp000 tmp001 tmp002 List.rev_nth)
+  apply linarith
+ apply auto[1]
+apply auto[1]
+done
+
+
 lemma "reverse_lookup" [simp] :
   "n < length lst \<Longrightarrow>
    rev lst ! (length lst - Suc n) = lst ! n
