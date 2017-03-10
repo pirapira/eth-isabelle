@@ -288,24 +288,6 @@ lemma mload_inst [simp] :
 apply (auto simp:inst_size_def inst_code.simps)
 done
 
-(* nothing will work properly because everything is mod 2^256 *)
-
-definition store_bytes :: "w256 \<Rightarrow> byte list \<Rightarrow> memory \<Rightarrow> memory" where
-"store_bytes a lst mem = (\<lambda>i.
-   if unat (i - a) \<ge> 0 \<and> unat (i - a) < length lst then
-    lst!unat(i-a) 
-   else mem i)"
-
-
-lemma store_get [simp] :
-"unat a < length lst \<Longrightarrow>
- store_bytes addr lst mem (addr+a) = lst!unat a"
-apply (auto simp:store_bytes_def)
-done
-
-definition store_word :: "w256 \<Rightarrow> w256 \<Rightarrow> memory \<Rightarrow> memory" where
-"store_word pos vl mem = store_bytes pos (word_rsplit vl) mem"
-
 lemma aux1 :
 "(x \<in> memory_range_elms (addr+1)
                  lst \<Longrightarrow>
@@ -360,11 +342,33 @@ then have "x = MemoryElm (addr + (word_of_int (int n)::w256),
 then show ?thesis by force
 qed
 
+(* nothing will work properly because everything is mod 2^256 *)
+
+(*
+definition store_bytes :: "w256 \<Rightarrow> byte list \<Rightarrow> memory \<Rightarrow> memory" where
+"store_bytes a lst mem = (\<lambda>i.
+   if unat (i - a) \<ge> 0 \<and> unat (i - a) < length lst then
+    lst!unat(i-a) 
+   else mem i)"
+*)
+
+lemma store_get [simp] :
+"unat a < length lst \<Longrightarrow>
+ store_byte_list_memory addr lst mem (addr+a) = lst!unat a"
+apply (auto simp:store_byte_list_memory_def)
+done
+
+(*
+definition store_word :: "w256 \<Rightarrow> w256 \<Rightarrow> memory \<Rightarrow> memory" where
+"store_word pos vl mem = store_bytes pos (word_rsplit vl) mem"
+*)
+
+
 lemma memory_contra :
 assumes a:"x \<in> memory_range_elms addr (word_rsplit (w::w256))"
 and b:"\<forall>a. x \<noteq>
         MemoryElm
-         (a, store_bytes addr (word_rsplit w) mem a)"
+         (a, store_byte_list_memory addr (word_rsplit w) mem a)"
 shows "False"
 proof -
 from a have "\<exists>a. x = MemoryElm (addr+a, (word_rsplit w)!unat a) \<and>
@@ -373,99 +377,10 @@ using get_good_mem_elem and word_length by force
 then obtain a where
    aa:"x = MemoryElm (addr+a, (word_rsplit w)!unat a) \<and> unat a < 32" by auto
 then have "x = MemoryElm (addr+a,
-     store_bytes addr (word_rsplit w) mem (addr+a))"
+     store_byte_list_memory addr (word_rsplit w) mem (addr+a))"
   using store_get and word_length by force
 then show False using b by force
 qed
-
-lemma memory_was_changed :
-       "x \<in> memory_range_elms memaddr
-             (word_rsplit w) \<Longrightarrow>
-       x \<in> contexts_as_set
-             (x1\<lparr>vctx_pc := vctx_pc x1 + 1,
-                   vctx_stack := ta,
-                   vctx_memory :=
-                     store_word memaddr w (vctx_memory x1),
-                   vctx_memory_usage := memu\<rparr>)
-             co_ctx"
-apply(auto simp add: contexts_as_set_def variable_ctx_as_set_def stack_as_set_def ext_program_as_set_def
-       balance_as_set_def store_word_memory_def
-      store_byte_list_memory.simps store_word_def)
-using memory_contra [of x memaddr w "vctx_memory x1"]
- by auto
-
-(*
-
-lemma store_get :
-"length lst < unat (b::w256) \<Longrightarrow>
-  unat a < length lst \<Longrightarrow>
- store_byte_list_memory addr lst mem (addr+a) = lst!unat a"
-apply (induction lst arbitrary:addr mem a)
-apply (auto simp:store_byte_list_memory.simps)
-
-
-lemma store_memory_range :
-   assumes a : "(MemoryElm (memaddr, a)
-           \<in> memory_range_elms (memaddr+1)
-               lst \<Longrightarrow>
-           a =
-           store_byte_list_memory (memaddr+1)
-            lst (\<lambda>p. if memaddr = p then a
-             else mem p) memaddr)"
-  shows "x = MemoryElm (memaddr, a) \<Longrightarrow>
-       a =
-       store_byte_list_memory (memaddr + 1)
-        lst
-        (\<lambda>p. if memaddr = p then a
-             else mem p)
-        memaddr"
-apply (rule a)
-
-lemma store_shift :
-  "store_byte_list_memory addr lst mem (addr+a) ="
-
-lemma simple_foo :
-"length lst < unat (b::w256) \<Longrightarrow>
- store_byte_list_memory (addr + 1)
-        lst
-        (\<lambda>p. if addr = p then a else mem p) addr = a"
-
-lemma store_get_aux :
-    "(\<And>addr mem a.
-           unat a < length lst \<Longrightarrow>
-           store_byte_list_memory addr lst
-            mem (addr + a) =
-           lst ! unat a) \<Longrightarrow>
-       unat aa < Suc (length lst) \<Longrightarrow>
-       store_byte_list_memory (addr + 1)
-        lst
-        (\<lambda>p. if addr = p then a else mem p)
-        (addr + aa) =
-       (a # lst) ! unat aa"
-
-lemma store_memory_range :
-  "length lst = unat (b::w256) \<Longrightarrow>
-   x \<in> memory_range_elms addr lst \<Longrightarrow>
-   x = MemoryElm (addr+a, lst!unat a) \<Longrightarrow>
-   lst!unat a = store_byte_list_memory addr lst mem (addr+a)"
-apply (induction lst arbitrary:addr mem a)
-apply (auto simp:store_byte_list_memory.simps)
-
-apply (drule)
-
-subgoal for a lst memaddr mem
-apply (cases "mem_addr = p")
-
-
-
-*)
-
-(*
-lemma store_memory_range :
-  "length lst = unat (b::w256) \<Longrightarrow>
-   x \<in> memory_range_elms addr lst \<Longrightarrow>
-   x = MemoryElm (addr+a, lst!unat a) \<Longrightarrow>
-   store_byte_list_memory addr lst mem (addr+a) = lst!unat a"
 
 lemma memory_was_changed :
        "x \<in> memory_range_elms memaddr
@@ -478,11 +393,10 @@ lemma memory_was_changed :
                    vctx_memory_usage := memu\<rparr>)
              co_ctx"
 apply(auto simp add: contexts_as_set_def variable_ctx_as_set_def stack_as_set_def ext_program_as_set_def
-       balance_as_set_def store_word_memory_def
-      store_byte_list_memory.simps)
+       balance_as_set_def store_word_memory_def)
+using memory_contra [of x memaddr w "vctx_memory x1"]
+ by auto
 
-
-*)
 
 
 lemma mstore_inst [simp] :
@@ -516,10 +430,380 @@ apply(case_tac presult;
    auto simp add: meter_gas_def mstore_def
         memory_inst_numbers.simps    
         instruction_result_as_set_def vctx_advance_pc_def)
-apply (rule leibniz)
-apply blast
+apply simp
+apply (rule memory_was_changed)
 apply auto
 
+defer
+apply (rule leibniz)
+apply blast
+defer
+apply (auto simp:vctx_stack_default_def)[1]
+apply simp
+
+declare memory_as_set_def [simp del]
+
+lemma asd2 [simp]:
+   "memory_range_elms memaddr lst
+       \<subseteq> variable_ctx_as_set v \<Longrightarrow>
+   memory_range_elms memaddr lst \<subseteq> memory_as_set (vctx_memory v)"
+apply(auto simp add: contexts_as_set_def variable_ctx_as_set_def stack_as_set_def ext_program_as_set_def
+       balance_as_set_def)
+done
+
+lemma asd_1 :
+"idx < Suc (Suc (length ta)) \<Longrightarrow>
+       [v, memaddr] ! (idx - length ta) \<noteq>
+       memaddr \<Longrightarrow>
+       \<not> idx < length ta \<Longrightarrow>
+       idx = length ta"
+  using le_less_Suc_eq apply fastforce
+done
+
+lemma plz_sort_it_out :
+ "vctx_stack x1 = memaddr # v # ta \<Longrightarrow>
+  memu = memu2 \<Longrightarrow>
+  newmem = store_word_memory memaddr v (vctx_memory x1) \<Longrightarrow>
+  newgas = newgas2 \<Longrightarrow>
+  new_pc = new_pc2 \<Longrightarrow>
+(*
+  memory_range_elms memaddr
+        (word_rsplit old_v)
+       \<subseteq> variable_ctx_as_set x1 \<Longrightarrow>
+*)
+  memory_range_elms memaddr
+        (word_rsplit old_v)
+       \<subseteq> memory_as_set (vctx_memory x1) \<Longrightarrow>
+  contexts_as_set x1 co_ctx -
+       {GasElm (vctx_gas x1)} -
+       {MemoryUsageElm (vctx_memory_usage x1)} -
+       {PcElm (vctx_pc x1)} -
+       memory_range_elms memaddr
+        (word_rsplit (old_v::w256)) -
+       {StackElm (length ta, v)} -
+       {StackElm
+         (Suc (length ta), memaddr)} -
+       {CodeElm
+         (vctx_pc x1, Memory MSTORE)} -
+       {StackHeightElm
+         (Suc (Suc (length ta)))} =
+       insert
+        (GasElm
+          newgas2)
+        (insert (ContinuingElm True)
+          (contexts_as_set
+            (x1\<lparr>vctx_pc := new_pc2,
+                  vctx_stack := ta,
+                  vctx_memory :=
+                    newmem,
+                  vctx_memory_usage :=
+                    memu2\<rparr>)
+            co_ctx -
+           {GasElm (vctx_gas x1)})) -
+       {ContinuingElm True} -
+       {StackHeightElm (length ta)} -
+       memory_range_elms memaddr (word_rsplit (new_v::w256)) -
+       {PcElm new_pc} -
+       {CodeElm
+         (vctx_pc x1, Memory MSTORE)} -
+       {MemoryUsageElm memu} -
+       {GasElm newgas}"
+apply (auto)
+apply(auto simp add: contexts_as_set_def variable_ctx_as_set_def stack_as_set_def ext_program_as_set_def
+       balance_as_set_def)[1]
+using le_less_Suc_eq apply fastforce
+using asd_1 apply fastforce
+using le_less_Suc_eq apply fastforce
+proof -
+  fix idx :: nat
+  assume a1: "idx < Suc (Suc (length ta))"
+  assume a2: "[v, memaddr] ! (idx - length ta) \<noteq> memaddr"
+  assume "\<not> idx < length ta"
+  then have f3: "\<forall>w. [w] ! (idx - length ta - 1) = (rev ta @ [[w] ! (idx - length ta - 1), w]) ! idx"
+    by (metis over_one_rev')
+  { assume "\<exists>w. [w::256 word] ! (idx - length ta - 1) \<noteq> w"
+    then have "idx \<le> length ta"
+      using f3 a1 by (metis (no_types) not_less_eq over_two_rev)
+    then have "[v, memaddr] ! (idx - length ta) = v"
+      by simp }
+  then show "[v, memaddr] ! (idx - length ta) = v"
+    using a2 by (metis (no_types) nth_non_equal_first_eq)
+next
+
+
+
+(*
+  using le_less_Suc_eq apply fastforce
+  using le_less_Suc_eq apply fastforce
+proof -
+  fix idx :: nat
+  assume a1: "idx < Suc (Suc (length ta))"
+  assume a2: "[v, memaddr] ! (idx - length ta) \<noteq> memaddr"
+  assume "\<not> idx < length ta"
+  then have f3: "\<forall>w. [w] ! (idx - length ta - 1) = (rev ta @ [[w] ! (idx - length ta - 1), w]) ! idx"
+    by (metis over_one_rev')
+  { assume "\<exists>w. [w::256 word] ! (idx - length ta - 1) \<noteq> w"
+    then have "idx \<le> length ta"
+      using f3 a1 by (metis (no_types) not_less_eq over_two_rev)
+    then have "[v, memaddr] ! (idx - length ta) = v"
+      by simp }
+  then show "[v, memaddr] ! (idx - length ta) = v"
+    using a2 by (metis (no_types) nth_non_equal_first_eq)
+next
+*)
+
+definition range_elms :: "w256 \<Rightarrow> byte list \<Rightarrow> state_element set" where
+"range_elms addr lst =
+   {MemoryElm (addr+word_of_int (int i),lst!i)| i. i < length lst}"
+
+(* defining eq for memory_range_elms *)
+lemma range_elems_aux :
+  "range_elms begin (a # lst) =
+   {MemoryElm (begin, a)} \<union> range_elms (begin + 1) lst"
+apply (auto simp add:range_elms_def)
+  using less_Suc_eq_0_disj word_of_inc apply fastforce
+  apply (metis (no_types, hide_lams) Word.word_of_nat less_Suc_eq_0_disj nth_Cons' nth_Cons_Suc of_nat_Suc)
+apply (rule exI[of _ 0])
+apply simp
+  by (metis (no_types, hide_lams) Suc_less_eq2 Word.word_of_nat nth_Cons_Suc of_nat_Suc)
+
+
+lemma range_elms_eq :
+   "memory_range_elms addr lst = range_elms addr lst"
+apply (induction lst arbitrary:addr)
+apply (simp add:range_elms_def)
+apply (auto simp: range_elems_aux)
+done
+
+lemma extract_memory_range :
+  "MemoryElm (a, v) \<in> range_elms addr lst \<Longrightarrow>
+   \<exists>i. addr+word_of_int (int i) = a \<and> i < length lst"
+apply (auto simp: range_elms_def)
+done
+
+lemma extract_memory_range2 :
+  "MemoryElm (a, v) \<in> range_elms addr lst \<Longrightarrow>
+   \<exists>i. addr+i = a \<and> unat i < length lst"
+apply (auto simp: range_elms_def)
+by (metis (no_types, hide_lams) Word.word_of_nat le_unat_uoi less_trans not_less)
+
+lemma extract_memory_range3 :
+  "(\<exists>i. (addr::w256)+i = (a::w256) \<and> unat i < length lst) \<Longrightarrow>
+   unat (a-addr) < length lst"
+apply auto
+done
+
+lemma extract_memory_range4 :
+  "MemoryElm (a, v) \<notin> range_elms addr lst \<Longrightarrow>
+   length lst \<ge> 2^256 \<or> lst ! unat (a-addr) \<noteq> v \<or>
+   (unat (a-addr) \<ge> length lst)"
+apply (auto simp: range_elms_def)
+  by (simp add: HashMap.word_of_nat not_less)
+
+lemma cut_index_one :
+  "mem addr = cut_memory addr 1 mem ! 0"
+apply (auto simp:cut_memory_def cut_memory_aux.simps)
+done
+
+lemma unat_minus :
+ "unat (i::w256) \<le> n \<Longrightarrow>
+  n < 2^256 \<Longrightarrow>
+  unat i + unat ((word_of_int (int n)::w256) - i) = n"
+  by (simp add: unat_sub_if' unat_word_of_nat)
+
+lemma unat_minus_one :
+ "unat (i::w256) < n \<Longrightarrow>
+  n < 2^256 \<Longrightarrow>
+  unat (i+1) +
+  unat ((word_of_int (int n)::w256) - (i + 1)) = n"
+apply (rule unat_minus)
+  apply (metis Suc_eq_plus1 add_strict_right_mono less_Suc_eq_le unatSuc unat_0 w256_add_com zero_le)
+apply auto
+done
+
+lemma unat_inc :
+  "unat (i::w256) < n \<Longrightarrow>
+   n < 2^256 \<Longrightarrow>
+   unat (i+1) = unat i + unat (1::w256)"
+apply (rule unat_add)
+  by auto
+
+lemma blah :
+   "(w::w256) - (i::w256) - (1::w256) = (w - (i + (1::w256)))"
+apply auto
+done
+
+lemma unat_minus_one2 :
+assumes  a:"unat (i::w256) < n"
+and b:  "n < 2^256"
+shows "unat (1::w256) +
+  unat ((word_of_int (int n)::w256) - i - (1::w256)) =
+   n - unat i"
+proof -
+
+have "unat (i+1) +
+  unat ((word_of_int (int n)::w256) - (i + 1)) = n"
+using unat_minus_one and unat_inc and a and b by force
+have "unat i + unat (1::w256) +
+  unat ((word_of_int (int n)::w256) - (i + (1::w256))) = n"
+using unat_minus_one and unat_inc and a and b by force
+then have "unat i + unat (1::w256) +
+  unat ((word_of_int (int n)::w256) - i - (1::w256)) = n"
+apply (subst blah)
+apply auto
+done
+then show ?thesis by auto
+qed
+
+lemma cut_aux_length :
+   "length (cut_memory_aux addr i mem) = i"
+apply (induction i arbitrary:addr mem)
+apply (auto simp:cut_memory_aux.simps)
+done
+
+lemma cut_length [simp] : 
+   "length (cut_memory addr i mem) = unat i"
+apply (simp add:cut_memory_def cut_aux_length)
+done
+
+lemma unat_index [simp] :
+   "length l1 = unat (i::w256) \<Longrightarrow>
+    (l1@l2)!unat i = l2!0"
+  by (simp add: nth_append)
+
+lemma cut_index :
+  assumes a:"unat (i::w256) < length lst"
+  and   b:"length lst < 2^256"
+  shows "mem (addr+i) =
+         cut_memory addr (word_of_int (int (length lst)))
+                    mem ! unat i"
+proof -
+  have
+   "cut_memory addr i mem @
+    cut_memory (addr+i)
+           ((word_of_int (int (length lst))::w256)-i) mem =
+    cut_memory addr (i
+    + ((word_of_int (int (length lst))::w256)-i)) mem"
+using a and b and unat_minus and cut_memory_append by force
+then have s1:
+   "cut_memory addr i mem @
+    cut_memory (addr+i)
+           ((word_of_int (int (length lst))::w256)-i) mem =
+    cut_memory addr (word_of_int (int (length lst))::w256) mem"
+using a and b and unat_minus and cut_memory_append by force
+have
+ "cut_memory (addr+i) (1::w256) mem @
+  cut_memory ((addr+i)+(1::w256))
+           (((word_of_int (int (length lst))::w256)-i)-(1::w256)) mem
+= cut_memory (addr+i)
+           ((1::w256)+(((word_of_int (int (length lst))::w256)-i)-(1::w256))) mem"
+apply (rule cut_memory_append)
+using a and b
+and unat_minus_one2 [of i "length lst" ]
+apply simp
+done
+then have s2:
+ "cut_memory (addr+i) (1::w256) mem @
+  cut_memory ((addr+i)+(1::w256))
+           (((word_of_int (int (length lst))::w256)-i)-(1::w256)) mem
+= cut_memory (addr+i)
+           ((word_of_int (int (length lst))::w256)-i) mem"
+by auto
+from s1 and s2 have
+"cut_memory addr (word_of_int (int (length lst))::w256) mem
+= cut_memory addr i mem @
+ cut_memory (addr+i) (1::w256) mem @
+ cut_memory ((addr+i)+(1::w256))
+           (((word_of_int (int (length lst))::w256)-i)-(1::w256)) mem
+"
+by auto
+then show ?thesis
+apply auto
+apply (simp add: nth_append   cut_index_one)
+done
+qed
+(*
+using a and b and unat_minus and cut_memory_append by force
+*)
+
+lemma stuff_aux :
+"cut_memory memaddr 32 (vctx_memory x1) =
+  word_rsplit (old_v::w256) \<Longrightarrow>
+ ( a = memaddr + word_of_int (int (unat (a-memaddr))) \<and>
+        vctx_memory x1 a =
+          (word_rsplit (old_v::w256)::byte list) ! (unat (a-memaddr)) \<longrightarrow>
+        \<not> (unat (a-memaddr)) <
+         length ((word_rsplit old_v)::byte list) ) \<Longrightarrow>
+    vctx_memory x1 a \<noteq>
+    (word_rsplit (v::w256) :: byte list) ! unat (a - memaddr) \<Longrightarrow>
+    x = MemoryElm (a, vctx_memory x1 a) \<Longrightarrow>
+    unat (a - memaddr) < 32 \<Longrightarrow> False"
+
+apply (auto simp:word_length)
+  apply (simp add: HashMap.word_of_nat)
+
+lemma get_knowledge :
+  "x = MemoryElm (a, vctx_memory x1 a) \<Longrightarrow>
+   unat (a - memaddr) < length lst \<Longrightarrow>
+   range_elms memaddr lst \<subseteq>
+     memory_as_set (vctx_memory x1) \<Longrightarrow>
+   vctx_memory x1 a = lst ! unat (a-memaddr)"
+apply (auto simp:memory_as_set_def range_elms_def
+  store_word_memory_def  store_byte_list_memory_def)
+
+lemma cut_stuff :
+"length lst = 32 \<Longrightarrow>
+  memory_range_elms memaddr lst \<subseteq>
+   variable_ctx_as_set x1 \<Longrightarrow>
+  cut_memory memaddr 32 (vctx_memory x1) = lst"
+using memory_range_elms_cut_memory
+apply force
+done
+
+lemma stuff :
+"cut_memory memaddr 32 (vctx_memory x1) =
+  word_rsplit (old_v::w256) \<Longrightarrow>
+ x \<notin> memory_range_elms memaddr (word_rsplit old_v) \<Longrightarrow>
+ x \<notin> memory_as_set
+      (store_word_memory memaddr v (vctx_memory x1)) \<Longrightarrow>
+ x \<in> memory_as_set (vctx_memory x1) \<Longrightarrow>
+ False"
+apply (simp add:range_elms_eq)
+apply (auto simp:memory_as_set_def range_elms_def
+  store_word_memory_def  store_byte_list_memory_def)
+subgoal for a
+apply (cases "unat (a-memaddr) < 32")
+apply (auto simp:word_length)
+
+
+(*
+lemma extract_memory_range :
+  "unat (len::w256) = length lst \<Longrightarrow>
+  MemoryElm (a, v) \<in> range_elms memaddr lst \<Longrightarrow>
+  (a \<ge> memaddr \<and> a < memaddr + len) \<or>
+  (a < memaddr + len \<and> memaddr + len \<le> memaddr)"
+apply (auto simp: range_elms_def)
+
+
+subgoal for i
+proof -
+  assume a1: "unat len = length lst"
+  assume a2: "a = memaddr + word_of_int (int i)"
+  assume a3: "i < length lst"
+  assume a4: "\<not> memaddr + word_of_int (int i) < memaddr + len"
+  have f5: "\<forall>w wa. (w::256 word) + wa = word_of_int (int (unat w + unat wa))"
+    by (simp add: Word.word_of_nat word_arith_nat_add)
+  then have f6: "word_of_int (int (unat memaddr + unat (word_of_int (int i)::256 word))) = a"
+    using a2 by presburger
+  then have "\<forall>w. \<not> a < memaddr \<or> w < a - memaddr \<or> \<not> word_of_int (int (unat memaddr + unat w)) < a"
+    using f5 by (metis (no_types) add_diff_cancel_left' less_trans plus_le_left_cancel_wrap)
+  then show "memaddr \<le> memaddr + word_of_int (int i)"
+    using f6 f5 a4 a3 a1 by (metis (no_types) Suc_diff_Suc Word.word_of_nat add_diff_cancel_left' cancel_comm_monoid_add_class.diff_cancel le_unat_uoi less_trans linorder_cases nat.simps(3) not_less unat_mono)
+qed
+defer
+  apply (metis (no_types, hide_lams) Word.word_of_nat le_unat_uoi less_imp_le not_less word_le_nat_alt word_plus_mono_right2)
+  apply (metis (mono_tags, hide_lams) Word.word_of_nat \<open>\<And>i. \<lbrakk>unat len = length lst; a = memaddr + word_of_int (int i); v = lst ! i; i < length lst; \<not> memaddr + word_of_int (int i) < memaddr + len\<rbrakk> \<Longrightarrow> memaddr \<le> memaddr + word_of_int (int i)\<close> le_unat_uoi less_imp_le not_less plus_le_left_cancel_nowrap word_less_nat_alt)
+*)
 
 lemma memory_not_changed :
   "memory_range_elms memaddr (word_rsplit (w::w256))
