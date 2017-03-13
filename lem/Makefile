@@ -91,6 +91,7 @@ COQMKTOP?="$(COQBIN)coqmktop"
 VFILES:=helper.v\
   keccak.v\
   evm.v\
+  evm2.v\
   word160.v\
   word256.v\
   word4.v\
