@@ -16,7 +16,7 @@
 *)
 theory EvmFacts
   imports "lem/Evm"
-    Fields
+      "Hoare"
 begin
 
 lemmas gas_simps = Gverylow_def Glow_def Gmid_def Gbase_def Gzero_def Glogtopic_def 
@@ -114,7 +114,29 @@ lemma meter_gas_gt_0:
   by (simp add: C_def meter_gas_def)
      (fastforce  intro: ordered_comm_monoid_add_class.add_nonneg_pos
           thirdComponentOfC_gt_0)
-           
+
+lemma subtract_gas_lower_gas:
+   "subtract_gas m (InstructionContinue var) = InstructionContinue v
+    \<Longrightarrow> 0 < m \<Longrightarrow> vctx_gas v < vctx_gas var "
+  by (auto simp add: subtract_gas.simps)
+
+lemmas stack_op_simps = stack_0_0_op_def stack_0_1_op_def
+   stack_2_1_op_def stack_1_1_op_def stack_3_1_op_def
+
+lemmas op_simps = mstore8_def mload_def sha3_def
+  general_dup_def mstore_def swap_def ret_def create_def
+  call_def suicide_def calldatacopy_def codecopy_def
+  extcodecopy_def sstore_def jump_def jumpi_def
+  pc_def pop_def log_def callcode_def delegatecall_def
+  
+lemmas instruction_sem_simps =
+  stack_op_simps instruction_failure_result_def
+  subtract_gas.simps vctx_advance_pc_def
+  op_simps vctx_update_storage_def
+  blocked_jump_def blockedInstructionContinue_def
+  strict_if_def vctx_pop_stack_def
+  vctx_next_instruction_def 
+
 lemma instruction_sem_not_continuing:
   "\<lbrakk> inst \<in> {Misc STOP, Misc RETURN, Misc SUICIDE} \<union> range Unknown \<rbrakk> \<Longrightarrow>
 \<forall>v. instruction_sem var const inst \<noteq> InstructionContinue v"
@@ -133,28 +155,6 @@ inst \<notin> {Misc STOP, Misc RETURN, Misc SUICIDE} \<union> range Unknown"
    done
   done
 
-lemma subtract_gas_lower_gas:
-   "subtract_gas m (InstructionContinue var) = InstructionContinue v
-    \<Longrightarrow> 0 < m \<Longrightarrow> vctx_gas v < vctx_gas var "
-  by (auto simp add: subtract_gas.simps)
-        
-lemmas stack_op_simps = stack_0_0_op_def stack_0_1_op_def
-   stack_2_1_op_def stack_1_1_op_def stack_3_1_op_def
-
-lemmas op_simps = mstore8_def mload_def sha3_def
-  general_dup_def mstore_def swap_def ret_def create_def
-  call_def suicide_def calldatacopy_def codecopy_def
-  extcodecopy_def sstore_def jump_def jumpi_def
-  pc_def pop_def log_def callcode_def delegatecall_def
-  
-lemmas instruction_sem_simps =
-  stack_op_simps instruction_failure_result_def
-  subtract_gas.simps vctx_advance_pc_def
-  op_simps vctx_update_storage_def
-  blocked_jump_def blockedInstructionContinue_def
-  strict_if_def vctx_pop_stack_def
-  vctx_next_instruction_def 
-  
 lemma inst_sem_gas_consume:
   "instruction_sem var const inst = InstructionContinue v \<Longrightarrow>
    inst \<notin> {Misc STOP, Misc RETURN, Misc SUICIDE} \<union> range Unknown \<Longrightarrow>
@@ -190,16 +190,135 @@ lemma inst_sem_gas_consume:
      apply (case_tac "x13"; clarsimp simp: instruction_sem_simps  split: pc_inst.splits option.splits list.splits if_splits)
     done
 
-termination program_sem
+termination program_sem_t
   apply (relation "measure (\<lambda>(c,ir). nat (case ir of InstructionContinue v \<Rightarrow>  vctx_gas v | _ \<Rightarrow> 0))")
    apply (simp)
   apply clarsimp
   subgoal for const var inst
-    apply (clarsimp simp add: check_resources_def prod.case_eq_if )
     apply (case_tac "instruction_sem var const inst" ; simp)
-    apply (frule instruction_sem_continuing)
+    apply (clarsimp simp add: check_resources_def prod.case_eq_if )
+     apply (frule instruction_sem_continuing)
      apply (erule (3) inst_sem_gas_consume)
     done
   done
 
+    
+lemma program_sem_no_gas_not_continuing:
+  "\<lbrakk>vctx_gas var \<le> 0 ; 0\<le> vctx_memory_usage var \<rbrakk> \<Longrightarrow>
+\<forall>v. program_sem_t const (InstructionContinue var) \<noteq> InstructionContinue v"
+  apply (clarsimp simp add: check_resources_def prod.case_eq_if  split:option.split)
+  apply (drule instruction_sem_continuing)
+  subgoal for inst
+  using meter_gas_gt_0[where inst=inst and var=var and const=const]
+  apply simp
+  done
+ done
+
+declare program_sem_t.simps[simp del]
+declare next_state_def[simp del]
+
+lemma program_sem_t_imp_program_sem:
+  shows
+ "\<exists>k. program_sem_t const ir = program_sem (\<lambda>_. ()) const k ir"
+  apply (induct rule:program_sem_t.induct)
+  apply (case_tac p)
+      apply clarify
+      apply (rename_tac c p inst)
+      apply (drule_tac x=inst in meta_spec)
+      apply (case_tac "vctx_next_instruction inst c", simp add: vctx_next_instruction_def split:option.splits)
+      apply (rename_tac nxt_inst)
+      apply (drule_tac x="nxt_inst" in meta_spec)
+      apply (erule meta_impE , simp)
+      apply (subst program_sem_t.simps)
+      apply (simp only: instruction_result.simps)
+      apply (split if_split)
+      apply (rule conjI)
+       apply clarify
+       apply (rule exI[where x="Suc 0"])
+       apply (simp add: program_sem.simps next_state_def split: if_split)
+      apply (rule impI)
+      apply (simp only: option.simps split:if_split)
+      apply (rule impI | rule conjI)+
+      apply (rule exI[where x="Suc 0"])
+         apply (simp add: program_sem.simps next_state_def)
+    apply (rule impI)
+      apply (rule exI[where x="Suc 0"])
+        apply (simp add: program_sem.simps next_state_def)
+       apply (rule impI | rule conjI)+
+        apply (erule meta_impE, simp)+
+        apply clarsimp
+        apply (rule_tac x="Suc k" in exI)
+        apply (simp add: program_sem.simps next_state_def )
+       apply clarsimp
+       apply (rule exI[where x="Suc 0"])
+      apply (simp add: program_sem.simps next_state_def)
+      apply (rule impI | rule conjI)+
+      apply clarsimp
+        apply (rule exI[where x="Suc 0"])
+        apply (simp add: program_sem.simps next_state_def)
+      apply clarsimp
+        apply (rule exI[where x="Suc 0"])
+        apply (simp add: program_sem.simps next_state_def)
+      apply (rule impI | rule conjI)+
+      apply clarsimp
+        apply (rule_tac x="Suc k" in exI)
+        apply (simp add: program_sem.simps next_state_def)
+      apply clarsimp
+        apply (rule exI[where x="Suc 0"])
+        apply (simp add: program_sem.simps next_state_def)
+  
+      apply clarsimp
+        apply (rule exI[where x="Suc 0"])
+        apply (simp add: program_sem_t.simps program_sem.simps next_state_def)
+      apply clarsimp
+            apply (rule exI[where x="Suc 0"])
+         apply (simp add: program_sem.simps program_sem_t.simps next_state_def)
+  done
+    
+definition hoare_triple ::
+ "[failure_reason set, state_element set \<Rightarrow> bool,
+   (int * inst) set, state_element set \<Rightarrow> bool] \<Rightarrow> bool"
+ ("_ \<turnstile> \<lbrace>_\<rbrace> _ \<lbrace>_\<rbrace>" [81,81,81,81] 100)
+where
+  "hoare_triple F P c Q \<equiv>
+    \<forall>const ir rest. no_assertion const \<longrightarrow>
+       (P ** code c ** rest) (instruction_result_as_set const ir) \<longrightarrow>
+         (((Q ** code c ** rest) (instruction_result_as_set const (program_sem_t const ir)))
+         \<or> failed_for_reasons F (program_sem_t const ir))"
+
+lemma diff_diff_union:
+  "S - A - B = S - (A \<union> B)"
+  by blast
+    
+lemma Collect_union_disj_pair:
+ "{P x y | x y. (x,y) \<in> c1} \<union> {P x y |x y. (x,y) \<in> c2} = {P x y|x y.  (x,y) \<in> c1 \<or> (x,y) \<in> c2}"
+  by blast
+    
+lemma hoare_comp:
+   "F \<turnstile> \<lbrace>P\<rbrace> c1 \<lbrace>R\<rbrace> \<Longrightarrow> F \<turnstile> \<lbrace>R\<rbrace> c2 \<lbrace>Q\<rbrace> \<Longrightarrow> c = c1 \<union> c2 \<Longrightarrow> c1 \<inter> c2 = {} \<Longrightarrow>  F \<turnstile> \<lbrace>P\<rbrace> c \<lbrace>Q\<rbrace>"
+  apply (simp add: hoare_triple_def)
+  apply clarsimp
+  apply (drule_tac x=const in spec)+
+  apply clarsimp
+  apply (drule_tac x=ir and y="code c2 ** rest" in spec2)
+  apply clarsimp
+  apply (drule mp)
+  apply (rule conjI)
+    apply fastforce
+  apply (rule conjI)
+    apply fastforce
+   apply (subst diff_diff_union)
+   apply (subst Collect_union_disj_pair)
+   apply simp
+  apply clarsimp
+  apply (drule_tac x="program_sem_t const ir" in spec)
+  apply (drule_tac x="rest ** code c1" in spec)
+  apply (drule mp)
+  apply (rule conjI)
+    apply blast
+  defer
+   apply (rule conjI)
+    apply (subst Collect_union_disj_pair[symmetric])
+     apply (subst (asm) Diff_triv ) back back back
+     oops   
 end
