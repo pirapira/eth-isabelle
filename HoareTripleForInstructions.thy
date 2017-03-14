@@ -2670,192 +2670,6 @@ lemma memory_range_elms_update_balance [simp] :
 apply(auto simp add: balance_as_set_def)
 done
 
-
-lemma stack_topmost_in_insert_memory_usage [simp] :
-  "stack_topmost_elms h lst
-       \<subseteq> insert (MemoryUsageElm u) X =
-  (stack_topmost_elms h lst \<subseteq> X)"
-apply(auto)
-done
-
-lemma memory_gane_elms_in_stack_update [simp] :
-  "memory_range_elms in_begin input \<subseteq> variable_ctx_as_set (v\<lparr>vctx_stack := tf\<rparr>) =
-  (memory_range_elms in_begin input \<subseteq> variable_ctx_as_set v)"
-apply(auto)
-done
-
-lemma stack_topmost_in_minus_balance_as [simp] :
-  "stack_topmost_elms h lst
-       \<subseteq> X - balance_as_set b =
-  (stack_topmost_elms h lst \<subseteq> X)"
-apply(auto simp add: balance_as_set_def)
-done
-
-lemma stack_topmost_in_union_balance [simp] :
-  "stack_topmost_elms h lst
-       \<subseteq> X \<union> balance_as_set b =
-  (stack_topmost_elms h lst \<subseteq> X)"
-apply(auto simp add: balance_as_set_def)
-done
-
-lemma memory_range_in_minus_balance_as [simp] :
-  "memory_range_elms h lst
-       \<subseteq> X - balance_as_set b =
-  (memory_range_elms h lst \<subseteq> X)"
-apply(auto simp add: balance_as_set_def)
-done
-
-lemma memory_range_in_union_balance [simp] :
-  "memory_range_elms h lst
-       \<subseteq> X \<union> balance_as_set b =
-  (memory_range_elms h lst \<subseteq> X)"
-apply(auto simp add: balance_as_set_def)
-done
-
-lemma memory_range_in_minus_balance [simp] :
-  "memory_range_elms h lst
-    \<subseteq> X - {BalanceElm pair} =
-   (memory_range_elms h lst \<subseteq> X)"
-apply(auto)
-done
-
-lemma memory_range_advance [simp] :
-  "memory_range_elms in_begin input \<subseteq> variable_ctx_as_set (vctx_advance_pc co_ctx x1) =
-  (memory_range_elms in_begin input \<subseteq> variable_ctx_as_set x1)"
-apply(auto)
-done
-
-lemma update_balance_match [simp] :
-  "update_balance a f b a = f (b a)"
-apply(simp add: update_balance_def)
-done 
-
-lemma lookup_o [simp]:
-  "a \<ge> length tf \<Longrightarrow>
-   (rev tf @ lst) ! a
-   = lst ! (a - length tf)"
-	by (simp add: rev_append_eq)
-
-lemma update_balance_no_change [simp] :
-  "update_balance changed f original a = original a =
-   (changed \<noteq> a \<or> (changed = a \<and> f (original a) = original a))"
-apply(auto simp add: update_balance_def)
-done
-
-lemma update_balance_changed [simp] :
-  "original a \<noteq> update_balance changed f original a =
-  (changed = a \<and> f (original a) \<noteq> original a)"
-apply(auto simp add: update_balance_def)
-done
-
-lemma call_gas_triple:
-  "triple {OutOfGas}
-          (\<langle> h \<le> 1017 \<and> fund \<ge> v \<and> length input = unat in_size \<rangle> ** 
-           program_counter k ** memory_range in_begin input **
-           stack_topmost h [out_size, out_begin, in_size, in_begin, v, r, g] **
-           gas_pred own_gas **
-           memory_usage u **
-           this_account this **
-           balance this fund **
-           continuing)
-          {(k, Misc CALL)}
-          (memory_range in_begin input **
-           stack_topmost h [] **
-           this_account this **
-           balance this (fund - v) **
-           program_counter (k + 1) ** 
-           gas_any **
-           memory_usage (M (M u in_begin in_size) out_begin out_size) **
-           not_continuing **
-           action (ContractCall \<lparr> callarg_gas = g
-                                , callarg_code = ucast r
-                                , callarg_recipient = ucast r
-                                , callarg_value = v
-                                , callarg_data = input
-                                , callarg_output_begin = out_begin
-                                , callarg_output_size = out_size \<rparr>))"
-apply(simp only: triple_triple_alt)
-apply(auto simp add: triple_alt_def)
-apply(rule_tac x = 1 in exI)
-apply(case_tac presult; simp)
-apply(clarify)
-apply(simp add: call_def)
-apply(case_tac "vctx_balance x1 (cctx_this co_ctx) < v"; simp)
-apply(rule_tac x = "vctx_gas x1 - meter_gas (Misc CALL) x1 co_ctx" in exI)
-apply(simp add: instruction_result_as_set_def)
-apply(simp add: sep_memory_range_sep sep_memory_range failed_for_reasons_def)
-apply(rule leibniz)
- apply blast
-apply(rule Set.equalityI)
- apply(clarify)
- apply simp
- apply(rename_tac elm; case_tac elm; simp)
-  apply(case_tac "length tf \<le> fst x2"; simp)
- apply(clarsimp)
- apply(subgoal_tac "a = cctx_this co_ctx")
-  apply(simp)
- apply(case_tac "a = cctx_this co_ctx")
-  apply(simp)
- apply(simp)
-apply(clarsimp)
-apply(rename_tac elm; case_tac elm; simp)
-apply(auto)
-done
-
-declare stack_height_sep [simp]
-declare stack_sep [simp]
-declare balance_sep [simp]
-declare program_counter_sep [simp]
-declare meter_gas_def [simp]
-declare gas_def [simp]
-
-
-
-lemma gas_gas_triple :
-  "triple {OutOfGas}
-          (\<langle> h \<le> 1023 \<rangle> ** stack_height h ** program_counter k ** gas_pred g ** continuing)
-          {(k, Info GAS)}
-          (stack_height (h + 1) ** stack h (word_of_int (g - 2))
-           ** program_counter (k + 1) ** gas_pred (g - 2) ** continuing )"
-apply(auto simp add: triple_def)
-apply(rule_tac x = 1 in exI)
-apply(case_tac presult; auto simp add: instruction_result_as_set_def)
- apply(simp add: Word.wi_hom_syms(2))
-apply(rule leibniz)
- apply blast
-apply(rule  Set.equalityI; clarify)
- apply(simp)
- apply(rename_tac elm)
- apply(case_tac elm; simp)
-apply(simp)
-apply(rename_tac elm)
-apply(case_tac elm; auto simp add: Word.wi_hom_syms(2))
-done
-
-
-lemma pos_length_head_exists [simp] :
-  "n < length lst \<Longrightarrow>
-   index lst 0 = Some (lst ! 0)"
-apply(case_tac lst; auto)
-done
-
-lemma rev_lookup :
-  "k < length lst \<Longrightarrow>
-   rev lst ! (length lst - Suc k) = lst ! k"
-apply(simp add: List.rev_nth)
-done
-
-
-lemma list_swap_usage :
-  "n < length lst \<Longrightarrow>
-   rev lst ! (length lst - Suc 0) = w \<Longrightarrow>
-   rev lst ! (length lst - Suc n) = v \<Longrightarrow>
-   list_swap n lst = Some ([v] @ take (n - 1) (drop 1 lst) @ [w] @ (drop (n + 1) lst))"
-apply(subgoal_tac "0 < length lst")
- apply(simp add: rev_lookup list_swap_def)
-apply auto
-done
-
 lemma small_min [simp] :
   "Suc n < h \<Longrightarrow>
    min (h - Suc 0) n = n"
@@ -2943,107 +2757,218 @@ lemma rev_take_nth [simp] :
 apply(simp add: List.rev_nth)
 done
 
-lemma tmp001:
-"length lst = h \<Longrightarrow>
-Suc (unat n) < h \<Longrightarrow>
-unat n \<le> length (drop 1 lst)"
-apply auto
+lemma stack_topmost_in_insert_memory_usage [simp] :
+  "stack_topmost_elms h lst
+       \<subseteq> insert (MemoryUsageElm u) X =
+  (stack_topmost_elms h lst \<subseteq> X)"
+apply(auto)
 done
 
-lemma tmp000: "
-a \<noteq> h - Suc 0 \<Longrightarrow> \<not> a < h - Suc (Suc (unat n)) \<Longrightarrow> a \<noteq> h - Suc (Suc (unat n)) \<Longrightarrow> 
-a < h \<Longrightarrow> (Suc (a + unat n) - h) < unat n
-"
-apply auto
+lemma memory_gane_elms_in_stack_update [simp] :
+  "memory_range_elms in_begin input \<subseteq> variable_ctx_as_set (v\<lparr>vctx_stack := tf\<rparr>) =
+  (memory_range_elms in_begin input \<subseteq> variable_ctx_as_set v)"
+apply(auto)
 done
 
-lemma tmp002:
- "a \<noteq> h - Suc 0 \<Longrightarrow> a < h
-   \<Longrightarrow> Suc (h - Suc (Suc a)) = h - Suc a"
-apply auto
+lemma stack_topmost_in_minus_balance_as [simp] :
+  "stack_topmost_elms h lst
+       \<subseteq> X - balance_as_set b =
+  (stack_topmost_elms h lst \<subseteq> X)"
+apply(auto simp add: balance_as_set_def)
+done
+
+lemma stack_topmost_in_union_balance [simp] :
+  "stack_topmost_elms h lst
+       \<subseteq> X \<union> balance_as_set b =
+  (stack_topmost_elms h lst \<subseteq> X)"
+apply(auto simp add: balance_as_set_def)
+done
+
+lemma memory_range_in_minus_balance_as [simp] :
+  "memory_range_elms h lst
+       \<subseteq> X - balance_as_set b =
+  (memory_range_elms h lst \<subseteq> X)"
+apply(auto simp add: balance_as_set_def)
+done
+
+lemma memory_range_in_union_balance [simp] :
+  "memory_range_elms h lst
+       \<subseteq> X \<union> balance_as_set b =
+  (memory_range_elms h lst \<subseteq> X)"
+apply(auto simp add: balance_as_set_def)
+done
+
+lemma memory_range_in_minus_balance [simp] :
+  "memory_range_elms h lst
+    \<subseteq> X - {BalanceElm pair} =
+   (memory_range_elms h lst \<subseteq> X)"
+apply(auto)
+done
+
+lemma memory_range_advance [simp] :
+  "memory_range_elms in_begin input \<subseteq> variable_ctx_as_set (vctx_advance_pc co_ctx x1) =
+  (memory_range_elms in_begin input \<subseteq> variable_ctx_as_set x1)"
+apply(auto)
+done
+
+lemma update_balance_match [simp] :
+  "update_balance a f b a = f (b a)"
+apply(simp add: update_balance_def)
+done 
+
+lemma lookup_o [simp]:
+  "a \<ge> length tf \<Longrightarrow>
+   (rev tf @ lst) ! a
+   = lst ! (a - length tf)"
+	by (simp add: rev_append_eq)
+
+lemma update_balance_no_change [simp] :
+  "update_balance changed f original a = original a =
+   (changed \<noteq> a \<or> (changed = a \<and> f (original a) = original a))"
+apply(auto simp add: update_balance_def)
+done
+
+lemma update_balance_changed [simp] :
+  "original a \<noteq> update_balance changed f original a =
+  (changed = a \<and> f (original a) \<noteq> original a)"
+apply(auto simp add: update_balance_def)
+done
+
+lemma storage_inst_advance [simp] :
+"       program_content (cctx_program co_ctx) (vctx_pc x1) = Some (Storage m) \<Longrightarrow>
+       k = vctx_pc x1 \<Longrightarrow>
+       vctx_pc (vctx_advance_pc co_ctx x1) = vctx_pc x1 + 1"
+apply(simp add: vctx_advance_pc_def inst_size_def inst_code.simps)
 done
 
 
-lemma take_drop_nth [simp] :
-  "length (vctx_stack x1) = h \<Longrightarrow>
-   Suc (unat n) < h \<Longrightarrow>
-   a \<noteq> h - Suc 0 \<Longrightarrow> \<not> a < h - Suc (Suc (unat n)) \<Longrightarrow> a \<noteq> h - Suc (Suc (unat n)) \<Longrightarrow>
-   a < h \<Longrightarrow>
-   rev (take (unat n) (drop (Suc 0) (vctx_stack x1))) ! (Suc (a + unat n) - h) = rev (vctx_stack x1) ! a"
-apply(simp add: tmp000 tmp001 tmp002 List.rev_nth)
+lemma update_storage_preserves_pc [simp] :
+"vctx_pc
+  (vctx_update_storage idx new x1) =
+ vctx_pc x1"
+apply(simp add: vctx_update_storage_def)
 done
 
-lemma swap_gas_triple :
-   "triple {OutOfGas} (\<langle> h \<le> 1024 \<and> Suc (unat n) < h \<rangle> **
-                       stack_height h **
-                       stack (h - 1) w **
-                       stack (h - (unat n) - 2) v **
-                       program_counter k **
-                       gas_pred g **
-                       continuing
-                      )
+lemma update_storage_updates [simp] :
+"vctx_storage (vctx_update_storage idx new x1) idx = new"
+apply(simp add: vctx_update_storage_def)
+done
 
-                      {(k, Swap n)}
-                      (stack_height h **
-                       stack (h - 1) v **
-                       stack (h - (unat n) - 2) w **
-                       program_counter (k + 1) **
-                       gas_pred (g - Gverylow) **
-                       continuing
-                      )"
-apply(simp add: triple_def)
-apply clarify
+lemma update_storage_preserves_gas [simp] :
+  "vctx_gas (vctx_update_storage idx new x1) = vctx_gas x1"
+apply(simp add: vctx_update_storage_def)
+done
+
+lemma default_zero [simp] :
+  "vctx_stack x1 = idx # ta \<Longrightarrow>
+   vctx_stack_default 0 x1 = idx"
+apply(simp add: vctx_stack_default_def)
+done
+
+lemma default_one [simp] :
+  "vctx_stack x1 = idx # y # ta \<Longrightarrow>
+   vctx_stack_default 1 x1 = y"
+apply(simp add: vctx_stack_default_def)
+done
+
+lemma rev_append_look_up [simp] :
+  "(rev ta @ lst) ! pos = val =
+   ((pos < length ta \<and> rev ta ! pos = val) \<or>
+    (length ta \<le> pos \<and> lst ! (pos - length ta) = val))"
+apply (simp add: nth_append)
+done
+
+lemma pair_snd_eq [simp] : 
+ "x3 \<noteq> (idx, snd x3) =
+  (fst x3 \<noteq> idx)"
+apply (case_tac x3; auto)
+done
+
+
+lemma call_gas_triple:
+  "triple {OutOfGas}
+          (\<langle> h \<le> 1017 \<and> fund \<ge> v \<and> length input = unat in_size \<rangle> ** 
+           program_counter k ** memory_range in_begin input **
+           stack_topmost h [out_size, out_begin, in_size, in_begin, v, r, g] **
+           gas_pred own_gas **
+           memory_usage u **
+           this_account this **
+           balance this fund **
+           continuing)
+          {(k, Misc CALL)}
+          (memory_range in_begin input **
+           stack_topmost h [] **
+           this_account this **
+           balance this (fund - v) **
+           program_counter (k + 1) ** 
+           gas_any **
+           memory_usage (M (M u in_begin in_size) out_begin out_size) **
+           not_continuing **
+           action (ContractCall \<lparr> callarg_gas = g
+                                , callarg_code = ucast r
+                                , callarg_recipient = ucast r
+                                , callarg_value = v
+                                , callarg_data = input
+                                , callarg_output_begin = out_begin
+                                , callarg_output_size = out_size \<rparr>))"
+apply(simp only: triple_triple_alt)
+apply(auto simp add: triple_alt_def)
 apply(rule_tac x = 1 in exI)
-apply(case_tac presult)
-  defer
-  apply(simp add: instruction_result_as_set_def)
- apply(simp add: instruction_result_as_set_def)
-apply(simp add: swap_def list_swap_usage swap_inst_numbers_def)
-apply(rule impI)
-apply(rule leibniz)
- apply blast
-apply(rule  Set.equalityI)
- apply(simp add: Set.subset_iff)
- apply(rule allI)
- apply(rename_tac elm)
- apply(case_tac elm; simp add: instruction_result_as_set_def)
- apply(rename_tac pair)
- apply(case_tac pair; simp)
- apply(case_tac "a = h - Suc 0"; simp)
- apply(case_tac "a < h - Suc (Suc (unat n))"; simp)
- apply(case_tac "a = h - Suc (Suc (unat n))"; simp)
-  apply blast
- apply auto[1]
-apply(simp add: Set.subset_iff)
-apply(rule allI)
-apply(rename_tac elm)
-apply(case_tac elm; simp add: instruction_result_as_set_def)
- apply(rename_tac pair; case_tac pair)
- apply simp
- apply(case_tac "a = h - Suc 0"; simp)
- apply(case_tac "a < h - Suc 0"; simp)
-  apply(case_tac "a = h - Suc (Suc (unat n))"; simp)
-   apply blast
-  apply(case_tac "a < h - Suc (Suc (unat n))"; simp)
-   apply linarith
-  apply(simp add: tmp000 tmp001 tmp002 List.rev_nth)
-  apply linarith
- apply auto[1]
-apply auto[1]
-done
-
-(* the rest should be just one goal
+apply(case_tac presult; simp)
+apply(clarify)
+apply(simp add: call_def)
+apply(case_tac "vctx_balance x1 (cctx_this co_ctx) < v"; simp)
+apply(rule_tac x = "vctx_gas x1 - meter_gas (Misc CALL) x1 co_ctx" in exI)
+apply(simp add: instruction_result_as_set_def)
+apply(simp add: sep_memory_range_sep sep_memory_range failed_for_reasons_def)
 apply(rule leibniz)
  apply blast
 apply(rule Set.equalityI)
  apply(clarify)
- apply(simp)
+ apply simp
  apply(rename_tac elm; case_tac elm; simp)
-apply(clarify)
-apply(simp)
+  apply(case_tac "length tf \<le> fst x2"; simp)
+ apply(clarsimp)
+ apply(subgoal_tac "a = cctx_this co_ctx")
+  apply(simp)
+ apply(case_tac "a = cctx_this co_ctx")
+  apply(simp)
+ apply(simp)
+apply(clarsimp)
 apply(rename_tac elm; case_tac elm; simp)
 apply(auto)
-done *)
+done
+
+declare stack_height_sep [simp]
+declare stack_sep [simp]
+declare balance_sep [simp]
+declare program_counter_sep [simp]
+declare meter_gas_def [simp]
+declare gas_def [simp]
+
+
+
+lemma gas_gas_triple :
+  "triple {OutOfGas}
+          (\<langle> h \<le> 1023 \<rangle> ** stack_height h ** program_counter k ** gas_pred g ** continuing)
+          {(k, Info GAS)}
+          (stack_height (h + 1) ** stack h (word_of_int (g - 2))
+           ** program_counter (k + 1) ** gas_pred (g - 2) ** continuing )"
+apply(auto simp add: triple_def)
+apply(rule_tac x = 1 in exI)
+apply(case_tac presult; auto simp add: instruction_result_as_set_def)
+ apply(simp add: Word.wi_hom_syms(2))
+apply(rule leibniz)
+ apply blast
+apply(rule  Set.equalityI; clarify)
+ apply(simp)
+ apply(rename_tac elm)
+ apply(case_tac elm; simp)
+apply(simp)
+apply(rename_tac elm)
+apply(case_tac elm; auto simp add: Word.wi_hom_syms(2))
+done
+
 
 
 end

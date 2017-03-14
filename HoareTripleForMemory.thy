@@ -118,7 +118,7 @@ and word_of_nat [of x]
 apply force
 done
 
-lemma s : "(\<forall>x. f x = g x) \<Longrightarrow> f = g"
+lemma funext : "(\<forall>x. f x = g x) \<Longrightarrow> f = g"
 apply(auto)
 done
 
@@ -134,43 +134,6 @@ apply auto
 apply (subst word_of_inc)
   by (metis (no_types, hide_lams) add.assoc)
 
-(*
-definition memory :: "w256 \<Rightarrow> w256 \<Rightarrow> set_pred" where
-"memory ind w = memory_range ind [
-   (word_rsplit w)!0,
-   (word_rsplit w)!1,
-   (word_rsplit w)!2,
-   (word_rsplit w)!3,
-   (word_rsplit w)!4,
-   (word_rsplit w)!5,
-   (word_rsplit w)!6,
-   (word_rsplit w)!7,
-   (word_rsplit w)!8,
-   (word_rsplit w)!9,
-   (word_rsplit w)!10,
-   (word_rsplit w)!11,
-   (word_rsplit w)!12,
-   (word_rsplit w)!13,
-   (word_rsplit w)!14,
-   (word_rsplit w)!15,
-   (word_rsplit w)!16,
-   (word_rsplit w)!17,
-   (word_rsplit w)!18,
-   (word_rsplit w)!19,
-   (word_rsplit w)!20,
-   (word_rsplit w)!21,
-   (word_rsplit w)!22,
-   (word_rsplit w)!23,
-   (word_rsplit w)!24,
-   (word_rsplit w)!25,
-   (word_rsplit w)!26,
-   (word_rsplit w)!27,
-   (word_rsplit w)!28,
-   (word_rsplit w)!29,
-   (word_rsplit w)!30,
-   (word_rsplit w)!31
-]"
-*)
 
 lemma sep_memory_range2 :
 "      unat (len_word :: w256) = length input \<Longrightarrow>
@@ -290,7 +253,7 @@ lemma mload_inst [simp] :
 apply (auto simp:inst_size_def inst_code.simps)
 done
 
-lemma aux1 :
+lemma get_good_mem_elem_nat_aux :
 "(x \<in> memory_range_elms (addr+1)
                  lst \<Longrightarrow>
            \<exists>a. x =
@@ -321,7 +284,7 @@ apply (induction lst arbitrary:addr)
 apply auto
 apply (rule exI[of _ 0])
 apply auto
-using aux1
+using get_good_mem_elem_nat_aux
 apply force
 done
 
@@ -637,51 +600,6 @@ apply(auto simp add: contexts_as_set_def variable_ctx_as_set_def stack_as_set_de
        balance_as_set_def)
 done
 
-lemma sort_out_sets :
- "vctx_stack x1 = memaddr # 64 # ta \<Longrightarrow>
-  stack_new = stack_new2 \<Longrightarrow>
-  memu = memu2 \<Longrightarrow>
-  newgas = newgas2 \<Longrightarrow>
-  contexts_as_set x1 co_ctx -
-          {GasElm (vctx_gas x1)} -
-          {MemoryUsageElm (vctx_memory_usage x1)} -
-          {PcElm (vctx_pc x1)} -
-          {StackElm (Suc (length ta), memaddr)} -
-          {StackHeightElm
-            (Suc (Suc (length ta)))} -
-          memory_range_elms memaddr memstuff -
-          {CodeElm (vctx_pc x1, Arith SHA3)} -
-          {StackElm (length ta, 64)} =
-          insert (PcElm (vctx_pc x1 + 1))
-           (insert
-             (GasElm newgas)
-             (insert
-               (MemoryUsageElm memu)
-               (contexts_as_set x1 co_ctx -
-                stack_as_set (memaddr # 64 # ta) -
-                {PcElm (vctx_pc x1),
-                 GasElm (vctx_gas x1),
-                 MemoryUsageElm
-                  (vctx_memory_usage x1)} \<union>
-                stack_as_set (stack_new # ta)))) -
-          {StackHeightElm (Suc (length ta))} -
-          {PcElm (vctx_pc x1 + 1)} -
-          {StackElm (length ta, stack_new2)} -
-          {CodeElm (vctx_pc x1, Arith SHA3)} -
-          memory_range_elms memaddr memstuff -
-          {MemoryUsageElm memu2} -
-          {GasElm newgas2}"
-apply(auto simp add: contexts_as_set_def variable_ctx_as_set_def stack_as_set_def ext_program_as_set_def
-       balance_as_set_def)
-  using le_less_Suc_eq by force
-
-lemma set_eq_dirs :
-   "(\<And> x. x \<in> a \<Longrightarrow> x \<in> b) \<Longrightarrow>
-    (\<And> x. x \<in> b \<Longrightarrow> x \<in> a) \<Longrightarrow>
-    a = b"
-apply auto
-done
-
 lemma sort_out_sets_again :
  "vctx_stack x1 = memaddr # 64 # ta \<Longrightarrow>
   stack_new = stack_new2 \<Longrightarrow>
@@ -737,10 +655,7 @@ lemma hash2_gas_triple :
        stack_height (h+2) **
        program_counter k **   
        memory_usage memu **
-(*
-       memory memaddr table **
-       memory (memaddr+32) key **
-*)
+(* memory memaddr table ** memory (memaddr+32) key ** *)
        memory_ran memaddr
         (word_rsplit table @ word_rsplit key) **
        gas_pred g **
@@ -755,9 +670,6 @@ lemma hash2_gas_triple :
      gas_pred (g - Gsha3 - Gsha3word * 2 + Cmem memu -
                Cmem (M memu memaddr 64)) **
      continuing )"
-(*
-apply(auto simp add: triple_def)
-*)
 apply(auto simp add: triple_def)
 apply(rule_tac x = 1 in exI)
 apply(case_tac presult)
@@ -810,9 +722,6 @@ apply(rule leibniz)
 apply (simp add:vctx_advance_pc_def many_such_cases)
 apply (simp add:meter_gas_def)
 
-(*
-apply (rule sort_out_sets)
-*)
 apply (rule sort_out_sets_again)
 
 apply auto
@@ -836,24 +745,11 @@ done
 
 (* nothing will work properly because everything is mod 2^256 *)
 
-(*
-definition store_bytes :: "w256 \<Rightarrow> byte list \<Rightarrow> memory \<Rightarrow> memory" where
-"store_bytes a lst mem = (\<lambda>i.
-   if unat (i - a) \<ge> 0 \<and> unat (i - a) < length lst then
-    lst!unat(i-a) 
-   else mem i)"
-*)
-
 lemma store_get [simp] :
 "unat a < length lst \<Longrightarrow>
  store_byte_list_memory addr lst mem (addr+a) = lst!unat a"
 apply (auto simp:store_byte_list_memory_def)
 done
-
-(*
-definition store_word :: "w256 \<Rightarrow> w256 \<Rightarrow> memory \<Rightarrow> memory" where
-"store_word pos vl mem = store_bytes pos (word_rsplit vl) mem"
-*)
 
 
 lemma memory_contra :
@@ -899,7 +795,7 @@ done
 
 declare memory_as_set_def [simp del]
 
-lemma asd2 [simp]:
+lemma memory_range_at_memory_set [simp]:
    "memory_range_elms memaddr lst
        \<subseteq> variable_ctx_as_set v \<Longrightarrow>
    memory_range_elms memaddr lst \<subseteq> memory_as_set (vctx_memory v)"
@@ -907,7 +803,7 @@ apply(auto simp add: contexts_as_set_def variable_ctx_as_set_def stack_as_set_de
        balance_as_set_def)
 done
 
-lemma asd2_was_bad [simp]:
+lemma memory_at_set [simp]:
    "memory_range_elms memaddr lst \<subseteq> memory_as_set (vctx_memory v)
     \<Longrightarrow> memory_range_elms memaddr lst
        \<subseteq> variable_ctx_as_set v"
@@ -915,34 +811,7 @@ apply(auto simp add: contexts_as_set_def variable_ctx_as_set_def stack_as_set_de
        balance_as_set_def)
 done
 
-lemma asd_1 :
-"idx < Suc (Suc (length ta)) \<Longrightarrow>
-       [v, memaddr] ! (idx - length ta) \<noteq>
-       memaddr \<Longrightarrow>
-       \<not> idx < length ta \<Longrightarrow>
-       idx = length ta"
-  using le_less_Suc_eq apply fastforce
-done
 
-(*
-  using le_less_Suc_eq apply fastforce
-  using le_less_Suc_eq apply fastforce
-proof -
-  fix idx :: nat
-  assume a1: "idx < Suc (Suc (length ta))"
-  assume a2: "[v, memaddr] ! (idx - length ta) \<noteq> memaddr"
-  assume "\<not> idx < length ta"
-  then have f3: "\<forall>w. [w] ! (idx - length ta - 1) = (rev ta @ [[w] ! (idx - length ta - 1), w]) ! idx"
-    by (metis over_one_rev')
-  { assume "\<exists>w. [w::256 word] ! (idx - length ta - 1) \<noteq> w"
-    then have "idx \<le> length ta"
-      using f3 a1 by (metis (no_types) not_less_eq over_two_rev)
-    then have "[v, memaddr] ! (idx - length ta) = v"
-      by simp }
-  then show "[v, memaddr] ! (idx - length ta) = v"
-    using a2 by (metis (no_types) nth_non_equal_first_eq)
-next
-*)
 
 definition range_elms :: "w256 \<Rightarrow> byte list \<Rightarrow> state_element set" where
 "range_elms addr lst =
@@ -1020,7 +889,7 @@ lemma unat_inc :
 apply (rule unat_add)
   by auto
 
-lemma blah :
+lemma word_minus_plus :
    "(w::w256) - (i::w256) - (1::w256) = (w - (i + (1::w256)))"
 apply auto
 done
@@ -1041,7 +910,7 @@ have "unat i + unat (1::w256) +
 using unat_minus_one and unat_inc and a and b by force
 then have "unat i + unat (1::w256) +
   unat ((word_of_int (int n)::w256) - i - (1::w256)) = n"
-apply (subst blah)
+apply (subst word_minus_plus)
 apply auto
 done
 then show ?thesis by auto
@@ -1139,18 +1008,7 @@ and word_length
 apply auto
 done
 
-(*
-lemma get_knowledge :
-  "x = MemoryElm (a, vctx_memory x1 a) \<Longrightarrow>
-   unat (a - memaddr) < length lst \<Longrightarrow>
-   range_elms memaddr lst \<subseteq>
-     memory_as_set (vctx_memory x1) \<Longrightarrow>
-   vctx_memory x1 a = lst ! unat (a-memaddr)"
-apply (auto simp:memory_as_set_def range_elms_def
-  store_word_memory_def  store_byte_list_memory_def)
-*)
-
-declare asd2 [simp del]
+declare memory_range_at_memory_set [simp del]
 
 lemma cut_stuff2 :
 "length lst = 32 \<Longrightarrow>
@@ -1166,7 +1024,7 @@ lemma cut_stuff :
   memory_range_elms memaddr lst \<subseteq>
    memory_as_set (vctx_memory (x1::variable_ctx)) \<Longrightarrow>
   cut_memory memaddr 32 (vctx_memory x1) = lst"
-using asd2_was_bad [of memaddr lst x1]
+using memory_at_set [of memaddr lst x1]
 apply auto
 done
 
@@ -1219,21 +1077,6 @@ done
 
 declare word_of_nat [simp add]
 
-(*
-lemma one_more_obstacle :
-"cut_memory memaddr 32 (vctx_memory x1) =
-     (word_rsplit (old_v::w256))  \<Longrightarrow>
-  x \<notin> memory_range_elms memaddr (word_rsplit (v::w256)) \<Longrightarrow>
- x \<in> memory_range_elms memaddr
-               (word_rsplit old_v) \<Longrightarrow>
-         x \<in> memory_as_set
-               (store_word_memory memaddr v
-                 (vctx_memory x1)) \<Longrightarrow>
-         False"
-apply (auto simp:range_elms_eq range_elms_def memory_as_set_def
-store_word_memory_def)
-done
-*)
 
 lemma work_on_it :
 "memory_range_elms memaddr
@@ -1430,7 +1273,7 @@ apply (auto simp:range_elms_eq range_elms_def memory_as_set_def
 store_word_memory_def)
 done
 
-lemma final_nightmare :
+lemma memory_range_fact :
 "memory_range_elms memaddr
         (word_rsplit old_v)
        \<subseteq> variable_ctx_as_set x1 \<Longrightarrow>
@@ -1478,8 +1321,8 @@ defer
 apply (auto simp:vctx_stack_default_def)[1]
 *)
 apply (rule plz_sort_it_out)
-apply auto
-using final_nightmare
-by fastforce
+(* apply auto *)
+apply (auto simp:memory_range_fact)
+done
 
 end
