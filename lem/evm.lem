@@ -1978,6 +1978,7 @@ type account_state = <|
   account_storage : storage;
   account_code : program;
   account_balance : w256;
+  account_nonce : w256;
   account_ongoing_calls : list (variable_ctx * integer * integer);
     (* the variable environments that are executing on this account, but waiting for calls to finish *)
   account_killed : bool;
@@ -2034,6 +2035,7 @@ let empty_account addr =
    account_balance = 0;
    account_ongoing_calls = [];
    account_killed = false;
+   account_nonce = 0;
  |>
 
 (* And after our contract makes a move, the account state is updated as follows. *)
@@ -2112,7 +2114,7 @@ indreln [build_vctx_called : account_state -> call_env -> variable_ctx -> bool]
 
 indreln [build_vctx_returned : account_state -> return_result -> variable_ctx -> bool]
 vctx_returned:
-   forall a_code v_pc new_bal a_bal a_addr a_storage v_stack v_memory v_memory_usage
+   forall a_code a_nonce v_pc new_bal a_bal a_addr a_storage v_stack v_memory v_memory_usage
           v_storage v_balance v_caller v_value v_data v_init_storage v_init_balance
           v_origin v_ext_program v_ext_program' v_block v_gas v_gas' mem_start mem_size
           r rest whichever v_ex v_ex' v_touched v_logs.
@@ -2124,6 +2126,7 @@ vctx_returned:
      <| account_address = a_addr (* all elements are spelled out for performance *)
      ; account_storage = a_storage
      ; account_code = a_code
+     ; account_nonce = a_nonce
      ; account_balance = a_bal
      ; account_ongoing_calls =
          ((<| vctx_stack = v_stack

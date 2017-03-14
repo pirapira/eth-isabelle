@@ -77,7 +77,7 @@ let start_env a state args caller block =
      vctx_ext_program = (fun (addr:address) -> (state addr).account_code); (* the codes of the external programs are arbitrary. *)
      vctx_block = block; (* the block information is chosen arbitrarily. *)
      vctx_gas = word256ToInteger args.callarg_gas; (* the amount of gas is chosen arbitrarily. *)
-     vctx_account_existence = (fun (addr:address) -> true); (* existence is chosen arbitrarily *)
+     vctx_account_existence = (fun _ -> true); (* existence is chosen arbitrarily *)
      vctx_touched_storage_index = [];
      vctx_logs = []
    |>
@@ -98,7 +98,7 @@ let create_env a state value data gas caller block =
      vctx_ext_program = (fun (addr:address) -> (state addr).account_code); (* the codes of the external programs are arbitrary. *)
      vctx_block = block; (* the block information is chosen arbitrarily. *)
      vctx_gas = word256ToInteger gas; (* the amount of gas is chosen arbitrarily. *)
-     vctx_account_existence = (fun (addr:address) -> true); (* existence is chosen arbitrarily *)
+     vctx_account_existence = (fun _ -> true); (* existence is chosen arbitrarily *)
      vctx_touched_storage_index = [];
      vctx_logs = []
    |>
@@ -161,6 +161,22 @@ let byte_to_inst b =
  if b = 0X8d then Dup 13 else
  if b = 0X8e then Dup 14 else
  if b = 0X8f then Dup 15 else
+ if b = 0X90 then Swap 0 else
+ if b = 0X91 then Swap 1 else
+ if b = 0X92 then Swap 2 else
+ if b = 0X93 then Swap 3 else
+ if b = 0X94 then Swap 4 else
+ if b = 0X95 then Swap 5 else
+ if b = 0X96 then Swap 6 else
+ if b = 0X97 then Swap 7 else
+ if b = 0X98 then Swap 8 else
+ if b = 0X99 then Swap 9 else
+ if b = 0X9a then Swap 10 else
+ if b = 0X9b then Swap 11 else
+ if b = 0X9c then Swap 12 else
+ if b = 0X9d then Swap 13 else
+ if b = 0X9e then Swap 14 else
+ if b = 0X9f then Swap 15 else
  if b = 0X30 then Info ADDRESS else
  if b = 0X31 then Info BALANCE else
  if b = 0X32 then Info ORIGIN else
@@ -197,9 +213,53 @@ let byte_to_inst b =
  if b = 0X0b then Sarith SIGNEXTEND else
  Unknown b
 
+val inst_to_byte : inst -> byte
+let inst_to_byte inst = match inst with
+| Unknown byte -> byte
+| Bits b -> bits_inst_code b
+| Sarith s -> sarith_inst_code s
+| Arith a -> arith_inst_code a
+| Info i -> info_inst_code i
+| Dup d -> dup_inst_code d
+| Memory m -> memory_inst_code m
+| Storage s -> storage_inst_code s
+| Pc p -> pc_inst_code p
+| Stack s -> match index (stack_inst_code s) 0 with Nothing -> 0 | Just x -> x end 
+| Swap s -> swap_inst_code s
+| Log l -> log_inst_code l
+| Misc m -> misc_inst_code m
+end
+
+val fix_push : list inst -> list inst
+let rec fix_push lst = match lst with
+ | [] -> []
+ | Stack (PUSH_N lst) :: tl -> Stack (PUSH_N (List.map inst_to_byte (take (length lst) tl))) :: fix_push tl
+ | a :: tl -> a :: fix_push tl
+end
+
+val bytelist_to_instlist : list byte -> list inst
+let bytelist_to_instlist lst = fix_push (map byte_to_inst lst)
+
+type stack_hint =
+ | NoHint
+ | CreateAddress of address
+ | ReturnTo of integer * integer
+
 type block_state =
- | Continue of world_state * list (world_state * variable_ctx * constant_ctx * maybe (integer*integer)) * world_state * constant_ctx * instruction_result
+ | Continue of world_state * list (world_state * variable_ctx * constant_ctx * stack_hint) * world_state * constant_ctx * instruction_result
  | Finished of world_state
+
+let get_hint = function
+ | Just (a,b) -> ReturnTo a b
+ | Nothing -> NoHint
+end
+
+let set_account_code acc bytes =
+  let code (i:integer) = if i < 0 then Nothing else List.index (bytelist_to_instlist bytes) (natFromInteger i) in
+  <| acc with account_code = <|
+       program_annotation = (fun _ -> []);
+       program_length = integerFromNat (List.length bytes);
+       program_content = code |> |>
 
 let next = function
  | Finished st -> Finished st
@@ -208,6 +268,7 @@ let next = function
     | InstructionToEnvironment act v stuff ->
       let n_acc = update_account_state (state c.cctx_this) act v stuff in
       let n_state addr = if addr = c.cctx_this then n_acc else state addr in
+      let stuff = get_hint stuff in
       match act with
       | ContractCall args ->
          let acc = n_state args.callarg_recipient in
@@ -218,34 +279,44 @@ let next = function
          let cctx = <| cctx_this = args.callarg_recipient; cctx_program = (n_state args.callarg_code).account_code; cctx_hash_filter = c.cctx_hash_filter |> in
          Continue orig ((state,v,c,stuff)::stack) n_state cctx (InstructionContinue (start_env acc n_state args c.cctx_this v.vctx_block))
       | ContractCreate args ->
-         let addr = w256_to_address (keccak (word_rsplit256 (address_to_w256 c.cctx_this) ++ [(* nonce *)])) in
+         let addr = w256_to_address (keccak (word_rsplit256 (address_to_w256 c.cctx_this) ++ (word_rsplit256 n_acc.account_nonce))) in
          let acc = empty_account addr in
-(*         let code (i:integer) = if i < 0 then Nothing else List.index args.createarg_code (natFromInteger i) in *)
-         let code (i:integer) = Nothing in
-         let acc = <| acc with account_code = <|
-            program_annotation = (fun _ -> []);
-            program_length = integerFromNat (List.length args.createarg_code);
-            program_content = code |> |> in
+         let acc = set_account_code acc args.createarg_code in
          let cctx = <| cctx_this = addr; cctx_program = acc.account_code; cctx_hash_filter = c.cctx_hash_filter |> in
-         Continue orig ((state,v,c,stuff)::stack) n_state cctx (InstructionContinue (create_env acc n_state args.createarg_value [] 0 c.cctx_this v.vctx_block))
-      | ContractFail lst ->
+         let n_state addr = if addr = c.cctx_this then acc else n_state addr in
+         Continue orig ((state,v,c,CreateAddress addr)::stack) n_state cctx (InstructionContinue (create_env acc n_state args.createarg_value [] 0 c.cctx_this v.vctx_block))
+      | ContractFail _ ->
          match stack with
          | [] -> Finished orig
-         | (oldstate,v,c,stuff) :: rest -> Continue orig rest oldstate c (InstructionContinue v)
+         | (oldstate,v,c,_) :: rest ->
+           let v = <| v with vctx_stack = 0::v.vctx_stack |> in
+           Continue orig rest oldstate c (InstructionContinue v)
          end
       | ContractSuicide ->
          match stack with
          | [] -> Finished orig
-         | (oldstate,v,c,stuff) :: rest -> Continue orig rest n_state c (InstructionContinue v)
+         | (_,v,c,_) :: rest ->
+           let acc = n_state c.cctx_this in
+           let v = <| v with vctx_stack = 1::v.vctx_stack |> in
+           let v = vctx_update_from_world v acc n_state in
+           Continue orig rest n_state c (InstructionContinue v)
          end
       | ContractReturn bytes ->
          match stack with
-         | [] -> Finished state
-         | (_,v,c,Just (mem_start,mem_size)) :: rest -> 
+         | [] -> Finished n_state
+         | (_,v,c,ReturnTo mem_start mem_size) :: rest -> 
            let acc = n_state c.cctx_this in
-           let nv = <| v with vctx_stack = 1::v.vctx_stack; vctx_memory = put_return_values v.vctx_memory bytes mem_start mem_size |> in
-           let nv = vctx_update_from_world nv acc n_state in
-           Continue orig rest n_state c (InstructionContinue nv)
+           let v = <| v with vctx_stack = 1::v.vctx_stack; vctx_memory = put_return_values v.vctx_memory bytes mem_start mem_size |> in
+           let v = vctx_update_from_world v acc n_state in
+           Continue orig rest n_state c (InstructionContinue v)
+         | (_,v,c,CreateAddress new_addr) :: rest ->
+           let new_acc = n_state new_addr in
+           let new_acc = set_account_code new_acc bytes in
+           let n_state addr = if addr = new_addr then new_acc else n_state addr in
+           let acc = n_state c.cctx_this in
+           let v = <| v with vctx_stack = address_to_w256 new_addr::v.vctx_stack |> in
+           let v = vctx_update_from_world v acc n_state in
+           Continue orig rest n_state c (InstructionContinue v)
          | _ -> Finished orig (* should be impossible *)
          end
       end
