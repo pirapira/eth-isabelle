@@ -108,6 +108,7 @@ let test_one_case j : testResult =
   let c : constant_ctx =
     { cctx_program = test_case.exec.code
     ; cctx_this = Conv.word160_of_big_int test_case.exec.address
+    ; cctx_hash_filter = (fun _ -> true)
     } in
   let number = Nat_big_num.of_string (Big_int.string_of_big_int test_case.exec.gas) in
   let ret : instruction_result = Conv.program_sem_wrapper c (Nat_big_num.to_int number) (InstructionContinue v) in
