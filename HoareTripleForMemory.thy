@@ -1305,7 +1305,6 @@ lemma mstore_gas_triple :
      continuing )"
 apply(auto simp add: triple_def)
 apply(rule_tac x = 1 in exI)
-(* apply(case_tac presult) *)
 apply(case_tac presult;
    auto simp add: meter_gas_def mstore_def
         memory_inst_numbers.simps    
@@ -1316,12 +1315,7 @@ apply auto
 defer
 apply (rule leibniz)
 apply blast
-(*
-defer
-apply (auto simp:vctx_stack_default_def)[1]
-*)
 apply (rule plz_sort_it_out)
-(* apply auto *)
 apply (auto simp:memory_range_fact)
 done
 
