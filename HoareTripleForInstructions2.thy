@@ -508,6 +508,13 @@ lemma continuing_not_vctx [simp] :
 apply(simp add: variable_ctx_as_set_def ext_program_as_set_def balance_as_set_def)
 done
 
+lemma log_num_in_v_means [simp] :
+ "LogNumElm x6 \<in> variable_ctx_as_set v =
+  (length (vctx_logs v) = x6)"
+apply(simp add: variable_ctx_as_set_def)
+apply auto
+done
+
 lemma vctx_gas_changed [simp] :
    "variable_ctx_as_set
              (v \<lparr> vctx_gas := g \<rparr>) =

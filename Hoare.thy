@@ -28,6 +28,7 @@ datatype state_element =
   | MemoryElm "w256 * byte" (* address, value *)
   | LogElm "nat * log_entry" (* position, log *)
     (* Log (0, entry) says that the first recorded log entry is 0 *)
+  | LogNumElm "nat" (* Number of recorded logs *)
   | PcElm "int" (* program counter *)
   | GasElm "int" (* remaining gas *)
   | MemoryUsageElm "int" (* current memory usage *)
@@ -95,7 +96,8 @@ definition ext_program_as_set :: "(address \<Rightarrow> program) \<Rightarrow> 
 definition log_as_set :: "log_entry list \<Rightarrow> state_element set"
   where
     "log_as_set logs ==
-      { LogElm (pos, l) | pos l. logs ! pos = l \<and> pos < length logs}
+      { LogNumElm (length logs) } \<union>
+      { LogElm (pos, l) | pos l. (rev logs) ! pos = l \<and> pos < length logs}
     "
 
 definition program_as_set :: "program \<Rightarrow> state_element set"

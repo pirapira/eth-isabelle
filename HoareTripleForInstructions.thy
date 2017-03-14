@@ -131,7 +131,7 @@ done
 
 lemma log_element_means [simp] :
   "(LogElm p \<in> variable_ctx_as_set v) =
-   (vctx_logs v ! (fst p) = (snd p) \<and> fst p < length (vctx_logs v))"
+   (rev (vctx_logs v) ! (fst p) = (snd p) \<and> fst p < length (vctx_logs v))"
 apply(simp add: variable_ctx_as_set_def stack_as_set_def ext_program_as_set_def balance_as_set_def)
 apply(case_tac p; auto)
 done
@@ -941,6 +941,18 @@ lemma block_number_elm_c_means [simp] :
 apply(simp add: contexts_as_set_def)
 done
 
+lemma log_num_v_advance [simp] :
+  "LogNumElm x6 \<in> variable_ctx_as_set (vctx_advance_pc co_ctx x1) =
+   (LogNumElm x6 \<in> variable_ctx_as_set x1)"
+apply(simp add: variable_ctx_as_set_def)
+done
+
+lemma log_num_advance [simp] :
+  "LogNumElm x6 \<in> contexts_as_set (vctx_advance_pc co_ctx x1) co_ctx =
+   (LogNumElm x6 \<in> contexts_as_set x1 co_ctx)"
+apply(simp add: contexts_as_set_def)
+done
+
 
 lemma balance0 [simp] :
 "length list = h \<Longrightarrow>
@@ -1052,7 +1064,7 @@ done
 
 lemma log_elm_means [simp] :
   "LogElm ab \<in> contexts_as_set x1 co_ctx =
-   (fst ab < length (vctx_logs x1) \<and> vctx_logs x1 ! (fst ab) = (snd ab))"
+   (fst ab < length (vctx_logs x1) \<and> rev (vctx_logs x1) ! (fst ab) = (snd ab))"
 apply(auto simp add: contexts_as_set_def)
 done
 
@@ -2100,6 +2112,13 @@ lemma memory_range_gas_update [simp] :
 apply(auto simp add: variable_ctx_as_set_def)
 done
 
+lemma lognum_not_memory [simp] :
+  "\<forall> x6 in_begin. LogNumElm x6 \<notin> memory_range_elms in_begin input"
+apply(induction input)
+ apply(simp add: memory_range_elms.simps)
+apply(simp add: memory_range_elms.simps)
+done
+
 lemma memory_range_stack [simp] :
 "      x \<in> memory_range_elms in_begin input \<Longrightarrow>
        x \<in> variable_ctx_as_set (x1\<lparr>vctx_stack := sta\<rparr>)
@@ -2448,6 +2467,17 @@ lemma stack_topmost_in_insert_gas [simp] :
   "stack_topmost_elms l lst \<subseteq> insert (GasElm a) X =
    (stack_topmost_elms l lst \<subseteq> X)"
 apply auto
+done
+
+
+lemma lognum_not_program [simp] :
+ "LogNumElm x6 \<notin> program_as_set p"
+apply(simp add: program_as_set_def)
+done
+
+lemma lognum_not_constant [simp] :
+  "LogNumElm x6 \<notin> constant_ctx_as_set c"
+apply(simp add: constant_ctx_as_set_def)
 done
 
 lemma stack_topmost_not_constant [simp]:
@@ -2885,6 +2915,52 @@ apply (case_tac x3; auto)
 done
 
 
+lemma log_num_memory_usage [simp] :
+  "LogNumElm x6
+       \<in> contexts_as_set
+           (v
+            \<lparr> vctx_memory_usage := m \<rparr>) co_ctx =
+   (LogNumElm x6 \<in> contexts_as_set v co_ctx)"
+apply(simp add: contexts_as_set_def)
+done
+
+lemma log_num_not_balance [simp] :
+  "LogNumElm x6 \<notin> balance_as_set b"
+apply(simp add: balance_as_set_def)
+done
+
+lemma log_num_balance_update [simp] :
+  "LogNumElm x6
+       \<in> contexts_as_set
+           (v \<lparr>vctx_balance := b\<rparr>) co_ctx =
+   (LogNumElm x6 \<in> contexts_as_set v co_ctx)"
+apply(simp add: contexts_as_set_def)
+done
+
+lemma log_num_not_stack_topmost [simp] :
+  "\<forall> n. LogNumElm x6 \<notin> stack_topmost_elms n lst"
+apply(induction lst)
+ apply(simp add: stack_topmost_elms.simps)
+apply(simp add: stack_topmost_elms.simps)
+done
+
+lemma log_num_not_stack [simp] :
+  "LogNumElm x6 \<notin> stack_as_set tf"
+apply(simp add: stack_as_set_def)
+done
+
+(*
+lemma log0_gas_triple:
+  "triple {OutOfGas}
+          (\<langle> h \<le> 1024 \<rangle> **
+           stack_topmost h [logged_start, logged_size] **
+           continuing)
+          {(k, Log 0)}
+          (stack_topmost h [] **
+           continuing)
+  "
+*)
+
 lemma call_gas_triple:
   "triple {OutOfGas}
           (\<langle> h \<le> 1017 \<and> fund \<ge> v \<and> length input = unat in_size \<rangle> ** 
@@ -2970,6 +3046,16 @@ apply(rename_tac elm)
 apply(case_tac elm; auto simp add: Word.wi_hom_syms(2))
 done
 
+lemma log_num_not_ext_program [simp] :
+  "LogNumElm x6 \<notin> ext_program_as_set e"
+apply(simp add: ext_program_as_set_def)
+done
 
+lemma log_num_elm_means [simp] :
+  "LogNumElm x6 \<in> contexts_as_set x1 co_ctx =
+   (length (vctx_logs x1) = x6)"
+apply(simp add: contexts_as_set_def)
+apply(auto simp add: variable_ctx_as_set_def)
+done
 
 end
