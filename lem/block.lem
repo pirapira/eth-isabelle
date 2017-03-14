@@ -17,8 +17,8 @@ open import Pervasives
 (*
 open import Word
 open import Word160
-open import Word8
 *)
+open import Word8
 open import Word256
 open import Keccak
 open import Evm
@@ -109,6 +109,93 @@ let vctx_update_from_world v a state = <| v with
      vctx_balance_at_call = (fun (addr:address) -> (state addr).account_balance); (* the snapshot of the balance is remembered in case of failure *)
      vctx_ext_program = (fun (addr:address) -> (state addr).account_code); (* the codes of the external programs are arbitrary. *)
 |>
+
+val byte_to_inst : byte -> inst
+let byte_to_inst b =
+ if b = 0X00 then Misc STOP else
+ if b = 0X16 then Bits inst_AND else
+ if b = 0X17 then Bits inst_OR else
+ if b = 0X18 then Bits inst_XOR else
+ if b = 0X19 then Bits inst_NOT else
+ if b = 0X1a then Bits BYTE else
+ if b = 0Xf0 then Misc CREATE else
+ if b = 0Xf1 then Misc CALL else
+ if b = 0Xf2 then Misc CALLCODE else
+ if b = 0Xf3 then Misc RETURN else
+ if b = 0Xf4 then Misc DELEGATECALL else
+ if b = 0Xff then Misc SUICIDE else
+ if b = 0Xa0 then Log LOG0 else
+ if b = 0Xa1 then Log LOG1 else
+ if b = 0Xa2 then Log LOG2 else
+ if b = 0Xa3 then Log LOG3 else
+ if b = 0Xa4 then Log LOG4 else
+ if b = 0X35 then Stack CALLDATALOAD else
+ if b = 0X50 then Stack POP else
+ if b > 0X5f && b <= 0X5f+32 then Stack (PUSH_N (replicate (natFromInt (word8ToInt (b-0X5f))) 0)) else
+ if b = 0X56 then Pc JUMP else
+ if b = 0X57 then Pc JUMPI else
+ if b = 0X58 then Pc PC else
+ if b = 0X5b then Pc JUMPDEST else
+ if b = 0X54 then Storage SLOAD else
+ if b = 0X55 then Storage SSTORE else
+ if b = 0X51 then Memory MLOAD else
+ if b = 0X52 then Memory MSTORE else
+ if b = 0X53 then Memory MSTORE8 else
+ if b = 0X37 then Memory CALLDATACOPY else
+ if b = 0X39 then Memory CODECOPY else
+ if b = 0X3c then Memory EXTCODECOPY else
+ if b = 0X59 then Memory MSIZE else
+ if b = 0X80 then Dup 0 else
+ if b = 0X81 then Dup 1 else
+ if b = 0X82 then Dup 2 else
+ if b = 0X83 then Dup 3 else
+ if b = 0X84 then Dup 4 else
+ if b = 0X85 then Dup 5 else
+ if b = 0X86 then Dup 6 else
+ if b = 0X87 then Dup 7 else
+ if b = 0X88 then Dup 8 else
+ if b = 0X89 then Dup 9 else
+ if b = 0X8a then Dup 10 else
+ if b = 0X8b then Dup 11 else
+ if b = 0X8c then Dup 12 else
+ if b = 0X8d then Dup 13 else
+ if b = 0X8e then Dup 14 else
+ if b = 0X8f then Dup 15 else
+ if b = 0X30 then Info ADDRESS else
+ if b = 0X31 then Info BALANCE else
+ if b = 0X32 then Info ORIGIN else
+ if b = 0X34 then Info CALLVALUE else
+ if b = 0X36 then Info CALLDATASIZE else
+ if b = 0X33 then Info CALLER else
+ if b = 0X38 then Info CODESIZE else
+ if b = 0X3a then Info GASPRICE else
+ if b = 0X3b then Info EXTCODESIZE else
+ if b = 0X40 then Info BLOCKHASH else
+ if b = 0X41 then Info COINBASE else
+ if b = 0X42 then Info TIMESTAMP else
+ if b = 0X43 then Info NUMBER else
+ if b = 0X44 then Info DIFFICULTY else
+ if b = 0X45 then Info GASLIMIT else
+ if b = 0X5a then Info GAS else
+ if b = 0X01 then Arith ADD else
+ if b = 0X02 then Arith MUL else
+ if b = 0X03 then Arith SUB else
+ if b = 0X04 then Arith DIV else
+ if b = 0X06 then Arith MOD else
+ if b = 0X08 then Arith ADDMOD else
+ if b = 0X09 then Arith MULMOD else
+ if b = 0X0a then Arith EXP else
+ if b = 0X11 then Arith inst_GT else
+ if b = 0X10 then Arith inst_LT else
+ if b = 0X14 then Arith inst_EQ else
+ if b = 0X15 then Arith ISZERO else
+ if b = 0X20 then Arith SHA3 else
+ if b = 0X05 then Sarith SDIV else
+ if b = 0X07 then Sarith SMOD else
+ if b = 0X13 then Sarith SGT else
+ if b = 0X12 then Sarith SLT else
+ if b = 0X0b then Sarith SIGNEXTEND else
+ Unknown b
 
 type block_state =
  | Continue of world_state * list (world_state * variable_ctx * constant_ctx * maybe (integer*integer)) * world_state * constant_ctx * instruction_result
