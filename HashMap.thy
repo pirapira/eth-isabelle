@@ -494,10 +494,10 @@ lemma alloc_zero_split :
   alloc_zero t m = alloc_zero t (add a b m) ** perhaps_alloc t a m"
 apply(auto simp:alloc_zero_table_def alloc_zero_def sep_def
   emp_def zero_table_def perhaps_alloc_def)
-apply(rule s)
+apply(rule funext)
 apply (simp add:alloc_zero_mem)
 apply(auto)[1]
-apply(rule s)
+apply(rule funext)
 apply (simp add:add_not_mem)
 apply (auto)
 apply (rule exI [of "_" "{StorageElm (hash2 t a, 0)}"])
