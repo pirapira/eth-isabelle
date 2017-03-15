@@ -283,6 +283,11 @@ definition logged :: "nat \<Rightarrow> log_entry \<Rightarrow> state_element se
 where
 "logged n l s == s = {LogElm (n, l)}"
 
+lemma sep_logged [simp]:
+  "(a ** logged n l) s =
+   (LogElm (n, l) \<in> s \<and> a (s - {LogElm (n, l)}))"
+apply(auto simp add: sep_def logged_def)
+done
 
 definition gas_pred :: "int \<Rightarrow> state_element set \<Rightarrow> bool"
   where
@@ -303,6 +308,12 @@ lemma sep_gas_any_sep [simp] :
    (\<exists> g. GasElm g \<in> s \<and> (a ** rest) (s - {GasElm g}))"
 	by simp
 
+lemma sep_log_number_sep [simp] :
+  "(a ** log_number n ** b) s =
+   (LogNumElm n \<in> s \<and> (a ** b) (s - {LogNumElm n}))
+  "
+apply(auto simp add: log_number_def sep_def)
+done
 
 
 definition caller :: "address \<Rightarrow> state_element set \<Rightarrow> bool"

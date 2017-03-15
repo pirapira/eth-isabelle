@@ -2949,21 +2949,140 @@ lemma log_num_not_stack [simp] :
 apply(simp add: stack_as_set_def)
 done
 
+lemma contract_action_not_vctx [simp] :
+  "ContractActionElm x19 \<notin> variable_ctx_as_set x1"
+apply(simp add: variable_ctx_as_set_def ext_program_as_set_def balance_as_set_def)
+done
+
+lemma continuing_not_vctx [simp] :
+  "ContinuingElm b \<notin> variable_ctx_as_set v"
+apply(simp add: variable_ctx_as_set_def ext_program_as_set_def balance_as_set_def)
+done
+
+lemma log_num_not_ext_program [simp] :
+  "LogNumElm x6 \<notin> ext_program_as_set e"
+apply(simp add: ext_program_as_set_def)
+done
+
+lemma log_num_elm_means [simp] :
+  "LogNumElm x6 \<in> contexts_as_set x1 co_ctx =
+   (length (vctx_logs x1) = x6)"
+apply(simp add: contexts_as_set_def)
+apply(auto simp add: variable_ctx_as_set_def)
+done
+
+
+
+lemma log_num_in_v_means [simp] :
+ "LogNumElm x6 \<in> variable_ctx_as_set v =
+  (length (vctx_logs v) = x6)"
+apply(simp add: variable_ctx_as_set_def)
+apply auto
+done
+
+lemma vctx_gas_changed [simp] :
+   "variable_ctx_as_set
+             (v \<lparr> vctx_gas := g \<rparr>) =
+    variable_ctx_as_set v - { GasElm (vctx_gas v)} \<union> { GasElm g }"
+apply(simp)
+apply(rule Set.equalityI)
+ apply(clarify)
+ apply(simp)
+ apply(rename_tac elm)
+ apply(case_tac elm; simp)
+apply(clarify)
+apply(simp)
+apply(rename_tac elm)
+apply(case_tac elm; simp)
+apply(auto)
+done
+
+lemma lognum_not_stack_topmost [simp] :
+  "LogNumElm n \<notin> stack_topmost_elms h lst"
+apply(simp add: stack_topmost_elms.simps)
+done
+
+lemma stack_topmost_minus_lognum [simp] :
+   "stack_topmost_elms h lst \<subseteq> X - {LogNumElm n} =
+   (stack_topmost_elms h lst \<subseteq> X)"
+apply auto
+done
+
+lemma vctx_pc_log_advance [simp] :
+  "program_content (cctx_program co_ctx) k = Some (Log LOGx) \<Longrightarrow>
+   vctx_pc v = k \<Longrightarrow>
+   vctx_pc
+     (vctx_advance_pc co_ctx v) =
+   vctx_pc v + 1"
+apply(simp add: vctx_advance_pc_def inst_size_def inst_code.simps)
+done
+
+lemma memory_range_elms_in_x_minus_lognum [simp] :
+   "memory_range_elms in_begin data \<subseteq> X - {LogNumElm n} =
+   (memory_range_elms in_begin data \<subseteq> X)"
+apply auto
+done
+
+lemma memory_range_elms_logs_update [simp] :
+  "memory_range_elms in_begin data
+             \<subseteq> variable_ctx_as_set (x1\<lparr>vctx_logs := ls\<rparr>) =
+  (memory_range_elms in_begin data
+             \<subseteq> variable_ctx_as_set x1)"
+apply(auto simp add: variable_ctx_as_set_def)
+done
+
+
+lemma log0_create_logs [simp] :
+   "vctx_stack x1 = logged_start # logged_size # ta  \<Longrightarrow>
+    length data = unat logged_size \<Longrightarrow>
+    memory_range_elms logged_start data \<subseteq> variable_ctx_as_set x1  \<Longrightarrow>
+    create_log_entry 0 x1 co_ctx = \<lparr>log_addr = cctx_this co_ctx, log_topics = [], log_data = data\<rparr>"
+apply(auto simp add: create_log_entry_def vctx_returned_bytes_def memory_range_elms_cut_memory)
+done
+
+
 lemma log0_gas_triple:
   "triple {OutOfGas}
-          (\<langle> h \<le> 1024 \<and> length input = unat logged_size \<rangle> **
-           memory_range in_begin input **
+          (\<langle> h \<le> 1022 \<and> length data = unat logged_size \<rangle> **
+           memory_range logged_start data **
+           this_account this **
            log_number n **
-           stack_topmost h [logged_start, logged_size] **
+           gas_pred g **
+           stack_topmost h [logged_size, logged_start] **
+           program_counter k ** 
+           memory_usage m **
            continuing)
           {(k, Log LOG0)}
-          (memory_range in_begin input **
+          (memory_range logged_start data **
+           this_account this **
            log_number (Suc n) **
-           logged (Suc n) \<lparr> log_addr = addr, log_topics = [], log_data = data \<rparr>  **
+           logged n \<lparr> log_addr = this, log_topics = [], log_data = data \<rparr>  **
            stack_topmost h [] **
+           gas_any **
+           program_counter (k + 1) ** 
+           memory_usage (M m logged_start logged_size) **
            continuing)
   "
-oops
+apply (simp add: triple_def)
+apply clarify
+apply (rule_tac x = 1 in exI)
+apply(case_tac presult; simp add: log_inst_numbers.simps sep_memory_range sep_memory_range_sep log_def
+        instruction_result_as_set_def)
+apply clarify
+apply(rule_tac x = " vctx_gas x1 - meter_gas (Log LOG0) x1 co_ctx" in exI)
+apply simp
+apply (rule leibniz)
+ apply blast
+apply(rule Set.equalityI)
+ apply clarify
+ apply simp
+ apply(rename_tac elm; case_tac elm; simp)
+ apply(case_tac "fst x2 < length ta"; simp)
+apply clarify
+apply simp
+apply(rename_tac elm; case_tac elm; simp)
+apply(case_tac "length (vctx_logs x1) \<le> fst x5"; auto)
+done
 
 lemma call_gas_triple:
   "triple {OutOfGas}
@@ -3048,18 +3167,6 @@ apply(rule  Set.equalityI; clarify)
 apply(simp)
 apply(rename_tac elm)
 apply(case_tac elm; auto simp add: Word.wi_hom_syms(2))
-done
-
-lemma log_num_not_ext_program [simp] :
-  "LogNumElm x6 \<notin> ext_program_as_set e"
-apply(simp add: ext_program_as_set_def)
-done
-
-lemma log_num_elm_means [simp] :
-  "LogNumElm x6 \<in> contexts_as_set x1 co_ctx =
-   (length (vctx_logs x1) = x6)"
-apply(simp add: contexts_as_set_def)
-apply(auto simp add: variable_ctx_as_set_def)
 done
 
 end
