@@ -297,7 +297,6 @@ let set_account_code acc bytes =
 
 todo
  * refund gas
- * collect logs
 
 *)
 
@@ -408,10 +407,3 @@ let start_transaction tr state block =
     Continue state [] n_state c (InstructionContinue v)
 end
 
-(*
-  tr_to : maybe address;
-  tr_gas_limit : w256;
-  tr_gas_price : w256;
-  tr_nonce : w256;
-  tr_data : list byte;
-*)
