@@ -1417,7 +1417,7 @@ let mstore8 v c = match v.vctx_stack with
  | pos :: vl :: rest ->
    let new_memory = (fun p -> if p = pos then w256_to_byte vl else v.vctx_memory p) in
    InstructionContinue (vctx_advance_pc c
-          <| v with vctx_stack = rest; vctx_memory_usage = M v.vctx_memory_usage pos 8;
+          <| v with vctx_stack = rest; vctx_memory_usage = M v.vctx_memory_usage pos 1;
                     vctx_memory = new_memory |>)
  | _ -> instruction_failure_result v [TooShortStack]
 end
