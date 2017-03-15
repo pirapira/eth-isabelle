@@ -110,7 +110,7 @@ let vctx_update_from_world v a state = <| v with
      vctx_ext_program = (fun (addr:address) -> (state addr).account_code); (* the codes of the external programs are arbitrary. *)
 |>
 
-type block_state =
+type global_state =
  | Continue of world_state * list (world_state * variable_ctx * constant_ctx * maybe (integer*integer)) * world_state * constant_ctx * instruction_result
  | Finished of world_state
 
