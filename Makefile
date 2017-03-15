@@ -42,6 +42,7 @@ lem-ocaml: lem/evm.ml lem/word256.ml lem/word160.ml lem/word8.ml lem/keccak.ml l
 
 lem-coq:
 	lem -coq lem/*.lem
+	cd lem; coq_makefile -f coqmakefile.in -o Makefile; cd ..
 
 lem/block.lem: lem/evm.lem
 	touch lem/block.lem

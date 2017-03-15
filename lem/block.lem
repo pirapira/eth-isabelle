@@ -16,10 +16,10 @@
 open import Pervasives
 (*
 open import Word
-open import Word256
 open import Word160
 open import Word8
 *)
+open import Word256
 open import Keccak
 open import Evm
 
@@ -60,3 +60,111 @@ type block = <|
   block_timestampt : w256;
   block_nonce : w256;
 |>
+
+let start_env a state args caller block =
+<| vctx_stack = []; (* The stack is initialized for every invocation *)
+    vctx_memory = empty_memory; (* The memory is also initialized for every invocation *)
+     vctx_memory_usage = 0; (* The memory usage is initialized. *)
+     vctx_storage = a.account_storage; (* The storage is taken from the account state *)
+     vctx_pc = 0; (* The program counter is initialized to zero *)
+     vctx_balance = (fun (addr:address) -> (state addr).account_balance);
+     vctx_caller = caller; (* the caller is specified by the environment *)
+     vctx_value_sent = args.callarg_value; (* the sent value is specified by the environment *)
+     vctx_data_sent = args.callarg_data; (* the sent data is specified by the environment *)
+     vctx_storage_at_call = a.account_storage; (* the snapshot of the storage is remembered in case of failure *)
+     vctx_balance_at_call = (fun (addr:address) -> (state addr).account_balance); (* the snapshot of the balance is remembered in case of failure *)
+     vctx_origin = caller; (* the origin of the transaction is arbitrarily chosen *)
+     vctx_ext_program = (fun (addr:address) -> (state addr).account_code); (* the codes of the external programs are arbitrary. *)
+     vctx_block = block; (* the block information is chosen arbitrarily. *)
+     vctx_gas = word256ToInteger args.callarg_gas; (* the amount of gas is chosen arbitrarily. *)
+     vctx_account_existence = (fun (addr:address) -> true); (* existence is chosen arbitrarily *)
+     vctx_touched_storage_index = [];
+     vctx_logs = []
+   |>
+
+let create_env a state value data gas caller block =
+<| vctx_stack = []; (* The stack is initialized for every invocation *)
+    vctx_memory = empty_memory; (* The memory is also initialized for every invocation *)
+     vctx_memory_usage = 0; (* The memory usage is initialized. *)
+     vctx_storage = a.account_storage; (* The storage is taken from the account state *)
+     vctx_pc = 0; (* The program counter is initialized to zero *)
+     vctx_balance = (fun (addr:address) -> (state addr).account_balance);
+     vctx_caller = caller; (* the caller is specified by the environment *)
+     vctx_value_sent = value; (* the sent value is specified by the environment *)
+     vctx_data_sent = data; (* the sent data is specified by the environment *)
+     vctx_storage_at_call = a.account_storage; (* the snapshot of the storage is remembered in case of failure *)
+     vctx_balance_at_call = (fun (addr:address) -> (state addr).account_balance); (* the snapshot of the balance is remembered in case of failure *)
+     vctx_origin = caller; (* the origin of the transaction is arbitrarily chosen *)
+     vctx_ext_program = (fun (addr:address) -> (state addr).account_code); (* the codes of the external programs are arbitrary. *)
+     vctx_block = block; (* the block information is chosen arbitrarily. *)
+     vctx_gas = word256ToInteger gas; (* the amount of gas is chosen arbitrarily. *)
+     vctx_account_existence = (fun (addr:address) -> true); (* existence is chosen arbitrarily *)
+     vctx_touched_storage_index = [];
+     vctx_logs = []
+   |>
+
+let vctx_update_from_world v a state = <| v with
+     vctx_storage = a.account_storage; (* The storage is taken from the account state *)
+     vctx_balance = (fun (addr:address) -> (state addr).account_balance);
+     vctx_balance_at_call = (fun (addr:address) -> (state addr).account_balance); (* the snapshot of the balance is remembered in case of failure *)
+     vctx_ext_program = (fun (addr:address) -> (state addr).account_code); (* the codes of the external programs are arbitrary. *)
+|>
+
+type global_state =
+ | Continue of world_state * list (world_state * variable_ctx * constant_ctx * maybe (integer*integer)) * world_state * constant_ctx * instruction_result
+ | Finished of world_state
+
+let next = function
+ | Finished st -> Finished st
+ | Continue orig stack state c res ->
+    match res with
+    | InstructionToEnvironment act v stuff ->
+      let n_acc = update_account_state (state c.cctx_this) act v stuff in
+      let n_state addr = if addr = c.cctx_this then n_acc else state addr in
+      match act with
+      | ContractCall args ->
+         let acc = n_state args.callarg_recipient in
+         let cctx = <| cctx_this = args.callarg_recipient; cctx_program = (n_state args.callarg_code).account_code; cctx_hash_filter = c.cctx_hash_filter |> in
+         Continue orig ((state,v,c,stuff)::stack) n_state cctx (InstructionContinue (start_env acc n_state args c.cctx_this v.vctx_block))
+      | ContractDelegateCall args ->
+         let acc = n_state args.callarg_recipient in
+         let cctx = <| cctx_this = args.callarg_recipient; cctx_program = (n_state args.callarg_code).account_code; cctx_hash_filter = c.cctx_hash_filter |> in
+         Continue orig ((state,v,c,stuff)::stack) n_state cctx (InstructionContinue (start_env acc n_state args c.cctx_this v.vctx_block))
+      | ContractCreate args ->
+         let addr = w256_to_address (keccak (word_rsplit256 (address_to_w256 c.cctx_this) ++ [(* nonce *)])) in
+         let acc = empty_account addr in
+(*         let code (i:integer) = if i < 0 then Nothing else List.index args.createarg_code (natFromInteger i) in *)
+         let code (i:integer) = Nothing in
+         let acc = <| acc with account_code = <|
+            program_annotation = (fun _ -> []);
+            program_length = integerFromNat (List.length args.createarg_code);
+            program_content = code |> |> in
+         let cctx = <| cctx_this = addr; cctx_program = acc.account_code; cctx_hash_filter = c.cctx_hash_filter |> in
+         Continue orig ((state,v,c,stuff)::stack) n_state cctx (InstructionContinue (create_env acc n_state args.createarg_value [] 0 c.cctx_this v.vctx_block))
+      | ContractFail lst ->
+         match stack with
+         | [] -> Finished orig
+         | (oldstate,v,c,stuff) :: rest -> Continue orig rest oldstate c (InstructionContinue v)
+         end
+      | ContractSuicide ->
+         match stack with
+         | [] -> Finished orig
+         | (oldstate,v,c,stuff) :: rest -> Continue orig rest n_state c (InstructionContinue v)
+         end
+      | ContractReturn bytes ->
+         match stack with
+         | [] -> Finished state
+         | (_,v,c,Just (mem_start,mem_size)) :: rest -> 
+           let acc = n_state c.cctx_this in
+           let nv = <| v with vctx_stack = 1::v.vctx_stack; vctx_memory = put_return_values v.vctx_memory bytes mem_start mem_size |> in
+           let nv = vctx_update_from_world nv acc n_state in
+           Continue orig rest n_state c (InstructionContinue nv)
+         | _ -> Finished orig (* should be impossible *)
+         end
+      end
+    | a -> Continue orig stack state c (next_state (fun _ -> ()) c a)
+    end
+end
+
+
+

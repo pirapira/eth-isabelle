@@ -1,8 +1,83 @@
 theory HoareTripleForInstructions2
 
 imports Main "./HoareTripleForInstructions"
+"./HoareTripleForStorage"
 
 begin
+
+lemma pos_length_head_exists [simp] :
+  "n < length lst \<Longrightarrow>
+   index lst 0 = Some (lst ! 0)"
+apply(case_tac lst; auto)
+done
+
+lemma rev_lookup :
+  "k < length lst \<Longrightarrow>
+   rev lst ! (length lst - Suc k) = lst ! k"
+apply(simp add: List.rev_nth)
+done
+
+
+lemma list_swap_usage :
+  "n < length lst \<Longrightarrow>
+   rev lst ! (length lst - Suc 0) = w \<Longrightarrow>
+   rev lst ! (length lst - Suc n) = v \<Longrightarrow>
+   list_swap n lst = Some ([v] @ take (n - 1) (drop 1 lst) @ [w] @ (drop (n + 1) lst))"
+apply(subgoal_tac "0 < length lst")
+ apply(simp add: rev_lookup list_swap_def)
+apply auto
+done
+
+
+lemma iszero_gas_triple :
+   "triple {OutOfGas} (\<langle> h \<le> 1023 \<rangle> **
+                       stack_height (Suc h) **
+                       stack h w **
+                       program_counter k **
+                       gas_pred g **
+                       continuing
+                      )
+
+                      {(k, Arith ISZERO)}
+                      (stack_height (Suc h) **
+                       stack h (if w = 0 then 1 else 0) **
+                       program_counter (k + 1) **
+                       gas_pred (g - Gverylow) **
+                       continuing
+                      )"
+apply(auto simp add: triple_def)
+ apply(rule_tac x = 1 in exI)
+ apply(case_tac presult; auto simp add: instruction_result_as_set_def)
+ apply(rule leibniz)
+  apply blast
+ apply(rule  Set.equalityI; clarify)
+  apply(simp)
+  apply(rename_tac elm)
+  apply(case_tac elm; simp)
+  apply(rename_tac pair)
+  apply(case_tac pair; auto)
+ apply(simp)
+ apply(rename_tac elm)
+ apply(case_tac elm; simp)
+ apply(rename_tac pair)
+ apply(case_tac pair; auto)
+apply(rule_tac x = 1 in exI)
+apply(case_tac presult; auto simp add: instruction_result_as_set_def)
+apply(rule leibniz)
+ apply blast
+apply(rule  Set.equalityI; clarify)
+ apply(simp)
+ apply(rename_tac elm)
+ apply(case_tac elm; simp)
+ apply(rename_tac pair)
+ apply(case_tac pair; auto)
+apply(simp)
+apply(rename_tac elm)
+apply(case_tac elm; simp)
+apply(rename_tac pair)
+apply(case_tac pair; auto)
+done
+
 
 lemma tmp001:
 "length lst = h \<Longrightarrow>

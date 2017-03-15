@@ -10,6 +10,7 @@ let empty_program : program =
 let dummy_constant_ctx : constant_ctx =
   { cctx_program = empty_program
   ; cctx_this = word160_of_big_int (Big_int.big_int_of_int 100)
+  ; cctx_hash_filter = (fun _ -> true)
   }
 
 let empty_memory : memory = (fun _ -> byte_of_big_int Big_int.zero_big_int)

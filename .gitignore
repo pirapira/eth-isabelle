@@ -22,6 +22,7 @@ lem/Word32*.thy
 lem/Word64*.thy
 lem/Word8Auxiliary.thy
 lem/Word4Auxiliary.thy
+lem/Makefile
 lem/*.tex
 lem/*.log
 lem/*.pdf

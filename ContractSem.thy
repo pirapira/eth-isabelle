@@ -151,7 +151,7 @@ declare create_def [simp]
 declare ret_def [simp]
 declare stop_def [simp]
 declare pop_def [simp]
-declare store_byte_list_memory.psimps [simp]
+(* declare store_byte_list_memory.psimps [simp] *)
 declare store_word_memory_def [simp]
 declare mstore_def [simp]
 declare mload_def [simp]
