@@ -21,7 +21,7 @@ abbreviation always_fail_account_state :: "w256 \<Rightarrow> account_state"
 where
 "always_fail_account_state balance \<equiv>
    \<lparr> account_address = this_address
-   , account_storage = \<lambda> _. 0
+   , account_storage = (\<lambda> (a::w256). 0)
    , account_code = program_of_lst always_fail_code program_content_of_lst
    , account_balance = balance
    , account_ongoing_calls = []

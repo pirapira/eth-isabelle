@@ -10,6 +10,7 @@ lem/EvmAuxiliary.thy
 lem/EvmNonExec.thy
 lem/Keccak.thy
 lem/KeccakAuxiliary.thy
+lem/BlockAuxiliary.thy
 lem/Rlp.thy
 lem/RlpAuxiliary.thy
 lem/Word160.thy
