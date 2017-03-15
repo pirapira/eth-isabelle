@@ -275,6 +275,15 @@ definition program_counter :: "int \<Rightarrow> state_element set \<Rightarrow>
   where
     "program_counter pos s == s = {PcElm pos}"
 
+definition log_number :: "nat \<Rightarrow> state_element set \<Rightarrow> bool"
+where
+"log_number n s == s = {LogNumElm n}"
+
+definition logged :: "nat \<Rightarrow> log_entry \<Rightarrow> state_element set \<Rightarrow> bool"
+where
+"logged n l s == s = {LogElm (n, l)}"
+
+
 definition gas_pred :: "int \<Rightarrow> state_element set \<Rightarrow> bool"
   where
     "gas_pred g s == s = {GasElm g}"

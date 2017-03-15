@@ -2949,17 +2949,21 @@ lemma log_num_not_stack [simp] :
 apply(simp add: stack_as_set_def)
 done
 
-(*
 lemma log0_gas_triple:
   "triple {OutOfGas}
-          (\<langle> h \<le> 1024 \<rangle> **
+          (\<langle> h \<le> 1024 \<and> length input = unat logged_size \<rangle> **
+           memory_range in_begin input **
+           log_number n **
            stack_topmost h [logged_start, logged_size] **
            continuing)
-          {(k, Log 0)}
-          (stack_topmost h [] **
+          {(k, Log LOG0)}
+          (memory_range in_begin input **
+           log_number (Suc n) **
+           logged (Suc n) \<lparr> log_addr = addr, log_topics = [], log_data = data \<rparr>  **
+           stack_topmost h [] **
            continuing)
   "
-*)
+oops
 
 lemma call_gas_triple:
   "triple {OutOfGas}
