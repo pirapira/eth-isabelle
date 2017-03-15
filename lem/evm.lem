@@ -1115,6 +1115,48 @@ let stack_3_1_op v c f = match v.vctx_stack with
  | _ -> instruction_failure_result v [TooShortStack]
 end
 
+(* Retrieve value of a stack element, or 0 if non-existent: *)
+val vctx_stack_default : int -> variable_ctx -> w256
+let vctx_stack_default idx v =
+  match List.index v.vctx_stack (natFromInt idx) with
+  | Just w -> w
+  | Nothing -> 0
+  end
+
+(* Calculate active memory (i.e. vctx_memory_usage) after the execution of an instruction: *)
+val new_memory_consumption : inst -> variable_ctx -> integer
+let new_memory_consumption i v =
+  match i with
+  | Arith SHA3 -> M v.vctx_memory_usage (vctx_stack_default 0 v) (vctx_stack_default 1 v)
+  | Memory CALLDATACOPY ->
+    M v.vctx_memory_usage (vctx_stack_default 0 v) (vctx_stack_default 2 v)
+  | Memory CODECOPY ->
+    M v.vctx_memory_usage (vctx_stack_default 0 v) (vctx_stack_default 2 v)
+  | Memory EXTCODECOPY ->
+    M v.vctx_memory_usage (vctx_stack_default 1 v) (vctx_stack_default 3 v)
+  | Memory MLOAD ->
+    M v.vctx_memory_usage (vctx_stack_default 0 v) 32
+  | Memory MSTORE ->
+    M v.vctx_memory_usage (vctx_stack_default 0 v) 32
+  | Memory MSTORE8 ->
+    M v.vctx_memory_usage (vctx_stack_default 0 v) 1
+  | Misc CREATE ->
+    M v.vctx_memory_usage (vctx_stack_default 1 v) (vctx_stack_default 2 v)
+  | Misc CALL ->
+    M (M v.vctx_memory_usage (vctx_stack_default 3 v) (vctx_stack_default 4 v))
+      (vctx_stack_default 5 v) (vctx_stack_default 6 v)
+  | Misc CALLCODE ->
+    M (M v.vctx_memory_usage (vctx_stack_default 3 v) (vctx_stack_default 4 v))
+      (vctx_stack_default 5 v) (vctx_stack_default 6 v)
+  | Misc DELEGATECALL ->
+    M (M v.vctx_memory_usage (vctx_stack_default 2 v) (vctx_stack_default 3 v))
+      (vctx_stack_default 4 v) (vctx_stack_default 5 v)
+  | Misc RETURN ->
+    M v.vctx_memory_usage (vctx_stack_default 0 v) (vctx_stack_default 1 v)
+  | Log _ -> M v.vctx_memory_usage (vctx_stack_default 0 v) (vctx_stack_default 1 v)
+  | _ -> v.vctx_memory_usage
+  end
+
 (* subsection {* Definition of EVM Operations *} *)
 
 (* SSTORE changes the storage so it does not fit into any of the patterns defined above. *)
@@ -1242,7 +1284,7 @@ let call v c = match v.vctx_stack with
         (<| (vctx_advance_pc c v) with
            vctx_stack = rest;
            vctx_balance = update_balance c.cctx_this (fun orig -> orig - e2) v.vctx_balance;
-           vctx_memory_usage = M (M v.vctx_memory_usage e3 e4) e5 e6 |>)
+           vctx_memory_usage = new_memory_consumption (Misc CALL) v |>)
         (Just (* saving the variable environment for timing *)
            (uint e5, uint e6)))
   | _ -> instruction_failure_result v [TooShortStack]
@@ -1270,7 +1312,8 @@ let delegatecall v c = match v.vctx_stack with
               callarg_output_begin = e5;
               callarg_output_size = e6 |>)
           (<| (vctx_advance_pc c v) with
-                 vctx_stack = rest; vctx_memory_usage = M (M v.vctx_memory_usage e3 e4) e5 e6 |>)
+                 vctx_stack = rest;
+                 vctx_memory_usage = new_memory_consumption (Misc DELEGATECALL) v |>)
           (Just (* save the variable environment for returns *)
             (uint e5, uint e6))
   | _ -> instruction_failure_result v [TooShortStack]
@@ -1299,7 +1342,7 @@ let callcode v c = match v.vctx_stack with
               callarg_output_size = e6 |>)
           (<| (vctx_advance_pc c v) with
                   vctx_stack = rest;
-                  vctx_memory_usage = M (M v.vctx_memory_usage e3 e4) e5 e6;
+                  vctx_memory_usage = new_memory_consumption (Misc CALLCODE) v;
                   vctx_balance = update_balance c.cctx_this (fun orig -> orig - e2) v.vctx_balance |>)
           (Just (* saving the variable environment *) (uint e5, uint e6))
   | _ -> instruction_failure_result v [TooShortStack]
@@ -1324,7 +1367,7 @@ let create v c = match v.vctx_stack with
              <| createarg_value = vl; createarg_code = code |>)
             (<| (vctx_advance_pc c v) with vctx_stack = rest;
                  vctx_balance = new_balance;
-                 vctx_memory_usage = M v.vctx_memory_usage code_start code_len |>)
+                 vctx_memory_usage = new_memory_consumption (Misc CREATE) v |>)
             (Just (* when returning to this invocation, use the following variable environment *)
               (0, 0))
   | _ -> instruction_failure_result v [TooShortStack]
@@ -1341,8 +1384,8 @@ end
 (* RETURN is modeled like this: *)
 val ret : variable_ctx -> constant_ctx -> instruction_result
 let ret v _ =  match v.vctx_stack with
- | e0 :: e1 :: _ ->
-     let new_v = <| v with vctx_memory_usage = M v.vctx_memory_usage e0 e1 |> in
+ | _ :: _ :: _ ->
+     let new_v = <| v with vctx_memory_usage = new_memory_consumption (Misc RETURN) v |> in
      InstructionToEnvironment (ContractReturn (vctx_returned_bytes new_v))
                            v
                            Nothing (* No possibility of ever returning to this invocation. *)
@@ -1396,7 +1439,7 @@ let mstore v c = match v.vctx_stack with
        let new_memory = store_word_memory pos vl v.vctx_memory in
        InstructionContinue (vctx_advance_pc c
          <| v with vctx_stack = rest; vctx_memory = new_memory;
-           vctx_memory_usage = M v.vctx_memory_usage pos 32
+           vctx_memory_usage = new_memory_consumption (Memory MSTORE) v
           |>)
   | _ -> instruction_failure_result v [TooShortStack]
 end
@@ -1407,7 +1450,8 @@ let mload v c = match v.vctx_stack with
  | pos :: rest ->
       let value = read_word_from_bytes 0 (cut_memory pos 32 v.vctx_memory) in
       InstructionContinue
-        (vctx_advance_pc c <| v with vctx_stack = value :: rest; vctx_memory_usage = M v.vctx_memory_usage pos 32 |>)
+        (vctx_advance_pc c <| v with vctx_stack = value :: rest;
+                                     vctx_memory_usage = new_memory_consumption (Memory MLOAD) v |>)
  | _ -> instruction_failure_result v [TooShortStack]
 end
 
@@ -1417,7 +1461,8 @@ let mstore8 v c = match v.vctx_stack with
  | pos :: vl :: rest ->
    let new_memory = (fun p -> if p = pos then w256_to_byte vl else v.vctx_memory p) in
    InstructionContinue (vctx_advance_pc c
-          <| v with vctx_stack = rest; vctx_memory_usage = M v.vctx_memory_usage pos 1;
+          <| v with vctx_stack = rest;
+                    vctx_memory_usage = new_memory_consumption (Memory MSTORE8) v;
                     vctx_memory = new_memory |>)
  | _ -> instruction_failure_result v [TooShortStack]
 end
@@ -1442,7 +1487,7 @@ let calldatacopy v c = match v.vctx_stack with
        let new_memory = store_byte_list_memory dst_start data v.vctx_memory in
        InstructionContinue (vctx_advance_pc c
          <| v with vctx_stack = rest; vctx_memory = new_memory;
-            vctx_memory_usage = M v.vctx_memory_usage dst_start len |>)
+            vctx_memory_usage = new_memory_consumption (Memory CALLDATACOPY) v |>)
  | _ -> instruction_failure_result v [TooShortStack]
 end
 
@@ -1455,7 +1500,7 @@ let codecopy v c = match v.vctx_stack with
      let new_memory = store_byte_list_memory dst_start data v.vctx_memory in
      InstructionContinue (vctx_advance_pc c
        <| v with vctx_stack = rest; vctx_memory = new_memory;
-                 vctx_memory_usage = M v.vctx_memory_usage dst_start len |>)
+                 vctx_memory_usage = new_memory_consumption (Memory CODECOPY) v |>)
  | _ -> instruction_failure_result v [TooShortStack]
 end
 
@@ -1469,7 +1514,7 @@ let extcodecopy v c = match v.vctx_stack with
      let new_memory = store_byte_list_memory dst_start data v.vctx_memory in
      InstructionContinue (vctx_advance_pc c
        <| v with vctx_stack = rest; vctx_memory = new_memory;
-                 vctx_memory_usage = M v.vctx_memory_usage dst_start len |>)
+                 vctx_memory_usage = new_memory_consumption (Memory EXTCODECOPY) v |>)
  | _ -> instruction_failure_result v [TooShortStack]
 end
 
@@ -1478,13 +1523,6 @@ val pc : variable_ctx -> constant_ctx -> instruction_result
 let pc v c =
    InstructionContinue (vctx_advance_pc c
      <| v with vctx_stack = word256FromInteger v.vctx_pc :: v.vctx_stack|>)
-
-val vctx_stack_default : int -> variable_ctx -> w256
-let vctx_stack_default idx v =
-  match List.index v.vctx_stack (natFromInt idx) with
-  | Just w -> w
-  | Nothing -> 0
-  end
 
 val create_log_entry : nat -> variable_ctx -> constant_ctx -> log_entry
 let create_log_entry n v c =
@@ -1500,7 +1538,7 @@ let log n v c =
    InstructionContinue
     (vctx_advance_pc c (vctx_pop_stack (n+2)
        <| v with
-          vctx_memory_usage = M v.vctx_memory_usage (vctx_stack_default 0 v) (vctx_stack_default 1 v);
+          vctx_memory_usage = new_memory_consumption (Log LOG0) v;
           vctx_logs = new_log_entry ::  v.vctx_logs
         |>))
 
@@ -1527,7 +1565,7 @@ let sha3 v c = match v.vctx_stack with
       InstructionContinue (
         vctx_advance_pc c
            <| v with vctx_stack = keccak lst :: rest;
-                     vctx_memory_usage = M v.vctx_memory_usage start len |>)
+                     vctx_memory_usage = new_memory_consumption (Arith SHA3) v |>)
  | _ -> instruction_failure_result v [TooShortStack]
 end
 
@@ -1712,39 +1750,6 @@ let vctx_recipient v c =
   | Misc CALLCODE -> c.cctx_this
   | Misc DELEGATECALL -> c.cctx_this
   | _ -> 0
-  end
-
-val new_memory_consumption : inst -> variable_ctx -> integer
-let new_memory_consumption i v =
-  match i with
-  | Arith SHA3 -> M v.vctx_memory_usage (vctx_stack_default 0 v) (vctx_stack_default 1 v)
-  | Memory CALLDATACOPY ->
-    M v.vctx_memory_usage (vctx_stack_default 0 v) (vctx_stack_default 2 v)
-  | Memory CODECOPY ->
-    M v.vctx_memory_usage (vctx_stack_default 0 v) (vctx_stack_default 2 v)
-  | Memory EXTCODECOPY ->
-    M v.vctx_memory_usage (vctx_stack_default 1 v) (vctx_stack_default 3 v)
-  | Memory MLOAD ->
-    M v.vctx_memory_usage (vctx_stack_default 0 v) 32
-  | Memory MSTORE ->
-    M v.vctx_memory_usage (vctx_stack_default 0 v) 32
-  | Memory MSTORE8 ->
-    M v.vctx_memory_usage (vctx_stack_default 0 v) 1
-  | Misc CREATE ->
-    M v.vctx_memory_usage (vctx_stack_default 1 v) (vctx_stack_default 2 v)
-  | Misc CALL ->
-    M (M v.vctx_memory_usage (vctx_stack_default 3 v) (vctx_stack_default 4 v))
-      (vctx_stack_default 5 v) (vctx_stack_default 6 v)
-  | Misc CALLCODE ->
-    M (M v.vctx_memory_usage (vctx_stack_default 3 v) (vctx_stack_default 4 v))
-      (vctx_stack_default 5 v) (vctx_stack_default 6 v)
-  | Misc DELEGATECALL ->
-    M (M v.vctx_memory_usage (vctx_stack_default 2 v) (vctx_stack_default 3 v))
-      (vctx_stack_default 4 v) (vctx_stack_default 5 v)
-  | Misc RETURN ->
-    M v.vctx_memory_usage (vctx_stack_default 0 v) (vctx_stack_default 1 v)
-  | Log _ -> M v.vctx_memory_usage (vctx_stack_default 0 v) (vctx_stack_default 1 v)
-  | _ -> v.vctx_memory_usage
   end
 
 val meter_gas : inst -> variable_ctx -> constant_ctx -> integer
