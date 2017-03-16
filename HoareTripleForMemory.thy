@@ -1237,26 +1237,7 @@ apply (auto)
 apply(auto simp add: contexts_as_set_def variable_ctx_as_set_def stack_as_set_def ext_program_as_set_def
        balance_as_set_def)[1]
 using le_less_Suc_eq apply fastforce
-(*
-using le_less_Suc_eq apply fastforce
-subgoal for idx
-proof -
-  fix idx :: nat
-  assume a1: "idx < Suc (Suc (length ta))"
-  assume a2: "[v, memaddr] ! (idx - length ta) \<noteq> memaddr"
-  assume "\<not> idx < length ta"
-  then have f3: "\<forall>w. [w] ! (idx - length ta - 1) = (rev ta @ [[w] ! (idx - length ta - 1), w]) ! idx"
-    by (metis over_one_rev')
-  { assume "\<exists>w. [w::256 word] ! (idx - length ta - 1) \<noteq> w"
-    then have "idx \<le> length ta"
-      using f3 a1 by (metis (no_types) not_less_eq over_two_rev)
-    then have "[v, memaddr] ! (idx - length ta) = v"
-      by simp }
-  then show "[v, memaddr] ! (idx - length ta) = v"
-    using a2 by (metis (no_types) nth_non_equal_first_eq)
-next
-qed
-*)
+
 using stuff2 [of memaddr old_v x1 _ v]
 apply force
 using other_similar [of memaddr old_v x1 _ co_ctx v]
