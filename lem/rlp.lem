@@ -89,3 +89,13 @@ end
 val RLP_nat : nat -> list byte
 let RLP_nat i = RLP (Leaf (BE i))
 
+val RLP_w256 : word256 -> tree
+let RLP_w256 i = Leaf (BE (natFromInteger (word256ToInteger i)))
+
+val RLP_address : word160 -> tree
+let RLP_address i = Leaf (BE (natFromInteger (word160ToInteger i)))
+
+(*
+val RLP_nat : nat -> list byte
+let RLP_nat i = RLP (Leaf (BE i))
+*)

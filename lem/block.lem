@@ -22,6 +22,7 @@ open import Word8
 open import Word256
 open import Keccak
 open import Evm
+open import Rlp
 
 type transaction = <|
   tr_from : address;
@@ -288,7 +289,7 @@ type global = <|
 
 type global_state =
  | Continue of global
- | Finished of world_state
+ | Finished of world_state * list address
 
 let get_hint = function
  | Just (a,b) -> ReturnTo a b
@@ -334,7 +335,7 @@ let create_account n_state new_addr bytes =
   update_world n_state new_addr new_acc
 
 let next = function
- | Finished st -> Finished st
+ | Finished st lst -> Finished st lst
  | Continue global (* orig stack state c res *) ->
     let <| g_orig = orig; g_vmstate = res; g_cctx = c; g_current = state; g_stack = stack |> = global in
     match res with
@@ -355,7 +356,7 @@ let next = function
       | ContractCreate args ->
          let n_state = update_tr state c.cctx_this args.createarg_value in
          let n_acc = n_state c.cctx_this in
-         let addr = w256_to_address (keccak (word_rsplit256 (address_to_w256 c.cctx_this) ++ (word_rsplit256 n_acc.account_nonce))) in
+         let addr = w256_to_address (keccak (RLP (Node [RLP_address c.cctx_this; RLP_w256 (n_acc.account_nonce-1)]))) in
          let acc = empty_account addr in
          let acc = set_account_code acc args.createarg_code in
          let acc = <| acc with account_balance = args.createarg_value |> in
@@ -365,14 +366,15 @@ let next = function
          Continue <| global with g_stack=((state,v,c,CreateAddress addr)::stack); g_current=n_state; g_cctx=cctx; g_vmstate=InstructionContinue nv |>
       | ContractFail _ ->
          match stack with
-         | [] -> Finished orig
+         | [] -> Finished orig global.g_killed
          | (oldstate,v,c,_) :: rest ->
            let v = <| v with vctx_stack = 0::v.vctx_stack |> in
            Continue <| global with g_stack=rest; g_current=oldstate; g_cctx=c; g_vmstate=InstructionContinue v |>
          end
       | ContractSuicide ->
+         let killed = c.cctx_this::global.g_killed in
          match stack with
-         | [] -> Finished orig
+         | [] -> Finished orig killed
          | (_,nv,nc,is_new) :: rest ->
            let n_state = match is_new with
             | CreateAddress new_addr -> create_account state new_addr []
@@ -381,12 +383,12 @@ let next = function
            let acc = n_state nc.cctx_this in
            let nv = <| nv with vctx_stack = 1::nv.vctx_stack |> in
            let nv = vctx_update_from_world nv acc n_state v in
-           Continue <| global with g_stack=rest; g_current=n_state; g_cctx=nc; g_vmstate=InstructionContinue nv; g_killed = c.cctx_this::global.g_killed |>
+           Continue <| global with g_stack=rest; g_current=n_state; g_cctx=nc; g_vmstate=InstructionContinue nv; g_killed = killed |>
          end
       | ContractReturn bytes ->
          let n_state = update_return state c.cctx_this v in
          match stack with
-         | [] -> Finished n_state
+         | [] -> Finished n_state global.g_killed
          | (_,nv,c,ReturnTo mem_start mem_size) :: rest -> 
            let acc = n_state c.cctx_this in
            let nv = <| v with vctx_stack = 1::nv.vctx_stack; vctx_memory = put_return_values nv.vctx_memory bytes mem_start mem_size |> in
@@ -398,7 +400,7 @@ let next = function
            let nv = <| nv with vctx_stack = address_to_w256 new_addr::nv.vctx_stack |> in
            let nv = vctx_update_from_world nv acc n_state v in
            Continue <| global with g_stack=rest; g_current=n_state; g_cctx=c; g_vmstate=InstructionContinue nv |>
-         | _ -> Finished orig (* should be impossible *)
+         | _ -> Finished orig global.g_killed (* should be impossible *)
          end
       end
     | a -> Continue <| global with g_vmstate = next_state (fun _ -> ()) c a |>
@@ -406,12 +408,13 @@ let next = function
 end
 
 let start_transaction tr state block =
+  let s_acc = state tr.tr_from in
+  if s_acc.account_balance < tr.tr_value then Finished state [] else
+  let s_acc = <| s_acc with account_nonce = s_acc.account_nonce + 1; account_balance = s_acc.account_balance - tr.tr_value |> in
+  let n_state = update_world state tr.tr_from s_acc in
   match tr.tr_to with
-  | Nothing -> Finished state
+  | Nothing -> Finished n_state []
   | Just addr ->
-    let s_acc = state tr.tr_from in
-    let s_acc = <| s_acc with account_nonce = s_acc.account_nonce + 1; account_balance = s_acc.account_balance - tr.tr_value |> in
-    let n_state = update_world state tr.tr_from s_acc in
     let acc = state addr in
     let acc = <| acc with account_balance = acc.account_balance + tr.tr_value |> in
     let n_state = update_world n_state addr acc in
