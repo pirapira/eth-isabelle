@@ -995,7 +995,8 @@ type variable_ctx = <|
   vctx_gas : integer; (* remaining gas before the instruction *)
   vctx_account_existence : address -> bool;
   vctx_touched_storage_index : list w256;
-  vctx_logs : list log_entry (* stored newest first *)
+  vctx_logs : list log_entry; (* stored newest first *)
+  vctx_refund : integer;
 |>
 
 (* The constant context contains information that is rather stable. *)
@@ -1117,6 +1118,9 @@ end
 
 (* subsection {* Definition of EVM Operations *} *)
 
+val check_refund : w256 -> w256 -> integer
+let check_refund old new = if old <> 0 && new = 0 then 15000 else 0
+
 (* SSTORE changes the storage so it does not fit into any of the patterns defined above. *)
 
 val sstore : variable_ctx -> constant_ctx -> instruction_result
@@ -1124,7 +1128,8 @@ let sstore v c = match v.vctx_stack with
  | addr :: vl :: stack_tail ->
       InstructionContinue (vctx_advance_pc c
         (vctx_update_storage addr vl
-           <| v with vctx_stack = stack_tail; vctx_touched_storage_index = addr :: v.vctx_touched_storage_index |>))
+           <| v with vctx_stack = stack_tail; vctx_touched_storage_index = addr :: v.vctx_touched_storage_index;
+                     vctx_refund = v.vctx_refund + check_refund (v.vctx_storage addr) vl |>))
  | _ -> instruction_failure_result v [TooShortStack]
 end
 
@@ -1374,15 +1379,6 @@ let store_byte_list_memory pos lst orig p = match index lst (natFromNatural (wor
  | Just e -> e
  | Nothing -> orig p
 end
-(* if unat (p-pos) >= 0 && unat (p-pos) < length lst then  else orig p *)
-(*
-let rec store_byte_list_memory pos lst orig = match lst with
- | [] -> orig
- | h :: t ->
-     store_byte_list_memory (pos + 1) t (fun p -> if pos = p then h else orig p)
-end
-declare termination_argument store_byte_list_memory = automatic
-*)
 
 (* Using the function above, it is straightforward to store a byte in the memory. *)
 val store_word_memory : w256 -> w256 -> memory -> memory
@@ -2099,6 +2095,7 @@ indreln [build_vctx_called : account_state -> call_env -> variable_ctx -> bool]
      vctx_gas = gas; (* the amount of gas is chosen arbitrarily. *)
      vctx_account_existence = existence; (* existence is chosen arbitrarily *)
      vctx_touched_storage_index = [];
+     vctx_refund = 0;
      vctx_logs = []
    |>
 
@@ -2115,7 +2112,7 @@ vctx_returned:
    forall a_code v_pc new_bal a_bal a_addr a_storage v_stack v_memory v_memory_usage
           v_storage v_balance v_caller v_value v_data v_init_storage v_init_balance
           v_origin v_ext_program v_ext_program' v_block v_gas v_gas' mem_start mem_size
-          r rest whichever v_ex v_ex' v_touched v_logs.
+          r rest whichever v_ex v_ex' v_touched v_logs v_refund.
    (is_call_like (a_code.program_content (v_pc - 1))) &&
    (word256UGE new_bal a_bal) ==> (* the balance might have increased *)
    build_vctx_returned
@@ -2144,6 +2141,7 @@ vctx_returned:
          ; vctx_account_existence = v_ex
          ; vctx_touched_storage_index = v_touched
          ; vctx_logs = v_logs
+         ; vctx_refund = v_refund
          |>, mem_start, mem_size) :: rest)
      ; account_killed = whichever
      |>
@@ -2172,4 +2170,5 @@ vctx_returned:
        ; vctx_account_existence = v_ex'
        ; vctx_touched_storage_index = v_touched
        ; vctx_logs = v_logs
+       ; vctx_refund = v_refund
       |>)
