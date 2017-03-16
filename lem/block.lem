@@ -39,9 +39,7 @@ type account = <|
   account_code : program;
   account_balance : w256;
   account_nonce : w256;
-  account_killed : bool;
-    (* the boolean that indicates the account has executed SUICIDE in this transaction. *)
-  (* The flag causes a destruction of the contract at the end of a transaction. *)
+  account_exists : bool;
 |>
 
 
@@ -57,18 +55,20 @@ let build_cctx a =
 (* destroyed itself. *)
 
 val empty_account : address -> account
-let empty_account addr =
- <| account_address = addr;
-    account_storage = empty_storage;
+let empty_account addr = <|
+   account_address = addr;
+   account_storage = empty_storage;
    account_code = empty_program;
    account_balance = 0;
-   account_killed = false;
+   account_exists = false;
    account_nonce = 0;
- |>
+|>
 
 (* And after our contract makes a move, the account state is updated as follows. *)
 
 type world_state = address -> account
+
+let empty_state _ = empty_account
 
 type receipt = <|
   receipt_state : world_state;
@@ -277,8 +277,17 @@ type stack_hint =
  | CreateAddress of address
  | ReturnTo of integer * integer
 
+type global = <|
+  g_orig : world_state;
+  g_stack : list (world_state * variable_ctx * constant_ctx * stack_hint);
+  g_current : world_state;
+  g_cctx : constant_ctx;
+  g_killed : list address;
+  g_vmstate : instruction_result
+|>
+
 type global_state =
- | Continue of world_state * list (world_state * variable_ctx * constant_ctx * stack_hint) * world_state * constant_ctx * instruction_result
+ | Continue of global
  | Finished of world_state
 
 let get_hint = function
@@ -316,15 +325,18 @@ let update_call state addr args =
   let state = update_world state args.callarg_recipient to_acc in
   state
 
-let update_selfdestruct state addr =
-  update_world state addr <| (state addr) with account_killed = true |>
-
 let update_return state addr v =
   update_world state addr <| (state addr) with account_storage = v.vctx_storage |>
 
+let create_account n_state new_addr bytes =
+  let new_acc = <| n_state new_addr with account_exists = true |> in
+  let new_acc = set_account_code new_acc bytes in
+  update_world n_state new_addr new_acc
+
 let next = function
  | Finished st -> Finished st
- | Continue orig stack state c res ->
+ | Continue global (* orig stack state c res *) ->
+    let <| g_orig = orig; g_vmstate = res; g_cctx = c; g_current = state; g_stack = stack |> = global in
     match res with
     | InstructionToEnvironment act v stuff ->
       match act with
@@ -333,13 +345,13 @@ let next = function
          let acc = n_state args.callarg_recipient in
          let cctx = <| cctx_this = args.callarg_recipient; cctx_program = (n_state args.callarg_code).account_code; cctx_hash_filter = c.cctx_hash_filter |> in
          let nv = start_env acc n_state args c.cctx_this v.vctx_origin v.vctx_block in
-         Continue orig ((state,v,c,get_hint stuff)::stack) n_state cctx (InstructionContinue nv)
+         Continue <| global with g_stack=((state,v,c,get_hint stuff)::stack); g_current=n_state; g_cctx=cctx; g_vmstate=InstructionContinue nv |>
       | ContractDelegateCall args ->
          let n_state = update_call state c.cctx_this args in
          let acc = n_state args.callarg_recipient in
          let cctx = <| cctx_this = args.callarg_recipient; cctx_program = (n_state args.callarg_code).account_code; cctx_hash_filter = c.cctx_hash_filter |> in
          let nv = start_env acc n_state args c.cctx_this v.vctx_origin v.vctx_block in
-         Continue orig ((state,v,c,get_hint stuff)::stack) n_state cctx (InstructionContinue nv)
+         Continue <| global with g_stack=((state,v,c,get_hint stuff)::stack); g_current=n_state; g_cctx=cctx; g_vmstate=InstructionContinue nv |>
       | ContractCreate args ->
          let n_state = update_tr state c.cctx_this args.createarg_value in
          let n_acc = n_state c.cctx_this in
@@ -350,23 +362,26 @@ let next = function
          let cctx = <| cctx_this = addr; cctx_program = acc.account_code; cctx_hash_filter = c.cctx_hash_filter |> in
          let n_state = update_world n_state c.cctx_this acc in
          let nv = create_env acc n_state args.createarg_value [] 0 c.cctx_this v.vctx_origin v.vctx_block in
-         Continue orig ((state,v,c,CreateAddress addr)::stack) n_state cctx (InstructionContinue nv)
+         Continue <| global with g_stack=((state,v,c,CreateAddress addr)::stack); g_current=n_state; g_cctx=cctx; g_vmstate=InstructionContinue nv |>
       | ContractFail _ ->
          match stack with
          | [] -> Finished orig
          | (oldstate,v,c,_) :: rest ->
            let v = <| v with vctx_stack = 0::v.vctx_stack |> in
-           Continue orig rest oldstate c (InstructionContinue v)
+           Continue <| global with g_stack=rest; g_current=oldstate; g_cctx=c; g_vmstate=InstructionContinue v |>
          end
       | ContractSuicide ->
-         let n_state = update_selfdestruct state c.cctx_this in
          match stack with
          | [] -> Finished orig
-         | (_,nv,c,_) :: rest ->
-           let acc = n_state c.cctx_this in
+         | (_,nv,nc,is_new) :: rest ->
+           let n_state = match is_new with
+            | CreateAddress new_addr -> create_account state new_addr []
+            | _ -> state
+           end in
+           let acc = n_state nc.cctx_this in
            let nv = <| nv with vctx_stack = 1::nv.vctx_stack |> in
            let nv = vctx_update_from_world nv acc n_state v in
-           Continue orig rest n_state c (InstructionContinue nv)
+           Continue <| global with g_stack=rest; g_current=n_state; g_cctx=nc; g_vmstate=InstructionContinue nv; g_killed = c.cctx_this::global.g_killed |>
          end
       | ContractReturn bytes ->
          let n_state = update_return state c.cctx_this v in
@@ -376,19 +391,17 @@ let next = function
            let acc = n_state c.cctx_this in
            let nv = <| v with vctx_stack = 1::nv.vctx_stack; vctx_memory = put_return_values nv.vctx_memory bytes mem_start mem_size |> in
            let nv = vctx_update_from_world nv acc n_state v in
-           Continue orig rest n_state c (InstructionContinue nv)
+           Continue <| global with g_stack=rest; g_current=n_state; g_cctx=c; g_vmstate=InstructionContinue nv |>
          | (_,nv,c,CreateAddress new_addr) :: rest ->
-           let new_acc = n_state new_addr in
-           let new_acc = set_account_code new_acc bytes in
-           let n_state addr = if addr = new_addr then new_acc else n_state addr in
+           let n_state = create_account n_state new_addr bytes in
            let acc = n_state c.cctx_this in
            let nv = <| nv with vctx_stack = address_to_w256 new_addr::nv.vctx_stack |> in
            let nv = vctx_update_from_world nv acc n_state v in
-           Continue orig rest n_state c (InstructionContinue nv)
+           Continue <| global with g_stack=rest; g_current=n_state; g_cctx=c; g_vmstate=InstructionContinue nv |>
          | _ -> Finished orig (* should be impossible *)
          end
       end
-    | a -> Continue orig stack state c (next_state (fun _ -> ()) c a)
+    | a -> Continue <| global with g_vmstate = next_state (fun _ -> ()) c a |>
     end
 end
 
@@ -404,6 +417,6 @@ let start_transaction tr state block =
     let n_state = update_world n_state addr acc in
     let v = create_env acc n_state tr.tr_value tr.tr_data tr.tr_gas_limit tr.tr_from tr.tr_from block in
     let c = build_cctx acc in
-    Continue state [] n_state c (InstructionContinue v)
+    Continue <| g_orig = state; g_stack = []; g_current = n_state; g_cctx = c; g_vmstate = InstructionContinue v; g_killed = [] |>
 end
 
