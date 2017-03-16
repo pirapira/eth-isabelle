@@ -1288,8 +1288,7 @@ let call v c = match v.vctx_stack with
             callarg_output_size = e6 |>)
         (<| (vctx_advance_pc c v) with
            vctx_stack = rest;
-           vctx_balance = update_balance c.cctx_this (fun orig -> orig - e2) v.vctx_balance;
-           vctx_memory_usage = new_memory_consumption (Misc CALL) v |>)
+           vctx_balance = update_balance c.cctx_this (fun orig -> orig - e2) v.vctx_balance |>)
         (Just (* saving the variable environment for timing *)
            (uint e5, uint e6)))
   | _ -> instruction_failure_result v [TooShortStack]
@@ -1316,9 +1315,7 @@ let delegatecall v c = match v.vctx_stack with
               callarg_data = cut_memory e3 e4 v.vctx_memory;
               callarg_output_begin = e5;
               callarg_output_size = e6 |>)
-          (<| (vctx_advance_pc c v) with
-                 vctx_stack = rest;
-                 vctx_memory_usage = new_memory_consumption (Misc DELEGATECALL) v |>)
+          (<| (vctx_advance_pc c v) with vctx_stack = rest |>)
           (Just (* save the variable environment for returns *)
             (uint e5, uint e6))
   | _ -> instruction_failure_result v [TooShortStack]
@@ -1347,7 +1344,6 @@ let callcode v c = match v.vctx_stack with
               callarg_output_size = e6 |>)
           (<| (vctx_advance_pc c v) with
                   vctx_stack = rest;
-                  vctx_memory_usage = new_memory_consumption (Misc CALLCODE) v;
                   vctx_balance = update_balance c.cctx_this (fun orig -> orig - e2) v.vctx_balance |>)
           (Just (* saving the variable environment *) (uint e5, uint e6))
   | _ -> instruction_failure_result v [TooShortStack]
@@ -1371,8 +1367,7 @@ let create v c = match v.vctx_stack with
            (ContractCreate
              <| createarg_value = vl; createarg_code = code |>)
             (<| (vctx_advance_pc c v) with vctx_stack = rest;
-                 vctx_balance = new_balance;
-                 vctx_memory_usage = new_memory_consumption (Misc CREATE) v |>)
+                 vctx_balance = new_balance |>)
             (Just (* when returning to this invocation, use the following variable environment *)
               (0, 0))
   | _ -> instruction_failure_result v [TooShortStack]
@@ -1390,8 +1385,7 @@ end
 val ret : variable_ctx -> constant_ctx -> instruction_result
 let ret v _ =  match v.vctx_stack with
  | _ :: _ :: _ ->
-     let new_v = <| v with vctx_memory_usage = new_memory_consumption (Misc RETURN) v |> in
-     InstructionToEnvironment (ContractReturn (vctx_returned_bytes new_v))
+     InstructionToEnvironment (ContractReturn (vctx_returned_bytes v))
                            v
                            Nothing (* No possibility of ever returning to this invocation. *)
  | _ -> instruction_failure_result v [TooShortStack]
@@ -1434,9 +1428,7 @@ let mstore v c = match v.vctx_stack with
   | pos :: vl :: rest ->
        let new_memory = store_word_memory pos vl v.vctx_memory in
        InstructionContinue (vctx_advance_pc c
-         <| v with vctx_stack = rest; vctx_memory = new_memory;
-           vctx_memory_usage = new_memory_consumption (Memory MSTORE) v
-          |>)
+         <| v with vctx_stack = rest; vctx_memory = new_memory |>)
   | _ -> instruction_failure_result v [TooShortStack]
 end
 
@@ -1446,8 +1438,7 @@ let mload v c = match v.vctx_stack with
  | pos :: rest ->
       let value = read_word_from_bytes 0 (cut_memory pos 32 v.vctx_memory) in
       InstructionContinue
-        (vctx_advance_pc c <| v with vctx_stack = value :: rest;
-                                     vctx_memory_usage = new_memory_consumption (Memory MLOAD) v |>)
+        (vctx_advance_pc c <| v with vctx_stack = value :: rest |>)
  | _ -> instruction_failure_result v [TooShortStack]
 end
 
@@ -1458,7 +1449,6 @@ let mstore8 v c = match v.vctx_stack with
    let new_memory = (fun p -> if p = pos then w256_to_byte vl else v.vctx_memory p) in
    InstructionContinue (vctx_advance_pc c
           <| v with vctx_stack = rest;
-                    vctx_memory_usage = new_memory_consumption (Memory MSTORE8) v;
                     vctx_memory = new_memory |>)
  | _ -> instruction_failure_result v [TooShortStack]
 end
@@ -1482,8 +1472,7 @@ let calldatacopy v c = match v.vctx_stack with
        let data = cut_natural_map (word256ToNatural src_start) (word256ToNatural len) (input_as_natural_map v.vctx_data_sent) in
        let new_memory = store_byte_list_memory dst_start data v.vctx_memory in
        InstructionContinue (vctx_advance_pc c
-         <| v with vctx_stack = rest; vctx_memory = new_memory;
-            vctx_memory_usage = new_memory_consumption (Memory CALLDATACOPY) v |>)
+         <| v with vctx_stack = rest; vctx_memory = new_memory |>)
  | _ -> instruction_failure_result v [TooShortStack]
 end
 
@@ -1495,8 +1484,7 @@ let codecopy v c = match v.vctx_stack with
                   (program_as_natural_map c.cctx_program) in
      let new_memory = store_byte_list_memory dst_start data v.vctx_memory in
      InstructionContinue (vctx_advance_pc c
-       <| v with vctx_stack = rest; vctx_memory = new_memory;
-                 vctx_memory_usage = new_memory_consumption (Memory CODECOPY) v |>)
+       <| v with vctx_stack = rest; vctx_memory = new_memory |>)
  | _ -> instruction_failure_result v [TooShortStack]
 end
 
@@ -1509,8 +1497,7 @@ let extcodecopy v c = match v.vctx_stack with
                     (v.vctx_ext_program (w256_to_address addr))) in
      let new_memory = store_byte_list_memory dst_start data v.vctx_memory in
      InstructionContinue (vctx_advance_pc c
-       <| v with vctx_stack = rest; vctx_memory = new_memory;
-                 vctx_memory_usage = new_memory_consumption (Memory EXTCODECOPY) v |>)
+       <| v with vctx_stack = rest; vctx_memory = new_memory |>)
  | _ -> instruction_failure_result v [TooShortStack]
 end
 
@@ -1533,10 +1520,7 @@ let log n v c =
    let new_log_entry = create_log_entry n v c in
    InstructionContinue
     (vctx_advance_pc c (vctx_pop_stack (n+2)
-       <| v with
-          vctx_memory_usage = new_memory_consumption (Log LOG0) v;
-          vctx_logs = new_log_entry ::  v.vctx_logs
-        |>))
+       <| v with vctx_logs = new_log_entry ::  v.vctx_logs |>))
 
 (* For SWAP operations, I first define a swap operations on lists. *)
 val list_swap : forall 'a. nat -> list 'a -> maybe (list 'a)
@@ -1560,8 +1544,7 @@ let sha3 v c = match v.vctx_stack with
       if not (c.cctx_hash_filter lst) then instruction_failure_result v [OutOfGas] else
       InstructionContinue (
         vctx_advance_pc c
-           <| v with vctx_stack = keccak lst :: rest;
-                     vctx_memory_usage = new_memory_consumption (Arith SHA3) v |>)
+           <| v with vctx_stack = keccak lst :: rest |>)
  | _ -> instruction_failure_result v [TooShortStack]
 end
 
@@ -1764,14 +1747,14 @@ let check_resources v c s i =
   end
 
 
-val subtract_gas : integer -> instruction_result -> instruction_result
-let subtract_gas consumption orig =
+val subtract_gas : integer -> integer -> instruction_result -> instruction_result
+let subtract_gas consumption memory_usage orig =
   match orig with
   | InstructionContinue v ->
-    InstructionContinue (<| v with vctx_gas = v.vctx_gas - consumption |>)
+    InstructionContinue (<| v with vctx_gas = v.vctx_gas - consumption; vctx_memory_usage = memory_usage |>)
   | InstructionAnnotationFailure -> InstructionAnnotationFailure
   | InstructionToEnvironment act v opt ->
-    InstructionToEnvironment act (<|v with vctx_gas = v.vctx_gas - consumption|>) opt
+    InstructionToEnvironment act (<|v with vctx_gas = v.vctx_gas - consumption; vctx_memory_usage = memory_usage |>) opt
   end
 
 val signextend : w256 -> w256 -> w256
@@ -1790,7 +1773,7 @@ let signextend len w =
 (* on the execution environments. *)
 val instruction_sem : variable_ctx -> constant_ctx -> inst -> instruction_result
 let instruction_sem v c inst =
-  subtract_gas (meter_gas inst v c)
+  subtract_gas (meter_gas inst v c) (new_memory_consumption inst v)
   (match inst with
   | Stack (PUSH_N lst) -> stack_0_1_op v c (word_of_bytes (constant_mark lst))
   | Unknown _ -> instruction_failure_result v [ShouldNotHappen]

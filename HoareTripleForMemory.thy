@@ -242,7 +242,7 @@ declare memory_range_elms.simps [simp]
 declare meter_gas_def [simp del]
 
 lemma subtract_gas_annotation :
- "subtract_gas x res = InstructionAnnotationFailure \<Longrightarrow>
+ "subtract_gas x m res = InstructionAnnotationFailure \<Longrightarrow>
   res = InstructionAnnotationFailure"
 apply(cases res)
 apply(auto)
@@ -315,6 +315,7 @@ lemma memory_not_changed :
    xa \<in> contexts_as_set
            (x1\<lparr>vctx_pc := new_pc,
                  vctx_stack := new_stack,
+                 vctx_gas := new_gas,
                  vctx_memory_usage := memu\<rparr>)
            co_ctx"
 apply(auto simp add: contexts_as_set_def variable_ctx_as_set_def stack_as_set_def ext_program_as_set_def
@@ -359,6 +360,7 @@ lemma set_dir1 :
        x \<in> contexts_as_set
              (x1\<lparr>vctx_pc := vctx_pc x1 + 1,
                    vctx_stack := nstack # t,
+                   vctx_gas := newgas2,
                    vctx_memory_usage := memu\<rparr>)
              co_ctx"
 apply(auto simp add: contexts_as_set_def variable_ctx_as_set_def stack_as_set_def ext_program_as_set_def
@@ -369,6 +371,7 @@ lemma set_dir2 :
   "vctx_stack x1 = memaddr # t \<Longrightarrow>
    memu = memu2 \<Longrightarrow>
    newpc = newpc2 \<Longrightarrow>
+   newgas = newgas2 \<Longrightarrow>
    nstack = nstack2 \<Longrightarrow>
    x \<noteq> GasElm newgas  \<Longrightarrow>
    x \<noteq> MemoryUsageElm memu \<Longrightarrow>
@@ -386,6 +389,7 @@ lemma set_dir2 :
                    vctx_stack :=
                      nstack #
                      t,
+                   vctx_gas := newgas2,
                    vctx_memory_usage :=
                      memu2\<rparr>)
              co_ctx \<Longrightarrow>
@@ -445,15 +449,18 @@ apply (case_tac "\<not> cctx_hash_filter c (cut_memory a aa (vctx_memory v))")
 apply auto
 done
 
+(*
 lemma subtract_gas_environment :
-   "subtract_gas x res =
+   "subtract_gas x memu res =
      InstructionToEnvironment act v opt \<Longrightarrow>
     res = InstructionToEnvironment act
-      (v\<lparr> vctx_gas := vctx_gas v + x \<rparr>) opt"
+      (v\<lparr> vctx_gas := vctx_gas v + x, vctx_memory_usage := memu  \<rparr>) opt"
 apply(cases res)
 apply(auto)
 done
+*)
 
+(*
 lemma sha_env :
   "length (vctx_stack v) \<ge> 2 \<Longrightarrow>
    sha3 v c = InstructionToEnvironment act nv opt \<Longrightarrow>
@@ -468,38 +475,58 @@ apply auto
 apply (case_tac "\<not> cctx_hash_filter c (cut_memory a aa (vctx_memory v))")
 apply auto
 done
+*)
 
 lemma sha_fail_helper :
-  assumes a:"subtract_gas x (sha3 v c) =
-       InstructionToEnvironment act nv opt"
-  and   b:"length (vctx_stack v) \<ge> 2"
-  shows "failed_for_reasons {OutOfGas}
+  "subtract_gas x memu (sha3 v c) =
+     InstructionToEnvironment act nv opt \<Longrightarrow>
+   length (vctx_stack v) \<ge> 2 \<Longrightarrow>
+   failed_for_reasons {OutOfGas}
         (InstructionToEnvironment act nv opt)"
-proof -
-  have "act = ContractFail [OutOfGas]" using 
-    subtract_gas_environment and sha_env and a
-    and b  by fastforce
-  then show ?thesis by auto
-qed
-
-lemma subtract_gas_continue :
-   "subtract_gas x res = InstructionContinue v \<Longrightarrow>
-    res = InstructionContinue
-      (v\<lparr> vctx_gas := vctx_gas v + x \<rparr>)"
-apply(cases res)
-apply(auto)
+apply (auto simp:sha3_def)
+apply(cases "vctx_stack v")
+apply(simp)
+apply(cases "tl (vctx_stack v)")
+apply(simp)
+apply(simp)
+apply auto
+apply (case_tac "\<not> cctx_hash_filter c (cut_memory a aa (vctx_memory v))")
+apply auto
 done
 
+lemma subtract_gas_continue :
+   "subtract_gas x memu res = InstructionContinue v \<Longrightarrow>
+    \<exists>memu. res = InstructionContinue
+      (v\<lparr> vctx_gas := vctx_gas v + x, vctx_memory_usage := memu  \<rparr>)"
+apply(cases res)
+apply(auto)
+subgoal for x1
+apply(rule_tac exI[of _ "vctx_memory_usage x1"])
+apply auto
+done
+done
+
+(*
 lemma sha_continue :
   "sha3 v c = InstructionContinue nv \<Longrightarrow>
    nv = vctx_advance_pc c v\<lparr>
       vctx_stack :=
         keccak (cut_memory (hd (vctx_stack v))
             (hd (tl (vctx_stack v))) (vctx_memory v)) #
+        tl (tl (vctx_stack v)) \<rparr>"
+done
+*)
+
+
+lemma sha_continue_helper :
+  "subtract_gas x memu (sha3 v c) = InstructionContinue nv \<Longrightarrow>
+   nv = vctx_advance_pc c v\<lparr>
+      vctx_gas := vctx_gas v - x,
+      vctx_stack :=
+        keccak (cut_memory (hd (vctx_stack v))
+            (hd (tl (vctx_stack v))) (vctx_memory v)) #
         tl (tl (vctx_stack v)),
-      vctx_memory_usage :=
-        M (vctx_memory_usage v) (hd (vctx_stack v))
-          (hd (tl (vctx_stack v)))  \<rparr>"
+      vctx_memory_usage := memu  \<rparr>"
 apply (auto simp:sha3_def)
 apply(cases "vctx_stack v")
 apply(simp)
@@ -511,21 +538,16 @@ apply (case_tac "\<not> cctx_hash_filter c (cut_memory a aa (vctx_memory v))")
 apply (auto)
 done
 
-lemma sha_continue_helper :
-  "subtract_gas x (sha3 v c) = InstructionContinue nv \<Longrightarrow>
-   nv = vctx_advance_pc c v\<lparr>
-      vctx_gas := vctx_gas v - x,
+lemma sha_special_helper :
+  "subtract_gas x memu (sha3 v c) = InstructionContinue nv \<Longrightarrow>
+   sha3 v c = InstructionContinue (vctx_advance_pc c v\<lparr>
       vctx_stack :=
         keccak (cut_memory (hd (vctx_stack v))
             (hd (tl (vctx_stack v))) (vctx_memory v)) #
-        tl (tl (vctx_stack v)),
-      vctx_memory_usage :=
-        M (vctx_memory_usage v) (hd (vctx_stack v))
-          (hd (tl (vctx_stack v)))  \<rparr>"
-apply (cases "sha3 v c")
-apply(auto)
-using sha_continue
-apply force
+        tl (tl (vctx_stack v))\<rparr>)"
+apply (auto simp:sha3_def split:list.split)
+apply (case_tac "\<not> cctx_hash_filter c (cut_memory x21 x21a (vctx_memory v))")
+apply (auto)
 done
 
 lemma rsplit_length :
@@ -680,6 +702,9 @@ apply simp
 apply(case_tac
 "subtract_gas
           (meter_gas (Arith SHA3) x1 co_ctx)
+(M (vctx_memory_usage x1)
+               (vctx_stack_default 0 x1)
+               (vctx_stack_default 1 x1))
           (sha3 x1 co_ctx)")
 defer
 apply simp
@@ -691,11 +716,12 @@ apply simp
 subgoal for co_ctx presult rest x1 x1a
 using sha_continue_helper
    [of "(meter_gas (Arith SHA3) x1 co_ctx)"
+"(M (vctx_memory_usage x1)
+       (vctx_stack_default 0 x1)
+       (vctx_stack_default 1 x1))"
        x1 co_ctx x1a]
 apply simp
 apply(auto simp add: instruction_result_as_set_def)
-
-
 
 apply (simp add:cut_memory_works)
 apply (rule sym)
@@ -706,14 +732,14 @@ apply (rule_tac
 apply auto
 using cut_memory_works
 apply force
-using subtract_gas_continue
+using sha_special_helper
 apply force
 apply (rule_tac
  magic_hash_property [of co_ctx x1 memaddr _ table key])
 apply auto
 using cut_memory_works
 apply force
-using subtract_gas_continue
+using sha_special_helper
 apply force
 apply (simp add:meter_gas_def)
 apply(rule leibniz)
@@ -737,7 +763,7 @@ apply (rule_tac
 apply auto
 using cut_memory_works
 apply force
-using subtract_gas_continue
+using sha_special_helper
 apply force
 done
 done
@@ -773,13 +799,14 @@ qed
 lemma memory_was_changed :
        "x \<in> memory_range_elms memaddr
              (word_rsplit w) \<Longrightarrow>
-       x \<in> contexts_as_set
+       x \<notin> contexts_as_set
              (x1\<lparr>vctx_pc := vctx_pc x1 + 1,
                    vctx_stack := ta,
                    vctx_memory :=
                      store_word_memory memaddr w (vctx_memory x1),
-                   vctx_memory_usage := memu\<rparr>)
-             co_ctx"
+                   vctx_gas := gas2,
+                   vctx_memory_usage := memu  \<rparr>)
+             co_ctx \<Longrightarrow> False"
 apply(auto simp add: contexts_as_set_def variable_ctx_as_set_def stack_as_set_def ext_program_as_set_def
        balance_as_set_def store_word_memory_def)
 using memory_contra [of x memaddr w "vctx_memory x1"]
@@ -1191,14 +1218,30 @@ lemma plz_sort_it_out :
   newmem = store_word_memory memaddr v (vctx_memory x1) \<Longrightarrow>
   newgas = newgas2 \<Longrightarrow>
   new_pc = new_pc2 \<Longrightarrow>
-(*
-  memory_range_elms memaddr
-        (word_rsplit old_v)
-       \<subseteq> variable_ctx_as_set x1 \<Longrightarrow>
-*)
   memory_range_elms memaddr
         (word_rsplit old_v)
        \<subseteq> memory_as_set (vctx_memory x1) \<Longrightarrow>
+      contexts_as_set x1 co_ctx - {GasElm (vctx_gas x1)} -
+       {MemoryUsageElm (vctx_memory_usage x1)} -
+       {PcElm (vctx_pc x1)} -
+       {StackElm (length ta, v)} -
+       memory_range_elms memaddr (word_rsplit (old_v::w256)) -
+       {StackElm (Suc (length ta), memaddr)} -
+       {CodeElm (vctx_pc x1, Memory MSTORE)} -
+       {StackHeightElm (Suc (Suc (length ta)))} =
+       contexts_as_set
+        (x1\<lparr>vctx_pc := vctx_pc x1 + 1, vctx_stack := ta,
+              vctx_memory := newmem,
+              vctx_gas := newgas2,
+              vctx_memory_usage := memu2\<rparr>)
+        co_ctx -
+       {StackHeightElm (length ta)} -
+       memory_range_elms memaddr (word_rsplit (v::w256)) -
+       {PcElm (vctx_pc x1 + 1)} -
+       {CodeElm (vctx_pc x1, Memory MSTORE)} -
+       {MemoryUsageElm memu} -
+       {GasElm newgas}
+(*
   contexts_as_set x1 co_ctx -
        {GasElm (vctx_gas x1)} -
        {MemoryUsageElm (vctx_memory_usage x1)} -
@@ -1232,7 +1275,7 @@ lemma plz_sort_it_out :
        {CodeElm
          (vctx_pc x1, Memory MSTORE)} -
        {MemoryUsageElm memu} -
-       {GasElm newgas}"
+       {GasElm newgas}*)"
 apply (auto)
 apply(auto simp add: contexts_as_set_def variable_ctx_as_set_def stack_as_set_def ext_program_as_set_def
        balance_as_set_def)[1]
@@ -1265,6 +1308,10 @@ apply(auto simp add: contexts_as_set_def variable_ctx_as_set_def stack_as_set_de
        balance_as_set_def)
 done
 
+lemma falseness : "False \<Longrightarrow> P"
+apply auto
+done
+
 lemma mstore_gas_triple :
   "triple {OutOfGas}
      (\<langle> h \<le> 1022 \<rangle> **
@@ -1290,14 +1337,33 @@ apply(case_tac presult;
    auto simp add: meter_gas_def mstore_def
         memory_inst_numbers.simps    
         instruction_result_as_set_def vctx_advance_pc_def)
-apply (rule memory_was_changed)
+subgoal for co_ctx rest x1 ta x
+apply (rule FalseE)
+apply (rule memory_was_changed [of x memaddr v "M (vctx_memory_usage x1)
+                   memaddr 32"
+  "vctx_gas x1 -
+                  (3 *
+                   M (vctx_memory_usage x1)
+                    memaddr 32 +
+                   M (vctx_memory_usage x1)
+                    memaddr 32 *
+                   M (vctx_memory_usage x1)
+                    memaddr 32 div
+                   512 -
+                   (3 * vctx_memory_usage x1 +
+                    vctx_memory_usage x1 *
+                    vctx_memory_usage x1 div
+                    512) +
+                   Gverylow)"  "(x1::variable_ctx)" ta co_ctx] )
 apply auto
+done
 
-defer
 apply (rule leibniz)
 apply blast
 apply (rule plz_sort_it_out)
 apply (auto simp:memory_range_fact)
 done
+
+
 
 end

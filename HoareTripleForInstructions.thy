@@ -1791,15 +1791,25 @@ lemma stack_topmost_not_code [simp] :
 apply(induction lst; auto simp add: stack_topmost_elms.simps)
 done
 
+lemma memory_usage_not_in_memory_range [simp] :
+"MemoryUsageElm x8
+       \<in> memory_range_elms in_begin
+           input \<Longrightarrow> False"
+apply (induction input arbitrary:in_begin)
+apply (auto simp:memory_range_elms.simps)
+done
+
 lemma memory_subtract_gas [simp] :
  "x \<in> memory_range_elms in_begin input \<Longrightarrow>
   x \<in> instruction_result_as_set co_ctx
-          (subtract_gas g r) =
+          (subtract_gas g memu r) =
   (x \<in> instruction_result_as_set co_ctx r)"
 apply(simp add: instruction_result_as_set_def)
 apply(case_tac r; simp)
  apply(case_tac x; simp)
+using memory_usage_not_in_memory_range apply force
 apply(case_tac x; simp)
+using memory_usage_not_in_memory_range apply force
 done
 
 lemma stack_height_after_call [simp] :
@@ -1807,7 +1817,7 @@ lemma stack_height_after_call [simp] :
         (StackHeightElm (h + 7) \<in>
           instruction_result_as_set co_ctx (InstructionContinue x1)) \<Longrightarrow>
         (StackHeightElm h
-          \<in> instruction_result_as_set co_ctx (subtract_gas g (call x1 co_ctx)))
+          \<in> instruction_result_as_set co_ctx (subtract_gas g memu (call x1 co_ctx)))
         "
 apply(simp add: call_def)
 apply(case_tac "vctx_stack x1"; simp)
@@ -1899,7 +1909,7 @@ lemma call_new_balance [simp] :
        vctx_stack x1 = g # r # v # in_begin # in_size # out_begin # out_size # tf \<Longrightarrow>
        BalanceElm (this, fund - v)
        \<in> instruction_result_as_set co_ctx
-           (subtract_gas (meter_gas (Misc CALL) x1 co_ctx) (call x1 co_ctx))"
+           (subtract_gas (meter_gas (Misc CALL) x1 co_ctx) memu (call x1 co_ctx))"
 apply(clarify)
 apply(auto simp add: call_def failed_for_reasons_def)
 apply(simp add: instruction_result_as_set_def)
@@ -2193,7 +2203,7 @@ done
 lemma call_memory_no_change [simp] :
   "x \<in> memory_range_elms in_begin input \<Longrightarrow>
    x \<in> instruction_result_as_set co_ctx
-         (subtract_gas (meter_gas (Misc CALL) x1 co_ctx) (call x1 co_ctx)) =
+         (subtract_gas (meter_gas (Misc CALL) x1 co_ctx) memu (call x1 co_ctx)) =
   (x \<in> instruction_result_as_set co_ctx (InstructionContinue x1))"
 apply(simp add: call_def)
 apply(case_tac "vctx_stack x1"; simp)
@@ -2920,10 +2930,13 @@ apply(simp add: call_def)
 apply(case_tac "vctx_balance x1 (cctx_this co_ctx) < v"; simp)
 apply(rule_tac x = "vctx_gas x1 - meter_gas (Misc CALL) x1 co_ctx" in exI)
 apply(simp add: instruction_result_as_set_def)
-apply(simp add: sep_memory_range_sep sep_memory_range failed_for_reasons_def )
-apply(simp add: vctx_stack_default_def)
+apply(auto simp add: vctx_stack_default_def
+   sep_memory_range_sep sep_memory_range failed_for_reasons_def)
+apply blast
+  apply (meson DiffE memory_range_in_minus_balance_as set_rev_mp)
+
 apply(rule leibniz)
- apply blast
+apply force
 apply(rule Set.equalityI)
  apply(clarify)
  apply simp

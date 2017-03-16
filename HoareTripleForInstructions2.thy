@@ -146,10 +146,12 @@ apply(rule  Set.equalityI)
  apply(rename_tac pair)
  apply(case_tac pair; simp)
  apply(case_tac "a = h - Suc 0"; simp)
+  apply blast
  apply(case_tac "a < h - Suc (Suc (unat n))"; simp)
+
  apply(case_tac "a = h - Suc (Suc (unat n))"; simp)
   apply blast
- apply auto[1]
+apply auto[1]
 apply(simp add: Set.subset_iff)
 apply(rule allI)
 apply(rename_tac elm)
@@ -157,15 +159,13 @@ apply(case_tac elm; simp add: instruction_result_as_set_def)
  apply(rename_tac pair; case_tac pair)
  apply simp
  apply(case_tac "a = h - Suc 0"; simp)
+  using rev_nth tmp002 apply auto[1]
  apply(case_tac "a < h - Suc 0"; simp)
   apply(case_tac "a = h - Suc (Suc (unat n))"; simp)
    apply blast
   apply(case_tac "a < h - Suc (Suc (unat n))"; simp)
-   apply linarith
   apply(simp add: tmp000 tmp001 tmp002 List.rev_nth)
   apply linarith
- apply auto[1]
-apply auto[1]
 done
 
 
@@ -553,6 +553,7 @@ apply(rule Set.equalityI)
 apply(clarify)
 apply(simp)
 apply(rename_tac elm; case_tac elm; simp)
+apply auto
 done 
 
 lemma pop_gas_triple : "triple {OutOfGas} (\<langle> h \<le> 1024 \<rangle> **
@@ -575,7 +576,10 @@ apply(case_tac presult; simp)
   apply(rule leibniz)
    apply blast
   apply(auto simp add: instruction_result_as_set_def)
- apply(auto simp add: stack_as_set_def)
+
+apply(auto simp add:
+vctx_advance_pc_def
+ contexts_as_set_def variable_ctx_as_set_def ext_program_as_set_def balance_as_set_def)
 done
 
 lemma balance_gas_triple :
@@ -658,6 +662,7 @@ apply(auto simp add: triple_def)
   apply(clarsimp)
   apply(rename_tac elm; case_tac elm; simp)
   apply(case_tac "fst x2 < length ta"; simp)
+  apply (metis (no_types, hide_lams) HoareTripleForInstructions.pair_snd_eq One_nat_def diff_diff_left diff_is_0_eq' length_Cons less_SucE less_Suc_eq_le list.size(4) nth_Cons_0 nth_non_equal_first_eq)
  apply(clarsimp)
  apply(rename_tac elm; case_tac elm; simp)
  apply(case_tac "fst x2 < length ta"; simp)
@@ -672,6 +677,8 @@ apply(rule Set.equalityI)
  apply(clarsimp)
  apply(rename_tac elm; case_tac elm; simp)
  apply(case_tac "fst x2 < length ta"; simp)
+  apply (metis (no_types, hide_lams) HoareTripleForInstructions.pair_snd_eq One_nat_def diff_diff_left diff_is_0_eq le_neq_implies_less length_Cons less_SucE list.size(4) not_less nth_Cons')
+
 apply(clarsimp)
 apply(rename_tac elm; case_tac elm; simp)
 apply(case_tac "fst x2 < Suc (Suc (length ta))"; simp)
@@ -731,9 +738,15 @@ apply(rule Set.equalityI)
  apply(clarsimp)
  apply(rename_tac elm; case_tac elm; simp)
  apply(case_tac "fst x2 < length ta"; simp)
+ apply(case_tac "fst x2 = length ta"; simp)
+ apply(case_tac "fst x2 = Suc (length ta)"; simp)
 apply(clarsimp)
 apply(rename_tac elm; case_tac elm; simp)
-apply auto
+ apply(case_tac "fst x2 < length ta"; simp)
+
+apply auto[1]
+  apply (metis cancel_comm_monoid_add_class.diff_cancel fst_conv le_neq_implies_less less_Suc_eq_le nth_Cons_0 old.prod.exhaust snd_conv)
+
 done
 
 
@@ -766,8 +779,14 @@ apply(rule Set.equalityI)
  apply(clarsimp)
  apply(rename_tac elm; case_tac elm; simp)
  apply(case_tac "fst x2 < length ta"; simp)
+ apply(case_tac "fst x2 = length ta"; simp)
+ apply(case_tac "fst x2 = Suc (length ta)"; simp)
 apply(clarsimp)
-apply(rename_tac elm; case_tac elm; auto)
+apply(rename_tac elm; case_tac elm; simp)
+ apply(case_tac "fst x2 < length ta"; simp)
+
+apply auto[1]
+  apply (metis cancel_comm_monoid_add_class.diff_cancel fst_conv le_neq_implies_less less_Suc_eq_le nth_Cons_0 old.prod.exhaust snd_conv)
 
 done
 
@@ -888,10 +907,12 @@ apply(case_tac presult; simp)
 apply(auto simp add:
       instruction_result_as_set_def
       )
-apply(auto simp add: stack_as_set_def)
 apply(rule leibniz)
  apply blast
 apply(auto)
+apply(auto simp add:
+vctx_advance_pc_def
+ contexts_as_set_def variable_ctx_as_set_def ext_program_as_set_def balance_as_set_def)
 done
 
 declare misc_inst_numbers.simps [simp]
@@ -960,7 +981,6 @@ apply(rule leibniz)
 apply(auto)
   apply(rename_tac elm; case_tac elm; auto simp add: stack_as_set_def)
  apply(rename_tac elm; case_tac elm; auto simp add: stack_as_set_def)
-apply(rename_tac elm; case_tac elm; auto simp add: stack_as_set_def)
 done
 
 
