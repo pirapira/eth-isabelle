@@ -1119,7 +1119,7 @@ end
 (* subsection {* Definition of EVM Operations *} *)
 
 val check_refund : w256 -> w256 -> integer
-let check_refund old new = if old <> 0 && new = 0 then 15000 else 0
+let check_refund oldv newv = if oldv <> 0 && newv = 0 then 15000 else 0
 
 (* SSTORE changes the storage so it does not fit into any of the patterns defined above. *)
 
