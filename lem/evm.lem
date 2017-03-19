@@ -1,8 +1,6 @@
 (*                                                                          *)
 (* Copyright 2016 Sami Mäkelä                                               *)
 (* Copyright 2016 Yoichi Hirai                                              *)
-(* Copyright 2017 Sidney Amani                                              *)
-(* Copyright 2017 Maksym Bortin                                             *)
 (*                                                                          *)
 (* Licensed under the Apache License, Version 2.0 (the "License");          *)
 (* you may not use this file except in compliance with the License.         *)
@@ -85,14 +83,12 @@ val log2 : integer -> integer
 let rec log2 x =
   if x <= 1 then 0
   else 1 + log2 (x / 2)
-declare termination_argument log2 = automatic
 declare coq target_rep function log2 = `Z.log2`
 
 val log256floor : integer -> integer
 let rec {isabelle; hol; ocaml} log256floor x =
   if x <= 255 then 0
   else 1 + log256floor (x / 256)
-declare termination_argument log256floor = automatic
 let {coq} log256floor x = log2 x / 8
 
 val word_exp : integer -> natural -> integer
@@ -1753,7 +1749,7 @@ let new_memory_consumption i v =
 
 val meter_gas : inst -> variable_ctx -> constant_ctx -> integer
 let meter_gas i v c =
-  C v.vctx_memory_usage (new_memory_consumption i v) i
+  C v.vctx_memory_usage (new_memory_consumption i v) (vctx_next_instruction_default v c)
     (vctx_stack_default 0 v) (vctx_stack_default 1 v) (vctx_stack_default 2 v) (vctx_stack_default 3 v)
     (not (v.vctx_account_existence (vctx_recipient v c))) (v.vctx_storage (vctx_stack_default 0 v))
     (vctx_stack_default 1 v) v.vctx_gas (word256ToNatural v.vctx_block.block_number)
@@ -1763,8 +1759,7 @@ let check_resources v c s i =
   match inst_stack_numbers i with
   | (consumed, produced) ->
     (intFromNat (length s) + produced - consumed <= 1024) &&
-    (meter_gas i v c <= v.vctx_gas) &&
-    (0 <= v.vctx_memory_usage)
+    (meter_gas i v c <= v.vctx_gas)
   end
 
 
@@ -1930,21 +1925,19 @@ let check_annotations v c =
   List.all (fun annot -> annot (build_aenv v c)) annots
 
 
-val program_sem: constant_ctx -> instruction_result -> instruction_result
-let rec program_sem c p =
-  match p with
-  | InstructionToEnvironment _ _ _ -> p
-  | InstructionAnnotationFailure -> p
+val next_state: (instruction_result -> unit) -> constant_ctx -> instruction_result -> instruction_result
+let next_state stopper c pr =
+  match pr with
+  | InstructionToEnvironment _ _ _ ->
+    let () = stopper pr in pr
+  | InstructionAnnotationFailure -> let () = stopper pr in pr
   | InstructionContinue v ->
      if not (check_annotations v c) then InstructionAnnotationFailure else
      match vctx_next_instruction v c with
       | Nothing -> InstructionToEnvironment (ContractFail [ShouldNotHappen]) v Nothing
       | Just i ->
         if check_resources v c v.vctx_stack i then
-          (* This if is required to prove that vctx_gas is stictly decreasing on program_sem's recursion *)
-          (if v.vctx_gas <= 0 then
-              instruction_sem v c i
-          else  program_sem c (instruction_sem v c i))
+          instruction_sem v c i
         else
           InstructionToEnvironment (ContractFail
               (match inst_stack_numbers i with
@@ -1956,7 +1949,21 @@ let rec program_sem c p =
               v Nothing
      end
   end
-declare termination_argument program_sem = manual
+
+(* The program execution takes a counter. *)
+(* One counter is decremented for each instruction. *)
+(* The other counter is decremented when a backward-jump happens. *)
+(* This setup allows an easy termination proof. *)
+(* Also, during the proofs, I can do case analysis on the number of backwad jumps *)
+(* rather than the number of instructions. *)
+
+val program_sem :  (instruction_result -> unit) -> constant_ctx -> nat -> instruction_result -> instruction_result
+let rec program_sem stopper c fuel pr =
+match fuel with
+ | 0 -> pr
+ | fuel_pred + 1 -> program_sem stopper c fuel_pred (next_state stopper c pr)
+end
+declare termination_argument program_sem = automatic
 
 (* subsection {* Account's State *} *)
 
