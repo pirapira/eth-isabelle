@@ -378,11 +378,13 @@ where
 "no_assertion_failure (I :: account_state \<Rightarrow> bool) \<equiv>
   (\<forall> addr str code bal ongoing killed callenv.
     I \<lparr> account_address = addr, account_storage = str, account_code = code,
-       account_balance = bal, account_ongoing_calls = ongoing,
+       account_balance = bal,
+       account_ongoing_calls = ongoing,
        account_killed = killed \<rparr> \<longrightarrow>
   (\<forall> fin. star (one_round I) (
     \<lparr> account_address = addr, account_storage = str, account_code = code,
-      account_balance = bal, account_ongoing_calls = ongoing,
+      account_balance = bal, 
+      account_ongoing_calls = ongoing,
       account_killed = killed \<rparr>
   , Init callenv) fin \<longrightarrow>
   no_assertion_failure_post I fin))"

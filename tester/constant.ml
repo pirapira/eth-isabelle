@@ -52,4 +52,5 @@ let dummy_variable_con : variable_ctx =
   ; vctx_account_existence = (fun _ -> false)
   ; vctx_touched_storage_index = []
   ; vctx_logs = []
+  ; vctx_refund = Nat_big_num.of_int 0
   }

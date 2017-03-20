@@ -104,6 +104,7 @@ let test_one_case j : testResult =
     ; vctx_account_existence = construct_account_existence test_case.pre
     ; vctx_touched_storage_index = []
     ; vctx_logs = []
+    ; vctx_refund = Nat_big_num.of_int 0
     } in
   let c : constant_ctx =
     { cctx_program = test_case.exec.code

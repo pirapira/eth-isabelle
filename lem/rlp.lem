@@ -24,12 +24,23 @@ type tree =
  | Leaf of list byte
  | Node of list tree
 
+val BE_rev_prim : nat -> nat -> list byte
+let rec BE_rev_prim limit n = match limit with
+ | 0 -> []
+ | limit+1 -> 
+   if n = 0 then [] else
+   if n < 256 then [word8FromNat n] else
+         (word8FromNat (n mod 256) :: BE_rev_prim limit (n div 256))
+end
+
 val BE_rev : nat -> list byte
 let rec BE_rev n = match n with
  | 0 -> []
  | n -> if n < 256 then [word8FromNat n] else
          (word8FromNat (n mod 256) :: BE_rev (n div 256))
 end
+
+declare coq target_rep function BE_rev = (fun n -> BE_rev_prim n n)
 
 val BE : nat -> list byte
 let BE n = List.reverse (BE_rev n)
@@ -89,3 +100,13 @@ end
 val RLP_nat : nat -> list byte
 let RLP_nat i = RLP (Leaf (BE i))
 
+val RLP_w256 : word256 -> tree
+let RLP_w256 i = Leaf (BE (natFromInteger (word256ToInteger i)))
+
+val RLP_address : word160 -> tree
+let RLP_address i = Leaf (BE (natFromInteger (word160ToInteger i)))
+
+(*
+val RLP_nat : nat -> list byte
+let RLP_nat i = RLP (Leaf (BE i))
+*)
