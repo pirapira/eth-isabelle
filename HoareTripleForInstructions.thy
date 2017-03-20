@@ -1726,7 +1726,7 @@ done
 lemma fourth_stack_topmost [simp] :
   "(a ** b ** c ** stack_topmost h lst ** rest) s =
    (stack_topmost_elms h lst \<subseteq> s \<and> (a ** b ** c ** rest) (s - stack_topmost_elms h lst))"
-	by (metis abel_semigroup.left_commute set_pred.abel_semigroup_axioms stack_topmost_sep)
+  by (smt sep_assoc sep_three stack_topmost_sep)
 
 lemma this_account_not_stack_topmost [simp] :
   "\<forall> h. ThisAccountElm this
