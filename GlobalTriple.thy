@@ -25,7 +25,7 @@ definition sstorage_as_set :: "nat \<Rightarrow> (address \<Rightarrow> account)
 definition saved_as_set :: "nat \<Rightarrow> (address\<Rightarrow>account) \<Rightarrow> constant_ctx \<Rightarrow>
   variable_ctx \<Rightarrow> stack_hint \<Rightarrow> global_element set" where
 "saved_as_set n st c v hint =
-    sstorage_as_set n st \<union> State ` contexts_as_set v c"
+    sstorage_as_set n st \<union> SavedState n ` contexts_as_set v c"
 
 fun saved_stack_as_set ::
  "(world_state * variable_ctx * constant_ctx * stack_hint) list \<Rightarrow> global_element set" where
@@ -37,7 +37,8 @@ fun global_as_set :: "global_state \<Rightarrow> global_element set" where
   "global_as_set (Finished fin) = state_as_set (f_state fin)"
 | "global_as_set (Continue g) = state_as_set (g_current g) \<union>
     State ` instruction_result_as_set (g_cctx g) (g_vmstate g) \<union>
-    backup_as_set (g_orig g)"
+    backup_as_set (g_orig g) \<union>
+    saved_stack_as_set (g_stack g)"
 
 fun iter :: "nat \<Rightarrow> global_state \<Rightarrow> global_state" where
 "iter 0 x = x"
@@ -56,7 +57,7 @@ where
        (\<exists> k. (post ** rest) (global_as_set (iter k presult)))"
 
 definition lift_pred :: "state_element set_pred \<Rightarrow> global_pred" where
-"lift_pred p s = p {x|x. State x \<in> s}"
+"lift_pred p s == p {x|x. State x \<in> s} \<and> s \<subseteq> {State x|x. State x \<in> s}"
 
 lemmas rw = instruction_sem_def instruction_failure_result_def
   subtract_gas.simps stack_2_1_op_def stack_1_1_op_def
@@ -164,12 +165,150 @@ using no_reasons_next
 apply (auto simp add: program_environment failed_for_reasons_def)
 done
 
+lemma sep_lift_commute :
+  "lift_pred (a**b) t = (lift_pred a ** lift_pred b) t"
+apply (auto simp:lift_pred_def sep_def)
+subgoal for u v 
+apply (rule_tac exI[of _ "{State uu| uu. uu \<in> u}"]; auto)
+apply (rule_tac exI[of _ "{State uv| uv. uv \<in> v}"]; auto)
+apply (case_tac x; auto)
+done
+subgoal for u v 
+apply (rule_tac exI[of _ "{uu| uu. State uu \<in> u}"]; auto)
+done
+done
+
+lemma state_lifted_aux :
+  "State x \<notin> saved_stack_as_set lst"
+apply (induction lst)
+apply (auto simp:saved_as_set_def  sstorage_as_set_def)
+done
+
+lemma state_lifted :
+  "State x \<in> global_as_set (Continue res) \<Longrightarrow>
+   x \<in> instruction_result_as_set (g_cctx res) (g_vmstate res)"
+apply (auto simp:state_as_set_def backup_as_set_def)
+apply (auto simp:state_lifted_aux)
+done
+
+lemma state_finished :
+  "State x \<in> global_as_set (Finished res) \<Longrightarrow>
+   False"
+apply (auto simp:state_as_set_def)
+done
+
+lemma get_continue_elem :
+"(lift_pred continuing ** rest) (global_as_set presult) \<Longrightarrow>
+ State (ContinuingElm True) \<in> global_as_set presult"
+apply (auto simp: sep_def lift_pred_def continuing_def)
+done
+
+declare global_as_set.simps [simp del]
+
+lemma continuing_false :
+ "ContinuingElm True \<in> contexts_as_set v c \<Longrightarrow> False"
+apply (auto simp:contexts_as_set_def constant_ctx_as_set_def
+   program_as_set_def variable_ctx_as_set_def
+   stack_as_set_def data_sent_as_set_def
+   ext_program_as_set_def)
+done
+
+lemma continuing_extract:
+"(lift_pred continuing ** rest) (global_as_set presult) \<Longrightarrow>
+ \<exists>x y. presult = Continue x \<and> g_vmstate x = InstructionContinue y"
+apply (cases presult; auto)
+apply (case_tac "g_vmstate x1")
+apply simp
+using get_continue_elem and state_lifted
+apply force
+subgoal for x1 x31 x32 x33
+using get_continue_elem [of rest presult]
+  and state_lifted [of "ContinuingElm True" x1]
+apply (auto simp: instruction_result_as_set_def)
+apply (rule continuing_false; auto)
+done
+using state_finished and get_continue_elem
+apply force
+done
+
+lemma lift_triple_finished :
+assumes a:"(rest ** lift_pred (continuing ** pre ** code inst))
+        (global_as_set (Finished st))"
+shows  "False"
+proof -
+  have b:"lift_pred (continuing ** pre ** code inst) =
+    lift_pred continuing ** lift_pred (pre ** code inst)"
+   by (auto simp:sep_lift_commute)
+  then have
+   "rest ** lift_pred (continuing ** pre ** code inst) =
+    lift_pred continuing ** (rest ** lift_pred (pre ** code inst))"
+  by auto
+  then show ?thesis
+    by (metis assms get_continue_elem state_finished)
+qed
+
+lemma lift_triple_finished2 :
+assumes a:"(rest ** lift_pred (continuing ** pre ** r ** code inst))
+        (global_as_set (Finished st))"
+shows  "False"
+proof -
+  have b:"lift_pred (continuing ** pre ** r ** code inst) =
+    lift_pred continuing ** lift_pred (pre ** r ** code inst)"
+   by (auto simp:sep_lift_commute)
+  then have
+   "rest ** lift_pred (continuing ** pre ** r ** code inst) =
+    lift_pred continuing ** (rest ** lift_pred (pre ** r ** code inst))"
+  by auto
+  then show ?thesis
+    by (metis assms get_continue_elem state_finished)
+qed
+
+declare contiuning_sep sep_continuing_sep sep_code code_sep
+  sep_code_sep sep_sep_code
+ [simp del]
+
+(*
+probably cannot be factored...
+
+lemma factor_pred :
+  "r = lift_pred p ** q"
+*)
+
+lemma lift_triple :
+   "triple {} (pre**continuing) inst post \<Longrightarrow>
+    global_triple
+      (lift_pred (pre ** continuing ** code inst ** r))
+      (lift_pred (post ** code inst ** r))"
+apply (auto simp:global_triple_def)
+apply (case_tac presult)
+defer
+using lift_triple_finished2
+apply fastforce
+subgoal for presult rest x1
+apply (subst (asm) triple_def)
+
+apply (drule spec[where x="g_cctx x1"])
+apply (drule spec2[where x="g_vmstate x1" and y = r])
+apply auto
+using get_continue_elem
+
 lemma lift_triple :
    "triple {} (pre**continuing) inst post \<Longrightarrow>
     global_triple
       (lift_pred (pre ** continuing ** code inst))
       (lift_pred (post ** code inst))"
-apply (auto simp:triple_def global_triple_def)
+apply (auto simp:global_triple_def no_reasons)
+apply (case_tac presult)
+defer
+using lift_triple_finished
+apply fastforce
+subgoal for presult rest x1
+apply (auto simp:triple_def)
+
+apply (drule spec[where x="g_cctx x1"])
 apply clarsimp
+apply (drule spec2[where x="g_vmstate x1" and y = rest])
+apply (rule_tac spec[of "g_cctx x1"])
+
 
 end
