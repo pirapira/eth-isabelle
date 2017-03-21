@@ -247,22 +247,6 @@ proof -
     by (metis assms get_continue_elem state_finished)
 qed
 
-lemma lift_triple_finished2 :
-assumes a:"(rest ** lift_pred (continuing ** pre ** r ** code inst))
-        (global_as_set (Finished st))"
-shows  "False"
-proof -
-  have b:"lift_pred (continuing ** pre ** r ** code inst) =
-    lift_pred continuing ** lift_pred (pre ** r ** code inst)"
-   by (auto simp:sep_lift_commute)
-  then have
-   "rest ** lift_pred (continuing ** pre ** r ** code inst) =
-    lift_pred continuing ** (rest ** lift_pred (pre ** r ** code inst))"
-  by auto
-  then show ?thesis
-    by (metis assms get_continue_elem state_finished)
-qed
-
 declare contiuning_sep [simp del]
 declare sep_continuing_sep [simp del]
 declare sep_code [simp del]
@@ -272,25 +256,6 @@ declare sep_sep_code [simp del]
 
 lemmas cont = contiuning_sep sep_continuing_sep
 
-(*
-probably cannot be factored...
-
-lemma factor_pred :
-  "r = lift_pred p ** q"
-*)
-
-(* this only works if we have
-     State x \in s \<Longrightarrow> rest s = False
-lemma lift_imp :
-  "(rest **
-     lift_pred
-      (continuing ** pre ** r ** code inst))
-     (global_as_set (Continue x1)) \<Longrightarrow>
-    (pre ** r ** code inst)
-     (instruction_result_as_set (g_cctx x1)
-       (g_vmstate x1) -
-      {ContinuingElm True})"
- *)
 
 definition unlift :: "global_state \<Rightarrow> global_element set_pred \<Rightarrow>
   state_element set_pred" where
@@ -385,6 +350,29 @@ apply auto
   using state_lifted by auto
 done
 
+lemma unlift_imp2_gen :
+   "(post ** unlift (Continue x1) rest)
+     (instruction_result_as_set (g_cctx x1) res) \<Longrightarrow>
+    (rest ** lift_pred post) (global_as_set (Continue (x1\<lparr> g_vmstate := res \<rparr>)))"
+apply (auto simp:unlift_def
+  lift_pred_def sep_def)
+subgoal for u v
+apply (rule exI[of _ "global_as_set (Continue x1) -
+      {State x |x.
+       State x
+       \<in> global_as_set (Continue x1)} \<union>
+      {State x |x. x \<in> v}"])
+apply clarsimp
+apply (rule exI[of _ "{State uu | uu. uu \<in> u}"])
+apply auto
+defer
+  using state_include apply auto[1]
+defer
+defer
+defer
+
+done
+
 lemma iter_simp: "next0 (iter k st) = iter k (next0 st)"
 apply (induction k arbitrary:st)
 apply auto
@@ -411,7 +399,19 @@ apply (auto)[1]
   apply (simp add: program_environment)
 apply (subst iter.simps)
 apply (subst iter_simp)
+apply (auto simp:next0_def)
+done
+done
 
+lemma smallest_k2 :
+"\<exists>l v2.
+   program_sem (\<lambda>stopper. ()) c l
+      (InstructionContinue v) = InstructionContinue v2 \<and>
+  next_state (\<lambda>stopper. ()) c (InstructionContinue v2) =
+  program_sem (\<lambda>stopper. ()) c (Suc k) (InstructionContinue v)"
+using smallest_k
+apply force
+done
 
 lemma lift_triple :
    "triple {} (pre**continuing) inst post \<Longrightarrow>
@@ -451,15 +451,20 @@ apply (rule exI[of _ k])
 apply (auto simp:program_sem.simps)[1]
 using unlift_imp2 apply force
 subgoal for ka
-using smallest_k [of "g_cctx x1" ka v]
-
-
-
-apply (rule exI[of _ k])
-(* problem, this is not the smallest such k *)
+using smallest_k2 [of "g_cctx x1" v ka]
+apply auto
+subgoal for l v2
+apply (rule exI[of _ "Suc l"])
+using do_iter [of x1 v l v2]
 apply auto
 
+(* problem, unlifting will be relative to
+   different state *)
+
+
 (*
+
+
 lemma lift_triple :
    "triple {} (pre**continuing) inst post \<Longrightarrow>
     global_triple
@@ -508,6 +513,25 @@ proof -
   then show "ContinuingElm True \<in> instruction_result_as_set (g_cctx x1) (g_vmstate x1)"
     using a2 by (meson state_lifted)
 qed
+
+lemma lift_triple_finished2 :
+assumes a:"(rest ** lift_pred (continuing ** pre ** r ** code inst))
+        (global_as_set (Finished st))"
+shows  "False"
+proof -
+  have b:"lift_pred (continuing ** pre ** r ** code inst) =
+    lift_pred continuing ** lift_pred (pre ** r ** code inst)"
+   by (auto simp:sep_lift_commute)
+  then have
+   "rest ** lift_pred (continuing ** pre ** r ** code inst) =
+    lift_pred continuing ** (rest ** lift_pred (pre ** r ** code inst))"
+  by auto
+  then show ?thesis
+    by (metis assms get_continue_elem state_finished)
+qed
+
+
+
 *)
 
 
