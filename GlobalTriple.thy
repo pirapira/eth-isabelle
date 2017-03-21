@@ -350,6 +350,19 @@ apply auto
   using state_lifted by auto
 done
 
+lemma change_vmstate :
+ "global_as_set (Continue (x\<lparr>g_vmstate := res\<rparr>)) =
+  (global_as_set (Continue x) -
+   {State u | u. u \<in> instruction_result_as_set
+     (g_cctx x) (g_vmstate x)}) \<union>
+  {State u | u. u \<in> instruction_result_as_set
+     (g_cctx x) res}"
+apply (auto simp:rw global_as_set.simps)
+  apply (metis Int_iff global0.select_convs(3) global0.select_convs(4) global0.select_convs(6) global_as_set.simps(2) inf_sup_absorb state_lifted)
+  apply (metis Un_iff global0.select_convs(1) global0.select_convs(4) global0.select_convs(6)  global_as_set.simps(2) state_lifted)
+  by (simp add: state_lifted_aux)
+
+
 lemma unlift_imp2_gen :
    "(post ** unlift (Continue x1) rest)
      (instruction_result_as_set (g_cctx x1) res) \<Longrightarrow>
@@ -365,11 +378,15 @@ apply (rule exI[of _ "global_as_set (Continue x1) -
 apply clarsimp
 apply (rule exI[of _ "{State uu | uu. uu \<in> u}"])
 apply auto
-defer
+apply (simp add:change_vmstate)
+  apply auto[1]
   using state_include apply auto[1]
-defer
-defer
-defer
+apply (simp add:change_vmstate)
+  apply auto[1]
+apply (simp add:change_vmstate)
+  apply auto[1]
+apply (simp add:change_vmstate)
+  using state_lifted by auto
 
 done
 
@@ -457,82 +474,13 @@ subgoal for l v2
 apply (rule exI[of _ "Suc l"])
 using do_iter [of x1 v l v2]
 apply auto
-
-(* problem, unlifting will be relative to
-   different state *)
-
-
-(*
-
-
-lemma lift_triple :
-   "triple {} (pre**continuing) inst post \<Longrightarrow>
-    global_triple
-      (lift_pred (pre ** continuing ** code inst ** r))
-      (lift_pred (post ** code inst ** r))"
-apply (auto simp:global_triple_def)
-apply (case_tac presult)
-defer
-using lift_triple_finished2
-apply fastforce
-subgoal for presult rest x1
-apply (subst (asm) triple_def)
-
-apply (drule spec[where x="g_cctx x1"])
-apply (drule spec2[where x="g_vmstate x1" and y = r])
-apply auto
-subgoal
-proof -
-  assume a1: "(rest ** lift_pred (continuing ** pre ** r ** code inst)) (global_as_set (Continue x1))"
-  assume a2: "presult = Continue x1"
-  have "\<forall>p pa pb. (\<exists>G. p (G::global_element set) \<and> \<not> pa G) \<or> (\<forall>G. \<not> (p ** pb) G \<or> (pa ** pb) G)"
-    by (meson imp_sepL)
-  then obtain GG :: "(global_element set \<Rightarrow> bool) \<Rightarrow> (global_element set \<Rightarrow> bool) \<Rightarrow> (global_element set \<Rightarrow> bool) \<Rightarrow> global_element set" where
-    f3: "\<forall>p pa pb. p (GG p pa pb) \<and> \<not> pa (GG p pa pb) \<or> (\<forall>G. \<not> (p ** pb) G \<or> (pa ** pb) G)"
-  by moura
-  have "(rest ** lift_pred (continuing ** pre ** r ** code inst)) (global_as_set presult)"
-    using a2 a1 by meson
-  then have f4: "\<forall>p. \<not> p (GG rest p (lift_pred (continuing ** pre ** r ** code inst))) \<or> (p ** lift_pred (continuing ** pre ** r ** code inst)) (global_as_set presult)"
-    using f3 by meson
-  then have f5: "\<forall>p pa. lift_pred (continuing ** pre ** r ** code inst) (GG (lift_pred (continuing ** pre ** r ** code inst)) p pa) \<or> (p ** pa) (global_as_set presult) \<or> \<not> pa (GG rest pa (lift_pred (continuing ** pre ** r ** code inst)))"
-    using f3 by (metis (no_types) set_pred.commute)
-  have "\<forall>p pa. \<not> p (GG (lift_pred (continuing ** pre ** r ** code inst)) p pa) \<or> (p ** pa) (global_as_set presult) \<or> \<not> pa (GG rest pa (lift_pred (continuing ** pre ** r ** code inst)))"
-    using f4 f3 by (metis (no_types) set_pred.commute)
-  then have f6: "\<forall>p pa pb. \<not> lift_pred (p ** pb) (GG (lift_pred (continuing ** pre ** r ** code inst)) (lift_pred p ** lift_pred pb) pa) \<or> \<not> pa (GG rest pa (lift_pred (continuing ** pre ** r ** code inst))) \<or> (lift_pred p ** lift_pred pb ** pa) (global_as_set presult)"
-    by (metis (no_types) sep_lift_commute set_pred.assoc)
-  { assume "\<exists>p. p (GG rest p (lift_pred (continuing ** pre ** r ** code inst)))"
-    { assume "\<exists>p. p (GG rest p (lift_pred (continuing ** pre ** r ** code inst))) \<and> State (ContinuingElm True) \<notin> global_as_set presult"
-      then have "\<exists>p. \<not> (lift_pred continuing ** lift_pred (pre ** r ** code inst) ** p) (global_as_set presult) \<and> p (GG rest p (lift_pred (continuing ** pre ** r ** code inst)))"
-        by (metis get_continue_elem)
-      then have "State (ContinuingElm True) \<in> global_as_set presult"
-        using f6 f5 by (metis (no_types) set_pred.assoc) }
-    then have "State (ContinuingElm True) \<in> global_as_set presult"
-      by blast }
-  then have "State (ContinuingElm True) \<in> global_as_set presult"
-    by meson
-  then show "ContinuingElm True \<in> instruction_result_as_set (g_cctx x1) (g_vmstate x1)"
-    using a2 by (meson state_lifted)
-qed
-
-lemma lift_triple_finished2 :
-assumes a:"(rest ** lift_pred (continuing ** pre ** r ** code inst))
-        (global_as_set (Finished st))"
-shows  "False"
-proof -
-  have b:"lift_pred (continuing ** pre ** r ** code inst) =
-    lift_pred continuing ** lift_pred (pre ** r ** code inst)"
-   by (auto simp:sep_lift_commute)
-  then have
-   "rest ** lift_pred (continuing ** pre ** r ** code inst) =
-    lift_pred continuing ** (rest ** lift_pred (pre ** r ** code inst))"
-  by auto
-  then show ?thesis
-    by (metis assms get_continue_elem state_finished)
-qed
-
-
-
-*)
+using unlift_imp2_gen
+apply force
+done
+done
+done
+done
+done
 
 
 end
