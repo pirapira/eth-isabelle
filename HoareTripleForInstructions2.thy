@@ -498,32 +498,6 @@ lemma union_cong :
 apply(simp)
 done
 
-lemma contract_action_not_vctx [simp] :
-  "ContractActionElm x19 \<notin> variable_ctx_as_set x1"
-apply(simp add: variable_ctx_as_set_def ext_program_as_set_def balance_as_set_def)
-done
-
-lemma continuing_not_vctx [simp] :
-  "ContinuingElm b \<notin> variable_ctx_as_set v"
-apply(simp add: variable_ctx_as_set_def ext_program_as_set_def balance_as_set_def)
-done
-
-lemma vctx_gas_changed [simp] :
-   "variable_ctx_as_set
-             (v \<lparr> vctx_gas := g \<rparr>) =
-    variable_ctx_as_set v - { GasElm (vctx_gas v)} \<union> { GasElm g }"
-apply(simp)
-apply(rule Set.equalityI)
- apply(clarify)
- apply(simp)
- apply(rename_tac elm)
- apply(case_tac elm; simp)
-apply(clarify)
-apply(simp)
-apply(rename_tac elm)
-apply(case_tac elm; simp)
-apply(auto)
-done
 
 
 lemma jumpdest_gas_triple :
