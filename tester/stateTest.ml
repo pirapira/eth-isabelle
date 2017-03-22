@@ -63,6 +63,15 @@ let construct_tr a = {
   tr_data = Conv.byte_list_of_hex_string a.data;
 }
 
+let run_tr tr state block =
+  let res = start_transaction tr state block in
+  let rec do_run = function
+   | Finished fi -> fi
+   | a -> do_run (next a) in
+  let fi = do_run res in
+  let final_state = end_transaction fi tr block in
+  final_state
+
 let () =
   let test : json = Yojson.Basic.from_file "../tests/StateTests/stExample.json" in
   let test_assoc : (string * json) list = Util.to_assoc test in
@@ -77,6 +86,11 @@ let () =
         let post_st = make_state_list tc.post in
         Printf.printf "state has %d accounts\n" (List.length pre_st);
         let state x = try List.assoc x pre_st with _ -> empty_account0 x in
+        let state = run_tr tr state block_info in
+        List.iter (fun (a,cmp) ->
+           let acc = state a in
+           Printf.printf "address %s has balance %s\n" (Conv.string_of_address acc.account_address0) (Conv.decimal_of_word256 acc.account_balance0);
+           Printf.printf "should be %s\n" (Conv.decimal_of_word256 cmp.account_balance0)) post_st;
         ()
       ) test_assoc
   in
