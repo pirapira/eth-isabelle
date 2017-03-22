@@ -41,8 +41,8 @@ type account = <|
   account_balance : w256;
   account_nonce : w256;
   account_exists : bool;
+  account_hascode : bool;
 |>
-
 
 val build_cctx : account -> constant_ctx
 let build_cctx a =
@@ -63,6 +63,7 @@ let empty_account addr = <|
    account_balance = 0;
    account_exists = false;
    account_nonce = 0;
+   account_hascode = true;
 |>
 
 (* And after our contract makes a move, the account state is updated as follows. *)
@@ -78,6 +79,7 @@ type receipt = <|
   receipt_logs : list log_entry;
 |>
 
+(*
 type block = <|
   block_parent_hash : w256;
   block_uncles_hash : list w256;
@@ -91,6 +93,7 @@ type block = <|
   block_timestampt : w256;
   block_nonce : w256;
 |>
+*)
 
 let start_env a state args caller origin block =
 <| vctx_stack = []; (* The stack is initialized for every invocation *)
@@ -346,11 +349,10 @@ let update_call state addr args =
   state
 
 let update_return state addr v =
-  update_world state addr (<| state addr with account_storage = v.vctx_storage |>)
+  update_world state addr (<| (state addr) with account_storage = v.vctx_storage |>)
 
-val set_account_code : (address -> account)-> addr -> list word8 -> (address -> account)
 let create_account n_state new_addr bytes =
-  let new_acc = <| n_state new_addr with account_exists = true |> in
+  let new_acc = <| (n_state new_addr) with account_exists = true |> in
   let new_acc = set_account_code new_acc bytes in
   update_world n_state new_addr new_acc
 
