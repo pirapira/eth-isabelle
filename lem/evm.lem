@@ -737,7 +737,7 @@ val Gexp : integer
 let Gexp = 10
 
 val Gexpbyte : integer
-let Gexpbyte = 50
+let Gexpbyte = 10
 
 val Gmemory : integer
 let Gmemory = 3
@@ -1412,7 +1412,12 @@ end
 
 (* A utility function for storing a list of bytes in the memory: *)
 val store_byte_list_memory : w256 -> list byte -> memory -> memory
-let store_byte_list_memory pos lst orig p = match index lst (natFromNatural (word256ToNatural (p-pos))) with
+let {isabelle;hol;coq} store_byte_list_memory pos lst orig p = match index lst (natFromNatural (word256ToNatural (p-pos))) with
+ | Just e -> e
+ | Nothing -> orig p
+end
+
+let {ocaml} store_byte_list_memory pos lst orig p = if p < pos then orig p else match index lst (natFromNatural (word256ToNatural (p-pos))) with
  | Just e -> e
  | Nothing -> orig p
 end
@@ -1920,6 +1925,9 @@ let next_state stopper c pr =
      match vctx_next_instruction v c with
       | Nothing -> InstructionToEnvironment (ContractFail [ShouldNotHappen]) v Nothing
       | Just i ->
+        (*
+        prerr_endline ("Inst " ^ String.concat "," (List.map (fun x -> Z.format "%x" (word8ToNatural x)) (inst_code i)));
+        *)
         if check_resources v c v.vctx_stack i then
           instruction_sem v c i
         else
