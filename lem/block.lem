@@ -489,8 +489,9 @@ let start_transaction tr state block =
   let s_acc = state tr.tr_from in
   let gas_value = tr.tr_gas_price * tr.tr_gas_limit in
   let igas = 21000 + txdatacost tr.tr_data in
+  if tr.tr_nonce <> s_acc.account_nonce then Finished <| f_state=state; f_killed=[]; f_gas=0; f_refund=0 |> else
   if word256ToNatural s_acc.account_balance < word256ToNatural (tr.tr_value + gas_value) then
-    Finished <| f_state=state; f_killed=[]; f_gas=word256ToInteger tr.tr_gas_limit - igas; f_refund=0 |> else
+    Finished <| f_state=state; f_killed=[]; f_gas=0; f_refund=0 |> else
   match tr.tr_to with
   | Nothing ->
     if tr.tr_data = [] && tr.tr_gas_limit = 0 && tr.tr_gas_price = 0 then Finished <| f_state=state; f_killed=[]; f_gas=0; f_refund=0 |> else
@@ -508,15 +509,16 @@ let start_transaction tr state block =
     Continue (<| g_create = true; g_orig = state; g_stack = []; g_current = n_state; g_cctx = c; g_vmstate = InstructionToEnvironment act v Nothing; g_killed = [] |>)
   | Just addr ->
     let s_acc = <| s_acc with account_nonce = s_acc.account_nonce + 1;  account_balance = s_acc.account_balance - gas_value |> in
-    let state = update_world state tr.tr_from s_acc in
+    let state2 = update_world state tr.tr_from s_acc in
+    if word256ToNatural s_acc.account_balance < word256ToNatural tr.tr_value then Finished <| f_state=state; f_killed=[]; f_gas=0; f_refund=0 |> else
     let s_acc = <| s_acc with account_balance = s_acc.account_balance - tr.tr_value |> in
     let n_state = update_world state tr.tr_from s_acc in
-    let acc = state addr in
+    let acc = n_state addr in
     let acc = <| acc with account_balance = acc.account_balance + tr.tr_value |> in
     let n_state = update_world n_state addr acc in
     let v = create_env acc n_state tr.tr_value tr.tr_data (tr.tr_gas_limit - word256FromInteger igas) tr.tr_from tr.tr_from block in
     let c = build_cctx acc in
-    Continue (<| g_create = false; g_orig = state; g_stack = []; g_current = n_state; g_cctx = c; g_vmstate = InstructionContinue v; g_killed = [] |>)
+    Continue (<| g_create = false; g_orig = state2; g_stack = []; g_current = n_state; g_cctx = c; g_vmstate = InstructionContinue v; g_killed = [] |>)
 end
 
 let rec kill_accounts state killed = match killed with
