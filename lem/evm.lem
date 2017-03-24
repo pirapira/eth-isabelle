@@ -736,8 +736,9 @@ let Gnewaccount = 25000
 val Gexp : integer
 let Gexp = 10
 
-val Gexpbyte : integer
-let Gexpbyte = 10
+val Gexpbyte : natural -> integer
+let Gexpbyte blocknumber =
+  if blocknumber >= eip150_block then 50 else 10
 
 val Gmemory : integer
 let Gmemory = 3
@@ -1266,6 +1267,51 @@ let rec cut_natural_map idx n nmap = match n with
  | n + 1 -> nmap idx :: cut_natural_map (idx + 1) n nmap
 end
 
+(* Cnew is the funciton denoted as C_\text{\tiny NEW} in the yellow paper.*)
+(* However, it takes the sent value and a boolean indicating emptiness of the recipient. *)
+val Cnew : w256 -> bool -> integer
+let Cnew value emp = if emp && not (value = 0) then Gnewaccount else 0
+
+(* Cxfer is the function denoted as C_\text{\tiny XFER} in the yellow paper. *)
+val Cxfer : w256 -> integer
+let Cxfer value = if value = 0 then 0 else Gcallvalue
+
+(* Cextra is the function denoted as C_\text{\tiny EXTRA} in the yellow paper. *)
+(* However, it takes a word indicating the transferred value, and a boolean indicating emptiness *)
+val Cextra : w256 -> bool -> natural -> integer
+let Cextra value emp blocknumber = Gcall blocknumber + Cxfer value + Cnew value emp
+
+(* L is the function denoted as L in the yellow paper. *)
+val L : integer -> integer
+let L x = x - x / 64
+
+(* Cgascap is the function denoted as C_{\text{\tiny GASCAP}} in the yellow paper. *)
+(* However, it takes the two topmost stack elements,
+   a boolean indicating emptiness of the recipient, and the remaining gas of the caller *)
+val Cgascap : w256 -> w256 -> bool -> integer -> natural -> integer
+let Cgascap mu0 mu1 emp remaining_gas blocknumber =
+  if remaining_gas >= Cextra mu1 emp blocknumber then
+    integerMin (L (remaining_gas - Cextra mu1 emp blocknumber)) (uint mu0)
+  else
+    uint mu0
+
+(* Ccallgas is the function denoted as C_{\text{\tiny CALLGAS}} in the yellow paper. *)
+(* However, it takes the three topmost stack elements,
+   a boolean indicating emptiness of the recipient, and the remaining gas of the caller *)
+val Ccallgas : w256 -> w256 -> w256 -> bool -> integer -> natural -> integer
+let Ccallgas mu0 mu1 mu2 emp remaining_gas blocknumber =
+  ( if blocknumber < eip150_block then word256ToInteger mu0 else Cgascap mu0 mu1 emp remaining_gas blocknumber) +
+  ( if mu2 = 0 then 0 else Gcallstipend )
+
+(* Ccall is the function denoted as C_{\text{\tiny CALL}} *)
+(* However, it takes the three topmost stack elements, a boolean indicating
+   emptiness of the recipient, and the remaining gas of the caller *)
+val Ccall : w256 -> w256 -> w256 -> bool -> integer -> natural -> integer
+let Ccall mu0 mu1 mu2 emp remaining_gas blocknumber =
+  if blocknumber < eip150_block then word256ToInteger mu0 + Cextra mu2 emp blocknumber else
+  Cgascap mu0 mu1 emp remaining_gas blocknumber + Cextra mu2 emp blocknumber
+
+
 (* CALL instruction results in @{term ContractCall} action when there are enough stack elements *)
 (* (and gas, when we introduce the gas accounting). *)
 val call : variable_ctx -> constant_ctx -> instruction_result
@@ -1279,7 +1325,8 @@ let call v c = match v.vctx_stack with
              |>
            )))
        (fun _ -> InstructionToEnvironment (ContractCall
-         <| callarg_gas = e0;
+         <| callarg_gas = word256FromInteger (Ccallgas e0 e1 e2
+                     (not (v.vctx_account_existence (w256_to_address e1))) v.vctx_gas (word256ToNatural v.vctx_block.block_number));
             callarg_code = w256_to_address e1;
             callarg_recipient = w256_to_address e1;
             callarg_value = e2;
@@ -1584,49 +1631,6 @@ val Csuicide : bool -> natural -> integer
 let Csuicide recipient_empty blocknumber =
   Gsuicide blocknumber + (if recipient_empty && blocknumber >= eip150_block then Gnewaccount else 0)
 
-(* Cnew is the funciton denoted as C_\text{\tiny NEW} in the yellow paper.*)
-(* However, it takes the sent value and a boolean indicating emptiness of the recipient. *)
-val Cnew : w256 -> bool -> integer
-let Cnew value emp = if emp && not (value = 0) then Gnewaccount else 0
-
-(* Cxfer is the function denoted as C_\text{\tiny XFER} in the yellow paper. *)
-val Cxfer : w256 -> integer
-let Cxfer value = if value = 0 then 0 else Gcallvalue
-
-(* Cextra is the function denoted as C_\text{\tiny EXTRA} in the yellow paper. *)
-(* However, it takes a word indicating the transferred value, and a boolean indicating emptiness *)
-val Cextra : w256 -> bool -> natural -> integer
-let Cextra value emp blocknumber = Gcall blocknumber + Cxfer value + Cnew value emp
-
-(* L is the function denoted as L in the yellow paper. *)
-val L : integer -> integer
-let L x = x - x / 64
-
-(* Cgascap is the function denoted as C_{\text{\tiny GASCAP}} in the yellow paper. *)
-(* However, it takes the two topmost stack elements,
-   a boolean indicating emptiness of the recipient, and the remaining gas of the caller *)
-val Cgascap : w256 -> w256 -> bool -> integer -> natural -> integer
-let Cgascap mu0 mu1 emp remaining_gas blocknumber =
-  if remaining_gas >= Cextra mu1 emp blocknumber then
-    integerMin (L (remaining_gas - Cextra mu1 emp blocknumber)) (uint mu0)
-  else
-    uint mu0
-
-(* Ccallgas is the function denoted as C_{\text{\tiny CALLGAS}} in the yellow paper. *)
-(* However, it takes the three topmost stack elements,
-   a boolean indicating emptiness of the recipient, and the remaining gas of the caller *)
-val Ccallgas : w256 -> w256 -> w256 -> bool -> integer -> natural -> integer
-let Ccallgas mu0 mu1 mu2 emp remaining_gas blocknumber =
-  if mu2 = 0 then
-    Cgascap mu0 mu1 emp remaining_gas blocknumber
-  else
-    Cgascap mu0 mu1 emp remaining_gas blocknumber + Gcallstipend
-
-(* Ccall is the function denoted as C_{\text{\tiny CALL}} *)
-(* However, it takes the three topmost stack elements, a boolean indicating
-   emptiness of the recipient, and the remaining gas of the caller *)
-val Ccall : w256 -> w256 -> w256 -> bool -> integer -> natural -> integer
-let Ccall mu0 mu1 mu2 emp remaining_gas blocknumber = Cgascap mu0 mu1 emp remaining_gas blocknumber + Cextra mu2 emp blocknumber
 
 
 (* thirdComponentOfC is the third component in the definition of C (the gas function). *)
@@ -1636,7 +1640,7 @@ val thirdComponentOfC : inst -> w256 -> w256 -> w256 -> w256 -> bool -> w256 -> 
 let thirdComponentOfC i s0 s1 s2 s3 recipient_empty orig_val new_val remaining_gas = fun blocknumber ->
   match i with
   | Storage SSTORE -> Csstore orig_val new_val
-  | Arith EXP -> Gexp + if s1 = 0 then 0 else Gexpbyte * (1 + log256floor (uint s1))
+  | Arith EXP -> Gexp + if s1 = 0 then 0 else Gexpbyte blocknumber * (1 + log256floor (uint s1))
   | Memory CALLDATACOPY -> Gverylow + Gcopy * ((uint s2 + 31) / 32)
   | Memory CODECOPY -> Gverylow + Gcopy * ((uint s2 + 31) / 32)
   | Memory EXTCODECOPY -> Gextcode blocknumber + Gcopy * ((uint s3 + 31) / 32)

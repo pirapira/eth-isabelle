@@ -306,6 +306,7 @@ type global = <|
   g_cctx : constant_ctx;
   g_killed : list address;
   g_vmstate : instruction_result;
+  g_create : bool;
 |>
 
 type tr_result = <|
@@ -324,22 +325,35 @@ let get_hint = function
  | Nothing -> NoHint
 end
 
+type opt = (nat -> maybe inst)
+
+let make_opt lst =
+  let bytes = bytelist_to_instlist lst in
+  (fun x -> List.index bytes x)
+
+val get_opt : opt -> nat -> maybe inst
+let get_opt m x = m x
+
+val codemap : list byte -> (integer -> maybe inst)
+let codemap lst =
+  let m = make_opt lst in
+  (fun x -> if x < 0 then Nothing else get_opt m (natFromInteger x))
+
 val set_account_code : account -> list word8 -> account
 let set_account_code acc bytes =
-  let code (i:integer) = if i < 0 then Nothing else List.index (bytelist_to_instlist bytes) (natFromInteger i) in
+(* let code (i:integer) = if i < 0 then Nothing else List.index (bytelist_to_instlist bytes) (natFromInteger i) in *)
   <| acc with account_code = <|
        program_annotation = (fun _ -> []);
        program_length = integerFromNat (List.length bytes);
-       program_content = code |> |>
+       program_content = codemap bytes |> |>
 
 val update_world : world_state -> address -> account -> world_state
 let update_world state a_addr n_acc a = if a = a_addr then n_acc else state a
 
 let update_tr state addr value =
   let acc = state addr in
-  let acc = <| acc with account_balance = acc.account_balance - value; account_nonce = acc.account_nonce+1 |> in
+  let acc = <| acc with account_balance = acc.account_balance - value |> in
   update_world state addr acc
-
 
 let update_call state addr args =
   let state = update_tr state addr args.callarg_value in
@@ -371,12 +385,17 @@ let next = function
     | InstructionToEnvironment act v stuff ->
       match act with
       | ContractCall args ->
+         (*
+         prerr_endline ("Calling " ^ Z.format "%x" (Word160.word160ToNatural args.callarg_recipient));
+         prerr_endline ("with value " ^ Z.format "%x" (word256ToNatural args.callarg_value));
+         *)
          let n_state = update_call state c.cctx_this args in
          let acc = n_state args.callarg_recipient in
          let cctx = <|
             cctx_this = args.callarg_recipient;
             cctx_program = (n_state args.callarg_code).account_code;
             cctx_hash_filter = c.cctx_hash_filter |> in
+         (* let v = <| v with vctx_gas = v.vctx_gas - word256ToInteger args.callarg_gas |> in *)
          let nv = start_env acc n_state args c.cctx_this v.vctx_origin v.vctx_block in
          Continue (<| global with g_stack=((state,v,c,get_hint stuff)::global.g_stack);
                                  g_current=n_state; g_cctx=cctx; g_vmstate=InstructionContinue nv |>)
@@ -391,6 +410,7 @@ let next = function
          Continue (<| global with g_stack=((state,v,c,get_hint stuff)::global.g_stack);
                                  g_current=n_state; g_cctx=cctx; g_vmstate=InstructionContinue nv |>)
       | ContractCreate args ->
+         let state = update_nonce state c.cctx_this in
          let n_state = update_tr state c.cctx_this args.createarg_value in
          let n_acc = n_state c.cctx_this in
          let addr = w256_to_address (keccak (RLP (Node [RLP_address c.cctx_this; RLP_w256 (n_acc.account_nonce-1)]))) in
@@ -413,13 +433,14 @@ let next = function
          | [] -> Finished <| f_state=orig; f_killed=[]; f_gas=0; f_refund=0 |>
          | (oldstate,v,c,_) :: rest ->
            let v = <| v with vctx_stack = 0::v.vctx_stack |> in
-           Continue (<| global with g_stack=rest; g_current=update_nonce oldstate c.cctx_this; g_cctx=c; g_vmstate=InstructionContinue v |>)
+           Continue (<| global with g_stack=rest; g_current=oldstate; g_cctx=c; g_vmstate=InstructionContinue v |>)
          end
       | ContractSuicide ->
          let killed = c.cctx_this::global.g_killed in
          match global.g_stack with
          | [] -> Finished (<| f_state = state; f_killed = killed; f_refund = v.vctx_refund; f_gas = v.vctx_gas |>)
          | (_,nv,nc,is_new) :: rest ->
+           if rest = [] && global.g_create then Finished <| f_state=orig; f_killed=[]; f_gas=0; f_refund=0 |> else
            let n_state = match is_new with
             | CreateAddress new_addr -> create_account state new_addr []
             | _ -> state
@@ -435,10 +456,11 @@ let next = function
          | [] -> Finished <| f_state = n_state; f_killed = global.g_killed; f_refund = v.vctx_refund; f_gas = v.vctx_gas |>
          | (_,nv,c,ReturnTo mem_start mem_size) :: rest -> 
            let acc = n_state c.cctx_this in
-           let nv = <| v with vctx_stack = 1::nv.vctx_stack; vctx_memory = put_return_values nv.vctx_memory bytes mem_start mem_size |> in
+           let nv = <| nv with vctx_stack = 1::nv.vctx_stack; vctx_memory = put_return_values nv.vctx_memory bytes mem_start mem_size |> in
            let nv = vctx_update_from_world nv acc n_state v in
            Continue (<| global with g_stack=rest; g_current=n_state; g_cctx=c; g_vmstate=InstructionContinue nv |>)
          | (_,nv,c,CreateAddress new_addr) :: rest ->
+           if bytes = [] && rest = [] && global.g_create then Finished <| f_state=orig; f_killed=[]; f_gas=0; f_refund=0 |> else
            let n_state = create_account n_state new_addr bytes in
            let acc = n_state c.cctx_this in
            let v = <| v with vctx_gas = v.vctx_gas - integerFromNat (200*length bytes) |> in
@@ -467,26 +489,34 @@ let start_transaction tr state block =
   let s_acc = state tr.tr_from in
   let gas_value = tr.tr_gas_price * tr.tr_gas_limit in
   let igas = 21000 + txdatacost tr.tr_data in
-  if s_acc.account_balance < tr.tr_value + gas_value then Finished <| f_state=state; f_killed=[]; f_gas=word256ToInteger tr.tr_gas_limit - igas; f_refund=0 |> else
+  if word256ToNatural s_acc.account_balance < word256ToNatural (tr.tr_value + gas_value) then
+    Finished <| f_state=state; f_killed=[]; f_gas=word256ToInteger tr.tr_gas_limit - igas; f_refund=0 |> else
   match tr.tr_to with
   | Nothing ->
+    if tr.tr_data = [] && tr.tr_gas_limit = 0 && tr.tr_gas_price = 0 then Finished <| f_state=state; f_killed=[]; f_gas=0; f_refund=0 |> else
+    if tr.tr_data = [] && tr.tr_gas_price = 0 then Finished <| f_state=update_nonce state tr.tr_from; f_killed=[]; f_gas=0; f_refund=0 |> else
+    if integerFromNatural (word256ToNatural tr.tr_gas_limit) < igas then
+      Finished <| f_state=state; f_killed=[]; f_gas=0; f_refund=0 |> else
     (* This should be creation... perhaps make a bogus state *)
     let s_acc = <| s_acc with account_balance = s_acc.account_balance - gas_value |> in
     let n_state = update_world state tr.tr_from s_acc in
+    if tr.tr_data = [] then Finished <| f_state=update_nonce n_state tr.tr_from; f_killed=[]; f_gas=word256ToInteger tr.tr_gas_limit - igas; f_refund=0 |> else
     let v = create_env s_acc n_state 0 [] (tr.tr_gas_limit - word256FromInteger igas) tr.tr_from tr.tr_from block in
     let c = build_cctx s_acc in
     let args = <| createarg_value = tr.tr_value; createarg_code = tr.tr_data |> in
     let act = ContractCreate args in
-    Continue (<| g_orig = n_state; g_stack = []; g_current = n_state; g_cctx = c; g_vmstate = InstructionToEnvironment act v Nothing; g_killed = [] |>)
+    Continue (<| g_create = true; g_orig = state; g_stack = []; g_current = n_state; g_cctx = c; g_vmstate = InstructionToEnvironment act v Nothing; g_killed = [] |>)
   | Just addr ->
-    let s_acc = <| s_acc with account_nonce = s_acc.account_nonce + 1; account_balance = s_acc.account_balance - tr.tr_value - gas_value |> in
+    let s_acc = <| s_acc with account_nonce = s_acc.account_nonce + 1;  account_balance = s_acc.account_balance - gas_value |> in
+    let state = update_world state tr.tr_from s_acc in
+    let s_acc = <| s_acc with account_balance = s_acc.account_balance - tr.tr_value |> in
     let n_state = update_world state tr.tr_from s_acc in
     let acc = state addr in
     let acc = <| acc with account_balance = acc.account_balance + tr.tr_value |> in
     let n_state = update_world n_state addr acc in
-    let v = create_env acc n_state tr.tr_value tr.tr_data (tr.tr_gas_limit - word256FromInteger igas - 32000) tr.tr_from tr.tr_from block in
+    let v = create_env acc n_state tr.tr_value tr.tr_data (tr.tr_gas_limit - word256FromInteger igas) tr.tr_from tr.tr_from block in
     let c = build_cctx acc in
-    Continue (<| g_orig = state; g_stack = []; g_current = n_state; g_cctx = c; g_vmstate = InstructionContinue v; g_killed = [] |>)
+    Continue (<| g_create = false; g_orig = state; g_stack = []; g_current = n_state; g_cctx = c; g_vmstate = InstructionContinue v; g_killed = [] |>)
 end
 
 let rec kill_accounts state killed = match killed with
@@ -494,16 +524,16 @@ let rec kill_accounts state killed = match killed with
   | a::rest -> kill_accounts (update_world state a (empty_account a)) rest
 end
 
-val refund_selfdestruct : integer
+val refund_selfdestruct : natural
 let refund_selfdestruct = 24000
 
 let end_transaction f tr block =
   let state = kill_accounts f.f_state f.f_killed in
-  let refund = integerFromNat (List.length f.f_killed) * refund_selfdestruct + f.f_refund in
+  let refund = naturalFromNat (List.length f.f_killed) * refund_selfdestruct + naturalFromInteger f.f_refund in
   (* refund gas to account *)
   let acc = state tr.tr_from in
-  let r = f.f_gas + min refund ((word256ToInteger tr.tr_gas_limit - f.f_gas) div 2) in
-  let refund_sum = word256FromInteger (r * word256ToInteger tr.tr_gas_price) in
+  let r = naturalFromInteger f.f_gas + min refund ((word256ToNatural tr.tr_gas_limit - naturalFromInteger f.f_gas) div 2) in
+  let refund_sum = word256FromNatural (r * word256ToNatural tr.tr_gas_price) in
   let state = update_world state tr.tr_from (<| acc with account_balance = acc.account_balance + refund_sum |>) in
   let cb = state block.block_coinbase in
   update_world state block.block_coinbase (<| cb with account_balance = cb.account_balance + (tr.tr_gas_limit * tr.tr_gas_price - refund_sum) |>)
