@@ -352,13 +352,13 @@ lemma advance_pc_change [simp] :
   "vctx_pc x1 \<noteq> vctx_pc (vctx_advance_pc co_ctx x1)"
 	by (metis advance_pc_different)
 
-lemma caller_sep [simp]:
+lemma caller_sep:
   "(caller c ** rest) s =
    (CallerElm c \<in> s \<and> rest (s - {CallerElm c}))"
 apply(auto simp add: caller_def sep_def)
 done
 
-lemma sep_caller [simp]:
+lemma sep_caller:
   "(rest ** caller c) s =
    (CallerElm c \<in> s \<and> rest (s - {CallerElm c}))"
 apply(auto simp add: caller_def sep_def)
@@ -377,19 +377,19 @@ proof -
     by auto
 qed
 
-lemma balance_sep [simp] :
+lemma balance_sep :
   "(balance a b ** rest) s =
    (BalanceElm (a, b) \<in> s \<and> rest (s - {BalanceElm (a, b)}))"
 apply(auto simp add: balance_def sep_def)
 done
 
-lemma sep_balance [simp] :
+lemma sep_balance :
   "(rest ** balance a b) s =
    (BalanceElm (a, b) \<in> s \<and> rest (s - {BalanceElm (a, b)}))"
 apply(auto simp add: balance_def sep_def)
 done
 
-lemma sep_balance_sep [simp] :
+lemma sep_balance_sep :
   "(q ** balance a b ** rest) s =
    (BalanceElm (a, b) \<in> s \<and> (q ** rest) (s - {BalanceElm (a, b)}))"
   (is "?L = ?R")
@@ -401,8 +401,6 @@ proof -
   ultimately show ?thesis
     by auto
 qed
-
-
 
 lemma Gverylow_positive [simp]:
   "Gverylow > 0"
@@ -1161,31 +1159,30 @@ apply(auto simp add: stack_as_set_def)
 done
 
 
-lemma not_continuing_sep [simp] :
+lemma not_continuing_sep :
   "(not_continuing ** rest) s =
    (ContinuingElm False \<in> s \<and> rest (s - {ContinuingElm False}))"
 apply(auto simp add: sep_def not_continuing_def)
 done
 
-lemma sep_not_continuing_sep [simp] :
+lemma sep_not_continuing_sep :
   "(a ** not_continuing ** rest) s =
    (ContinuingElm False \<in> s \<and> (a ** rest) (s - {ContinuingElm False}))"
-	by simp
+	by (simp add: not_continuing_sep)
 
-
-lemma this_account_sep [simp] :
+lemma this_account_sep :
   "(this_account t ** rest) s =
    (ThisAccountElm t \<in> s \<and> rest (s - {ThisAccountElm t}))"
 apply(auto simp add: this_account_def sep_def)
 done
 
-lemma sep_this_account [simp] :
+lemma sep_this_account :
   "(rest ** this_account t) s =
    (ThisAccountElm t \<in> s \<and> rest (s - {ThisAccountElm t}))"
 apply(auto simp add: this_account_def sep_def)
 done
 
-lemma sep_this_account_sep [simp] :
+lemma sep_this_account_sep :
   "(a ** this_account t ** rest) s =
    (ThisAccountElm t \<in> s \<and> (a ** rest) (s - {ThisAccountElm t}))"
 proof -
@@ -1198,20 +1195,22 @@ proof -
 qed
 
 
-lemma action_sep [simp] :
+
+
+lemma action_sep :
   "(action a ** rest) s =
    (ContractActionElm a \<in> s \<and> rest (s - {ContractActionElm a}))"
 apply(auto simp add: action_def sep_def)
 done
 
-lemma sep_action [simp] :
+lemma sep_action :
   "(rest ** action a) s =
    (ContractActionElm a \<in> s \<and> rest (s - {ContractActionElm a}))"
 apply(auto simp add: action_def sep_def)
 done
 
 
-lemma sep_action_sep [simp] :
+lemma sep_action_sep :
   "(b ** action a ** rest) s =
    (ContractActionElm a \<in> s \<and> (b ** rest) (s - {ContractActionElm a}))"
 	by (metis action_sep set_pred.left_commute)
@@ -1359,11 +1358,6 @@ proof -
   by (rule memory8_short)
 qed
 
-
-lemma sep_ac:
-"(a ** b ** c) s \<Longrightarrow> (b ** a ** c) s"
-by simp
-
 lemma memory_range_cons :
 "(memory_range b (a # lst) ** rest) s = (memory8 b a ** memory_range (b + 1) lst ** rest) s"
 apply(auto)
@@ -1382,13 +1376,14 @@ apply(induction lst)
 apply(auto simp add: memory_range_cons memory8_short)
  apply(rule memory8_short2)
  apply blast
-apply(drule sep_ac)
 apply(drule_tac x = "memory8 b a ** rest" in spec)
 apply(drule_tac x = "b + 1" in spec)
 apply(drule_tac x = "n - 1" in spec)
 apply(auto)
 apply(drule unat_suc)
 by blast
+
+
 declare Hoare.memory8_sep [simp]
 declare sep_memory8_sep [simp]
 
@@ -1396,7 +1391,8 @@ declare sep_memory8_sep [simp]
 
 (****** specifying each instruction *******)
 
-declare meter_gas_def [simp]
+bundle simp_for_triples =
+        meter_gas_def [simp]
         C_def [simp] Cmem_def [simp]
         Gmemory_def [simp]
         new_memory_consumption.simps [simp]
@@ -1429,7 +1425,7 @@ general_dup_def [simp]
 dup_inst_numbers_def [simp]
 storage_inst_numbers.simps [simp]
 Gbase_def [simp]
-
+Gsreset_def [simp]
 
 lemma emp_sep [simp] :
   "(emp ** rest) s = rest s"
@@ -1681,7 +1677,7 @@ where
 lemma code_ac :
   "(code c ** pre ** rest) s =
    (pre ** code c ** rest) s"
-  using sep_ac by blast
+by simp
 
 lemma triple_triple_alt :
   "triple s pre c post = triple_alt s pre c post"
@@ -1726,7 +1722,7 @@ apply(rule leibniz)
 apply(auto)
 done
 
-lemma sep_stack_topmost [simp] :
+lemma sep_stack_topmost :
   "(rest ** stack_topmost h lst) s =
    (stack_topmost_elms h lst \<subseteq> s \<and> rest (s - stack_topmost_elms h lst))"
 apply(auto simp add: stack_topmost_def sep_def)
@@ -1802,6 +1798,10 @@ lemma stack_topmost_not_code [simp] :
      (stack_topmost_elms h lst \<subseteq> s)"
 apply(induction lst; auto simp add: stack_topmost_elms.simps)
 done
+
+context
+  includes simp_for_triples
+begin
 
 lemma memory_subtract_gas [simp] :
  "x \<in> memory_range_elms in_begin input \<Longrightarrow>
@@ -1903,6 +1903,8 @@ lemma memory_usage_not_topmost [simp] :
 apply(induction lst; auto simp add: stack_topmost_elms.simps)
 done
 
+end
+
 lemma call_new_balance [simp] :
       "v \<le> fund \<Longrightarrow>
        ThisAccountElm this \<in> instruction_result_as_set co_ctx (InstructionContinue x1) \<Longrightarrow>
@@ -1914,9 +1916,15 @@ lemma call_new_balance [simp] :
            (subtract_gas (meter_gas (Misc CALL) x1 co_ctx) (call x1 co_ctx))"
 apply(clarify)
 apply(auto simp add: call_def failed_for_reasons_def)
-apply(simp add: instruction_result_as_set_def)
-apply(simp add: update_balance_def)
+apply(simp add: instruction_result_as_set_def subtract_gas.simps strict_if_def)
+apply(case_tac "vctx_balance x1 (cctx_this co_ctx) < v")
+ apply(simp add: update_balance_def)
+apply(simp add: strict_if_def subtract_gas.simps update_balance_def)
 done
+
+context
+ includes simp_for_triples
+ begin
 
 lemma advance_pc_call [simp] :
       "program_content (cctx_program co_ctx) (vctx_pc x1) = Some (Misc CALL) \<Longrightarrow>
@@ -1924,6 +1932,8 @@ lemma advance_pc_call [simp] :
        vctx_pc (vctx_advance_pc co_ctx x1) = vctx_pc x1 + 1"
 apply(simp add: vctx_advance_pc_def inst_size_def inst_code.simps)
 done
+
+end
 
 lemma memory_range_elms_not_continuing [simp] :
   "(memory_range_elms in_begin input
@@ -2209,6 +2219,10 @@ lemma memory_range_continue [simp] :
 apply(auto simp add: instruction_result_as_set_def contexts_as_set_def constant_ctx_as_set_def program_as_set_def)
 done
 
+context
+ includes simp_for_triples
+begin
+
 lemma call_memory_no_change [simp] :
   "x \<in> memory_range_elms in_begin input \<Longrightarrow>
    x \<in> instruction_result_as_set co_ctx
@@ -2239,7 +2253,7 @@ apply(case_tac listd; simp)
 apply(case_tac liste; simp)
 done
 
-
+end
 
 lemma gas_limit_not_topmost [simp] :
   "\<forall> len. GaslimitElm g
@@ -2713,6 +2727,10 @@ apply auto
 done
 
 
+context
+ includes simp_for_triples
+begin
+
 lemma swap_advance [simp] :
  "program_content (cctx_program co_ctx) (vctx_pc x1) = Some (Swap n) \<Longrightarrow>
   vctx_pc (vctx_advance_pc co_ctx x1) = vctx_pc x1 + 1"
@@ -2724,6 +2742,8 @@ lemma minus_one_bigger [simp] :
    h - Suc (Suc n) \<noteq> h - Suc 0"
 apply auto
 done
+
+end
 
 
 lemma storage_elm_kept_by_gas_update [simp]:
@@ -2864,42 +2884,6 @@ lemma update_balance_changed [simp] :
 apply(auto simp add: update_balance_def)
 done
 
-lemma storage_inst_advance [simp] :
-"       program_content (cctx_program co_ctx) (vctx_pc x1) = Some (Storage m) \<Longrightarrow>
-       k = vctx_pc x1 \<Longrightarrow>
-       vctx_pc (vctx_advance_pc co_ctx x1) = vctx_pc x1 + 1"
-apply(simp add: vctx_advance_pc_def inst_size_def inst_code.simps)
-done
-
-
-lemma update_storage_preserves_pc [simp] :
-"vctx_pc
-  (vctx_update_storage idx new x1) =
- vctx_pc x1"
-apply(simp add: vctx_update_storage_def)
-done
-
-lemma update_storage_updates [simp] :
-"vctx_storage (vctx_update_storage idx new x1) idx = new"
-apply(simp add: vctx_update_storage_def)
-done
-
-lemma update_storage_preserves_gas [simp] :
-  "vctx_gas (vctx_update_storage idx new x1) = vctx_gas x1"
-apply(simp add: vctx_update_storage_def)
-done
-
-lemma default_zero [simp] :
-  "vctx_stack x1 = idx # ta \<Longrightarrow>
-   vctx_stack_default 0 x1 = idx"
-apply(simp add: vctx_stack_default_def)
-done
-
-lemma default_one [simp] :
-  "vctx_stack x1 = idx # y # ta \<Longrightarrow>
-   vctx_stack_default 1 x1 = y"
-apply(simp add: vctx_stack_default_def)
-done
 
 lemma rev_append_look_up [simp] :
   "(rev ta @ lst) ! pos = val =
@@ -3008,6 +2992,10 @@ lemma stack_topmost_minus_lognum [simp] :
 apply auto
 done
 
+context
+ includes simp_for_triples
+begin
+
 lemma vctx_pc_log_advance [simp] :
   "program_content (cctx_program co_ctx) k = Some (Log LOGx) \<Longrightarrow>
    vctx_pc v = k \<Longrightarrow>
@@ -3022,6 +3010,8 @@ lemma memory_range_elms_in_x_minus_lognum [simp] :
    (memory_range_elms in_begin data \<subseteq> X)"
 apply auto
 done
+
+end
 
 lemma memory_range_elms_logs_update [simp] :
   "memory_range_elms in_begin data
@@ -3041,132 +3031,33 @@ apply(auto simp add: create_log_entry_def vctx_returned_bytes_def memory_range_e
 done
 
 
-lemma log0_gas_triple:
-  "triple {OutOfGas}
-          (\<langle> h \<le> 1022 \<and> length data = unat logged_size \<rangle> **
-           memory_range logged_start data **
-           this_account this **
-           log_number n **
-           gas_pred g **
-           stack_topmost h [logged_size, logged_start] **
-           program_counter k ** 
-           memory_usage m **
-           continuing)
-          {(k, Log LOG0)}
-          (memory_range logged_start data **
-           this_account this **
-           log_number (Suc n) **
-           logged n \<lparr> log_addr = this, log_topics = [], log_data = data \<rparr>  **
-           stack_topmost h [] **
-           gas_any **
-           program_counter (k + 1) ** 
-           memory_usage (M m logged_start logged_size) **
-           continuing)
-  "
-apply (simp add: triple_def)
-apply clarify
-apply (rule_tac x = 1 in exI)
-apply(case_tac presult; simp add: log_inst_numbers.simps sep_memory_range sep_memory_range_sep log_def
-        instruction_result_as_set_def)
-apply clarify
-apply(rule_tac x = " vctx_gas x1 - meter_gas (Log LOG0) x1 co_ctx" in exI)
-apply simp
-apply (rule leibniz)
- apply blast
-apply(rule Set.equalityI)
- apply clarify
- apply simp
- apply(rename_tac elm; case_tac elm; simp)
- apply(case_tac "fst x2 < length ta"; simp)
-apply clarify
-apply simp
-apply(rename_tac elm; case_tac elm; simp)
-apply(case_tac "length (vctx_logs x1) \<le> fst x5"; auto)
-done
-
-lemma call_gas_triple:
-  "triple {OutOfGas}
-          (\<langle> h \<le> 1017 \<and> fund \<ge> v \<and> length input = unat in_size \<rangle> ** 
-           program_counter k ** memory_range in_begin input **
-           stack_topmost h [out_size, out_begin, in_size, in_begin, v, r, g] **
-           gas_pred own_gas **
-           memory_usage u **
-           this_account this **
-           balance this fund **
-           continuing)
-          {(k, Misc CALL)}
-          (memory_range in_begin input **
-           stack_topmost h [] **
-           this_account this **
-           balance this (fund - v) **
-           program_counter (k + 1) ** 
-           gas_any **
-           memory_usage (M (M u in_begin in_size) out_begin out_size) **
-           not_continuing **
-           action (ContractCall \<lparr> callarg_gas = g
-                                , callarg_code = ucast r
-                                , callarg_recipient = ucast r
-                                , callarg_value = v
-                                , callarg_data = input
-                                , callarg_output_begin = out_begin
-                                , callarg_output_size = out_size \<rparr>))"
-apply(simp only: triple_triple_alt)
-apply(auto simp add: triple_alt_def)
-apply(rule_tac x = 1 in exI)
-apply(case_tac presult; simp)
-apply(clarify)
-apply(simp add: call_def)
-apply(case_tac "vctx_balance x1 (cctx_this co_ctx) < v"; simp)
-apply(rule_tac x = "vctx_gas x1 - meter_gas (Misc CALL) x1 co_ctx" in exI)
-apply(simp add: instruction_result_as_set_def)
-apply(simp add: sep_memory_range_sep sep_memory_range failed_for_reasons_def )
+lemma default_zero [simp] :
+  "vctx_stack x1 = idx # ta \<Longrightarrow>
+   vctx_stack_default 0 x1 = idx"
 apply(simp add: vctx_stack_default_def)
-apply(rule leibniz)
- apply blast
-apply(rule Set.equalityI)
- apply(clarify)
- apply simp
- apply(rename_tac elm; case_tac elm; simp)
-  apply(case_tac "length tf \<le> fst x2"; simp)
- apply(clarsimp)
- apply(subgoal_tac "a = cctx_this co_ctx")
-  apply(simp)
- apply(case_tac "a = cctx_this co_ctx")
-  apply(simp)
- apply(simp)
-apply(clarsimp)
-apply(rename_tac elm; case_tac elm; simp)
-apply(auto)
 done
 
-declare stack_height_sep [simp]
-declare stack_sep [simp]
-declare balance_sep [simp]
-declare program_counter_sep [simp]
-declare meter_gas_def [simp]
-declare gas_def [simp]
-
-
-
-lemma gas_gas_triple :
-  "triple {OutOfGas}
-          (\<langle> h \<le> 1023 \<rangle> ** stack_height h ** program_counter k ** gas_pred g ** continuing)
-          {(k, Info GAS)}
-          (stack_height (h + 1) ** stack h (word_of_int (g - 2))
-           ** program_counter (k + 1) ** gas_pred (g - 2) ** continuing )"
-apply(auto simp add: triple_def)
-apply(rule_tac x = 1 in exI)
-apply(case_tac presult; auto simp add: instruction_result_as_set_def)
- apply(simp add: Word.wi_hom_syms(2))
-apply(rule leibniz)
- apply blast
-apply(rule  Set.equalityI; clarify)
- apply(simp)
- apply(rename_tac elm)
- apply(case_tac elm; simp)
-apply(simp)
-apply(rename_tac elm)
-apply(case_tac elm; auto simp add: Word.wi_hom_syms(2))
+lemma default_one [simp] :
+  "vctx_stack x1 = idx # y # ta \<Longrightarrow>
+   vctx_stack_default 1 x1 = y"
+apply(simp add: vctx_stack_default_def)
 done
+
+
+bundle sep_crunch = caller_sep [simp]
+                    sep_caller [simp]
+                    sep_caller_sep [simp]
+                    balance_sep [simp]
+                    sep_balance [simp]
+                    sep_balance_sep [simp]
+                    not_continuing_sep [simp]
+                    sep_not_continuing_sep [simp]
+                    this_account_sep [simp]
+                    sep_this_account [simp]
+                    sep_this_account_sep [simp]
+                    action_sep [simp]
+                    sep_action [simp]
+                    sep_action_sep [simp]
+                    sep_stack_topmost [simp]
 
 end

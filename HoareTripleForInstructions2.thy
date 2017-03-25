@@ -5,6 +5,10 @@ imports Main "./HoareTripleForInstructions"
 
 begin
 
+context
+  includes sep_crunch simp_for_triples
+begin
+
 lemma pos_length_head_exists [simp] :
   "n < length lst \<Longrightarrow>
    index lst 0 = Some (lst ! 0)"
@@ -937,5 +941,6 @@ apply(auto)
 apply(rename_tac elm; case_tac elm; auto simp add: stack_as_set_def)
 done
 
+end
 
 end
