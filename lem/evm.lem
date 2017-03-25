@@ -874,7 +874,7 @@ type contract_action =
 | ContractDelegateCall of call_arguments (* calling some code to run on behalf of the contract *)
 | ContractCreate of create_arguments (* deploying a smart contract *)
 | ContractFail of list failure_reason (* failing back to the caller *)
-| ContractSuicide (* destroying itself and returning back to the caller *)
+| ContractSuicide of address (* destroying itself and returning back to the caller *)
 | ContractReturn of list byte (* normally returning back to the caller *)
 
 (* subsection "Program Representation" *)
@@ -1604,11 +1604,7 @@ end
 val suicide : variable_ctx -> constant_ctx -> instruction_result
 let suicide v c = match v.vctx_stack with
  | dst :: _ ->
-     let new_balance addr =
-        if addr = c.cctx_this then 0 else
-        if addr = w256_to_address dst then v.vctx_balance c.cctx_this + v.vctx_balance addr else
-        v.vctx_balance addr in
-     InstructionToEnvironment ContractSuicide v Nothing
+     InstructionToEnvironment (ContractSuicide (w256_to_address dst)) v Nothing
  | _ -> instruction_failure_result v [TooShortStack]
 end
 

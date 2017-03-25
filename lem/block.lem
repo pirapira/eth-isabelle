@@ -435,7 +435,9 @@ let next = function
            let v = <| v with vctx_stack = 0::v.vctx_stack |> in
            Continue (<| global with g_stack=rest; g_current=oldstate; g_cctx=c; g_vmstate=InstructionContinue v |>)
          end
-      | ContractSuicide ->
+      | ContractSuicide dst ->
+         let n_dst = <| (state dst) with account_balance = (state dst).account_balance + (state c.cctx_this).account_balance |> in
+         let state = if dst = c.cctx_this then state else update_world state dst n_dst in
          let killed = c.cctx_this::global.g_killed in
          match global.g_stack with
          | [] -> Finished (<| f_state = state; f_killed = killed; f_refund = v.vctx_refund; f_gas = v.vctx_gas |>)
@@ -485,13 +487,26 @@ let rec txdatacost lst = match lst with
  | b::lst -> (if b = 0 then 4 else 68) + txdatacost lst
 end
 
+let charge_gas state addr gas_value =
+  let s_acc = state addr in
+  let s_acc = <| s_acc with account_balance = s_acc.account_balance - gas_value |> in
+  update_world state addr s_acc
+
 let start_transaction tr state block =
   let s_acc = state tr.tr_from in
-  let gas_value = tr.tr_gas_price * tr.tr_gas_limit in
+  let gas_value = word256ToNatural tr.tr_gas_price * word256ToNatural tr.tr_gas_limit in
   let igas = 21000 + txdatacost tr.tr_data in
-  if tr.tr_nonce <> s_acc.account_nonce then Finished <| f_state=state; f_killed=[]; f_gas=0; f_refund=0 |> else
-  if word256ToNatural s_acc.account_balance < word256ToNatural (tr.tr_value + gas_value) then
-    Finished <| f_state=state; f_killed=[]; f_gas=0; f_refund=0 |> else
+  let nothing_happens = Finished <|
+    f_state=charge_gas state tr.tr_from (tr.tr_gas_price * tr.tr_gas_limit);
+    f_killed=[];
+    f_gas=uint tr.tr_gas_limit;
+    f_refund=0 |> in
+  if tr.tr_nonce <> s_acc.account_nonce then nothing_happens else
+  if word256ToNatural s_acc.account_balance < word256ToNatural tr.tr_value + gas_value then
+    nothing_happens else
+  let gas_value = tr.tr_gas_price * tr.tr_gas_limit in
+  if word256ToNatural block.block_gaslimit < word256ToNatural tr.tr_gas_limit then nothing_happens else
+  if word256ToNatural tr.tr_gas_limit < 21000 then nothing_happens else
   match tr.tr_to with
   | Nothing ->
     if tr.tr_data = [] && tr.tr_gas_limit = 0 && tr.tr_gas_price = 0 then Finished <| f_state=state; f_killed=[]; f_gas=0; f_refund=0 |> else
@@ -510,7 +525,7 @@ let start_transaction tr state block =
   | Just addr ->
     let s_acc = <| s_acc with account_nonce = s_acc.account_nonce + 1;  account_balance = s_acc.account_balance - gas_value |> in
     let state2 = update_world state tr.tr_from s_acc in
-    if word256ToNatural s_acc.account_balance < word256ToNatural tr.tr_value then Finished <| f_state=state; f_killed=[]; f_gas=0; f_refund=0 |> else
+    if word256ToNatural s_acc.account_balance < word256ToNatural tr.tr_value then nothing_happens else
     let s_acc = <| s_acc with account_balance = s_acc.account_balance - tr.tr_value |> in
     let n_state = update_world state tr.tr_from s_acc in
     let acc = n_state addr in

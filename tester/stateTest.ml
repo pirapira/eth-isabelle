@@ -66,20 +66,29 @@ let construct_tr a = {
   tr_data = Conv.byte_list_of_hex_string a.data;
 }
 
-(*
+let debug_vm c1 pr =  
+ match pr with
+  | InstructionContinue v ->
+     prerr_endline ("Gas " ^ Z.to_string v.vctx_gas);
+     (match vctx_next_instruction v c1 with
+      | None -> ()
+      | Some i ->
+        prerr_endline ("Inst " ^ String.concat "," (List.map (fun x -> Z.format "%x" (Word8.word8ToNatural x)) (inst_code i))) )
+  | InstructionToEnvironment( _, _, _) -> ()
+  | InstructionAnnotationFailure -> ()
+
 let debug_state = function
- | Continue res ->
-   (match res.g_vmstate with
-   | InstructionContinue v ->
-   | _ -> () )
+ | Continue res -> debug_vm res.g_cctx res.g_vmstate
  | _ -> ()
-*)
+
+let debug_mode = if Array.length Sys.argv > 2 then true else false
 
 let run_tr tr state block =
   let res = start_transaction tr state block in
   let rec do_run = function
    | Finished fi -> fi
    | a ->
+     if debug_mode then debug_state a;
      do_run (next a) in
   let fi = do_run res in
   let final_state = end_transaction fi tr block in
