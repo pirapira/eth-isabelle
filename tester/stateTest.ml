@@ -66,6 +66,8 @@ let construct_tr a = {
   tr_data = Conv.byte_list_of_hex_string a.data;
 }
 
+let w256hex i = Z.format "%d" (Word256.word256ToNatural i)
+
 let debug_vm c1 pr =  
  match pr with
   | InstructionContinue v ->
@@ -73,7 +75,9 @@ let debug_vm c1 pr =
      (match vctx_next_instruction v c1 with
       | None -> ()
       | Some i ->
-        prerr_endline ("Inst " ^ String.concat "," (List.map (fun x -> Z.format "%x" (Word8.word8ToNatural x)) (inst_code i))) )
+        prerr_endline ("Watch " ^ w256hex (v.vctx_storage (Word256.word256FromNat 262)));
+        prerr_endline ("Inst " ^ String.concat "," (List.map (fun x -> Z.format "%x" (Word8.word8ToNatural x)) (inst_code i)));
+        prerr_endline ("Stack " ^ String.concat "," (List.map (fun x -> Z.format "%d" (Word256.word256ToNatural x)) v.vctx_stack)) )
   | InstructionToEnvironment( _, _, _) -> ()
   | InstructionAnnotationFailure -> ()
 

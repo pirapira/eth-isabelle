@@ -355,15 +355,15 @@ let update_tr state addr value =
   let acc = <| acc with account_balance = acc.account_balance - value |> in
   update_world state addr acc
 
+let update_return state addr v =
+  update_world state addr (<| (state addr) with account_storage = v.vctx_storage |>)
+
 let update_call state addr args =
   let state = update_tr state addr args.callarg_value in
   let to_acc = state args.callarg_recipient in
   let to_acc = <| to_acc with account_balance = to_acc.account_balance + args.callarg_value |> in
   let state = update_world state args.callarg_recipient to_acc in
   state
-
-let update_return state addr v =
-  update_world state addr (<| (state addr) with account_storage = v.vctx_storage |>)
 
 let update_nonce state addr =
   let acc = state addr in
@@ -389,7 +389,8 @@ let next = function
          prerr_endline ("Calling " ^ Z.format "%x" (Word160.word160ToNatural args.callarg_recipient));
          prerr_endline ("with value " ^ Z.format "%x" (word256ToNatural args.callarg_value));
          *)
-         let n_state = update_call state c.cctx_this args in
+         let n_state = update_return state c.cctx_this v in
+         let n_state = update_call n_state c.cctx_this args in
          let acc = n_state args.callarg_recipient in
          let cctx = <|
             cctx_this = args.callarg_recipient;
@@ -400,7 +401,8 @@ let next = function
          Continue (<| global with g_stack=((state,v,c,get_hint stuff)::global.g_stack);
                                  g_current=n_state; g_cctx=cctx; g_vmstate=InstructionContinue nv |>)
       | ContractDelegateCall args ->
-         let n_state = update_call state c.cctx_this args in
+         let n_state = update_return state c.cctx_this v in
+         let n_state = update_call n_state c.cctx_this args in
          let acc = n_state args.callarg_recipient in
          let cctx = <|
             cctx_this = args.callarg_recipient;
