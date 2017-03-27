@@ -39,11 +39,7 @@ apply(case_tac presult; simp add: log_inst_numbers.simps sep_memory_range sep_me
 apply clarify
 apply(rule_tac x = " vctx_gas x1 - meter_gas (Log LOG0) x1 co_ctx" in exI)
 apply simp
-
-
 apply (rule leibniz)
- 
-
  apply blast
 apply(rule Set.equalityI)
  apply clarify
@@ -55,6 +51,51 @@ apply simp
 apply(rename_tac elm; case_tac elm; simp)
 apply(case_tac "length (vctx_logs x1) \<le> fst x5"; auto)
 done
+
+
+lemma log1_gas_triple :
+  "triple {OutOfGas}
+          (\<langle> h \<le> 1021 \<and> length data = unat logged_size \<rangle> **
+           memory_range logged_start data **
+           this_account this **
+           log_number n **
+           gas_pred g **
+           stack_topmost h [topic0, logged_size, logged_start] **
+           program_counter k ** 
+           memory_usage m **
+           continuing)
+          {(k, Log LOG1)}
+          (memory_range logged_start data **
+           this_account this **
+           log_number (Suc n) **
+           logged n \<lparr> log_addr = this, log_topics = [topic0], log_data = data \<rparr>  **
+           stack_topmost h [] **
+           gas_any **
+           program_counter (k + 1) ** 
+           memory_usage (M m logged_start logged_size) **
+           continuing)
+  "
+apply (simp add: triple_def)
+apply clarify
+apply (rule_tac x = 1 in exI)
+apply(case_tac presult; simp add: log_inst_numbers.simps sep_memory_range sep_memory_range_sep log_def
+        instruction_result_as_set_def)
+apply clarify
+apply(rule_tac x = " vctx_gas x1 - meter_gas (Log LOG1) x1 co_ctx" in exI)
+apply (simp add: create_log_entry_def vctx_returned_bytes_def)
+apply (rule leibniz)
+ apply blast
+apply(rule Set.equalityI)
+ apply clarify
+ apply simp
+ apply(rename_tac elm; case_tac elm; simp)
+ apply(case_tac "rev tb ! fst x2 = snd x2"; simp)
+apply clarify
+apply simp
+apply(rename_tac elm; case_tac elm; simp)
+apply(case_tac "length (vctx_logs x1) \<le> fst x5"; auto)
+done
+
 
 end
 
