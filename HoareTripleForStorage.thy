@@ -4,10 +4,14 @@ imports "HoareTripleForInstructions"
 
 begin
 
+context
+ includes simp_for_triples
+begin
+
 lemma storage_inst_advance [simp] :
-"       program_content (cctx_program co_ctx) (vctx_pc x1) = Some (Storage m) \<Longrightarrow>
-       k = vctx_pc x1 \<Longrightarrow>
-       vctx_pc (vctx_advance_pc co_ctx x1) = vctx_pc x1 + 1"
+"program_content (cctx_program co_ctx) (vctx_pc x1) = Some (Storage m) \<Longrightarrow>
+ k = vctx_pc x1 \<Longrightarrow>
+ vctx_pc (vctx_advance_pc co_ctx x1) = vctx_pc x1 + 1"
 apply(simp add: vctx_advance_pc_def inst_size_def inst_code.simps)
 done
 
@@ -29,32 +33,6 @@ lemma update_storage_preserves_gas [simp] :
 apply(simp add: vctx_update_storage_def)
 done
 
-lemma default_zero [simp] :
-  "vctx_stack x1 = idx # ta \<Longrightarrow>
-   vctx_stack_default 0 x1 = idx"
-apply(simp add: vctx_stack_default_def)
-done
-
-lemma default_one [simp] :
-  "vctx_stack x1 = idx # y # ta \<Longrightarrow>
-   vctx_stack_default 1 x1 = y"
-apply(simp add: vctx_stack_default_def)
-done
-
-lemma rev_append_look_up [simp] :
-  "(rev ta @ lst) ! pos = val =
-   ((pos < length ta \<and> rev ta ! pos = val) \<or>
-    (length ta \<le> pos \<and> lst ! (pos - length ta) = val))"
-apply (simp add: nth_append)
-done
-
-lemma pair_snd_eq [simp] : 
- "x3 \<noteq> (idx, snd x3) =
-  (fst x3 \<noteq> idx)"
-apply (case_tac x3; auto)
-done
-
-
 lemma some_list_gotcha :
   "       rev ta ! fst x2 = snd x2 \<longrightarrow> \<not> fst x2 < length ta \<Longrightarrow>
        x2 \<noteq> (Suc (length ta), idx) \<Longrightarrow>
@@ -72,6 +50,10 @@ apply(rename_tac smaller)
 apply(case_tac smaller; simp)
 done
 
+context
+ includes sep_crunch
+ notes Gsset_def [simp]
+begin
 
 lemma sstore_gas_triple :
   "triple {OutOfGas}
@@ -130,5 +112,9 @@ apply(case_tac elm; simp)
 apply(rename_tac pair)
 apply(case_tac pair; auto)
 done
+
+end
+
+end
 
 end
