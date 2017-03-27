@@ -465,9 +465,11 @@ let next = function
            Continue (<| global with g_stack=rest; g_current=n_state; g_cctx=c; g_vmstate=InstructionContinue nv |>)
          | (_,nv,c,CreateAddress new_addr) :: rest ->
            if bytes = [] && rest = [] && global.g_create then Finished <| f_state=orig; f_killed=[]; f_gas=0; f_refund=0 |> else
-           let n_state = create_account n_state new_addr bytes in
+           (*Check for gas here... *)
+           let (n_state, v) =
+              if v.vctx_gas < integerFromNat (200*length bytes) then (n_state, v)
+              else (create_account n_state new_addr bytes, <| v with vctx_gas = v.vctx_gas - integerFromNat (200*length bytes) |>) in
            let acc = n_state c.cctx_this in
-           let v = <| v with vctx_gas = v.vctx_gas - integerFromNat (200*length bytes) |> in
            let nv = <| nv with vctx_stack = address_to_w256 new_addr::nv.vctx_stack |> in
            let nv = vctx_update_from_world nv acc n_state v in
            Continue (<| global with g_stack=rest; g_current=n_state; g_cctx=c; g_vmstate=InstructionContinue nv |>)
