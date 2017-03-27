@@ -75,10 +75,11 @@ let debug_vm c1 pr =
      (match vctx_next_instruction v c1 with
       | None -> ()
       | Some i ->
-        prerr_endline ("Watch " ^ w256hex (v.vctx_storage (Word256.word256FromNat 262)));
+        prerr_endline ("Watch " ^ w256hex (v.vctx_storage (Word256.word256FromNat 1)));
+        (* prerr_endline ("Calldata " ^ String.concat "," (List.map (fun x -> Z.format "%x" (Word8.word8ToNatural x)) v.vctx_data_sent)); *)
         prerr_endline ("Inst " ^ String.concat "," (List.map (fun x -> Z.format "%x" (Word8.word8ToNatural x)) (inst_code i)));
         prerr_endline ("Stack " ^ String.concat "," (List.map (fun x -> Z.format "%d" (Word256.word256ToNatural x)) v.vctx_stack)) )
-  | InstructionToEnvironment( _, _, _) -> ()
+  | InstructionToEnvironment( _, v, _) -> prerr_endline ("Gas left " ^ Z.to_string v.vctx_gas)
   | InstructionAnnotationFailure -> ()
 
 let debug_state = function

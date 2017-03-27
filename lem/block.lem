@@ -339,13 +339,13 @@ let codemap lst =
   let m = make_opt lst in
   (fun x -> if x < 0 then Nothing else get_opt m (natFromInteger x))
 
-val set_account_code : account -> list word8 -> account
-let set_account_code acc bytes =
-(* let code (i:integer) = if i < 0 then Nothing else List.index (bytelist_to_instlist bytes) (natFromInteger i) in *)
-  <| acc with account_code = <|
+let make_program bytes = <|
        program_annotation = (fun _ -> []);
        program_length = integerFromNat (List.length bytes);
-       program_content = codemap bytes |> |>
+       program_content = codemap bytes |>
+
+val set_account_code : account -> list word8 -> account
+let set_account_code acc bytes = <| acc with account_code = make_program bytes |>
 
 val update_world : world_state -> address -> account -> world_state
 let update_world state a_addr n_acc a = if a = a_addr then n_acc else state a
@@ -390,6 +390,9 @@ let next = function
          prerr_endline ("with value " ^ Z.format "%x" (word256ToNatural args.callarg_value));
          *)
          let n_state = update_return state c.cctx_this v in
+         if (n_state c.cctx_this).account_balance < args.callarg_value then
+            let nv = <| v with vctx_stack = 0 :: v.vctx_stack; vctx_gas = v.vctx_gas + uint args.callarg_gas |> in
+            Continue (<| global with g_current = n_state; g_vmstate = InstructionContinue nv |>) else
          let n_state = update_call n_state c.cctx_this args in
          let acc = n_state args.callarg_recipient in
          let cctx = <|
@@ -402,6 +405,9 @@ let next = function
                                  g_current=n_state; g_cctx=cctx; g_vmstate=InstructionContinue nv |>)
       | ContractDelegateCall args ->
          let n_state = update_return state c.cctx_this v in
+         if (n_state c.cctx_this).account_balance < args.callarg_value then
+            let nv = <| v with vctx_stack = 0 :: v.vctx_stack; vctx_gas = v.vctx_gas + uint args.callarg_gas |> in
+            Continue (<| global with g_current = n_state; g_vmstate = InstructionContinue nv |>) else
          let n_state = update_call n_state c.cctx_this args in
          let acc = n_state args.callarg_recipient in
          let cctx = <|
@@ -413,7 +419,8 @@ let next = function
                                  g_current=n_state; g_cctx=cctx; g_vmstate=InstructionContinue nv |>)
       | ContractCreate args ->
          let state = update_nonce state c.cctx_this in
-         let n_state = update_tr state c.cctx_this args.createarg_value in
+         let n_state = update_return state c.cctx_this v in
+         let n_state = update_tr n_state c.cctx_this args.createarg_value in
          let n_acc = n_state c.cctx_this in
          let addr = w256_to_address (keccak (RLP (Node [RLP_address c.cctx_this; RLP_w256 (n_acc.account_nonce-1)]))) in
          (*
@@ -422,9 +429,9 @@ let next = function
          prerr_endline ("rlp " ^ String.concat "," (List.map (fun x -> Z.to_string (word8ToNatural x)) rlp));
          *)
          let acc = empty_account addr in
-         let acc = set_account_code acc args.createarg_code in
-         let acc = <| acc with account_balance = args.createarg_value |> in
-         let cctx = <| cctx_this = addr; cctx_program = acc.account_code; cctx_hash_filter = c.cctx_hash_filter |> in
+         (* let acc = set_account_code acc args.createarg_code in *)
+         let acc = <| acc with account_balance = args.createarg_value; account_exists = true |> in
+         let cctx = <| cctx_this = addr; cctx_program = make_program args.createarg_code; cctx_hash_filter = c.cctx_hash_filter |> in
          let n_state = update_world n_state addr acc in
          let nv = create_env acc n_state args.createarg_value [] (word256FromInteger v.vctx_gas) c.cctx_this v.vctx_origin v.vctx_block in
          let v = <| v with vctx_gas = 0 |> in

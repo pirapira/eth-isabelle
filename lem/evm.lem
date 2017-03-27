@@ -1317,14 +1317,14 @@ let Ccall mu0 mu1 mu2 emp remaining_gas blocknumber =
 val call : variable_ctx -> constant_ctx -> instruction_result
 let call v c = match v.vctx_stack with
  | e0 :: e1 :: e2 :: e3 :: e4 :: e5 :: e6 :: rest ->
-     strict_if (word256ULT (v.vctx_balance c.cctx_this) e2)
+     (* strict_if (word256ULT (v.vctx_balance c.cctx_this) e2)
         (fun _ -> (InstructionContinue
            (vctx_advance_pc c
              <| v with
                 vctx_stack = (0 :: rest)
              |>
-           )))
-       (fun _ -> InstructionToEnvironment (ContractCall
+           ))) *)
+     InstructionToEnvironment (ContractCall
          <| callarg_gas = word256FromInteger (Ccallgas e0 e1 e2
                      (not (v.vctx_account_existence (w256_to_address e1))) v.vctx_gas (word256ToNatural v.vctx_block.block_number));
             callarg_code = w256_to_address e1;
@@ -1337,7 +1337,7 @@ let call v c = match v.vctx_stack with
            vctx_stack = rest;
            vctx_balance = update_balance c.cctx_this (fun orig -> orig - e2) v.vctx_balance |>)
         (Just (* saving the variable environment for timing *)
-           (uint e5, uint e6)))
+           (uint e5, uint e6))
   | _ -> instruction_failure_result v [TooShortStack]
 end
 
@@ -1345,17 +1345,18 @@ end
 val delegatecall : variable_ctx -> constant_ctx -> instruction_result
 let delegatecall v c = match v.vctx_stack with
  | e0 :: e1 :: e3 :: e4 :: e5 :: e6 :: rest ->
-    if word256ULT (v.vctx_balance c.cctx_this) v.vctx_value_sent then
+    (* if word256ULT (v.vctx_balance c.cctx_this) v.vctx_value_sent then
         (InstructionContinue
            (vctx_advance_pc c
              <| v with
                 vctx_stack = (0 :: rest)
              |>
            ))
-     else
+     else *)
        InstructionToEnvironment
          (ContractDelegateCall
-           <| callarg_gas = e0;
+           <| callarg_gas = word256FromInteger (Ccallgas e0 e1 v.vctx_value_sent
+                     (not (v.vctx_account_existence (w256_to_address e1))) v.vctx_gas (word256ToNatural v.vctx_block.block_number));
               callarg_code = w256_to_address e1;
               callarg_recipient = w256_to_address e1;
               callarg_value = v.vctx_value_sent;
@@ -1372,17 +1373,18 @@ end
 val callcode : variable_ctx -> constant_ctx -> instruction_result
 let callcode v c = match v.vctx_stack with
  | e0 :: e1 :: e2 :: e3 :: e4 :: e5 :: e6 :: rest ->
-    if word256ULT (v.vctx_balance  c.cctx_this) e2 then
+    (* if word256ULT (v.vctx_balance  c.cctx_this) e2 then
         (InstructionContinue
            (vctx_advance_pc c
              <| v with
                 vctx_stack = (0 :: rest)
              |>
            ))
-     else
+     else *)
        InstructionToEnvironment
          (ContractDelegateCall
-           <| callarg_gas = e0;
+           <| callarg_gas = word256FromInteger (Ccallgas e0 e1 e2
+                     (not (v.vctx_account_existence (w256_to_address e1))) v.vctx_gas (word256ToNatural v.vctx_block.block_number));
               callarg_code = w256_to_address e1;
               callarg_recipient = c.cctx_this;
               callarg_value = e2;
@@ -2043,7 +2045,7 @@ let update_account_state prev act v v_opt =
                         (match v_opt with Nothing -> prev.account_ongoing_calls
                                      | Just (i, s) -> (v, i, s) :: prev.account_ongoing_calls end);
      account_killed =
-       (match act with ContractSuicide -> true
+       (match act with ContractSuicide _ -> true
                   | _ -> prev.account_killed end)
     |>
 
