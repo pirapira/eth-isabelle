@@ -9,6 +9,71 @@ context
   includes sep_crunch simp_for_triples
 begin
 
+lemma memory_range_elms_in_minus_action [simp] :
+  "memory_range_elms data_start data
+       \<subseteq> X - {ContractActionElm a} =
+   (memory_range_elms data_start data \<subseteq> X)" 
+apply auto
+done
+
+lemma stack_topmost_in_minus_code [simp] :
+  "stack_topmost_elms h lst
+       \<subseteq> X - {CodeElm p} =
+  (stack_topmost_elms h lst \<subseteq> X)"
+apply auto
+done
+
+lemma stack_topmost_in_minus_action [simp] :
+  "stack_topmost_elms h lst
+       \<subseteq> X - {ContractActionElm a} =
+  (stack_topmost_elms h lst \<subseteq> X)"
+apply auto
+done
+
+lemma return_gas_triple:
+  "triple {OutOfGas}
+          (\<langle> h \<le> 1022 \<and> length data = unat data_size \<rangle> **
+           memory_range data_start data **
+           gas_pred g **
+           stack_topmost h [data_size, data_start] **  program_counter k **
+           continuing)
+          {(k, Misc RETURN)}
+          ( memory_range data_start data ** stack_topmost h [data_size, data_start] **
+            program_counter k ** not_continuing ** action (ContractReturn data) ** gas_any)"
+apply(simp add: triple_def)
+apply(clarify)
+apply(rule_tac x = "1" in exI)
+apply(clarify)
+apply(case_tac presult; auto simp add: ret_def not_continuing_def action_def
+      instruction_result_as_set_def stack_as_set_def ext_program_as_set_def sep_memory_range
+      sep_memory_range_sep vctx_returned_bytes_def)
+ apply(rename_tac elm)
+ apply(case_tac elm; simp)
+  apply(rule exI)
+  apply(rule conjI)
+   apply blast
+  apply(rule leibniz)
+   apply blast
+  apply(rule  Set.equalityI; clarify)
+   apply(rename_tac elm)
+   apply(case_tac elm; simp)
+  apply(rename_tac elm)
+  apply(case_tac elm; simp)
+ apply(rule exI)
+ apply(rule conjI)
+  apply blast
+ apply(rule leibniz)
+  apply blast
+ apply(rule Set.equalityI; clarify)
+  apply(rename_tac elm)
+  apply(case_tac elm; simp)
+ apply(rename_tac elm)
+ apply(case_tac elm; simp)
+apply(split if_splits; auto)
+done
+
+
+
 lemma pos_length_head_exists [simp] :
   "n < length lst \<Longrightarrow>
    index lst 0 = Some (lst ! 0)"
