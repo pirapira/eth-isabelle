@@ -1,6 +1,6 @@
 theory Hoare
 
-imports Main "./lem/Evm"
+imports Main "../lem/Evm"
 
 begin
 
@@ -28,6 +28,7 @@ datatype state_element =
   | MemoryElm "w256 * byte" (* address, value *)
   | LogElm "nat * log_entry" (* position, log *)
     (* Log (0, entry) says that the first recorded log entry is 0 *)
+  | LogNumElm "nat" (* Number of recorded logs *)
   | PcElm "int" (* program counter *)
   | GasElm "int" (* remaining gas *)
   | MemoryUsageElm "int" (* current memory usage *)
@@ -95,7 +96,8 @@ definition ext_program_as_set :: "(address \<Rightarrow> program) \<Rightarrow> 
 definition log_as_set :: "log_entry list \<Rightarrow> state_element set"
   where
     "log_as_set logs ==
-      { LogElm (pos, l) | pos l. logs ! pos = l \<and> pos < length logs}
+      { LogNumElm (length logs) } \<union>
+      { LogElm (pos, l) | pos l. (rev logs) ! pos = l \<and> pos < length logs}
     "
 
 definition program_as_set :: "program \<Rightarrow> state_element set"
@@ -194,6 +196,20 @@ definition program_counter :: "int \<Rightarrow> state_element set \<Rightarrow>
   where
     "program_counter pos s == s = {PcElm pos}"
 
+definition log_number :: "nat \<Rightarrow> state_element set \<Rightarrow> bool"
+where
+"log_number n s == s = {LogNumElm n}"
+
+definition logged :: "nat \<Rightarrow> log_entry \<Rightarrow> state_element set \<Rightarrow> bool"
+where
+"logged n l s == s = {LogElm (n, l)}"
+
+lemma sep_logged [simp]:
+  "(a ** logged n l) s =
+   (LogElm (n, l) \<in> s \<and> a (s - {LogElm (n, l)}))"
+apply(auto simp add: sep_def logged_def)
+done
+
 definition gas_pred :: "int \<Rightarrow> state_element set \<Rightarrow> bool"
   where
     "gas_pred g s == s = {GasElm g}"
@@ -213,6 +229,12 @@ lemma sep_gas_any_sep [simp] :
    (\<exists> g. GasElm g \<in> s \<and> (a ** rest) (s - {GasElm g}))"
 	by simp
 
+lemma sep_log_number_sep [simp] :
+  "(a ** log_number n ** b) s =
+   (LogNumElm n \<in> s \<and> (a ** b) (s - {LogNumElm n}))
+  "
+apply(auto simp add: log_number_def sep_def)
+done
 
 
 definition caller :: "address \<Rightarrow> state_element set \<Rightarrow> bool"

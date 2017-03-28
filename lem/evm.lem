@@ -1488,10 +1488,12 @@ let {isabelle;hol;coq} store_byte_list_memory pos lst orig p = match index lst (
  | Nothing -> orig p
 end
 
-let {ocaml} store_byte_list_memory pos lst orig p = if p < pos then orig p else match index lst (natFromNatural (word256ToNatural (p-pos))) with
- | Just e -> e
- | Nothing -> orig p
-end
+let {ocaml} store_byte_list_memory pos lst orig p =
+  if word256UGE (p - pos) (word256FromNat (length lst)) then orig p else
+  match index lst (natFromNatural (word256ToNatural (p-pos))) with
+  | Just e -> e
+  | Nothing -> orig p
+  end
 
 (* Using the function above, it is straightforward to store a byte in the memory. *)
 val store_word_memory : w256 -> w256 -> memory -> memory
@@ -1573,6 +1575,7 @@ let extcodecopy v c = match v.vctx_stack with
                     (v.vctx_ext_program (w256_to_address addr))) in
      let new_memory = store_byte_list_memory dst_start data v.vctx_memory in
      InstructionContinue (vctx_advance_pc c
+<<<<<<< HEAD
        <| v with vctx_stack = rest; vctx_memory = new_memory |>)
  | _ -> instruction_failure_result v [TooShortStack]
 end
