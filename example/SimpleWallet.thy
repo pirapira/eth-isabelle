@@ -1,7 +1,11 @@
 theory SimpleWallet
 
-imports "../HoareTripleForInstructions2"
+imports "../Hoare/HoareTripleForInstructions2" "../Hoare/HoareTripleForLogGasCall"
 
+begin
+
+context
+ includes sep_crunch simp_for_triples
 begin
 
 (*
@@ -1420,5 +1424,7 @@ $ build/bin/geth --datadir ~/dapps/testing/00/ --networkid 4995690 --nodiscover 
 
 
 *)
+
+end
 
 end

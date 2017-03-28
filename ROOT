@@ -55,9 +55,9 @@ session "simplewallet" = "HOL" +
     "lem/Word8"
     "lem/Keccak"
     "lem/Evm"
-	"Hoare"
-	"HoareTripleForInstructions"
-	"HoareTripleForInstructions2"
+	"Hoare/Hoare"
+	"Hoare/HoareTripleForInstructions"
+	"Hoare/HoareTripleForInstructions2"
   theories
     "example/SimpleWallet"
   document_files (in simple_wallet_document)
@@ -71,19 +71,20 @@ session "all" = "HOL" +
     "attic/Parse"
     ContractSem
     RelationalSem
-    Hoare
-    HoareTripleForInstructions
-    HoareTripleForInstructions2
+    "Hoare/Hoare"
+    "Hoare/HoareTripleForInstructions"
+    "Hoare/HoareTripleForInstructions2"
     "attic/HP"
     "attic/YellowPaper"
     "example/Optimization"
     "example/AlwaysFail"
     "example/FailOnReentrance"
     "example/Deed"
+    "example/SimpleWallet"
 
 session "light" = "HOL" +
   theories [document = false]
     "~~/src/HOL/Word/Word"
     "~~/src/HOL/Data_Structures/AVL_Map"
-    HoareTripleForInstructions
+    "Hoare/HoareTripleForInstructions"
     "example/FailOnReentrance"

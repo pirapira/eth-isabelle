@@ -1,6 +1,6 @@
 theory Hoare
 
-imports Main "./lem/Evm"
+imports Main "../lem/Evm"
 
 begin
 
