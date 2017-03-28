@@ -1575,7 +1575,6 @@ let extcodecopy v c = match v.vctx_stack with
                     (v.vctx_ext_program (w256_to_address addr))) in
      let new_memory = store_byte_list_memory dst_start data v.vctx_memory in
      InstructionContinue (vctx_advance_pc c
-<<<<<<< HEAD
        <| v with vctx_stack = rest; vctx_memory = new_memory |>)
  | _ -> instruction_failure_result v [TooShortStack]
 end
