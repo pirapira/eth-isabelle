@@ -1270,7 +1270,7 @@ end
 (* Cnew is the funciton denoted as C_\text{\tiny NEW} in the yellow paper.*)
 (* However, it takes the sent value and a boolean indicating emptiness of the recipient. *)
 val Cnew : w256 -> bool -> integer
-let Cnew value emp = if emp && not (value = 0) then Gnewaccount else 0
+let Cnew value emp = if emp (* && not (value = 0) *) then Gnewaccount else 0
 
 (* Cxfer is the function denoted as C_\text{\tiny XFER} in the yellow paper. *)
 val Cxfer : w256 -> integer
@@ -1300,7 +1300,7 @@ let Cgascap mu0 mu1 emp remaining_gas blocknumber =
    a boolean indicating emptiness of the recipient, and the remaining gas of the caller *)
 val Ccallgas : w256 -> w256 -> w256 -> bool -> integer -> natural -> integer
 let Ccallgas mu0 mu1 mu2 emp remaining_gas blocknumber =
-  ( if blocknumber < eip150_block then word256ToInteger mu0 else Cgascap mu0 mu1 emp remaining_gas blocknumber) +
+  ( if blocknumber < eip150_block then word256ToInteger mu0  else Cgascap mu0 mu1 emp remaining_gas blocknumber) +
   ( if mu2 = 0 then 0 else Gcallstipend )
 
 (* Ccall is the function denoted as C_{\text{\tiny CALL}} *)
