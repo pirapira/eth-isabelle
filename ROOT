@@ -86,5 +86,5 @@ session "light" = "HOL" +
   theories [document = false]
     "~~/src/HOL/Word/Word"
     "~~/src/HOL/Data_Structures/AVL_Map"
-    HoareTripleForInstructions
+    "Hoare/HoareTripleForInstructions"
     "example/FailOnReentrance"
