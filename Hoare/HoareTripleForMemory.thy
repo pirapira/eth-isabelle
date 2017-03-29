@@ -1,12 +1,16 @@
 theory "HoareTripleForMemory" 
 
-imports  "lem/Evm" "Hoare"
+imports  "../lem/Evm" "Hoare"
  "HoareTripleForInstructions"
  "HoareTripleForStorage"
 
 begin
 
-definition memory :: "w256 \<Rightarrow> w256 \<Rightarrow> set_pred" where
+context
+includes sep_crunch simp_for_triples
+begin
+
+definition memory :: "w256 \<Rightarrow> w256 \<Rightarrow> state_element set_pred" where
 "memory ind w = memory_range ind (word_rsplit w)"
 
 
@@ -145,7 +149,7 @@ using sep_memory_range by force
 definition tk :: "byte list \<Rightarrow> byte list" where
 "tk lst = take (2^255) lst"
 
-definition memory_ran :: "w256 \<Rightarrow> byte list \<Rightarrow> set_pred" where
+definition memory_ran :: "w256 \<Rightarrow> byte list \<Rightarrow> state_element set_pred" where
 "memory_ran addr lst = memory_range addr (tk lst)"
 
 lemma sep_memory [simp] :
@@ -1241,41 +1245,7 @@ lemma plz_sort_it_out :
        {CodeElm (vctx_pc x1, Memory MSTORE)} -
        {MemoryUsageElm memu} -
        {GasElm newgas}
-(*
-  contexts_as_set x1 co_ctx -
-       {GasElm (vctx_gas x1)} -
-       {MemoryUsageElm (vctx_memory_usage x1)} -
-       {PcElm (vctx_pc x1)} -
-       {StackElm (length ta, v)} -
-       memory_range_elms memaddr
-        (word_rsplit (old_v::w256)) -
-       {StackElm
-         (Suc (length ta), memaddr)} -
-       {CodeElm
-         (vctx_pc x1, Memory MSTORE)} -
-       {StackHeightElm
-         (Suc (Suc (length ta)))} =
-       insert
-        (GasElm
-          newgas2)
-        (insert (ContinuingElm True)
-          (contexts_as_set
-            (x1\<lparr>vctx_pc := new_pc2,
-                  vctx_stack := ta,
-                  vctx_memory :=
-                    newmem,
-                  vctx_memory_usage :=
-                    memu2\<rparr>)
-            co_ctx -
-           {GasElm (vctx_gas x1)})) -
-       {ContinuingElm True} -
-       {StackHeightElm (length ta)} -
-       memory_range_elms memaddr (word_rsplit (v::w256)) -
-       {PcElm new_pc} -
-       {CodeElm
-         (vctx_pc x1, Memory MSTORE)} -
-       {MemoryUsageElm memu} -
-       {GasElm newgas}*)"
+"
 apply (auto)
 apply(auto simp add: contexts_as_set_def variable_ctx_as_set_def stack_as_set_def ext_program_as_set_def
        balance_as_set_def)[1]
@@ -1364,6 +1334,6 @@ apply (rule plz_sort_it_out)
 apply (auto simp:memory_range_fact)
 done
 
-
+end
 
 end

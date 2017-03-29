@@ -30,6 +30,7 @@ lemma stack_topmost_in_minus_action [simp] :
 apply auto
 done
 
+(* not correct anymore, new memory usage is calculated
 lemma return_gas_triple:
   "triple {OutOfGas}
           (\<langle> h \<le> 1022 \<and> length data = unat data_size \<rangle> **
@@ -49,9 +50,6 @@ apply(case_tac presult; auto simp add: ret_def not_continuing_def action_def
       sep_memory_range_sep vctx_returned_bytes_def)
  apply(rename_tac elm)
  apply(case_tac elm; simp)
-  apply(rule exI)
-  apply(rule conjI)
-   apply blast
   apply(rule leibniz)
    apply blast
   apply(rule  Set.equalityI; clarify)
@@ -59,9 +57,6 @@ apply(case_tac presult; auto simp add: ret_def not_continuing_def action_def
    apply(case_tac elm; simp)
   apply(rename_tac elm)
   apply(case_tac elm; simp)
- apply(rule exI)
- apply(rule conjI)
-  apply blast
  apply(rule leibniz)
   apply blast
  apply(rule Set.equalityI; clarify)
@@ -71,7 +66,7 @@ apply(case_tac presult; auto simp add: ret_def not_continuing_def action_def
  apply(case_tac elm; simp)
 apply(split if_splits; auto)
 done
-
+*)
 
 
 lemma pos_length_head_exists [simp] :
@@ -1025,6 +1020,8 @@ apply(auto)
   apply(rename_tac elm; case_tac elm; auto simp add: stack_as_set_def)
  apply(rename_tac elm; case_tac elm; auto simp add: stack_as_set_def)
 done
+
+
 
 end
 

@@ -1799,7 +1799,6 @@ lemma stack_topmost_not_code [simp] :
 apply(induction lst; auto simp add: stack_topmost_elms.simps)
 done
 
-<<<<<<< HEAD:HoareTripleForInstructions.thy
 lemma memory_usage_not_in_memory_range [simp] :
 "MemoryUsageElm x8
        \<in> memory_range_elms in_begin
@@ -1807,24 +1806,12 @@ lemma memory_usage_not_in_memory_range [simp] :
 apply (induction input arbitrary:in_begin)
 apply (auto simp:memory_range_elms.simps)
 done
-=======
+
+
 context
   includes simp_for_triples
 begin
->>>>>>> bd3091edf857e43e44f0d39561d6c40a6a7faf45:Hoare/HoareTripleForInstructions.thy
 
-lemma memory_subtract_gas [simp] :
- "x \<in> memory_range_elms in_begin input \<Longrightarrow>
-  x \<in> instruction_result_as_set co_ctx
-          (subtract_gas g memu r) =
-  (x \<in> instruction_result_as_set co_ctx r)"
-apply(simp add: instruction_result_as_set_def)
-apply(case_tac r; simp)
- apply(case_tac x; simp)
-using memory_usage_not_in_memory_range apply force
-apply(case_tac x; simp)
-using memory_usage_not_in_memory_range apply force
-done
 
 lemma stack_height_after_call [simp] :
        "vctx_balance x1 (cctx_this co_ctx) \<ge> vctx_stack x1 ! 2 \<Longrightarrow>
@@ -1934,6 +1921,7 @@ apply(case_tac "vctx_balance x1 (cctx_this co_ctx) < v")
 apply(simp add: strict_if_def subtract_gas.simps update_balance_def)
 done
 
+
 context
  includes simp_for_triples
  begin
@@ -1945,7 +1933,6 @@ lemma advance_pc_call [simp] :
 apply(simp add: vctx_advance_pc_def inst_size_def inst_code.simps)
 done
 
-end
 
 lemma memory_range_elms_not_continuing [simp] :
   "(memory_range_elms in_begin input
@@ -2172,17 +2159,6 @@ lemma memory_range_advance_pc [simp] :
 apply(case_tac x; simp)
 done
 
-(*
-       x \<in> memory_range_elms in_begin input \<Longrightarrow>
-       \<not> vctx_balance x1 (cctx_this co_ctx) < v \<Longrightarrow>
-       x \<in> variable_ctx_as_set
-             (vctx_advance_pc co_ctx x1
-              \<lparr>vctx_stack := tf,
-                 vctx_balance :=
-                   update_balance (cctx_this co_ctx) (\<lambda>orig. orig - v) (vctx_balance x1),
-                 vctx_memory_usage :=
-                   M (M (vctx_memory_usage x1) in_begin in_size) out_begin out_size\<rparr>)
-*)
 
 lemma memory_range_action [simp] :
       "x \<in> memory_range_elms in_begin input \<Longrightarrow>
@@ -3003,6 +2979,7 @@ lemma stack_topmost_minus_lognum [simp] :
    (stack_topmost_elms h lst \<subseteq> X)"
 apply auto
 done
+end 
 
 context
  includes simp_for_triples
@@ -3073,3 +3050,4 @@ bundle sep_crunch = caller_sep [simp]
                     sep_stack_topmost [simp]
 
 end
+

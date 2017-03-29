@@ -1,6 +1,6 @@
 theory GlobalTriple
 
-imports "./Hoare" "./lem/Block"
+imports "./Hoare/Hoare" "./lem/Block"
 
 begin
 
