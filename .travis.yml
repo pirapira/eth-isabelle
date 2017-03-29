@@ -26,7 +26,7 @@ before_install:
 - cd ECC-OCaml/src
 - make depend
 - make
-- make install
+- make install || echo "fails the second time and on"
 - cd ../..
 - git clone https://bitbucket.org/Peter_Sewell/lem.git lemdir
 - cd lemdir
