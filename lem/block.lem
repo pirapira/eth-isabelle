@@ -438,8 +438,7 @@ let next = function
                                  g_current=n_state; g_cctx=cctx; g_vmstate=InstructionContinue nv |>)
       | ContractFail _ ->
          match global.g_stack with
-         | [] -> (* Finished <| f_state=orig; f_killed=[]; f_gas=0; f_refund=0 |> *)
-            Finished <| f_state=orig; f_killed=[]; f_gas=0; f_refund=0 |>
+         | [] -> Finished <| f_state=orig; f_killed=[]; f_gas=0; f_refund=0 |>
          | (oldstate,v,c,_) :: rest ->
            let v = <| v with vctx_stack = 0::v.vctx_stack |> in
            Continue (<| global with g_stack=rest; g_current=oldstate; g_cctx=c; g_vmstate=InstructionContinue v |>)
@@ -457,7 +456,7 @@ let next = function
             | _ -> state
            end in
            
-           if rest = [] && global.g_create then Finished <| f_state=n_state; f_killed=killed; f_gas=v.vctx_gas; f_refund=0 |> else
+           if length rest = 0 && global.g_create then Finished <| f_state=n_state; f_killed=killed; f_gas=v.vctx_gas; f_refund=0 |> else
            let acc = n_state nc.cctx_this in
            let nv = <| nv with vctx_stack = 1::nv.vctx_stack |> in
            let nv = vctx_update_from_world nv acc n_state v in
@@ -473,7 +472,7 @@ let next = function
            let nv = vctx_update_from_world nv acc n_state v in
            Continue (<| global with g_stack=rest; g_current=n_state; g_cctx=c; g_vmstate=InstructionContinue nv |>)
          | (old_state,nv,c,CreateAddress new_addr) :: rest ->
-           if bytes = [] && rest = [] && global.g_create then Finished <| f_state=n_state; f_killed=global.g_killed; f_gas=v.vctx_gas; f_refund=v.vctx_refund |> else
+           if bytes = [] && length rest = 0 && global.g_create then Finished <| f_state=n_state; f_killed=global.g_killed; f_gas=v.vctx_gas; f_refund=v.vctx_refund |> else
            let (n_state, v) =
               if v.vctx_gas < integerFromNat (200*length bytes) && homestead_block <= word256ToNatural v.vctx_block.block_number then
                  (old_state, <| v with vctx_gas = 0 |>) 
