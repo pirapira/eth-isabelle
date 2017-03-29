@@ -17,6 +17,7 @@ open import Word
 open import Word256
 open import Word160
 open import Word8
+open import Keccak
 
 type byte = word8
 
@@ -24,43 +25,46 @@ type tree =
  | Leaf of list byte
  | Node of list tree
 
-val BE_rev_prim : nat -> nat -> list byte
+val BE_rev_prim : natural -> natural -> list byte
 let rec BE_rev_prim limit n = match limit with
  | 0 -> []
  | limit+1 -> 
    if n = 0 then [] else
-   if n < 256 then [word8FromNat n] else
-         (word8FromNat (n mod 256) :: BE_rev_prim limit (n div 256))
+   if n < 256 then [word8FromNatural n] else
+         (word8FromNatural (n mod 256) :: BE_rev_prim limit (n div 256))
 end
 
-val BE_rev : nat -> list byte
+val BE_rev : natural -> list byte
 let rec BE_rev n = match n with
  | 0 -> []
- | n -> if n < 256 then [word8FromNat n] else
-         (word8FromNat (n mod 256) :: BE_rev (n div 256))
+ | n -> if n < 256 then [word8FromNatural n] else
+         (word8FromNatural (n mod 256) :: BE_rev (n div 256))
 end
 
 declare coq target_rep function BE_rev = (fun n -> BE_rev_prim n n)
 
-val BE : nat -> list byte
+val BE : natural -> list byte
 let BE n = List.reverse (BE_rev n)
 
-val BD_rev : list byte -> nat
+val BE_nat : nat -> list byte
+let BE_nat n = List.reverse (BE_rev (naturalFromNat n))
+
+val BD_rev : list byte -> natural
 let rec BD_rev lst = match lst with
  | [] -> 0
- | h :: t -> 256 * BD_rev t + word8ToNat h
+ | h :: t -> 256 * BD_rev t + word8ToNatural h
 end
 
-val BD : list byte -> nat
+val BD : list byte -> natural
 let BD lst = BD_rev (List.reverse lst)
 
 val r_b : list byte -> list byte
 let r_b lst = match lst with
  | [] -> [128]
- | [k] -> if k < 128 then [k] else [129; k]
+ | [k] -> if word8ToNat k < 128 then [k] else [129; k]
  | lst ->
    if length lst < 56 then word8FromNat (128 + length lst) :: lst
-    else word8FromNat (183 + length (BE (length lst))) :: BE (length lst) ++ lst
+    else word8FromNat (183 + length (BE_nat (length lst))) :: BE_nat (length lst) ++ lst
 end
 
 val read_n_bytes : nat -> list byte -> maybe (list byte  * list byte)
@@ -82,7 +86,7 @@ let de_r_b lst = match lst with
       match read_n_bytes (word8ToNat k - 183) lst with
        | Nothing -> Nothing
        | Just (be_bytes, x_and_rest) ->
-         read_n_bytes (BD be_bytes) x_and_rest
+         read_n_bytes (natFromNatural (BD be_bytes)) x_and_rest
       end
    else Nothing
 end
@@ -94,19 +98,24 @@ let rec RLP tree = match tree with
    let s = List.concat (map RLP lst) in
    let len_s = length s in
    if len_s < 56 then word8FromNat (192 + len_s) :: s
-   else word8FromNat (247 + length (BE len_s)) :: (BE len_s ++ s)
+   else word8FromNat (247 + length (BE_nat len_s)) :: (BE_nat len_s ++ s)
 end   
 
-val RLP_nat : nat -> list byte
+val RLP_nat : natural -> list byte
 let RLP_nat i = RLP (Leaf (BE i))
 
 val RLP_w256 : word256 -> tree
-let RLP_w256 i = Leaf (BE (natFromInteger (word256ToInteger i)))
+let RLP_w256 i = Leaf (BE (naturalFromInteger (word256ToInteger i)))
 
-val RLP_address : word160 -> tree
-let RLP_address i = Leaf (BE (natFromInteger (word160ToInteger i)))
+val word_rsplit160 : word160 -> list byte
+let word_rsplit160 w = (word_rsplit_aux (boolListFromWord160 w) 20)
+declare isabelle target_rep function word_rsplit160 = `word_rsplit`
 
 (*
-val RLP_nat : nat -> list byte
-let RLP_nat i = RLP (Leaf (BE i))
+val RLP_address : word160 -> tree
+let RLP_address i = Leaf (BE (naturalFromInteger (word160ToInteger i)))
 *)
+
+val RLP_address : word160 -> tree
+let RLP_address addr = Leaf (word_rsplit160 addr)
+

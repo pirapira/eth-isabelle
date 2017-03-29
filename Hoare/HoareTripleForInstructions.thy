@@ -1734,7 +1734,7 @@ done
 lemma fourth_stack_topmost [simp] :
   "(a ** b ** c ** stack_topmost h lst ** rest) s =
    (stack_topmost_elms h lst \<subseteq> s \<and> (a ** b ** c ** rest) (s - stack_topmost_elms h lst))"
-	by (metis abel_semigroup.left_commute set_pred.abel_semigroup_axioms stack_topmost_sep)
+  by (smt sep_assoc sep_three stack_topmost_sep)
 
 lemma this_account_not_stack_topmost [simp] :
   "\<forall> h. ThisAccountElm this
@@ -1799,27 +1799,26 @@ lemma stack_topmost_not_code [simp] :
 apply(induction lst; auto simp add: stack_topmost_elms.simps)
 done
 
+lemma memory_usage_not_in_memory_range [simp] :
+"MemoryUsageElm x8
+       \<in> memory_range_elms in_begin
+           input \<Longrightarrow> False"
+apply (induction input arbitrary:in_begin)
+apply (auto simp:memory_range_elms.simps)
+done
+
+
 context
   includes simp_for_triples
 begin
 
-lemma memory_subtract_gas [simp] :
- "x \<in> memory_range_elms in_begin input \<Longrightarrow>
-  x \<in> instruction_result_as_set co_ctx
-          (subtract_gas g r) =
-  (x \<in> instruction_result_as_set co_ctx r)"
-apply(simp add: instruction_result_as_set_def)
-apply(case_tac r; simp)
- apply(case_tac x; simp)
-apply(case_tac x; simp)
-done
 
 lemma stack_height_after_call [simp] :
        "vctx_balance x1 (cctx_this co_ctx) \<ge> vctx_stack x1 ! 2 \<Longrightarrow>
         (StackHeightElm (h + 7) \<in>
           instruction_result_as_set co_ctx (InstructionContinue x1)) \<Longrightarrow>
         (StackHeightElm h
-          \<in> instruction_result_as_set co_ctx (subtract_gas g (call x1 co_ctx)))
+          \<in> instruction_result_as_set co_ctx (subtract_gas g memu (call x1 co_ctx)))
         "
 apply(simp add: call_def)
 apply(case_tac "vctx_stack x1"; simp)
@@ -1913,7 +1912,7 @@ lemma call_new_balance [simp] :
        vctx_stack x1 = g # r # v # in_begin # in_size # out_begin # out_size # tf \<Longrightarrow>
        BalanceElm (this, fund - v)
        \<in> instruction_result_as_set co_ctx
-           (subtract_gas (meter_gas (Misc CALL) x1 co_ctx) (call x1 co_ctx))"
+           (subtract_gas (meter_gas (Misc CALL) x1 co_ctx) memu (call x1 co_ctx))"
 apply(clarify)
 apply(auto simp add: call_def failed_for_reasons_def)
 apply(simp add: instruction_result_as_set_def subtract_gas.simps strict_if_def)
@@ -1921,6 +1920,7 @@ apply(case_tac "vctx_balance x1 (cctx_this co_ctx) < v")
  apply(simp add: update_balance_def)
 apply(simp add: strict_if_def subtract_gas.simps update_balance_def)
 done
+
 
 context
  includes simp_for_triples
@@ -1933,7 +1933,6 @@ lemma advance_pc_call [simp] :
 apply(simp add: vctx_advance_pc_def inst_size_def inst_code.simps)
 done
 
-end
 
 lemma memory_range_elms_not_continuing [simp] :
   "(memory_range_elms in_begin input
@@ -2160,17 +2159,6 @@ lemma memory_range_advance_pc [simp] :
 apply(case_tac x; simp)
 done
 
-(*
-       x \<in> memory_range_elms in_begin input \<Longrightarrow>
-       \<not> vctx_balance x1 (cctx_this co_ctx) < v \<Longrightarrow>
-       x \<in> variable_ctx_as_set
-             (vctx_advance_pc co_ctx x1
-              \<lparr>vctx_stack := tf,
-                 vctx_balance :=
-                   update_balance (cctx_this co_ctx) (\<lambda>orig. orig - v) (vctx_balance x1),
-                 vctx_memory_usage :=
-                   M (M (vctx_memory_usage x1) in_begin in_size) out_begin out_size\<rparr>)
-*)
 
 lemma memory_range_action [simp] :
       "x \<in> memory_range_elms in_begin input \<Longrightarrow>
@@ -2226,7 +2214,7 @@ begin
 lemma call_memory_no_change [simp] :
   "x \<in> memory_range_elms in_begin input \<Longrightarrow>
    x \<in> instruction_result_as_set co_ctx
-         (subtract_gas (meter_gas (Misc CALL) x1 co_ctx) (call x1 co_ctx)) =
+         (subtract_gas (meter_gas (Misc CALL) x1 co_ctx) memu (call x1 co_ctx)) =
   (x \<in> instruction_result_as_set co_ctx (InstructionContinue x1))"
 apply(simp add: call_def)
 apply(case_tac "vctx_stack x1"; simp)
@@ -2991,6 +2979,7 @@ lemma stack_topmost_minus_lognum [simp] :
    (stack_topmost_elms h lst \<subseteq> X)"
 apply auto
 done
+end 
 
 context
  includes simp_for_triples
@@ -3061,3 +3050,4 @@ bundle sep_crunch = caller_sep [simp]
                     sep_stack_topmost [simp]
 
 end
+

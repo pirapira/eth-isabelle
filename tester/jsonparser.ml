@@ -37,7 +37,7 @@ let parse_address_from_field field j =
                          (List.filter
                             (fun c -> c <> '"')
                          (to_list str))) in
-  let str = "0x" ^ str in
+  let str = if String.length str > 1 && str.[0] = '0' && str.[1] = 'x' then str else "0x" ^ str in
     try
       Big_int.big_int_of_string str
     with e ->

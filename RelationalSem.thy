@@ -126,7 +126,7 @@ where
 | "returnable_result (InstructionToEnvironment (ContractCall _) _ _) = True"
 | "returnable_result (InstructionToEnvironment (ContractDelegateCall _) _ _) = False"
 | "returnable_result (InstructionToEnvironment (ContractCreate _) _ _) = True"
-| "returnable_result (InstructionToEnvironment ContractSuicide _ _) = False"
+| "returnable_result (InstructionToEnvironment (ContractSuicide _) _ _) = False"
 | "returnable_result (InstructionToEnvironment (ContractFail _) _ _) = False"
 -- {* because we are not modeling nested calls here, the effect of the nested calls are modeled in
       account\_state\_return\_change *}
@@ -139,7 +139,7 @@ where
 | "returnable_from_delegate_call (InstructionToEnvironment (ContractCall _) _ _) = False"
 | "returnable_from_delegate_call (InstructionToEnvironment (ContractDelegateCall _) _ _) = True"
 | "returnable_from_delegate_call (InstructionToEnvironment (ContractCreate _) _ _) = False"
-| "returnable_from_delegate_call (InstructionToEnvironment ContractSuicide _ _) = False"
+| "returnable_from_delegate_call (InstructionToEnvironment (ContractSuicide _) _ _) = False"
 | "returnable_from_delegate_call (InstructionToEnvironment (ContractFail _) _ _) = False"
 -- {* because we are not modeling nested calls here, the effect of the nested calls are modeled in
       account\_state\_return\_change *}
@@ -299,8 +299,8 @@ causes our contract to destroy itself.
 *}
 lemma no_entry_suicide [dest!]:
 "star (one_round I)
-      (a, Execution (InstructionToEnvironment ContractSuicide v v_opt))
-      (b, c) \<Longrightarrow> b = a \<and> c = Execution (InstructionToEnvironment ContractSuicide v v_opt)"
+      (a, Execution (InstructionToEnvironment (ContractSuicide dst) v v_opt))
+      (b, c) \<Longrightarrow> b = a \<and> c = Execution (InstructionToEnvironment (ContractSuicide dst) v v_opt)"
 apply(drule star_case; simp)
 apply(simp add: one_round.simps add: environment_turn.simps)
 done

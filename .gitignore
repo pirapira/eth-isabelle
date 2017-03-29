@@ -31,6 +31,8 @@ lem/*.aux
 tester/lem
 lem/keccak.ml
 lem/evm.ml
+lem/block.ml
+lem/rlp.ml
 lem/word64.ml
 lem/word32.ml
 lem/word4.ml

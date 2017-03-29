@@ -132,7 +132,7 @@ let test_one_case j : testResult =
        | [], None, None, None, None -> TestSuccess
        | _ -> failwith "some postconditions are there for a failing case"
      end
-  | InstructionToEnvironment (ContractSuicide, v, pushed_opt) ->
+  | InstructionToEnvironment (ContractSuicide _, v, pushed_opt) ->
      begin
        match test_case.callcreates, test_case.gas, test_case.logs, test_case.out, test_case.post with
        | spec_created, Some spec_gas, Some spec_logs, Some spec_out, Some spec_post ->

@@ -45,6 +45,10 @@ val word8ToNat : word8 -> nat
 let word8ToNat w = natFromInt (intFromInteger (integerFromBitSeq (w8_to_bs w)) mod 256)
 declare isabelle target_rep function word8ToNat = `unat`
 
+val word8ToNatural : word8 -> natural
+let word8ToNatural w = naturalFromInt (intFromInteger (integerFromBitSeq (w8_to_bs w)) mod 256)
+declare isabelle target_rep function word8ToNatural = `unat`
+
 val word8ToInt : word8 -> int
 let word8ToInt w = intFromInteger (integerFromBitSeq (w8_to_bs w))
 declare isabelle target_rep function word8ToInt = `sint`

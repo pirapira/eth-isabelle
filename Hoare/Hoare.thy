@@ -136,10 +136,10 @@ definition contexts_as_set :: "variable_ctx \<Rightarrow> constant_ctx \<Rightar
     "contexts_as_set v c ==
        constant_ctx_as_set c \<union> variable_ctx_as_set v"
 
-type_synonym set_pred = "state_element set \<Rightarrow> bool"
+type_synonym 'a set_pred = "'a set \<Rightarrow> bool"
 
 (* From Magnus Myreen's thesis, Section 3.3 *)
-definition sep :: "set_pred \<Rightarrow> set_pred \<Rightarrow> set_pred"
+definition sep :: "'a set_pred \<Rightarrow> 'a set_pred \<Rightarrow> 'a set_pred"
   where
     "sep p q == (\<lambda> s. \<exists> u v. p u \<and> q v \<and> u \<union> v = s \<and> u \<inter> v = {})"
 
@@ -152,27 +152,12 @@ lemma sep_commute [simp]: "(a ** b)= (b ** a)"
   by (simp add: sep_def) blast
 
 lemma sep_lc [simp]: "(a ** b ** c) = (b ** a ** c)"
-proof -
-  have "(a ** b) = (b ** a)"
-    by (rule sep_commute)
-  then have "(a ** b) ** c = (b ** a) ** c"
-    by auto
-  then show "a ** b ** c = b ** a ** c"
-    using sep_assoc by simp
-qed
+using sep_assoc by force
 
 lemma sep_three : "c ** a ** b = a ** b ** c"
-proof -
- have "c ** a ** b = (a ** b) ** c"
-  using sep_commute by auto
- moreover have "(a ** b) ** c = a ** b ** c"
-  by simp
- ultimately show ?thesis
-  by auto
-qed
+by auto
 
-
-definition emp :: "set_pred"
+definition emp :: "'a set_pred"
   where
     "emp s == (s = {})"
 
@@ -181,79 +166,15 @@ lemma sep_emp [simp] :
 apply(simp add: emp_def sep_def)
 done
 
-(*
-definition sep_add :: "set_pred \<Rightarrow> set_pred \<Rightarrow> set_pred" where
-  "sep_add p q == (\<lambda> s. (p s \<or> q s) \<and> \<not> (p s \<and> q s))"
-
-definition sep_add :: "set_pred \<Rightarrow> set_pred \<Rightarrow> set_pred" where
-  "sep_add p q == (\<lambda> s. p s \<noteq> q s)"
-
-
-*)
-
-definition sep_add :: "set_pred \<Rightarrow> set_pred \<Rightarrow> set_pred" where
-  "sep_add p q == (\<lambda> s. p s \<or> q s)"
-
-
-notation sep_add (infixr "##" 59)
-
-lemma sep_distr : "a ** (b ## c) = (a**b) ## (a**c)"
-apply (simp add: sep_add_def sep_def)
-apply blast
-done
-
-lemma sep_add_assoc [simp]: "(a ## b) ## c = a ## (b ## c)"
-  by (simp add: sep_add_def)
-
-lemma sep_add_commute [simp]: "(a ## b) = (b ## a)"
-  by (simp add: sep_add_def) blast
-
-definition zero :: "set_pred" where
-  "zero == (\<lambda>s. False)"
-
-lemma zero_add [simp]: "(a ## zero) = a"
-  by (simp add: sep_add_def zero_def)
-
-(*
-definition inv :: "set_pred \<Rightarrow> set_pred" where
-  "inv p == p"
-
-lemma inv_zero [simp]: "(a ## inv a) = zero"
-  by (simp add: sep_add_def zero_def inv_def)
-*)
-
-(*
-lemma sep_add_assoc [simp]: "(a ## b) ## c = a ## (b ## c)"
-  by (simp add: sep_add_def) blast
-
-lemma sep_add_commute [simp]: "(a ## b) = (b ## a)"
-  by (simp add: sep_add_def) blast
-
-definition inv :: "set_pred \<Rightarrow> set_pred" where
-  "inv p == p"
-
-definition zero :: "set_pred" where
-  "zero == (\<lambda>s. False)"
-
-lemma zero_add [simp]: "(a ## zero) = a"
-  by (simp add: sep_add_def zero_def)
-
-lemma inv_zero [simp]: "(a ## inv a) = zero"
-  by (simp add: sep_add_def zero_def inv_def)
-
-lemma fun_ext : "(\<forall>a. f a = g a) \<Longrightarrow> f = g"
-apply auto
-done
-*)
 
 interpretation set_pred : comm_monoid
-   "sep :: set_pred \<Rightarrow> set_pred \<Rightarrow> set_pred"
-   "emp :: set_pred"
+   "sep :: 'a set_pred \<Rightarrow> 'a set_pred \<Rightarrow> 'a set_pred"
+   "emp :: 'a set_pred"
 apply(auto simp add: comm_monoid_def abel_semigroup_def semigroup_def abel_semigroup_axioms_def
-      sep_commute sep_three comm_monoid_axioms_def)
+      sep_three comm_monoid_axioms_def)
 done
 
-definition pure :: "bool \<Rightarrow> state_element set \<Rightarrow> bool"
+definition pure :: "bool \<Rightarrow> 'a set_pred"
   where
     "pure b s == emp s \<and> b"
 
@@ -881,10 +802,7 @@ done
 lemma tmp01:
     "(rest ** code c ** p x) (case presult of InstructionContinue v \<Rightarrow> contexts_as_set v co_ctx | _ \<Rightarrow> {}) \<Longrightarrow>
     (rest ** code c ** (\<lambda>s. \<exists>x. p x s)) (case presult of InstructionContinue v \<Rightarrow> contexts_as_set v co_ctx | _ \<Rightarrow> {})"
- using sep_def apply auto
- apply(rule_tac x = u in exI)
- apply(auto)
- done
+  by (smt imp_sepL sep_three)
 
 declare sep_code_sep [simp del]
 
@@ -919,7 +837,7 @@ lemma sep_impL :
  "\<forall> s. b s \<longrightarrow> a s \<Longrightarrow> 
  (c ** b ** d) s \<longrightarrow>
  (c ** a ** d) s"
-  using sep_def by auto
+  by (metis sep_def)
 
 
 lemma pre_imp:
