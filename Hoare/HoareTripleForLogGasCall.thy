@@ -125,9 +125,9 @@ apply (simp add: triple_def)
 apply clarify
 apply (rule_tac x = 1 in exI)
 apply(case_tac presult; simp add: log_inst_numbers.simps sep_memory_range sep_memory_range_sep log_def
-        instruction_result_as_set_def)
+        instruction_result_as_set_def vctx_stack_default_def)
 apply clarify
-apply(rule_tac x = " vctx_gas x1 - meter_gas (Log LOG2) x1 co_ctx" in exI)
+apply auto
 apply (simp add: create_log_entry_def vctx_returned_bytes_def)
 apply (rule leibniz)
  apply blast
@@ -140,6 +140,7 @@ apply clarify
 apply simp
 apply(rename_tac elm; case_tac elm; simp)
 apply(case_tac "length (vctx_logs x1) \<le> fst x5"; auto)
+apply (simp add: create_log_entry_def vctx_returned_bytes_def)
 done
 
 
@@ -169,9 +170,10 @@ apply (simp add: triple_def)
 apply clarify
 apply (rule_tac x = 1 in exI)
 apply(case_tac presult; simp add: log_inst_numbers.simps sep_memory_range sep_memory_range_sep log_def
-        instruction_result_as_set_def)
+        instruction_result_as_set_def vctx_stack_default_def)
 apply clarify
-apply(rule_tac x = " vctx_gas x1 - meter_gas (Log LOG3) x1 co_ctx" in exI)
+apply auto
+(* apply(rule_tac x = " vctx_gas x1 - meter_gas (Log LOG3) x1 co_ctx" in exI) *)
 apply (simp add: create_log_entry_def vctx_returned_bytes_def)
 apply (rule leibniz)
  apply blast
@@ -184,6 +186,7 @@ apply clarify
 apply simp
 apply(rename_tac elm; case_tac elm; simp)
 apply(case_tac "length (vctx_logs x1) \<le> fst x5"; auto)
+apply (simp add: create_log_entry_def vctx_returned_bytes_def)
 done
 
 lemma log4_gas_triple :
@@ -213,9 +216,10 @@ apply (simp add: triple_def)
 apply clarify
 apply (rule_tac x = 1 in exI)
 apply(case_tac presult; simp add: log_inst_numbers.simps sep_memory_range sep_memory_range_sep log_def
-        instruction_result_as_set_def)
+        instruction_result_as_set_def vctx_stack_default_def)
 apply clarify
-apply(rule_tac x = " vctx_gas x1 - meter_gas (Log LOG4) x1 co_ctx" in exI)
+apply auto
+(* apply(rule_tac x = " vctx_gas x1 - meter_gas (Log LOG4) x1 co_ctx" in exI) *)
 apply (simp add: create_log_entry_def vctx_returned_bytes_def)
 apply (rule leibniz)
  apply blast
@@ -228,6 +232,7 @@ apply clarify
 apply simp
 apply(rename_tac elm; case_tac elm; simp)
 apply(case_tac "length (vctx_logs x1) \<le> fst x5"; auto)
+apply (simp add: create_log_entry_def vctx_returned_bytes_def)
 done
 
 end
