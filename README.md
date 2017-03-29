@@ -34,7 +34,7 @@ $ make lem-thy
 
 Then, use Isabelle2016-1 to open `./examples/AlwaysFail.thy`.  The prerequisite Isabelle/HOL files are automatically opened.
 
-## How to run VM tests
+## How to run VM tests and state tests
 
 Make sure the tests submodule is cloned
 ```
@@ -63,6 +63,14 @@ $ ./runVmTest.native
 Another way is to run the VM Test and measure the coverage.
 ```
 $ sh measure_coverage.sh
+```
+
+Moreover, it's possible to run the state tests:
+```
+for j in `ls ../../tests/StateTests/*.json`
+do
+./stateTest.native $j
+done
 ```
 
 ## Makefile goals
