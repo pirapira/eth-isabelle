@@ -231,7 +231,7 @@ lemma update_account_state_None [simp] :
                  |  _ \<Rightarrow> bal (account_address prev)),
      account_ongoing_calls := account_ongoing_calls prev,
      account_killed :=
-       (case act of ContractSuicide \<Rightarrow> True
+       (case act of ContractSuicide _ \<Rightarrow> True
                   | _ \<Rightarrow> account_killed prev) \<rparr>)))"
 apply(case_tac act; simp add: update_account_state_def)
 done
@@ -247,7 +247,7 @@ lemma update_account_state_Some [simp] :
                   |  _ \<Rightarrow> bal (account_address prev)),
      account_ongoing_calls := (v, pushed) # account_ongoing_calls prev,
      account_killed :=
-       (case act of ContractSuicide \<Rightarrow> True
+       (case act of ContractSuicide _ \<Rightarrow> True
                   | _ \<Rightarrow> account_killed prev)\<rparr>)))"
 apply(case_tac act; simp add: update_account_state_def)
 done
