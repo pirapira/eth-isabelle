@@ -405,7 +405,7 @@ let next = function
                                  g_current=n_state; g_cctx=cctx; g_vmstate=InstructionContinue nv |>)
       | ContractDelegateCall args ->
          let n_state = update_return state c.cctx_this v in
-         if (n_state c.cctx_this).account_balance < args.callarg_value then
+         if (n_state c.cctx_this).account_balance < args.callarg_value || length global.g_stack > 1023 then
             let nv = <| v with vctx_stack = 0 :: v.vctx_stack; vctx_gas = v.vctx_gas + uint args.callarg_gas |> in
             Continue (<| global with g_current = n_state; g_vmstate = InstructionContinue nv |>) else
          let acc = n_state c.cctx_this in
