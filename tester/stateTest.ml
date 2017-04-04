@@ -3,6 +3,7 @@ open Yojson.Basic
 open Stateparser
 open Block
 open Evm
+open Extlib.ExtList
 
 let bighex x = Z.format "%x" (Z.of_string (Big_int.string_of_big_int x))
 
@@ -72,14 +73,14 @@ let w256dec i = Z.format "%d" (Word256.word256ToNatural i)
 let debug_vm c1 pr =  
  match pr with
   | InstructionContinue v ->
-     prerr_endline ("Gas " ^ Z.to_string v.vctx_gas);
+     Printf.printf "Gas %s\n"  (Z.to_string v.vctx_gas);
      (match vctx_next_instruction v c1 with
       | None -> ()
       | Some i ->
         (* prerr_endline ("Watch " ^ w256hex (v.vctx_storage (Word256.word256FromNat 1))); *)
         (* prerr_endline ("Calldata " ^ String.concat "," (List.map (fun x -> Z.format "%x" (Word8.word8ToNatural x)) v.vctx_data_sent)); *)
-        prerr_endline ("Inst " ^ String.concat "," (List.map (fun x -> Z.format "%x" (Word8.word8ToNatural x)) (inst_code i)));
-        prerr_endline ("Stack " ^ String.concat "," (List.map (fun x -> Z.format "%d" (Word256.word256ToNatural x)) v.vctx_stack)) )
+        Printf.printf "Inst %s Stack %s\n" (String.concat "," (List.map (fun x -> Z.format "%x" (Word8.word8ToNatural x)) (inst_code i)))
+                                    (String.concat "," (List.map (fun x -> Z.format "%x" (Word256.word256ToNatural x)) v.vctx_stack)) )
   | InstructionToEnvironment( _, v, _) -> prerr_endline ("Gas left " ^ Z.to_string v.vctx_gas)
   | InstructionAnnotationFailure -> ()
 
@@ -102,13 +103,24 @@ let run_tr tr state block =
     prerr_endline ("Killed " ^ string_of_int (List.length fi.f_killed));
   end;
   let final_state = end_transaction fi tr block in
-  final_state
+  final_state, List.rev fi.f_logs
 
 let compare_storage a stor (p,v) =
   if stor p <> v then begin
       Printf.printf "address %s has storage %s at %s, but it should be %s!\n" (Conv.string_of_address a) 
        (Conv.decimal_of_word256 (stor p)) (Conv.decimal_of_word256 p) (Conv.decimal_of_word256 v)
   end
+
+let compare_topics (actual : Keccak.w256) (spec : Big_int.big_int) =
+  if not (Big_int.eq_big_int spec (Conv.big_int_of_word256 actual)) then
+    Printf.printf "Bad log topic %s, should have been %s!\n" (w256hex actual) (w256hex (Conv.word256_of_big_int spec))
+
+let compare_log_entry (actual : Evm.log_entry) (spec : Jsonparser.log) =
+  if not (Big_int.eq_big_int (Conv.big_int_of_word160 actual.Evm.log_addr) spec.logAddress) then Printf.printf "Wrong log address\n";
+  if List.length actual.Evm.log_topics <> List.length spec.topics then Printf.printf "Log topic list length mismatch!\n";
+  BatList.iter2 compare_topics actual.Evm.log_topics spec.topics;
+  if spec.logData <> Conv.hex_string_of_byte_list "0x" actual.Evm.log_data then
+    Printf.printf "Bad log data: was %s and should be %s!\n" (Conv.hex_string_of_byte_list "0x" actual.Evm.log_data) spec.logData
 
 let run_test (label, elm) =
   let () = Printf.printf "%s\n%!" label in
@@ -118,7 +130,9 @@ let run_test (label, elm) =
   let pre_st = List.map (fun (a,b,_) -> (a,b)) (make_state_list tc.pre) in
   let post_st = make_state_list tc.post in
   let state x = try List.assoc x pre_st with _ -> empty_account0 x in
-  let state = run_tr tr state block_info in
+  let state, logs = run_tr tr state block_info in
+  let _ = if List.length logs <> List.length tc.logs then Printf.printf "Log length bad" in
+  List.iter2 compare_log_entry logs tc.logs;
   List.iter (fun (a,cmp, storage_list) ->
     let acc = state a in
     if acc.account_balance0 <> cmp.account_balance0 then begin

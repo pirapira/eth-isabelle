@@ -52,7 +52,7 @@ type test_case =
   { env : env
   ; tr : tr
   ; gas : string option
-  ; logs : log list option
+  ; logs : log list
   ; out : string option
   ; post : (string * account_state) list
   ; pre : (string * account_state) list
@@ -66,8 +66,8 @@ let parse_test_case (j : json) : test_case =
       (try Some (to_string (member "gas" j))
        with Yojson.Basic.Util.Type_error _ -> None)
   ; logs =
-      (try Some (List.map parse_log (to_list (member "logs" j)))
-       with Yojson.Basic.Util.Type_error _ -> None)
+      (try (List.map parse_log (to_list (member "logs" j)))
+       with Yojson.Basic.Util.Type_error _ -> [])
   ; out =
       (try Some (to_string (member "out" j))
        with Yojson.Basic.Util.Type_error _ -> None)

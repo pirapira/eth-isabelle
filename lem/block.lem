@@ -314,6 +314,7 @@ type tr_result = <|
   f_killed : list address;
   f_gas : integer;
   f_refund : integer;
+  f_logs : list log_entry;
 |>
 
 type global_state =
@@ -438,7 +439,7 @@ let next = function
                                  g_current=n_state; g_cctx=cctx; g_vmstate=InstructionContinue nv |>)
       | ContractFail _ ->
          match global.g_stack with
-         | [] -> Finished <| f_state=orig; f_killed=[]; f_gas=0; f_refund=0 |>
+         | [] -> Finished <| f_state=orig; f_killed=[]; f_gas=0; f_refund=0; f_logs = [] |>
          | (oldstate,v,c,_) :: rest ->
            let v = <| v with vctx_stack = 0::v.vctx_stack |> in
            Continue (<| global with g_stack=rest; g_current=oldstate; g_cctx=c; g_vmstate=InstructionContinue v |>)
@@ -449,14 +450,15 @@ let next = function
          let state = if dst = c.cctx_this then state else update_world (update_world state c.cctx_this acc) dst n_dst in
          let killed = c.cctx_this::global.g_killed in
          match global.g_stack with
-         | [] -> Finished (<| f_state = state; f_killed = killed; f_refund = v.vctx_refund; f_gas = v.vctx_gas |>)
+         | [] -> Finished (<| f_state = state; f_killed = killed; f_refund = v.vctx_refund; f_gas = v.vctx_gas; f_logs = v.vctx_logs |>)
          | (_,nv,nc,is_new) :: rest ->
            let n_state = match is_new with
             | CreateAddress new_addr -> create_account state new_addr []
             | _ -> state
            end in
            
-           if length rest = 0 && global.g_create then Finished <| f_state=n_state; f_killed=killed; f_gas=v.vctx_gas; f_refund=0 |> else
+           if length rest = 0 && global.g_create then
+             Finished <| f_state=n_state; f_killed=killed; f_gas=v.vctx_gas; f_refund=v.vctx_refund; f_logs = v.vctx_logs |> else
            let acc = n_state nc.cctx_this in
            let nv = <| nv with vctx_stack = 1::nv.vctx_stack |> in
            let nv = vctx_update_from_world nv acc n_state v in
@@ -465,14 +467,15 @@ let next = function
       | ContractReturn bytes ->
          let n_state = update_return state c.cctx_this v in
          match global.g_stack with
-         | [] -> Finished <| f_state = n_state; f_killed = global.g_killed; f_refund = v.vctx_refund; f_gas = v.vctx_gas |>
+         | [] -> Finished <| f_state = n_state; f_killed = global.g_killed; f_refund = v.vctx_refund; f_gas = v.vctx_gas; f_logs = v.vctx_logs |>
          | (_,nv,c,ReturnTo mem_start mem_size) :: rest -> 
            let acc = n_state c.cctx_this in
            let nv = <| nv with vctx_stack = 1::nv.vctx_stack; vctx_memory = put_return_values nv.vctx_memory bytes mem_start mem_size |> in
            let nv = vctx_update_from_world nv acc n_state v in
            Continue (<| global with g_stack=rest; g_current=n_state; g_cctx=c; g_vmstate=InstructionContinue nv |>)
          | (old_state,nv,c,CreateAddress new_addr) :: rest ->
-           if bytes = [] && length rest = 0 && global.g_create then Finished <| f_state=n_state; f_killed=global.g_killed; f_gas=v.vctx_gas; f_refund=v.vctx_refund |> else
+           if bytes = [] && length rest = 0 && global.g_create then
+             Finished <| f_state=n_state; f_killed=global.g_killed; f_gas=v.vctx_gas; f_refund=v.vctx_refund; f_logs = v.vctx_logs |> else
            let (n_state, v) =
               if v.vctx_gas < integerFromNat (200*length bytes) && homestead_block <= word256ToNatural v.vctx_block.block_number then
                  (old_state, <| v with vctx_gas = 0 |>) 
@@ -482,7 +485,7 @@ let next = function
            let nv = <| nv with vctx_stack = address_to_w256 new_addr::nv.vctx_stack |> in
            let nv = vctx_update_from_world nv acc n_state v in
            Continue (<| global with g_stack=rest; g_current=n_state; g_cctx=c; g_vmstate=InstructionContinue nv |>)
-         | _ -> Finished (<| f_state=orig; f_killed=[]; f_gas=0; f_refund=0 |>) (* should be impossible *)
+         | _ -> Finished (<| f_state=orig; f_killed=[]; f_gas=0; f_refund=0; f_logs = [] |>) (* should be impossible *)
          end
       end
     | a -> 
@@ -520,6 +523,7 @@ let start_transaction tr state block =
   let nothing_happens = Finished <|
     f_state=charge_gas state tr.tr_from (tr.tr_gas_price * tr.tr_gas_limit);
     f_killed=[];
+    f_logs = [];
     f_gas=uint tr.tr_gas_limit;
     f_refund=0 |> in
   if tr.tr_nonce <> s_acc.account_nonce then nothing_happens else
@@ -530,14 +534,15 @@ let start_transaction tr state block =
   if word256ToNatural tr.tr_gas_limit < naturalFromInteger igas then nothing_happens else
   match tr.tr_to with
   | Nothing ->
-    if tr.tr_data = [] && tr.tr_gas_limit = 0 && tr.tr_gas_price = 0 then Finished <| f_state=state; f_killed=[]; f_gas=0; f_refund=0 |> else
-    if tr.tr_data = [] && tr.tr_gas_price = 0 then Finished <| f_state=update_nonce state tr.tr_from; f_killed=[]; f_gas=0; f_refund=0 |> else
+    if tr.tr_data = [] && tr.tr_gas_limit = 0 && tr.tr_gas_price = 0 then Finished <| f_state=state; f_killed=[]; f_gas=0; f_refund=0; f_logs = [] |> else
+    if tr.tr_data = [] && tr.tr_gas_price = 0 then Finished <| f_state=update_nonce state tr.tr_from; f_killed=[]; f_gas=0; f_refund=0; f_logs = [] |> else
     if integerFromNatural (word256ToNatural tr.tr_gas_limit) < igas then
-      Finished <| f_state=state; f_killed=[]; f_gas=0; f_refund=0 |> else
+      Finished <| f_state=state; f_killed=[]; f_gas=0; f_refund=0; f_logs = [] |> else
     (* This should be creation... perhaps make a bogus state *)
     let s_acc = <| s_acc with account_balance = s_acc.account_balance - gas_value |> in
     let n_state = update_world state tr.tr_from s_acc in
-    if tr.tr_data = [] then Finished <| f_state=update_nonce n_state tr.tr_from; f_killed=[]; f_gas=word256ToInteger tr.tr_gas_limit - igas; f_refund=0 |> else
+    if tr.tr_data = [] then
+      Finished <| f_state=update_nonce n_state tr.tr_from; f_killed=[]; f_gas=word256ToInteger tr.tr_gas_limit - igas; f_refund=0; f_logs=[] |> else
     let v = create_env s_acc n_state 0 [] (tr.tr_gas_limit - word256FromInteger igas) tr.tr_from tr.tr_from block in
     let c = build_cctx s_acc in
     let args = <| createarg_value = tr.tr_value; createarg_code = tr.tr_data |> in
