@@ -427,9 +427,11 @@ let next = function
          prerr_endline ("nonce " ^ Z.format "%d" (word256ToNatural n_acc.account_nonce));
          prerr_endline ("rlp " ^ String.concat "," (List.map (fun x -> Z.to_string (word8ToNatural x)) rlp));
          *)
+         let old_acc = n_state addr in
+         let old_balance = old_acc.account_balance in
          let acc = empty_account addr in
          (* let acc = set_account_code acc args.createarg_code in *)
-         let acc = <| acc with account_balance = args.createarg_value; account_exists = true |> in
+         let acc = <| acc with account_balance = args.createarg_value + old_balance; account_exists = true |> in
          let cctx = <| cctx_this = addr; cctx_program = make_program args.createarg_code; cctx_hash_filter = c.cctx_hash_filter |> in
          let n_state = update_world n_state addr acc in
          let nv = create_env acc n_state args.createarg_value [] (word256FromInteger v.vctx_gas) c.cctx_this v.vctx_origin v.vctx_block in
