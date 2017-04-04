@@ -446,7 +446,7 @@ let next = function
       | ContractSuicide dst ->
          let n_dst = <| (state dst) with account_balance = (state dst).account_balance + (state c.cctx_this).account_balance |> in
          let acc = <| (state c.cctx_this) with account_balance = 0 |> in
-         let state = if dst = c.cctx_this then state else update_world (update_world state c.cctx_this acc) dst n_dst in
+         let state = update_world (update_world state dst n_dst) c.cctx_this acc in
          let killed = c.cctx_this::global.g_killed in
          match global.g_stack with
          | [] -> Finished (<| f_state = state; f_killed = killed; f_refund = v.vctx_refund; f_gas = v.vctx_gas |>)

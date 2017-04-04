@@ -1311,7 +1311,7 @@ let Ccallgas mu0 mu1 mu2 emp remaining_gas blocknumber memu_extra =
    emptiness of the recipient, and the remaining gas of the caller *)
 val Ccall : w256 -> w256 -> w256 -> bool -> integer -> natural -> integer -> integer
 let Ccall mu0 mu1 mu2 emp remaining_gas blocknumber memu_extra =
-  if blocknumber < eip150_block then word256ToInteger mu0 + Cextra mu2 emp blocknumber else
+  if blocknumber < eip150_block then integerFromNatural (word256ToNatural mu0) + Cextra mu2 emp blocknumber else
   Cgascap mu0 mu2 emp remaining_gas blocknumber memu_extra + Cextra mu2 emp blocknumber
 
 (* Cmem is the function denoted as C_{mem} in the yellow paper. *)
