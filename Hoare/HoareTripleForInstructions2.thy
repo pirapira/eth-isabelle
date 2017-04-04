@@ -195,7 +195,8 @@ apply(simp add: triple_def)
 apply clarify
 apply(rule_tac x = 1 in exI)
 apply(case_tac presult)
-  defer
+   defer
+   apply(simp add: instruction_result_as_set_def)
   apply(simp add: instruction_result_as_set_def)
  apply(simp add: instruction_result_as_set_def)
 apply(simp add: swap_def list_swap_usage swap_inst_numbers_def)
@@ -207,6 +208,7 @@ apply(rule  Set.equalityI)
  apply(rule allI)
  apply(rename_tac elm)
  apply(case_tac elm; simp add: instruction_result_as_set_def)
+
  apply(rename_tac pair)
  apply(case_tac pair; simp)
  apply(case_tac "a = h - Suc 0"; simp)
@@ -579,7 +581,8 @@ lemma jumpdest_gas_triple :
                       )"
 apply(auto simp add: triple_def)
 apply(rule_tac x = 1 in exI)
-apply(case_tac presult; simp)
+apply(case_tac presult; simp add: instruction_result_as_set_def)
+
 apply(clarify)
 apply(rule leibniz)
  apply blast
@@ -591,7 +594,6 @@ apply(rule Set.equalityI)
 apply(clarify)
 apply(simp)
 apply(rename_tac elm; case_tac elm; simp)
-apply auto
 done 
 
 lemma pop_gas_triple : "triple {OutOfGas} (\<langle> h \<le> 1024 \<rangle> **

@@ -39,6 +39,7 @@ apply(case_tac presult; simp add: log_inst_numbers.simps sep_memory_range sep_me
 vctx_stack_default_def)
 apply clarify
 apply auto
+
 apply (rule leibniz)
 apply blast
 apply(rule Set.equalityI)
