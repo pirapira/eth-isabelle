@@ -18,6 +18,12 @@ theory EvmFacts
   imports "Hoare"
 begin
 
+declare memory_as_set_def [simp del]
+declare storage_as_set_def [simp del]
+declare balance_as_set_def [simp del]
+declare log_as_set_def [simp del]
+
+
 lemmas gas_simps = Gverylow_def Glow_def Gmid_def Gbase_def Gzero_def Glogtopic_def 
     Gsha3word_def Gsha3_def Gextcode_def Gcopy_def Gblockhash_def Gexpbyte_def Gexp_def
     Gbalance_def Gsload_def Gsreset_def Gsset_def Gjumpdest_def Ghigh_def
@@ -702,14 +708,386 @@ using data_at_context [of s1 v2 c2]
   and maximality_data_sent [of s1 "vctx_data_sent v2"]
 by force
 
+(* reconstruct memory *)
 
-(*
+lemma maximality_memory :
+ "memory_as_set m1 \<subseteq> memory_as_set m2 \<Longrightarrow>
+  m1 = m2"
+apply(auto simp add:context_rw)
+done
+
+lemma memory_at_context :
+ "memory_as_set s1 \<subseteq> contexts_as_set v2 c2 \<Longrightarrow>
+  memory_as_set s1 \<subseteq> memory_as_set (vctx_memory v2)"
+apply(auto simp add:context_rw)
+done
+
+lemma memory_from_context :
+ "memory_as_set s1 \<subseteq> contexts_as_set v2 c2 \<Longrightarrow>
+  vctx_memory v2 = s1"
+using memory_at_context [of s1 v2 c2]
+  and maximality_memory [of s1 "vctx_memory v2"]
+by force
+
+(* reconstruct storage *)
+
+lemma maximality_storage :
+ "storage_as_set m1 \<subseteq> storage_as_set m2 \<Longrightarrow>
+  m1 = m2"
+apply(auto simp add:context_rw)
+done
+
+lemma storage_at_context :
+ "storage_as_set s1 \<subseteq> contexts_as_set v2 c2 \<Longrightarrow>
+  storage_as_set s1 \<subseteq> storage_as_set (vctx_storage v2)"
+apply(auto simp add:context_rw)
+done
+
+lemma storage_from_context :
+ "storage_as_set s1 \<subseteq> contexts_as_set v2 c2 \<Longrightarrow>
+  vctx_storage v2 = s1"
+using storage_at_context [of s1 v2 c2]
+  and maximality_storage [of s1 "vctx_storage v2"]
+by force
+
+(* balance *)
+
+lemma maximality_balance :
+ "balance_as_set m1 \<subseteq> balance_as_set m2 \<Longrightarrow>
+  m1 = m2"
+apply(auto simp add:context_rw)
+done
+
+lemma balance_at_context :
+ "balance_as_set s1 \<subseteq> contexts_as_set v2 c2 \<Longrightarrow>
+  balance_as_set s1 \<subseteq> balance_as_set (vctx_balance v2)"
+apply(auto simp add:context_rw)
+done
+
+lemma balance_from_context :
+ "balance_as_set s1 \<subseteq> contexts_as_set v2 c2 \<Longrightarrow>
+  vctx_balance v2 = s1"
+  by (metis balance_at_context maximality_balance)
+
+(* block info *)
+
+lemma maximality_block :
+ "blockhash_as_elm m1 \<subseteq> blockhash_as_elm m2 \<Longrightarrow>
+  m1 = m2"
+apply(auto simp add:context_rw)
+done
+
+lemma block_at_context :
+ "blockhash_as_elm s1 \<subseteq> contexts_as_set v2 c2 \<Longrightarrow>
+  blockhash_as_elm s1 \<subseteq>
+    blockhash_as_elm (block_blockhash (vctx_block v2))"
+apply(auto simp add:context_rw)
+done
+
+lemma block_from_context :
+ "blockhash_as_elm s1 \<subseteq> contexts_as_set v2 c2 \<Longrightarrow>
+  block_blockhash (vctx_block v2) = s1"
+using block_at_context [of s1 v2 c2]
+ and maximality_block [of s1 " block_blockhash (vctx_block v2)"]
+by force
+
+(* program *)
+
+definition program_inst :: "program \<Rightarrow> int \<Rightarrow> inst" where
+"program_inst p i =
+   (case program_content p i of None \<Rightarrow> Misc STOP | Some i \<Rightarrow> i)"
+
+definition program_as_set2 :: "program \<Rightarrow> state_element set" where
+"program_as_set2 p =
+ { CodeElm (pos, i) | pos i. program_inst p pos = i  }"
+
+lemma maximality_program_aux :
+ "program_as_set2 m1 \<subseteq> program_as_set2 m2 \<Longrightarrow>
+  program_inst m1 = program_inst m2"
+apply(auto simp add:context_rw program_as_set2_def)
+done
+
+lemma program_as_set_eq : "program_as_set p = program_as_set2 p"
+apply (auto simp:program_as_set_def
+  program_as_set2_def program_inst_def split:option.split)
+done
+
+lemma maximality_program :
+ "program_as_set m1 \<subseteq> program_as_set m2 \<Longrightarrow>
+  program_inst m1 = program_inst m2"
+by (auto simp:program_as_set_eq maximality_program_aux)
+
+lemma program_at_context :
+ "program_as_set s1 \<subseteq> contexts_as_set v2 c2 \<Longrightarrow>
+  program_as_set s1 \<subseteq> program_as_set (cctx_program c2)"
+apply(auto simp add:context_rw)
+apply blast
+apply force
+done
+
+lemma program_from_context :
+ "program_as_set s1 \<subseteq> contexts_as_set v2 c2 \<Longrightarrow>
+  program_inst (cctx_program c2) = program_inst s1"
+  by (metis program_at_context maximality_program)
+
+lemma program_inst_same :
+   "program_inst p1 = program_inst p2 \<Longrightarrow>
+    program_as_set p1 = program_as_set p2"
+apply (auto simp:program_as_set_def program_inst_def
+  program_as_set2_def program_inst_def split:option.split)
+  apply (metis option.case_eq_if option.expand option.sel option.simps(3) option.the_def program_inst_def)
+  apply (metis option.case_eq_if option.expand option.sel option.simps(3) option.the_def program_inst_def)
+  apply (metis option.case_eq_if option.expand option.sel option.simps(3) option.the_def program_inst_def)
+  apply (metis option.case_eq_if option.expand option.sel option.simps(3) option.the_def program_inst_def)
+  apply (metis option.case_eq_if option.expand option.sel option.simps(3) option.the_def program_inst_def)
+  apply (metis option.case_eq_if option.expand option.sel option.simps(3) option.the_def program_inst_def)
+done
+
+(* reconstruct logs *)
+
+lemma maximality_log_aux :
+   "log_as_set s1 \<subseteq> log_as_set s2 \<Longrightarrow>
+    i < length s1 \<Longrightarrow>
+    rev s1!i = rev s2!i"
+apply(auto simp add:context_rw)
+apply blast
+done
+
+lemma maximality_log_length :
+   "log_as_set s1 \<subseteq> log_as_set s2 \<Longrightarrow>
+    length s1 = length s2"
+by (auto simp add:context_rw)
+
+lemma maximality_log :
+ "log_as_set s1 \<subseteq> log_as_set s2 \<Longrightarrow>
+  s1 = s2"
+using maximality_log_aux [of s1 s2]
+  and maximality_log_length [of s1 s2]
+  and list_eq [of s1 s2]
+  by (metis length_rev nth_equalityI rev_is_rev_conv)
+
+lemma log_length_at_context :
+ "LogNumElm x \<in> contexts_as_set v2 c2 \<Longrightarrow>
+  LogNumElm x \<in> log_as_set (vctx_logs v2)"
+apply(simp add:context_rw)
+done
+
+lemma log_elem_at_context :
+ "LogElm (x,y) \<in> contexts_as_set v2 c2 \<Longrightarrow>
+  LogElm (x,y) \<in> log_as_set (vctx_logs v2)"
+apply(simp add:context_rw)
+done
+
+lemma log_at_context_aux :
+ "log_as_set s1 \<subseteq> contexts_as_set v2 c2 \<Longrightarrow>
+  x \<in> log_as_set s1 \<Longrightarrow>
+  x \<in> log_as_set (vctx_logs v2)"
+apply (case_tac x)
+apply (auto simp:log_length_at_context log_elem_at_context)
+apply(auto simp add:context_rw)
+done
+
+lemma log_at_context :
+ "log_as_set s1 \<subseteq> contexts_as_set v2 c2 \<Longrightarrow>
+  log_as_set s1 \<subseteq> log_as_set (vctx_logs v2)"
+using log_at_context_aux
+apply (auto)
+done
+
+lemma log_from_context :
+ "log_as_set s1 \<subseteq> contexts_as_set v2 c2 \<Longrightarrow>
+  vctx_logs v2 = s1"
+using log_at_context [of s1 v2 c2]
+  and maximality_log [of s1 "vctx_logs v2"]
+by force
+
+(* external programs *)
+
+lemma maximal_ext_length :
+   "ext_program_as_set s1 \<subseteq> ext_program_as_set s2 \<Longrightarrow>
+    program_length (s1 addr) = program_length (s2 addr)"
+apply(auto simp add:context_rw)
+done
+
+lemma maximal_ext_content :
+   "ext_program_as_set s1 \<subseteq> ext_program_as_set s2 \<Longrightarrow>
+    program_as_natural_map (s1 addr) =
+    program_as_natural_map (s2 addr)"
+apply(auto simp add:context_rw)
+apply blast
+done
+
+lemma ext_at_context :
+ "ext_program_as_set s1 \<subseteq> contexts_as_set v2 c2 \<Longrightarrow>
+  ext_program_as_set s1 \<subseteq> ext_program_as_set (vctx_ext_program v2)"
+apply(auto simp add:context_rw)
+apply blast
+done
+
+lemma ext_length_from_context :
+ "ext_program_as_set s1 \<subseteq> contexts_as_set v2 c2 \<Longrightarrow>
+  program_length (vctx_ext_program v2 addr) = program_length (s1 addr)"
+using ext_at_context [of s1 v2 c2]
+  and maximal_ext_length [of s1 "vctx_ext_program v2"]
+by force
+
+lemma ext_content_from_context :
+ "ext_program_as_set s1 \<subseteq> contexts_as_set v2 c2 \<Longrightarrow>
+  program_as_natural_map (vctx_ext_program v2 addr) =
+  program_as_natural_map (s1 addr)"
+using ext_at_context [of s1 v2 c2]
+  and maximal_ext_content [of s1 "vctx_ext_program v2"]
+by force
+
+lemma ext_program_same :
+   "(\<forall>addr. program_length (p1 addr) = program_length (p2 addr)) \<Longrightarrow>
+    (\<forall>addr. program_as_natural_map (p1 addr) =
+            program_as_natural_map (p2 addr)) \<Longrightarrow>
+    ext_program_as_set p1 = ext_program_as_set p2"
+apply(simp add:ext_program_as_set_def)
+done
+
+(* lemmas for all obvious subsets *)
+
+lemma stack_subset :
+  "stack_as_set (vctx_stack v1) \<subseteq> contexts_as_set v1 c1"
+by(auto simp add:context_rw)
+
+lemma memory_subset :
+  "memory_as_set (vctx_memory v1) \<subseteq> contexts_as_set v1 c1"
+by(auto simp add:context_rw)
+
+lemma storage_subset :
+  "storage_as_set (vctx_storage v1) \<subseteq> contexts_as_set v1 c1"
+by(auto simp add:context_rw)
+
+lemma balance_subset :
+  "balance_as_set (vctx_balance v1) \<subseteq> contexts_as_set v1 c1"
+by (auto simp add:context_rw)
+
+lemma data_sent_subset :
+  "data_sent_as_set (vctx_data_sent v1) \<subseteq> contexts_as_set v1 c1"
+by (auto simp add:context_rw)
+
+lemma ext_program_subset :
+  "ext_program_as_set (vctx_ext_program v1) \<subseteq> contexts_as_set v1 c1"
+by (auto simp add:context_rw)
+
+lemma log_subset :
+  "log_as_set (vctx_logs v1) \<subseteq> contexts_as_set v1 c1"
+by (auto simp add:context_rw)
+
+lemma block_subset :
+  "blockhash_as_elm (block_blockhash (vctx_block v1)) \<subseteq> contexts_as_set v1 c1"
+by (auto simp add:context_rw)
+
+
+lemma program_subset :
+  "program_as_set (cctx_program c1) \<subseteq> contexts_as_set v1 c1"
+by (auto simp add:context_rw)
+
+lemma get_condition1 :
+   "contexts_as_set v1 c1 \<subseteq> contexts_as_set v2 c2 \<Longrightarrow>
+    vctx_memory_usage v1 =
+    vctx_memory_usage v2 \<and>
+    vctx_caller v1 = vctx_caller v2 \<and>
+    vctx_value_sent v1 =
+    vctx_value_sent v2 \<and>
+    vctx_origin v1 = vctx_origin v2 \<and>
+    vctx_gas v1 = vctx_gas v2 \<and>
+    vctx_pc v1 = vctx_pc v2 \<and>
+    block_coinbase (vctx_block v1) =
+    block_coinbase (vctx_block v2) \<and>
+    block_timestamp (vctx_block v1) =
+    block_timestamp (vctx_block v2) \<and>
+    block_difficulty (vctx_block v1) =
+    block_difficulty (vctx_block v2) \<and>
+    block_gaslimit (vctx_block v1) =
+    block_gaslimit (vctx_block v2) \<and>
+    block_gasprice (vctx_block v1) =
+    block_gasprice (vctx_block v2) \<and>
+    block_number (vctx_block v1) =
+    block_number (vctx_block v2) \<and>
+    cctx_this c1 = cctx_this c2"
+apply(simp add:context_rw)
+done
+
+lemma eq_class :
+    "vctx_memory_usage v1 = vctx_memory_usage v2 \<Longrightarrow>
+    vctx_caller v1 = vctx_caller v2 \<Longrightarrow>
+    vctx_value_sent v1 = vctx_value_sent v2 \<Longrightarrow>
+    vctx_origin v1 = vctx_origin v2 \<Longrightarrow>
+    vctx_gas v1 = vctx_gas v2 \<Longrightarrow>
+    vctx_pc v1 = vctx_pc v2 \<Longrightarrow>
+    vctx_data_sent v1 = vctx_data_sent v2 \<Longrightarrow>
+    block_coinbase (vctx_block v1) =
+    block_coinbase (vctx_block v2) \<Longrightarrow>
+    block_blockhash (vctx_block v1) =
+    block_blockhash (vctx_block v2) \<Longrightarrow>
+    block_timestamp (vctx_block v1) =
+    block_timestamp (vctx_block v2) \<Longrightarrow>
+    block_difficulty (vctx_block v1) =
+    block_difficulty (vctx_block v2) \<Longrightarrow>
+    block_gaslimit (vctx_block v1) =
+    block_gaslimit (vctx_block v2) \<Longrightarrow>
+    block_gasprice (vctx_block v1) =
+    block_gasprice (vctx_block v2) \<Longrightarrow>
+    block_number (vctx_block v1) = block_number (vctx_block v2) \<Longrightarrow>
+    vctx_logs v1 = vctx_logs v2 \<Longrightarrow>
+    vctx_stack v1 = vctx_stack v2 \<Longrightarrow>
+    vctx_memory v1 = vctx_memory v2 \<Longrightarrow>
+    vctx_storage v1 = vctx_storage v2 \<Longrightarrow>
+    vctx_balance v1 = vctx_balance v2 \<Longrightarrow>
+    program_inst (cctx_program c1) = program_inst (cctx_program c2) \<Longrightarrow>
+    cctx_this c1 = cctx_this c2 \<Longrightarrow>
+    (\<forall>addr. program_length (vctx_ext_program v1 addr) =
+            program_length (vctx_ext_program v2 addr)) \<Longrightarrow>
+    (\<forall>addr. program_as_natural_map (vctx_ext_program v1 addr) =
+            program_as_natural_map (vctx_ext_program v2 addr)) \<Longrightarrow>
+    contexts_as_set v1 c1 = contexts_as_set v2 c2"
+apply(simp add:contexts_as_set_def constant_ctx_as_set_def
+  variable_ctx_as_set_def)
+apply auto
+using program_inst_same apply blast
+using ext_program_same apply blast
+using program_inst_same apply blast
+using ext_program_same apply blast
+done
+
 lemma maximality :
    "contexts_as_set v1 c1 \<subseteq> contexts_as_set v2 c2 \<Longrightarrow>
-    a \<in> contexts_as_set v2 c2 \<Longrightarrow>
-    a \<in> contexts_as_set v1 c1"
+    contexts_as_set v1 c1 = contexts_as_set v2 c2"
+apply (rule eq_class)
 apply(simp add:context_rw)
-apply clarsimp
-*)
+apply(simp add:context_rw)
+apply(simp add:context_rw)
+apply(simp add:context_rw)
+apply(simp add:context_rw)
+apply(simp add:context_rw)
+  apply (metis data_from_context data_sent_subset order.trans)
+apply(simp add:context_rw)
+using block_from_context and block_subset
+apply force
+apply(simp add:context_rw)
+apply(simp add:context_rw)
+apply(simp add:context_rw)
+apply(simp add:context_rw)
+apply(simp add:context_rw)
+using log_from_context and log_subset
+apply force
+using stack_from_context and stack_subset
+apply force
+using memory_from_context and memory_subset
+apply force
+using storage_from_context and storage_subset
+apply force
+using balance_from_context and balance_subset apply force
+using program_from_context and program_subset apply force
+apply(simp add:context_rw)
+using ext_length_from_context and ext_program_subset apply force
+using ext_content_from_context and ext_program_subset apply force
+done
+
+
 
 end
