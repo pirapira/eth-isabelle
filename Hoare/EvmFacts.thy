@@ -60,6 +60,13 @@ apply (auto)
   apply (simp add: Cextra_gt_0 add.commute add_nonneg_pos)
   by (metis Cextra_gt_0 Cgascap_gt_0 add.commute add.left_commute add_strict_increasing)
 
+lemma Ccall_ge_0:
+  "memu \<ge> 0 \<Longrightarrow>  0 \<le> Ccall s0 s1 s2 recipient_empty
+            remaining_gas blocknumber memu + memu"
+using Ccall_gt_0
+  by (simp add: dual_order.order_iff_strict)
+
+
 lemma Csuicide_gt_0:
   "Gsuicide blocknumber \<noteq> 0 \<Longrightarrow> 0 < Csuicide recipient_empty blocknumber"
   unfolding Csuicide_def
@@ -99,6 +106,37 @@ lemma thirdComponentOfC_gt_0:
          apply (smt Csuicide_gt_0)
          apply (smt Csuicide_gt_0)
 done
+
+lemma thirdComponentOfC_ge_0:
+  "memu \<ge> 0 \<Longrightarrow>
+  0 \<le> thirdComponentOfC i s0 s1 s2 s3 recipient_empty orig_val
+      new_val remaining_gas blocknumber memu + memu"
+  unfolding thirdComponentOfC_def
+  apply (case_tac i ; simp add: gas_simps )
+           apply (case_tac x2; simp add: gas_simps)
+          apply (case_tac x3; simp add: gas_simps )
+         apply (case_tac x4 ; simp add: gas_simps)
+         using log256floor_ge_0[where s="uint s1"]
+                 apply (simp add: )
+              apply (clarsimp; simp add: word_less_def word_neq_0_conv)
+                apply (case_tac x5; simp add: gas_simps)
+              apply (case_tac x7; simp add: gas_simps)
+                apply (case_tac "s2 = 0" ; auto simp: word_less_def word_neq_0_conv)
+                apply (case_tac "s2 = 0" ; auto simp: word_less_def word_neq_0_conv)
+              apply (case_tac "s3 = 0" ; auto simp: word_less_def word_neq_0_conv)
+            apply (case_tac x8; simp add: gas_simps Csstore_def)
+            apply (case_tac x9; simp add: gas_simps Csstore_def)
+           apply (case_tac x10; simp add: gas_simps Csstore_def)
+          apply ( case_tac x12; case_tac "s1 = 0"; 
+             simp add: gas_simps word_less_def word_neq_0_conv)
+         apply (clarsimp split: misc_inst.splits)
+         apply (rule conjI, clarsimp simp add: gas_simps L_def)
+         apply (rule conjI)
+          apply (auto simp add: Ccall_ge_0 Gcreate_def Gzero_def
+                Csuicide_def Gsuicide_def Gnewaccount_def)+
+done
+
+
 
 lemma Cmem_lift:
   "0 \<le> x \<Longrightarrow> x \<le> y \<Longrightarrow> Cmem x \<le> Cmem y"
@@ -141,26 +179,13 @@ apply (rule thirdComponentOfC_gt_0_massaged)
 apply auto
 done
 
-(*
-lemma instruction_sem_not_continuing:
-  "\<lbrakk> inst \<in> {Misc STOP, Misc RETURN, Misc SUICIDE} \<union> range Unknown \<rbrakk> \<Longrightarrow>
-\<forall>v. instruction_sem var const inst \<noteq> InstructionContinue v"
-  apply (case_tac inst; clarsimp simp: instruction_sem_def instruction_failure_result_def subtract_gas.simps)
-  subgoal for opcode v
-   apply (case_tac opcode; simp add: ret_def suicide_def image_def stop_def instruction_sem_def instruction_failure_result_def subtract_gas.simps split:list.splits)
-   done
-  done
-
-lemma instruction_sem_continuing:
-  "\<lbrakk> instruction_sem var const inst = InstructionContinue v \<rbrakk> \<Longrightarrow>
-inst \<notin> {Misc STOP, Misc RETURN, Misc SUICIDE} \<union> range Unknown"
-  apply (case_tac inst; clarsimp simp: instruction_sem_def instruction_failure_result_def subtract_gas.simps)
-  subgoal for opcode
-   apply (case_tac opcode; simp add: ret_def suicide_def image_def stop_def instruction_sem_def instruction_failure_result_def subtract_gas.simps split:list.splits)
-   done
-  done
-*)
-
+lemma meter_gas_ge_0:
+  "0 \<le> vctx_memory_usage var \<Longrightarrow>
+   0 \<le> meter_gas inst var const"
+  using Cmem_lift[OF _ vctx_memory_usage_never_decreases[where inst=inst and var=var]]
+  apply (simp add: C_def meter_gas_def)
+using thirdComponentOfC_ge_0
+  by (simp add: add.commute)
 
 definition all :: "state_element set_pred" where
 "all s = True"
@@ -195,23 +220,27 @@ by (simp add: never_def sep_add_def)
 lemma sep_add_distr [simp] : "a ** (b ## c) = a**b ## a**c"
 by (simp add: sep_def sep_add_def) blast
 
+definition action ::
+   "(contract_action \<Rightarrow> bool) \<Rightarrow> state_element set_pred" where
+"action p s = (\<exists>x. {ContractActionElm x} = s \<and> p x)"
+
 definition failing :: "state_element set_pred" where
-"failing s = (\<exists>x. ContractActionElm (ContractFail x) \<in> s)"
+"failing = action (\<lambda>y. \<exists>x. ContractFail x = y)"
 
 definition returning :: "state_element set_pred" where
-"returning s = (\<exists>x. ContractActionElm (ContractReturn x) \<in> s)"
+"returning = action (\<lambda>y. \<exists>x. ContractReturn x = y)"
 
 definition destructing :: "state_element set_pred" where
-"destructing s = (\<exists>x. ContractActionElm (ContractSuicide x) \<in> s)"
+"destructing = action (\<lambda>y. \<exists>x. ContractSuicide x = y)"
 
 definition calling :: "state_element set_pred" where
-"calling s = (\<exists>x. ContractActionElm (ContractCall x) \<in> s)"
+"calling = action (\<lambda>y. \<exists>x. ContractCall x = y)"
 
 definition creating :: "state_element set_pred" where
-"creating s = (\<exists>x. ContractActionElm (ContractCreate x) \<in> s)"
+"creating = action (\<lambda>y. \<exists>x. ContractCreate x = y)"
 
 definition delegating :: "state_element set_pred" where
-"delegating s = (\<exists>x. ContractActionElm (ContractDelegateCall x) \<in> s)"
+"delegating = action (\<lambda>y. \<exists>x. ContractDelegateCall x = y)"
 
 lemmas rw = instruction_sem_def instruction_failure_result_def
   subtract_gas.simps stack_2_1_op_def stack_1_1_op_def
@@ -349,7 +378,7 @@ lemma failing_insert :
  "x (s-{ContractActionElm (ContractFail b)}) \<Longrightarrow>
   (x ** failing) (insert (ContractActionElm (ContractFail b)) s)"
 apply(auto simp add:rw sep_def  not_continuing_def all_def
-         failing_def some_gas_def code_def gas_pred_def context_rw)
+         action_def failing_def some_gas_def code_def gas_pred_def context_rw)
 done
 
 lemma some_gas_in_context :
@@ -359,28 +388,6 @@ apply(auto simp add:rw sep_def  not_continuing_def all_def
          failing_def some_gas_def code_def gas_pred_def context_rw)
 done
 
-lemma case_1 :
-assumes a :
- "(rest ** all ** code {} ** gas_pred g)
-   (contexts_as_set x1 co_ctx)"
-shows  "(rest ** not_continuing ** all ** failing ** some_gas ** code {})
-           (insert (ContinuingElm False)
-             (insert
-               (ContractActionElm (ContractFail lst))
-               (contexts_as_set x1 co_ctx)))"
-proof -
-  let ?set =  "contexts_as_set x1 co_ctx"
-  let ?base =  "rest ** all ** code {} ** some_gas"
-from a have "?base ?set"
-  by (metis set_pred.assoc some_gas_in_context)
-then have "(?base ** not_continuing) (insert (ContinuingElm False) ?set)"
-  using context_cont1 not_cont_insert by presburger
-then have "(?base ** not_continuing)
-   (insert (ContinuingElm False) ?set-{ContractActionElm (ContractFail lst)})"
-  by (metis (full_types) Diff_empty Diff_insert2 context_cont context_cont1 contexts_as_set_def insert_minus state_element.distinct(685))
-then show ?thesis
-  by (metis failing_insert insert_commute sep_three set_pred.commute) 
-qed
 
 lemma meter_gas_check :
   "\<not> meter_gas a x1 co_ctx \<le> vctx_gas x1 \<Longrightarrow>
@@ -393,6 +400,7 @@ lemmas instruction_sem_simps =
   rw sha3_def vctx_update_storage_def
   vctx_pop_stack_def vctx_advance_pc_def
 blockedInstructionContinue_def blocked_jump_def
+vctx_memory_usage_never_decreases
 
 lemma env_meter_gas :
 "instruction_sem v1 c inst =
@@ -437,6 +445,66 @@ apply (case_tac x1 ;
          apply (case_tac x2 ; clarsimp simp: instruction_sem_simps split:list.splits)
          apply (case_tac x3 ; clarsimp simp: instruction_sem_simps split:list.splits)
          apply (case_tac x4 ; clarsimp simp: instruction_sem_simps split:list.splits)
+apply(case_tac "\<not> cctx_hash_filter c ( cut_memory x21 x21a (vctx_memory v1))")
+         apply (clarsimp simp: instruction_sem_simps split:list.splits)
+         apply (clarsimp simp: instruction_sem_simps split:list.splits)
+         apply (case_tac x5 ; clarsimp simp: instruction_sem_simps split:list.splits option.splits)
+         apply (case_tac x6 ; clarsimp simp: instruction_sem_simps split:list.splits option.splits)
+         apply (case_tac x7 ; clarsimp simp: instruction_sem_simps split:list.splits option.splits)
+      apply (case_tac x8 ; clarsimp simp: instruction_sem_simps Let_def split:list.splits option.splits pc_inst.splits )
+      apply (case_tac x9; clarsimp simp: instruction_sem_simps Let_def split: list.splits  pc_inst.splits option.splits)
+       apply (case_tac "x2"; clarsimp simp: instruction_sem_simps Let_def split: pc_inst.splits option.splits)
+       apply (case_tac "x21a = 0"; clarsimp simp: instruction_sem_simps Let_def split: pc_inst.splits option.splits)
+       apply (case_tac "x2"; clarsimp simp: instruction_sem_simps Let_def split: pc_inst.splits option.splits)
+       apply (case_tac "x21a = 0"; clarsimp simp: instruction_sem_simps Let_def split: pc_inst.splits option.splits)
+       apply (case_tac "x2a"; clarsimp simp: instruction_sem_simps Let_def split: pc_inst.splits option.splits)
+     apply (case_tac "x10"; clarsimp simp: instruction_sem_simps  split: pc_inst.splits option.splits list.splits)
+     apply (clarsimp simp: instruction_sem_simps  split: pc_inst.splits option.splits)
+     apply (case_tac "x12"; clarsimp simp: Let_def instruction_sem_simps  split: pc_inst.splits option.splits)
+     apply (case_tac "x13"; clarsimp simp: instruction_sem_simps  split: pc_inst.splits option.splits list.splits if_splits)
+done
+
+lemma memu_good :
+"instruction_sem v1 c inst = InstructionContinue v2 \<Longrightarrow>
+ vctx_memory_usage v2 \<ge> vctx_memory_usage v1"
+apply (simp only: instruction_sem_def)
+  apply (case_tac inst; clarsimp)
+apply (case_tac x1 ; 
+          clarsimp simp: rw
+           split:list.splits)
+         apply (case_tac x2 ; clarsimp simp: instruction_sem_simps split:list.splits)
+         apply (case_tac x3 ; clarsimp simp: instruction_sem_simps split:list.splits)
+         apply (case_tac x4 ; clarsimp simp: instruction_sem_simps split:list.splits)
+apply(case_tac "\<not> cctx_hash_filter c ( cut_memory x21 x21a (vctx_memory v1))")
+         apply (clarsimp simp: instruction_sem_simps split:list.splits)
+         apply (clarsimp simp: instruction_sem_simps split:list.splits)
+         apply (case_tac x5 ; clarsimp simp: instruction_sem_simps split:list.splits option.splits)
+         apply (case_tac x6 ; clarsimp simp: instruction_sem_simps split:list.splits option.splits)
+         apply (case_tac x7 ; clarsimp simp: instruction_sem_simps split:list.splits option.splits)
+      apply (case_tac x8 ; clarsimp simp: instruction_sem_simps Let_def split:list.splits option.splits pc_inst.splits )
+      apply (case_tac x9; clarsimp simp: instruction_sem_simps Let_def split: list.splits  pc_inst.splits option.splits)
+       apply (case_tac "x2"; clarsimp simp: instruction_sem_simps Let_def split: pc_inst.splits option.splits)
+       apply (case_tac "x21a = 0"; clarsimp simp: instruction_sem_simps Let_def split: pc_inst.splits option.splits)
+       apply (case_tac "x2"; clarsimp simp: instruction_sem_simps Let_def split: pc_inst.splits option.splits)
+       apply (case_tac "x21a = 0"; clarsimp simp: instruction_sem_simps Let_def split: pc_inst.splits option.splits)
+       apply (case_tac "x2a"; clarsimp simp: instruction_sem_simps Let_def split: pc_inst.splits option.splits)
+     apply (case_tac "x10"; clarsimp simp: instruction_sem_simps  split: pc_inst.splits option.splits list.splits)
+     apply (clarsimp simp: instruction_sem_simps  split: pc_inst.splits option.splits)
+     apply (case_tac "x12"; clarsimp simp: Let_def instruction_sem_simps  split: pc_inst.splits option.splits)
+     apply (case_tac "x13"; clarsimp simp: instruction_sem_simps  split: pc_inst.splits option.splits list.splits if_splits)
+done
+
+lemma memu_good_env :
+"instruction_sem v1 c inst = InstructionToEnvironment act v2 zz \<Longrightarrow>
+ vctx_memory_usage v2 \<ge> vctx_memory_usage v1"
+apply (simp only: instruction_sem_def)
+  apply (case_tac inst; clarsimp)
+apply (case_tac x1 ; 
+          clarsimp simp: instruction_sem_simps
+           split:list.splits)
+apply (case_tac x2 ; clarsimp simp: instruction_sem_simps split:list.splits)
+apply (case_tac x3 ; clarsimp simp: instruction_sem_simps split:list.splits)
+apply (case_tac x4 ; clarsimp simp: instruction_sem_simps split:list.splits)
 apply(case_tac "\<not> cctx_hash_filter c ( cut_memory x21 x21a (vctx_memory v1))")
          apply (clarsimp simp: instruction_sem_simps split:list.splits)
          apply (clarsimp simp: instruction_sem_simps split:list.splits)
@@ -528,12 +596,117 @@ apply(case_tac "\<not> cctx_hash_filter c ( cut_memory x21 x21a (vctx_memory v))
      apply (case_tac "x13"; clarsimp simp: instruction_sem_simps  split: pc_inst.splits option.splits list.splits if_splits)
 done
 
+lemma create_instruction :
+"instruction_sem v c inst =
+ InstructionToEnvironment (ContractCreate args) x32 x33 \<Longrightarrow>
+ inst = Misc CREATE"
+apply (simp only: instruction_sem_def)
+  apply (case_tac inst; clarsimp)
+apply (case_tac x1 ; 
+          clarsimp simp: rw
+           split:list.splits)
+         apply (case_tac x2 ; clarsimp simp: instruction_sem_simps split:list.splits)
+         apply (case_tac x3 ; clarsimp simp: instruction_sem_simps split:list.splits)
+         apply (case_tac x4 ; clarsimp simp: instruction_sem_simps split:list.splits)
+apply(case_tac "\<not> cctx_hash_filter c ( cut_memory x21 x21a (vctx_memory v))")
+         apply (clarsimp simp: instruction_sem_simps split:list.splits)
+         apply (clarsimp simp: instruction_sem_simps split:list.splits)
+         apply (case_tac x5 ; clarsimp simp: instruction_sem_simps split:list.splits option.splits)
+         apply (case_tac x6 ; clarsimp simp: instruction_sem_simps split:list.splits option.splits)
+         apply (case_tac x7 ; clarsimp simp: instruction_sem_simps split:list.splits option.splits)
+      apply (case_tac x8 ; clarsimp simp: instruction_sem_simps Let_def split:list.splits option.splits pc_inst.splits )
+      apply (case_tac x9; clarsimp simp: instruction_sem_simps Let_def split: list.splits  pc_inst.splits option.splits)
+       apply (case_tac "x2"; clarsimp simp: instruction_sem_simps Let_def split: pc_inst.splits option.splits)
+       apply (case_tac "x21a = 0"; clarsimp simp: instruction_sem_simps Let_def split: pc_inst.splits option.splits)
+       apply (case_tac "x2"; clarsimp simp: instruction_sem_simps Let_def split: pc_inst.splits option.splits)
+       apply (case_tac "x21a = 0"; clarsimp simp: instruction_sem_simps Let_def split: pc_inst.splits option.splits)
+       apply (case_tac "x2a"; clarsimp simp: instruction_sem_simps Let_def split: pc_inst.splits option.splits)
+     apply (case_tac "x10"; clarsimp simp: instruction_sem_simps  split: pc_inst.splits option.splits list.splits)
+     apply (clarsimp simp: instruction_sem_simps  split: pc_inst.splits option.splits)
+     apply (case_tac "x12"; clarsimp simp: Let_def instruction_sem_simps  split: pc_inst.splits option.splits)
+     apply (case_tac "x13"; clarsimp simp: instruction_sem_simps  split: pc_inst.splits option.splits list.splits if_splits)
+done
+
+
+lemma continue_instruction :
+ "instruction_sem v c inst = InstructionContinue v2 \<Longrightarrow>
+  inst \<noteq> Misc STOP \<and> inst \<noteq> Misc RETURN \<and>
+  inst \<noteq> Misc SUICIDE \<and> inst \<noteq> Misc DELEGATECALL \<and>
+  inst \<notin> range Unknown"
+apply (simp only: instruction_sem_def)
+  apply (case_tac inst; clarsimp)
+apply (case_tac x1 ; clarsimp simp: rw split:list.splits)
+apply (case_tac "x13"; clarsimp simp: instruction_sem_simps
+    split: pc_inst.splits option.splits list.splits if_splits)
+done
+
+lemma delegatecall_instruction :
+"instruction_sem v c inst =
+ InstructionToEnvironment (ContractDelegateCall args) x32 x33 \<Longrightarrow>
+ inst = Misc DELEGATECALL \<and>
+ unat (block_number (vctx_block v)) \<ge> homestead_block"
+apply (simp only: instruction_sem_def)
+  apply (case_tac inst; clarsimp)
+apply (case_tac x1 ; 
+          clarsimp simp: rw
+           split:list.splits)
+         apply (case_tac x2 ; clarsimp simp: instruction_sem_simps split:list.splits)
+         apply (case_tac x3 ; clarsimp simp: instruction_sem_simps split:list.splits)
+         apply (case_tac x4 ; clarsimp simp: instruction_sem_simps split:list.splits)
+apply(case_tac "\<not> cctx_hash_filter c ( cut_memory x21 x21a (vctx_memory v))")
+         apply (clarsimp simp: instruction_sem_simps split:list.splits)
+         apply (clarsimp simp: instruction_sem_simps split:list.splits)
+         apply (case_tac x5 ; clarsimp simp: instruction_sem_simps split:list.splits option.splits)
+         apply (case_tac x6 ; clarsimp simp: instruction_sem_simps split:list.splits option.splits)
+         apply (case_tac x7 ; clarsimp simp: instruction_sem_simps split:list.splits option.splits)
+      apply (case_tac x8 ; clarsimp simp: instruction_sem_simps Let_def split:list.splits option.splits pc_inst.splits )
+      apply (case_tac x9; clarsimp simp: instruction_sem_simps Let_def split: list.splits  pc_inst.splits option.splits)
+       apply (case_tac "x2"; clarsimp simp: instruction_sem_simps Let_def split: pc_inst.splits option.splits)
+       apply (case_tac "x21a = 0"; clarsimp simp: instruction_sem_simps Let_def split: pc_inst.splits option.splits)
+       apply (case_tac "x2"; clarsimp simp: instruction_sem_simps Let_def split: pc_inst.splits option.splits)
+       apply (case_tac "x21a = 0"; clarsimp simp: instruction_sem_simps Let_def split: pc_inst.splits option.splits)
+       apply (case_tac "x2a"; clarsimp simp: instruction_sem_simps Let_def split: pc_inst.splits option.splits)
+     apply (case_tac "x10"; clarsimp simp: instruction_sem_simps  split: pc_inst.splits option.splits list.splits)
+     apply (clarsimp simp: instruction_sem_simps  split: pc_inst.splits option.splits)
+     apply (case_tac "x12"; clarsimp simp: Let_def instruction_sem_simps  split: pc_inst.splits option.splits)
+     apply (case_tac "x13"; clarsimp simp: instruction_sem_simps  split: pc_inst.splits option.splits list.splits if_splits)
+done
+
+lemma delegatecall_decr_gas :
+   assumes a:"instruction_sem v1 co_ctx a =
+       InstructionToEnvironment (ContractDelegateCall x1a)
+        v2 x33"
+   and good:"vctx_memory_usage v1 \<ge> 0"
+  shows  "vctx_gas v1 > vctx_gas v2"
+proof -
+  have inst: "a = Misc DELEGATECALL \<and>
+ unat (block_number (vctx_block v1)) \<ge> homestead_block"
+   using delegatecall_instruction and a by force
+  then have "meter_gas a v1 co_ctx > 0"
+   using good and meter_gas_gt_0 by blast
+  then show ?thesis using env_meter_gas and a by force
+qed
+
+lemma create_decr_gas :
+   assumes a:"instruction_sem v1 co_ctx a =
+       InstructionToEnvironment (ContractCreate x1a)
+        v2 x33"
+   and good:"vctx_memory_usage v1 \<ge> 0"
+  shows  "vctx_gas v1 > vctx_gas v2"
+proof -
+  have inst: "a = Misc CREATE"
+   using create_instruction and a by force
+  then have "meter_gas a v1 co_ctx > 0"
+   using good and meter_gas_gt_0 by blast
+  then show ?thesis using env_meter_gas and a by force
+qed
+
 lemma call_decr_gas :
    assumes a:"instruction_sem v1 co_ctx a =
        InstructionToEnvironment (ContractCall x1a)
         v2 x33"
    and good:"vctx_memory_usage v1 \<ge> 0"
-  shows  "vctx_gas v1 \<ge> vctx_gas v2"
+  shows  "vctx_gas v1 > vctx_gas v2"
 proof -
   have inst: "a = Misc CALL \<or> a = Misc CALLCODE"
    using call_instruction and a by force
@@ -542,24 +715,16 @@ proof -
   then show ?thesis using env_meter_gas and a by force
 qed
 
-(* Perhaps "all" will have to hog absolutely everything
- ??? *)
-
-(*
-lemma gas_decreases_in_triples :
- "g1 \<ge> g2 \<Longrightarrow>
-  GasElm g1 \<in> s1 \<Longrightarrow>
-  GasElm g2 \<in> s2 \<Longrightarrow>
-  (\<forall>h1. GasElm h1 \<in> s1 \<longrightarrow> h1 = g1) \<Longrightarrow>
-  (\<forall>h2. GasElm h2 \<in> s2 \<longrightarrow> h2 = g2) \<Longrightarrow>
-  (all ** gas_pred g) s1 \<Longrightarrow>
-  (all ** gas_smaller g) s2"
-apply(auto simp add:rw sep_def gas_smaller_def  not_continuing_def all_def
-         failing_def some_gas_def code_def gas_pred_def context_rw)
-*)
-
-(* need to make a better 'all' should have a feature
-   like this *)
+lemma continue_decr_gas :
+   assumes a:"instruction_sem v1 co_ctx a = InstructionContinue v2"
+   and good:"vctx_memory_usage v1 \<ge> 0"
+  shows  "vctx_gas v1 > vctx_gas v2"
+proof -
+  have "meter_gas a v1 co_ctx > 0"
+   using a and good and meter_gas_gt_0 and continue_instruction
+   by auto
+  then show ?thesis using continue_meter_gas and a by force
+qed
 
 definition all_stack :: "state_element set_pred" where
 "all_stack s = (\<exists>t. s = stack_as_set t)"
