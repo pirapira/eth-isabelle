@@ -372,7 +372,7 @@ definition no_assertion :: "constant_ctx \<Rightarrow> bool"
 
 definition failed_for_reasons :: "failure_reason set \<Rightarrow> instruction_result \<Rightarrow> bool"
 where
-"failed_for_reasons allowed r =
+"failed_for_reasons allowed r == allowed \<noteq> {} \<and>
  (\<exists> reasons a b. 
               r = InstructionToEnvironment (ContractFail reasons) a b
               \<and> set reasons \<subseteq> allowed)"

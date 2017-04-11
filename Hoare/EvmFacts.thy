@@ -299,6 +299,7 @@ lemma no_reasons_next :
    "failed_for_reasons {}
    (next_state stopper c (InstructionContinue v)) = False"
 apply (auto simp:failed_for_reasons_def)
+(*
 apply (cases "vctx_next_instruction v c"; auto)
 apply (auto simp:check_resources_def)
 apply (case_tac "case inst_stack_numbers aa of
@@ -312,6 +313,7 @@ apply auto
 using inst_no_reasons apply fastforce
 using length_greater_0_conv apply fastforce
 using n_not_Suc_n apply fastforce
+*)
 done
 
 lemma program_annotation :
@@ -338,6 +340,7 @@ apply (simp add:program_sem.simps failed_for_reasons_def
   program_annotation no_reasons_next)
 apply (simp add:program_sem.simps no_reasons_next
   failed_for_reasons_def)
+(*
 apply (case_tac "next_state stopper c
              (InstructionContinue v)")
 using no_reasons_next
@@ -346,6 +349,7 @@ using program_annotation
 apply force
 using no_reasons_next 
 apply (auto simp add: program_environment failed_for_reasons_def)
+*)
 done
 
 lemmas context_rw = contexts_as_set_def constant_ctx_as_set_def variable_ctx_as_set_def
@@ -1253,6 +1257,147 @@ using ext_length_from_context and ext_program_subset apply force
 using ext_content_from_context and ext_program_subset apply force
 done
 
+(* Looping *)
 
+definition zero :: "'a set_pred" where
+"zero = (\<lambda>x. False)"
+
+lemma zero_add : "zero ## a = a"
+apply (simp add:zero_def sep_add_def)
+done
+
+lemma zero_mul : "zero ** a = zero"
+apply (simp add:zero_def sep_def)
+done
+
+lemma zero_triple : "triple {} zero {} p"
+apply (auto simp add:zero_mul triple_def zero_def sep_def)
+done
+
+lemma loop_triple :
+  "(\<forall>x. \<exists>y. y < x \<and> triple {} (p x) {} (p y ## q)) \<Longrightarrow>
+    p (0::nat) = zero \<Longrightarrow>
+    triple {} (p x) {} q"
+apply auto
+done
+
+lemma triple_three :
+  "triple {} p2 {} (q ## p1) \<Longrightarrow>
+   triple {} p1 {} (q ## p0) \<Longrightarrow>
+   triple {} p2 {} (q ## p0)"
+apply (auto simp:triple_def failed_for_reasons_def)
+apply(drule_tac x = co_ctx in spec)
+apply(drule_tac x = co_ctx in spec)
+apply auto
+apply(drule_tac x = presult in spec)
+apply(drule_tac x = rest in spec)
+apply auto
+apply(drule_tac x = stopper in spec)
+apply auto
+apply (auto simp:sep_add_def)
+apply(drule_tac x = "program_sem stopper co_ctx k presult" in spec)
+apply(drule_tac x = rest in spec)
+apply auto
+apply(drule_tac x = stopper in spec)
+apply auto
+done
+
+lemma loop_triple2 :
+  "(\<forall>x. triple {} (p x) {} (p (x-1) ## q)) \<Longrightarrow>
+    triple {} (p x) {} (p (0::nat) ## q)"
+apply (induction x)
+apply auto
+  apply (metis diff_0_eq_0)
+apply(drule_tac x = "Suc x" in spec)
+apply auto
+apply (rule triple_three)
+apply auto
+done
+
+lemma loop_triple_int :
+  "(\<forall>x. triple {} (p x) {} (p (x-1) ## q)) \<Longrightarrow>
+    \<exists>y. y < (0::int) \<and> triple {} (p x) {} (p y ## q)"
+apply (induction x)
+subgoal for n
+apply (induction n)
+  apply force
+
+apply auto
+apply(drule_tac x = "int (Suc n)" in spec)
+apply auto
+using triple_three
+  by blast
+  by force
+
+
+
+
+definition ex_pred :: "('b \<Rightarrow> 'a set_pred) \<Rightarrow> 'a set_pred" where
+"ex_pred pred = (\<lambda>s. \<exists>y. pred y s)"
+
+definition s_triple :: "state_element set_pred \<Rightarrow> state_element set_pred \<Rightarrow> bool" where
+"s_triple pre post ==
+    \<forall> co_ctx presult rest stopper. no_assertion co_ctx \<longrightarrow>
+       (pre ** rest) (instruction_result_as_set co_ctx presult) \<longrightarrow>
+       (\<exists> k.
+         (post ** rest) (instruction_result_as_set co_ctx (program_sem stopper co_ctx k presult)))"
+
+(*
+lemma s_triple_eq_aux :
+"\<exists>k. (rest ** q) (instruction_result_as_set co_ctx
+                         (program_sem stopper co_ctx k
+                           presult)) \<or>
+                      failed_for_reasons {}
+                       (program_sem stopper co_ctx k
+                         presult) \<Longrightarrow>
+       no_assertion co_ctx \<Longrightarrow>
+       (p ** rest)
+        (instruction_result_as_set co_ctx
+          (InstructionToEnvironment x31 x32 x33)) \<Longrightarrow>
+       presult = InstructionToEnvironment x31 x32 x33 \<Longrightarrow>
+       \<exists>k. (q ** rest)
+            (instruction_result_as_set co_ctx
+              (program_sem stopper co_ctx k
+                (InstructionToEnvironment x31 x32 x33)))"
+apply (auto simp:program_environment)
+*)
+
+lemma s_triple_eq : "s_triple p q = triple {} p {} q"
+apply (auto simp add: triple_def s_triple_def failed_for_reasons_def)
+done
+(*
+  apply blast
+subgoal for co_ctx presult rest stopper
+apply (cases presult)
+  apply (meson no_reasons)
+  apply (metis failed_for_reasons_def instruction_result.simps(8) program_annotation)
+apply auto
+*)
+
+(*
+lemma loop_triple_aux :
+"(\<And>y. y < x \<Longrightarrow> triple {} (p y) {} q) \<Longrightarrow>
+ triple {} (p x) {}
+       (q ## (\<lambda>s. \<exists>y. (p y ** \<langle> y < x \<rangle>) s)) \<Longrightarrow>
+ p 0 = zero \<Longrightarrow>
+ triple {} (p x) {} q"
+apply (auto simp add: triple_def failed_for_reasons_def)
+apply(drule_tac x = co_ctx in spec)
+apply auto
+apply(drule_tac x = presult in spec)
+apply(drule_tac x = rest in spec)
+apply auto
+apply(drule_tac x = stopper in spec)
+apply (auto simp add:sep_add_def)
+
+lemma loop_triple2 :
+  "(\<forall>x. triple {} (p x) {} (ex_pred (\<lambda>y. \<langle>y < x\<rangle> ** p y) ## q)) \<Longrightarrow>
+    p (0::nat) = zero \<Longrightarrow>
+    triple {} (p x) {} q"
+apply (induction x rule:less_induct)
+apply (auto simp add:ex_pred_def zero_triple)
+apply (auto simp add: triple_def)
+
+*)
 
 end
