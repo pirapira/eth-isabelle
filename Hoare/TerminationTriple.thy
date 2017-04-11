@@ -600,14 +600,14 @@ lemma simple_triple :
   by (simp add: pre_imp triple_tauto)
 
 lemma termination_triple :
-   "\<exists>y. y < 0 \<and>
+   "\<exists>y. y < 0 \<and> y \<le> g \<and>
     triple {} (all_perhaps_less_gas g ** continuing) {}
     (all_perhaps_less_gas y ** continuing ##
       (all_with_less_gas g ** not_continuing **
       (delegating ## calling ## creating)
     ## all_perhaps_less_gas g ** not_continuing **
        (failing ## returning  ## destructing)))"
-apply (rule loop_triple_int2 [of "\<lambda>g. all_perhaps_less_gas g ** continuing"
+apply (rule loop_triple_int3 [of "\<lambda>g. all_perhaps_less_gas g ** continuing"
   "\<lambda>g. all_with_less_gas g ** not_continuing **
       (delegating ## calling ## creating)
     ## all_perhaps_less_gas g ** not_continuing **
@@ -727,7 +727,7 @@ qed
 
 
 lemma termination_triple2 :
-   "\<exists>y<0.
+   "\<exists>y<0. y \<le> g \<and>
     triple {} (all_perhaps_less_gas g ** continuing) {}
     ((all_perhaps_less_gas y ** not_continuing ** failing) ##
       (all_with_less_gas g ** not_continuing **
@@ -753,14 +753,52 @@ apply force
 done
 done
 
+lemma add_absorb :
+   "(\<forall>s. p s \<longrightarrow> q s) \<Longrightarrow>
+   q ## p = q"
+apply (rule funext)
+apply (auto simp add:sep_add_def)
+done
+
+lemma perhaps_less_less :
+"y \<le> z \<Longrightarrow>
+ all_perhaps_less_gas y s \<Longrightarrow>
+ all_perhaps_less_gas z s"
+apply (auto simp add:failing_def
+    all_perhaps_less_gas_def not_continuing_def sep_def)
+apply force
+done
+
+lemma imp_mul :
+   "(\<forall>x. p x \<longrightarrow> q x) \<Longrightarrow>
+   (r ** p) x \<Longrightarrow> (r ** q) x"
+apply (auto simp add:failing_def
+    all_perhaps_less_gas_def not_continuing_def sep_def)
+done
+
 lemma termination_triple3 :
-   "g \<ge> 0 \<Longrightarrow>
-    triple {} (all_perhaps_less_gas g ** continuing) {}
-    ( (all_with_less_gas g ** not_continuing **
-      (delegating ## calling ## creating)
-    ## all_perhaps_less_gas g ** not_continuing **
-       (failing ## returning  ## destructing)))"
+   "triple {} (all_perhaps_less_gas g ** continuing) {}
+    ( not_continuing **
+    (all_with_less_gas g ** (delegating ## calling ## creating)
+    ## all_perhaps_less_gas g ** (failing ## returning  ## destructing)))"
 using termination_triple2 [of g]
 apply auto
+subgoal for y
+using perhaps_less_less [of y g]
+proof -
+  assume a1: "y \<le> g"
+  assume a2: "triple {} (continuing ** all_perhaps_less_gas g) {} (failing ** not_continuing ** all_perhaps_less_gas y ## delegating ** not_continuing ** all_with_less_gas g ## calling ** not_continuing ** all_with_less_gas g ## creating ** not_continuing ** all_with_less_gas g ## failing ** not_continuing ** all_perhaps_less_gas g ## destructing ** not_continuing ** all_perhaps_less_gas g ## returning ** not_continuing ** all_perhaps_less_gas g)"
+  assume a3: "\<And>s. \<lbrakk>y \<le> g; all_perhaps_less_gas y s\<rbrakk> \<Longrightarrow> all_perhaps_less_gas g s"
+  have f4: "\<forall>p pa pb. (pb::state_element set \<Rightarrow> bool) ## p ## pa = pa ## pb ## p"
+    using sep_add_assoc by force
+  have f5: "\<forall>p pa pb pc. (pa::state_element set \<Rightarrow> bool) ** (pc ## p) ## pb = pa ** pc ## pa ** p ## pb"
+    by (metis sep_add_assoc sep_add_distr)
+  have "all_perhaps_less_gas g ## all_perhaps_less_gas y = all_perhaps_less_gas g"
+    using a3 a1 by (metis add_absorb)
+  then show ?thesis
+    using f5 f4 a2 by (metis sep_add_commute sep_add_distr)
+qed
+done
+
 
 end

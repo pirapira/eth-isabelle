@@ -1366,6 +1366,26 @@ apply auto
 done
   by (smt negative_zle)
 
+lemma loop_triple_int3 :
+  "(\<forall>x. triple {} (p x) {} (p (x-1) ## q x)) \<Longrightarrow>
+   (\<forall>x. triple {} (q x) {} (q (x+1))) \<Longrightarrow>
+   \<exists>y. y < (0::int) \<and> y \<le> x \<and> triple {} (p x) {} (p y ## q x)"
+apply (induction x)
+subgoal for n
+apply (induction n)
+  apply (smt semiring_1_class.of_nat_simps(1))
+apply auto
+apply(drule_tac x = "int (Suc n)" in spec)
+apply(drule_tac x = "int n" in spec)
+apply auto
+subgoal for n y
+apply (rule exI[of _ y])
+apply auto
+  by (smt sep_add_assoc sep_add_commute sep_add_never triple_stable2 triple_three)
+done
+  by (smt negative_zle)
+
+
 
 
 definition ex_pred :: "('b \<Rightarrow> 'a set_pred) \<Rightarrow> 'a set_pred" where
