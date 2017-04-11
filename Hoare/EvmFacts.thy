@@ -1321,7 +1321,6 @@ apply (induction x)
 subgoal for n
 apply (induction n)
   apply force
-
 apply auto
 apply(drule_tac x = "int (Suc n)" in spec)
 apply auto
@@ -1329,6 +1328,43 @@ using triple_three
   by blast
   by force
 
+definition stable :: "state_element set_pred \<Rightarrow> bool" where
+"stable pre ==
+    \<forall> co_ctx presult rest stopper. no_assertion co_ctx \<longrightarrow>
+       (pre ** rest) (instruction_result_as_set co_ctx presult) \<longrightarrow>
+       (\<forall> k.
+         (pre ** rest) (instruction_result_as_set co_ctx (program_sem stopper co_ctx k presult)))"
+
+
+lemma triple_stable :
+   "triple {} p {} (q##r) \<Longrightarrow>
+    triple {} (p##r) {} (q##r)"
+  using triple_tauto triple_three by fastforce
+
+lemma triple_stable2 :
+   "triple {} p {} (q##s) \<Longrightarrow>
+    triple {} s {} r \<Longrightarrow>
+    triple {} (p##r) {} (q##r)"
+  by (metis sep_add_def triple_stable triple_three weaken_post)
+
+lemma loop_triple_int2 :
+  "(\<forall>x. triple {} (p x) {} (p (x-1) ## q x)) \<Longrightarrow>
+   (\<forall>x. triple {} (q x) {} (q (x+1))) \<Longrightarrow>
+   \<exists>y. y < (0::int) \<and> triple {} (p x) {} (p y ## q x)"
+apply (induction x)
+subgoal for n
+apply (induction n)
+  apply (smt semiring_1_class.of_nat_simps(1))
+apply auto
+apply(drule_tac x = "int (Suc n)" in spec)
+apply(drule_tac x = "int n" in spec)
+apply auto
+subgoal for n y
+apply (rule exI[of _ y])
+apply auto
+  by (smt sep_add_assoc sep_add_commute sep_add_never triple_stable2 triple_three)
+done
+  by (smt negative_zle)
 
 
 
