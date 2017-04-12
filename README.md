@@ -83,6 +83,7 @@ done
 * `make lem-pdf` compiles some of the Lem sources into PDF through LaTeX
 * `make all-isabelle` checks all Isabelle/HOL sources (but not the ones compiled from Lem)
 * `make` does everything above
+* `script/gen_coq.sh` generates a distribution useful for Coq users
 
 ## Links
 
