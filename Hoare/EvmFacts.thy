@@ -1398,62 +1398,291 @@ definition s_triple :: "state_element set_pred \<Rightarrow> state_element set_p
        (\<exists> k.
          (post ** rest) (instruction_result_as_set co_ctx (program_sem stopper co_ctx k presult)))"
 
-(*
-lemma s_triple_eq_aux :
-"\<exists>k. (rest ** q) (instruction_result_as_set co_ctx
-                         (program_sem stopper co_ctx k
-                           presult)) \<or>
-                      failed_for_reasons {}
-                       (program_sem stopper co_ctx k
-                         presult) \<Longrightarrow>
-       no_assertion co_ctx \<Longrightarrow>
-       (p ** rest)
-        (instruction_result_as_set co_ctx
-          (InstructionToEnvironment x31 x32 x33)) \<Longrightarrow>
-       presult = InstructionToEnvironment x31 x32 x33 \<Longrightarrow>
-       \<exists>k. (q ** rest)
-            (instruction_result_as_set co_ctx
-              (program_sem stopper co_ctx k
-                (InstructionToEnvironment x31 x32 x33)))"
-apply (auto simp:program_environment)
-*)
 
 lemma s_triple_eq : "s_triple p q = triple {} p {} q"
 apply (auto simp add: triple_def s_triple_def failed_for_reasons_def)
 done
-(*
-  apply blast
-subgoal for co_ctx presult rest stopper
-apply (cases presult)
-  apply (meson no_reasons)
-  apply (metis failed_for_reasons_def instruction_result.simps(8) program_annotation)
-apply auto
-*)
 
-(*
-lemma loop_triple_aux :
-"(\<And>y. y < x \<Longrightarrow> triple {} (p y) {} q) \<Longrightarrow>
- triple {} (p x) {}
-       (q ## (\<lambda>s. \<exists>y. (p y ** \<langle> y < x \<rangle>) s)) \<Longrightarrow>
- p 0 = zero \<Longrightarrow>
- triple {} (p x) {} q"
-apply (auto simp add: triple_def failed_for_reasons_def)
-apply(drule_tac x = co_ctx in spec)
-apply auto
-apply(drule_tac x = presult in spec)
-apply(drule_tac x = rest in spec)
-apply auto
-apply(drule_tac x = stopper in spec)
-apply (auto simp add:sep_add_def)
+definition failures :: "failure_reason set \<Rightarrow> state_element set_pred" where
+"failures fails = (\<lambda>s.
+   \<exists>lst. set lst \<subseteq> fails \<and> set lst \<noteq> {} \<and>
+   s = {ContinuingElm False,
+    ContractActionElm (ContractFail lst)})"
 
-lemma loop_triple2 :
-  "(\<forall>x. triple {} (p x) {} (ex_pred (\<lambda>y. \<langle>y < x\<rangle> ** p y) ## q)) \<Longrightarrow>
-    p (0::nat) = zero \<Longrightarrow>
-    triple {} (p x) {} q"
-apply (induction x rule:less_induct)
-apply (auto simp add:ex_pred_def zero_triple)
-apply (auto simp add: triple_def)
+lemma s_triple_eq2 :
+   "s_triple (p**code c) (q**code c) = triple {} p c q"
+apply (auto simp add: triple_def s_triple_def failed_for_reasons_def)
+done
 
-*)
+lemma no_annotation_failure :
+ "no_assertion co_ctx \<Longrightarrow>
+  presult \<noteq> InstructionAnnotationFailure \<Longrightarrow>
+  program_sem stopper co_ctx k presult \<noteq> InstructionAnnotationFailure"
+apply(cases presult)
+apply (simp add:program_sem.simps failed_for_reasons_def
+  program_annotation no_reasons_next)
+subgoal for v1
+apply (induction k arbitrary:v1 presult)
+apply (auto simp add:program_sem.simps failed_for_reasons_def
+  program_annotation no_reasons_next)
+apply (case_tac "next_state stopper co_ctx
+             (InstructionContinue v1)")
+apply auto
+defer
+  apply (simp add: program_environment)
+apply(simp add:next_state_def)
+apply(case_tac "vctx_next_instruction v1 co_ctx"; auto)
+apply(case_tac "check_resources v1 co_ctx (vctx_stack v1) a"; auto)
+using no_annotation_inst by force
+  apply (auto simp add: program_environment)
+done
+
+lemma code_elm_preserved :
+"no_assertion co_ctx \<Longrightarrow>
+ CodeElm (pos, i) \<in> instruction_result_as_set co_ctx presult \<Longrightarrow>
+ CodeElm (pos, i) \<in> instruction_result_as_set co_ctx
+ (program_sem stopper co_ctx k  presult)"
+apply (cases presult; auto)
+apply(case_tac "program_sem stopper co_ctx k
+             (InstructionContinue x1)")
+apply (auto simp add:context_rw instruction_result_as_set_def)
+using no_annotation_failure apply force
+using no_annotation_failure apply force
+apply(case_tac "program_sem stopper co_ctx k
+             presult")
+apply (auto simp add:context_rw instruction_result_as_set_def)
+using no_annotation_failure apply force
+apply(case_tac "program_sem stopper co_ctx k
+             presult")
+apply (auto simp add:context_rw instruction_result_as_set_def)
+using no_annotation_failure apply force
+done
+
+lemma continue_elm_false :
+"ContinuingElm False \<notin>
+       instruction_result_as_set co_ctx
+        (InstructionContinue x1)"
+apply(auto simp:context_rw instruction_result_as_set_def)
+done
+
+lemma get_action_elm :
+"ContractActionElm act \<in>
+       instruction_result_as_set co_ctx
+        (InstructionToEnvironment act2 v2 zz) \<Longrightarrow>
+ act = act2"
+apply(auto simp:context_rw instruction_result_as_set_def)
+done
+
+lemma s_triple_imp :
+   "s_triple (p**code c) (q**code c ##failures f) \<Longrightarrow> triple f p c q"
+apply (auto simp add: triple_def s_triple_def sep_add_def)
+apply (drule_tac x = co_ctx in spec)
+apply clarsimp
+apply (drule_tac x = presult and y = rest in spec2)
+apply clarsimp
+apply (drule_tac x = stopper in spec)
+apply clarsimp
+subgoal for co_ctx presult rest stopper k
+apply (rule_tac exI[of _ k])
+apply auto
+using code_elm_preserved apply fastforce
+
+apply (auto simp add:sep_def failures_def
+  failed_for_reasons_def)
+subgoal for u ua v va
+apply (rule exI [of _ "(va -
+          {CodeElm (pos, i) |pos i. (pos, i) \<in> c})"])
+apply auto
+proof -
+  assume a1: "rest ua"
+  assume a2: "ua \<union> va = instruction_result_as_set co_ctx (program_sem stopper co_ctx k presult)"
+  assume a3: "ua \<inter> va = {}"
+  assume "{CodeElm (pos, i) |pos i. (pos, i) \<in> c} \<subseteq> va"
+  then have f4: "ua \<inter> {CodeElm (i, ia) |i ia. (i, ia) \<in> c} = {}"
+    using a3 by blast
+  have "\<forall>S. (va - S) \<inter> ua = {} \<or> {} - ua \<inter> S \<noteq> {}"
+    using a3 by blast
+  then have "(va - {CodeElm (i, ia) |i ia. (i, ia) \<in> c}) \<inter> ua = {} \<and> ua \<union> va - {CodeElm (i, ia) |i ia. (i, ia) \<in> c} = ua \<union> (va - {CodeElm (i, ia) |i ia. (i, ia) \<in> c})"
+    using f4 by (simp add: Diff_triv Un_Diff)
+  then show "\<exists>S. rest S \<and> va - {CodeElm (i, ia) |i ia. (i, ia) \<in> c} \<union> S = instruction_result_as_set co_ctx (program_sem stopper co_ctx k presult) - {CodeElm (i, ia) |i ia. (i, ia) \<in> c} \<and> (va - {CodeElm (i, ia) |i ia. (i, ia) \<in> c}) \<inter> S = {}"
+    using a2 a1 by auto
+qed
+apply (cases "program_sem stopper co_ctx k presult")
+apply simp
+subgoal for u ua v lst x1
+using continue_elm_false[of co_ctx x1]
+apply auto
+done
+apply simp
+subgoal for u ua v lst act vctx x33
+apply (cases act; simp)
+using get_action_elm
+ [of "ContractFail lst" co_ctx act vctx x33]
+  apply (metis contract_action.distinct(5) insertI1 insert_commute)
+using get_action_elm
+ [of "ContractFail lst" co_ctx act vctx x33]
+  apply (metis contract_action.distinct insertI1 insert_commute)
+using get_action_elm
+ [of "ContractFail lst" co_ctx act vctx x33]
+  apply (metis contract_action.distinct insertI1 insert_commute)
+defer
+using get_action_elm
+ [of "ContractFail lst" co_ctx act vctx x33]
+  apply (metis contract_action.distinct insertI1 insert_commute)
+using get_action_elm
+ [of "ContractFail lst" co_ctx act vctx x33]
+  apply (metis contract_action.distinct insertI1 insert_commute)
+  by (metis \<open>ContractActionElm (ContractFail lst) \<in> instruction_result_as_set co_ctx (InstructionToEnvironment act vctx x33) \<Longrightarrow> ContractFail lst = act\<close> contract_action.inject(4) insertI1 insert_commute)
+
+apply (cases "program_sem stopper co_ctx k presult")
+apply simp
+
+subgoal for u ua v va x1
+apply (rule exI [of _ "(va -
+          {CodeElm (pos, i) |pos i. (pos, i) \<in> c})"])
+apply auto
+proof -
+  assume a1: "rest ua"
+  assume a2: "ua \<union> va = instruction_result_as_set co_ctx (InstructionContinue x1)"
+  assume a3: "ua \<inter> va = {}"
+  assume a4: "{CodeElm (pos, i) |pos i. (pos, i) \<in> c} \<subseteq> va"
+  have f5: "\<forall>S. {} - ua \<inter> S = ua \<inter> (va - S)"
+    using a3 by auto
+  have "ua \<union> va - {CodeElm (i, ia) |i ia. (i, ia) \<in> c} = ua \<union> (va - {CodeElm (i, ia) |i ia. (i, ia) \<in> c})"
+    using a4 a3 by auto
+  then have "(va - {CodeElm (i, ia) |i ia. (i, ia) \<in> c}) \<inter> ua = {} \<and> ua \<union> va - {CodeElm (i, ia) |i ia. (i, ia) \<in> c} = va - {CodeElm (i, ia) |i ia. (i, ia) \<in> c} \<union> ua"
+    using f5 by (simp add: inf_sup_aci(1) inf_sup_aci(5))
+  then show "\<exists>S. rest S \<and> va - {CodeElm (i, ia) |i ia. (i, ia) \<in> c} \<union> S = instruction_result_as_set co_ctx (InstructionContinue x1) - {CodeElm (i, ia) |i ia. (i, ia) \<in> c} \<and> (va - {CodeElm (i, ia) |i ia. (i, ia) \<in> c}) \<inter> S = {}"
+    using a2 a1 by auto
+qed
+apply simp
+subgoal for u ua v va
+apply (rule exI [of _ "(va -
+          {CodeElm (pos, i) |pos i. (pos, i) \<in> c})"])
+apply auto
+done
+subgoal for u ua v va act vctx x33
+apply (rule exI [of _ "(va -
+          {CodeElm (pos, i) |pos i. (pos, i) \<in> c})"])
+proof -
+  assume a1: "rest ua"
+  assume a2: "ua \<inter> va = {}"
+  assume a3: "{CodeElm (pos, i) |pos i. (pos, i) \<in> c} \<subseteq> va"
+  assume a4: "q (va - {CodeElm (pos, i) |pos i. (pos, i) \<in> c})"
+  assume "program_sem stopper co_ctx k presult = InstructionToEnvironment act vctx x33"
+  assume a5: "ua \<union> va = instruction_result_as_set co_ctx (program_sem stopper co_ctx k presult)"
+  have "ua \<inter> {CodeElm (i, ia) |i ia. (i, ia) \<in> c} = {}"
+    using a3 a2 by blast
+  then have "va - {CodeElm (i, ia) |i ia. (i, ia) \<in> c} \<union> ua = ua \<union> va - {CodeElm (i, ia) |i ia. (i, ia) \<in> c} \<and> (va - {CodeElm (i, ia) |i ia. (i, ia) \<in> c}) \<inter> ua = {}"
+    using a2 by (simp add: Diff_Int_distrib Diff_triv Un_Diff inf_sup_aci(1) inf_sup_aci(5))
+  then show "q (va - {CodeElm (i, ia) |i ia. (i, ia) \<in> c}) \<and> (\<exists>S. rest S \<and> va - {CodeElm (i, ia) |i ia. (i, ia) \<in> c} \<union> S = instruction_result_as_set co_ctx (program_sem stopper co_ctx k presult) - {CodeElm (i, ia) |i ia. (i, ia) \<in> c} \<and> (va - {CodeElm (i, ia) |i ia. (i, ia) \<in> c}) \<inter> S = {})"
+    using a5 a4 a1 by auto
+qed
+done
+done
+
+definition failures2 :: "failure_reason set \<Rightarrow> state_element set_pred" where
+"failures2 fails = (\<lambda>s.
+   \<exists>lst. set lst \<subseteq> fails \<and> set lst \<noteq> {} \<and>
+   ContinuingElm False \<in> s \<and>
+   ContractActionElm (ContractFail lst) \<in> s)"
+
+lemma s_triple_imp2 :
+   "s_triple (p**code c) (q**code c ##failures2 f) \<Longrightarrow> triple f p c q"
+apply (auto simp add: triple_def s_triple_def sep_add_def)
+apply (drule_tac x = co_ctx in spec)
+apply clarsimp
+apply (drule_tac x = presult and y = rest in spec2)
+apply clarsimp
+apply (drule_tac x = stopper in spec)
+apply clarsimp
+subgoal for co_ctx presult rest stopper k
+apply (rule_tac exI[of _ k])
+apply auto
+using code_elm_preserved apply fastforce
+
+apply (auto simp add:sep_def failures2_def
+  failed_for_reasons_def)
+subgoal for u ua v va
+apply (rule exI [of _ "(va -
+          {CodeElm (pos, i) |pos i. (pos, i) \<in> c})"])
+apply auto
+proof -
+  assume a1: "rest ua"
+  assume a2: "ua \<union> va = instruction_result_as_set co_ctx (program_sem stopper co_ctx k presult)"
+  assume a3: "ua \<inter> va = {}"
+  assume "{CodeElm (pos, i) |pos i. (pos, i) \<in> c} \<subseteq> va"
+  then have f4: "ua \<inter> {CodeElm (i, ia) |i ia. (i, ia) \<in> c} = {}"
+    using a3 by blast
+  have "\<forall>S. (va - S) \<inter> ua = {} \<or> {} - ua \<inter> S \<noteq> {}"
+    using a3 by blast
+  then have "(va - {CodeElm (i, ia) |i ia. (i, ia) \<in> c}) \<inter> ua = {} \<and> ua \<union> va - {CodeElm (i, ia) |i ia. (i, ia) \<in> c} = ua \<union> (va - {CodeElm (i, ia) |i ia. (i, ia) \<in> c})"
+    using f4 by (simp add: Diff_triv Un_Diff)
+  then show "\<exists>S. rest S \<and> va - {CodeElm (i, ia) |i ia. (i, ia) \<in> c} \<union> S = instruction_result_as_set co_ctx (program_sem stopper co_ctx k presult) - {CodeElm (i, ia) |i ia. (i, ia) \<in> c} \<and> (va - {CodeElm (i, ia) |i ia. (i, ia) \<in> c}) \<inter> S = {}"
+    using a2 a1 by auto
+qed
+apply (cases "program_sem stopper co_ctx k presult")
+apply simp
+subgoal for u ua v va lst x1
+using continue_elm_false[of co_ctx x1]
+apply auto
+done
+apply auto
+apply (cases "program_sem stopper co_ctx k presult")
+apply auto
+subgoal for u ua v va lst x31 x32 x33
+apply (rule exI [of _ "(va -
+          {CodeElm (pos, i) |pos i. (pos, i) \<in> c})"])
+apply auto
+  apply (metis Un_upper2 get_action_elm subset_iff)
+  by (metis Un_upper2 get_action_elm subset_iff)
+subgoal for u ua v va
+apply (rule exI [of _ "(va -
+          {CodeElm (pos, i) |pos i. (pos, i) \<in> c})"])
+apply auto
+proof -
+  assume a1: "rest ua"
+  assume a2: "ua \<union> va = instruction_result_as_set co_ctx (program_sem stopper co_ctx k presult)"
+  assume a3: "ua \<inter> va = {}"
+  assume "{CodeElm (pos, i) |pos i. (pos, i) \<in> c} \<subseteq> va"
+  then have "ua \<inter> {} = ua \<inter> {CodeElm (i, ia) |i ia. (i, ia) \<in> c}"
+  using a3 by auto
+  then have "ua \<union> va - {CodeElm (i, ia) |i ia. (i, ia) \<in> c} = va - {CodeElm (i, ia) |i ia. (i, ia) \<in> c} \<union> ua"
+    by auto
+  then show "\<exists>S. rest S \<and> va - {CodeElm (i, ia) |i ia. (i, ia) \<in> c} \<union> S = instruction_result_as_set co_ctx (program_sem stopper co_ctx k presult) - {CodeElm (i, ia) |i ia. (i, ia) \<in> c} \<and> (va - {CodeElm (i, ia) |i ia. (i, ia) \<in> c}) \<inter> S = {}"
+    using a3 a2 a1 by auto
+  qed
+done
+done
+
+lemma s_triple_imp2 :
+   "triple f p c q \<Longrightarrow> s_triple (p**code c) (q**code c ##failures2 f)"
+apply (auto simp add: triple_def s_triple_def sep_add_def)
+apply (drule_tac x = co_ctx in spec)
+apply clarsimp
+apply (drule_tac x = presult and y = rest in spec2)
+apply clarsimp
+apply (drule_tac x = stopper in spec)
+apply clarsimp
+subgoal for co_ctx presult rest stopper k
+apply (rule_tac exI[of _ k])
+apply auto
+
+apply (auto simp add:sep_def failures_def
+  failed_for_reasons_def)[1]
+subgoal for u ua v va
+apply (rule exI [of _ va])
+apply clarsimp
+apply (rule exI [of _
+ "ua \<union> {CodeElm (pos, i) |pos i. (pos, i) \<in> c}"])
+apply auto
+  by (metis (no_types, lifting) Diff_cancel Int_Diff Un_Diff inf_commute inf_sup_absorb inf_sup_aci(1) sup_bot.right_neutral)
+
+apply (cases "program_sem stopper co_ctx k presult")
+apply (simp add:failed_for_reasons_def)
+apply (simp add:failed_for_reasons_def)
+apply (simp add:failed_for_reasons_def)
+apply clarsimp
+oops
 
 end

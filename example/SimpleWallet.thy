@@ -625,7 +625,7 @@ lemma pick_fifth_L :
   "e ** a ** b ** c ** d ** rest = R \<Longrightarrow> a ** b ** c ** d ** e ** rest = R"
 proof -
  have "e ** a ** b ** c ** d ** rest = a ** b ** c ** d ** e ** rest"
-  using first_two by presburger
+  using first_two by auto
  moreover assume "e ** a ** b ** c ** d ** rest = R"
  ultimately show "a ** b ** c ** d ** e ** rest = R"
   by auto
@@ -637,7 +637,8 @@ lemma pick_ninth_L :
 proof -
  have "i ** a ** b ** c ** d ** e ** f ** g ** h ** rest
      = a ** b ** c ** d ** e ** f ** g ** h ** i ** rest"
-  using first_two by presburger
+  using first_two
+  by auto 
  moreover assume "i ** a ** b ** c ** d ** e ** f ** g ** h ** rest = R"
  ultimately show "a ** b ** c ** d ** e ** f ** g ** h ** i ** rest = R"
   by auto
@@ -682,7 +683,7 @@ lemma pick_fourth_L :
   "d ** a ** b ** c ** rest = R \<Longrightarrow> a ** b ** c ** d ** rest = R"
 proof -
  have "d ** a ** b ** c ** rest = a ** b ** c ** d** rest"
-  using first_two by presburger
+  using first_two by auto
  moreover assume "d ** a ** b ** c ** rest = R"
  ultimately show "a ** b ** c ** d ** rest = R"
   by auto
@@ -692,7 +693,7 @@ lemma pick_second_L :
   "b ** a ** rest = R \<Longrightarrow> a ** b ** rest = R"
 proof -
  have "b ** a ** rest = a ** b ** rest"
-  using first_two by presburger
+  using first_two by auto
  moreover assume "b ** a ** rest = R"
  ultimately show "a ** b ** rest = R"
   by auto
