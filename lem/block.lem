@@ -1,5 +1,6 @@
 (**)
 (*Copyright 2016 Sami Mäkelä*)
+(*Copyright 2017 Yoichi Hirai*)
 (**)
 (* Licensed under the Apache License, Version 2.0 (the "License"); *)
 (* you may not use this file except in compliance with the License. *)
@@ -16,9 +17,9 @@
 open import Pervasives
 (*
 open import Word
-open import Word160
 *)
 open import Word8
+open import Word160
 open import Word256
 open import Keccak
 open import Evm
@@ -317,6 +318,7 @@ type tr_result = <|
 |>
 
 type global_state =
+ | Unimplemented
  | Continue of global
  | Finished of tr_result
 
@@ -376,6 +378,7 @@ let create_account n_state new_addr bytes =
 
 let next = function
  | Finished st -> Finished st
+ | Unimplemented -> Unimplemented
  | Continue global (* orig stack state c res *) ->
     let orig = global.g_orig in
     let c = global.g_cctx in
@@ -389,6 +392,9 @@ let next = function
          prerr_endline ("Calling " ^ Z.format "%x" (Word160.word160ToNatural args.callarg_recipient));
          prerr_endline ("with value " ^ Z.format "%x" (word256ToNatural args.callarg_value));
          *)
+         if w160Less args.callarg_recipient 256 then
+           Unimplemented (* precompiled contracts *)
+         else
          let n_state = update_return state c.cctx_this v in
          if (n_state c.cctx_this).account_balance < args.callarg_value || length global.g_stack > 1023 then
             let nv = <| v with vctx_stack = 0 :: v.vctx_stack; vctx_gas = v.vctx_gas + uint args.callarg_gas |> in

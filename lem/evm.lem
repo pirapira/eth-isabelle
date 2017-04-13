@@ -1024,7 +1024,6 @@ type instruction_result =
     contract_action   (* the contract's move *)
   * variable_ctx      (* the last venv *)
   * maybe (integer * integer) (* the variable environment to return to *)
-| InstructionNotYetFormalized
 
 (* When the contract fails, the result of the instruction always looks like this: *)
 val instruction_failure_result : variable_ctx -> list failure_reason -> instruction_result
@@ -1771,7 +1770,6 @@ let subtract_gas consumption memory_usage orig =
   | InstructionAnnotationFailure -> InstructionAnnotationFailure
   | InstructionToEnvironment act v opt ->
     InstructionToEnvironment act (<|v with vctx_gas = v.vctx_gas - consumption; vctx_memory_usage = memory_usage |>) opt
-  | InstructionNotYetFormalized -> InstructionNotYetFormalized
   end
 
 val signextend : w256 -> w256 -> w256
@@ -1953,7 +1951,6 @@ let next_state stopper c pr =
               ))
               v Nothing
      end
-  | InstructionNotYetFormalized -> let () = stopper pr in pr
   end
 
 (* The program execution takes a counter. *)
