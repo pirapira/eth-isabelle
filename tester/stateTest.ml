@@ -87,10 +87,13 @@ let debug_state = function
 
 let debug_mode = if Array.length Sys.argv > 2 then true else false
 
+exception Skip
+
 let run_tr tr state block =
   let res = start_transaction tr state block in
   let rec do_run = function
    | Finished fi -> fi
+   | Unimplemented -> raise Skip
    | a ->
      if debug_mode then debug_state a;
      do_run (next a) in
@@ -116,19 +119,22 @@ let run_test (label, elm) =
   let pre_st = List.map (fun (a,b,_) -> (a,b)) (make_state_list tc.pre) in
   let post_st = make_state_list tc.post in
   let state x = try List.assoc x pre_st with _ -> empty_account0 x in
-  let state = run_tr tr state block_info in
-  List.iter (fun (a,cmp, storage_list) ->
-    let acc = state a in
-    if acc.account_balance0 <> cmp.account_balance0 then begin
-      Printf.printf "address %s has balance %s, but it should be %s!\n%!" (Conv.string_of_address a) (Conv.decimal_of_word256 acc.account_balance0)
-       (Conv.decimal_of_word256 cmp.account_balance0)
-    end;
-    if acc.account_nonce <> cmp.account_nonce then begin
-      Printf.printf "address %s has nonce %s, but it should be %s!\n%!" (Conv.string_of_address a) (Conv.decimal_of_word256 acc.account_nonce)
-       (Conv.decimal_of_word256 cmp.account_nonce)
-    end;
-    List.iter (compare_storage a acc.account_storage0) storage_list) post_st;
-  ()
+  try
+    let state = run_tr tr state block_info in
+    List.iter (fun (a,cmp, storage_list) ->
+      let acc = state a in
+      if acc.account_balance0 <> cmp.account_balance0 then begin
+        Printf.printf "address %s has balance %s, but it should be %s!\n%!" (Conv.string_of_address a) (Conv.decimal_of_word256 acc.account_balance0)
+         (Conv.decimal_of_word256 cmp.account_balance0)
+      end;
+      if acc.account_nonce <> cmp.account_nonce then begin
+        Printf.printf "address %s has nonce %s, but it should be %s!\n%!" (Conv.string_of_address a) (Conv.decimal_of_word256 acc.account_nonce)
+         (Conv.decimal_of_word256 cmp.account_nonce)
+      end;
+      List.iter (compare_storage a acc.account_storage0) storage_list) post_st;
+    ()
+  with
+    Skip -> ()
 
 let main fn filter =
   let test : json = Yojson.Basic.from_file fn in
