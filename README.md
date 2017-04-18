@@ -69,7 +69,7 @@ Moreover, it's possible to run the state tests:
 ```
 for j in `ls ../../tests/StateTests/*.json`
 do
-./stateTest.native $j
+./stateTestReturnStatus.native $j || break
 done
 ```
 
