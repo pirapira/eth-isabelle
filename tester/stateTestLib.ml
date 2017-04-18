@@ -2,6 +2,7 @@ open Yojson.Basic
 open Stateparser
 open Block
 open Evm
+open TestResult
 
 let bighex x = Z.format "%x" (Z.of_string (Big_int.string_of_big_int x))
 
@@ -66,7 +67,7 @@ let construct_tr a = {
 let w256hex i = Z.format "%x" (Word256.word256ToNatural i)
 let w256dec i = Z.format "%d" (Word256.word256ToNatural i)
 
-let debug_vm c1 pr =  
+let debug_vm c1 pr =
  match pr with
   | InstructionContinue v ->
      prerr_endline ("Gas " ^ Z.to_string v.vctx_gas);
@@ -104,13 +105,14 @@ let run_tr tr state block =
   let final_state = end_transaction fi tr block in
   final_state
 
-let compare_storage a stor (p,v) =
+let compare_storage diff_found a stor (p,v) =
   if stor p <> v then begin
-      Printf.printf "address %s has storage %s at %s, but it should be %s!\n" (Conv.string_of_address a) 
-       (Conv.decimal_of_word256 (stor p)) (Conv.decimal_of_word256 p) (Conv.decimal_of_word256 v)
+      Printf.printf "address %s has storage %s at %s, but it should be %s!\n" (Conv.string_of_address a)
+       (Conv.decimal_of_word256 (stor p)) (Conv.decimal_of_word256 p) (Conv.decimal_of_word256 v);
+      diff_found := true
   end
 
-let run_test (label, elm) =
+let run_test (label, elm) : testResult =
   let () = Printf.printf "%s\n%!" label in
   let tc = parse_test_case elm in
   let block_info = construct_block_info tc in
@@ -120,17 +122,20 @@ let run_test (label, elm) =
   let state x = try List.assoc x pre_st with _ -> empty_account0 x in
   try
     let state = run_tr tr state block_info in
+    let diff_found = ref false in
     List.iter (fun (a,cmp, storage_list) ->
       let acc = state a in
       if acc.account_balance0 <> cmp.account_balance0 then begin
         Printf.printf "address %s has balance %s, but it should be %s!\n%!" (Conv.string_of_address a) (Conv.decimal_of_word256 acc.account_balance0)
-         (Conv.decimal_of_word256 cmp.account_balance0)
+         (Conv.decimal_of_word256 cmp.account_balance0);
+        diff_found := true
       end;
       if acc.account_nonce <> cmp.account_nonce then begin
         Printf.printf "address %s has nonce %s, but it should be %s!\n%!" (Conv.string_of_address a) (Conv.decimal_of_word256 acc.account_nonce)
-         (Conv.decimal_of_word256 cmp.account_nonce)
+         (Conv.decimal_of_word256 cmp.account_nonce);
+         diff_found := true
       end;
-      List.iter (compare_storage a acc.account_storage0) storage_list) post_st;
-    ()
+      List.iter (compare_storage diff_found a acc.account_storage0) storage_list) post_st;
+    (if !diff_found then TestFailure else TestSuccess)
   with
-    Skip -> ()
+    Skip -> TestSkipped

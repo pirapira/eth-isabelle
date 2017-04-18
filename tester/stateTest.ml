@@ -6,7 +6,7 @@ let main fn filter =
   let test_assoc : (string * json) list = Util.to_assoc test in
   let check a = match filter with None -> true | Some b -> a = b in
   let () =
-    List.iter (fun (a,b) -> if check a then run_test (a,b)) test_assoc
+    List.iter (fun (a,b) -> if check a then ignore (run_test (a,b))) test_assoc
   in
   ()
 
