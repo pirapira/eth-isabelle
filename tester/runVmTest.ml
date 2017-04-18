@@ -1,6 +1,7 @@
 open Yojson.Basic
 open Jsonparser
 open Constant
+open TestResult
 
 
 let spec_includes_actual (spec_storage : list_storage) (touched : Word256.word256 list) (actual_storage : Word256.word256 -> Word256.word256) : bool =
@@ -72,8 +73,6 @@ let log_comparison
   List.length actual_log = List.length spec_log &&
     (BatList.for_all2 compare_log_entry actual_log spec_log)
 
-
-type testResult = TestSuccess | TestSkipped | TestFailure
 
 let test_one_case j : testResult =
   let test_case : test_case = parse_test_case j in
