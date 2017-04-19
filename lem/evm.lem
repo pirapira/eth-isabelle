@@ -15,6 +15,7 @@
 (* limitations under the License.                                           *)
 
 open import Pervasives
+open import List
 open import Word
 open import Word256
 open import Word160
@@ -123,8 +124,19 @@ let rec cut_memory_aux idx n memory = match n with
 end
 declare termination_argument cut_memory_aux = automatic
 
+val iota : w256 -> natural -> list w256 -> list w256
+let rec iota start n rev_acc =
+  match n with
+  | 0 -> reverse rev_acc
+  | x + 1 -> iota (start + 1) x (start :: rev_acc)
+  end
+declare termination_argument iota = automatic
+
+val cut_memory_aux_alt : w256 -> natural -> memory -> list byte
+let cut_memory_aux_alt idx n memory = List.map memory (iota idx n [])
+
 val cut_memory : w256 -> w256 -> memory -> list byte
-let cut_memory idx n memory = cut_memory_aux idx (word256ToNatural n) memory
+let cut_memory idx n memory = cut_memory_aux_alt idx (word256ToNatural n) memory
 
 val put_return_values_aux : memory -> list byte -> integer -> natural -> memory
 let rec put_return_values_aux orig lst b s = match s with
