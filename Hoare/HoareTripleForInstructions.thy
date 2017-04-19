@@ -1215,10 +1215,57 @@ lemma sep_action_sep :
    (ContractActionElm a \<in> s \<and> (b ** rest) (s - {ContractActionElm a}))"
 	by (metis action_sep set_pred.left_commute)
 
+lemma iota0_non_empty_aux:
+  "\<forall> b x len lst a.
+    len \<le> l \<longrightarrow>
+    iota0 b len (lst @ [a]) = a # iota0 b len lst"
+apply(induction l)
+ apply(simp add: iota0.simps)
+apply(auto simp add: iota0.simps)
+apply(case_tac "len = Suc l")
+ apply clarsimp
+ apply(simp add: iota0.simps)
+ apply(drule_tac x = "b + 1" in spec)
+ apply(drule_tac x = l in spec)
+ apply simp
+ apply(drule_tac x = "b # lst" in spec)
+ apply(drule_tac x = "a" in spec)
+ apply simp
+apply simp
+done
+
+lemma iota0_non_empty_aux':
+  "\<forall> b x len lst a l.
+    len \<le> l \<longrightarrow>
+    iota0 b len (lst @ [a]) = a # iota0 b len lst"
+using iota0_non_empty_aux apply auto
+done
+
+lemma iota0_non_empty:
+  "iota0 b len (lst @ [a]) = a # iota0 b len lst"
+using iota0_non_empty_aux' apply auto
+done
+
+lemma iota0_singleton':
+  "iota0 b len ([] @ [a]) = a # iota0 b len []"
+using iota0_non_empty apply blast
+done
+
+lemma iota0_singleton:
+  "iota0 b len [a] = a # iota0 b len []"
+using iota0_singleton' apply auto
+done
+
+lemma cut_memory_aux_alt_eqv :
+  "\<forall> b. cut_memory_aux_alt b len m = cut_memory_aux b len m"
+apply(induction len)
+ apply(simp add: cut_memory_aux.simps cut_memory_aux_alt_def iota0.simps)
+apply(simp add: cut_memory_aux.simps cut_memory_aux_alt_def iota0.simps iota0_singleton)
+done
 
 lemma cut_memory_head:
  "cut_memory b (n + 1) m = a # lst \<Longrightarrow> m b = a"
-apply(simp add: cut_memory_aux.simps cut_memory_def)
+apply(simp add: cut_memory_aux.simps cut_memory_def cut_memory_aux_alt_eqv)
 apply(cases "unat (n+1)")
 apply(simp add: cut_memory_aux.simps cut_memory_def)
 apply(simp add: cut_memory_aux.simps cut_memory_def)
@@ -1240,7 +1287,7 @@ done
 
 lemma cut_memory_S1 :
   "cut_memory b (n + 1) m = [] \<or> cut_memory b (n + 1) m = m b # cut_memory (b + 1) n m"
-apply(simp add: cut_memory_def)
+apply(simp add: cut_memory_def cut_memory_aux_alt_eqv)
 apply(cases "unat (n + 1)")
 apply(simp add:cut_memory_aux.simps)
 apply(cases "unat n")
@@ -1271,7 +1318,7 @@ qed
 
 lemma cut_memory_zero [simp] :
 "cut_memory b 0 m = []"
-apply(simp add: cut_memory_aux.simps cut_memory_def)
+apply(simp add: cut_memory_aux.simps cut_memory_def cut_memory_aux_alt_eqv)
 done
 
 (*
@@ -1308,7 +1355,7 @@ lemma unat_minus_one2 : "unat x = Suc n \<Longrightarrow> unat (x - 1) = n"
 lemma cut_memory_cons [simp] :
   "(cut_memory b n m = a # lst) =
    (n \<noteq> 0 \<and> m b = a \<and> cut_memory (b + 1) (n - 1) m = lst)"
-apply(auto simp:cut_memory_def cut_memory_aux.simps)
+apply(auto simp:cut_memory_def cut_memory_aux.simps cut_memory_aux_alt_eqv)
 apply(cases "unat n", auto simp:cut_memory_aux.simps)
 apply(cases "unat n", auto simp:cut_memory_aux.simps unat_minus_one)
 apply(cases "unat n", auto simp:cut_memory_aux.simps)
