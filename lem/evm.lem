@@ -416,7 +416,7 @@ let dup_inst_code m =
   (word8FromInt (word4ToUInt m) + 0X80)
 
 val dup_inst_numbers : dup_inst -> stack_numbers
-let dup_inst_numbers m = (word4ToUInt m + 1, word4ToUInt m + 2)
+let dup_inst_numbers m = (word4ToUInt m, word4ToUInt m + 1)
 
 (* subsection {* Memory Operations *} *)
 
@@ -533,7 +533,7 @@ let swap_inst_code m =
 
 val swap_inst_numbers : swap_inst -> stack_numbers
 let swap_inst_numbers m =
-(word4ToUInt m + 2, word4ToUInt m + 2)
+(word4ToUInt m + 1, word4ToUInt m + 1)
 
 (* subsection {* Logging Instructions *} *)
 
