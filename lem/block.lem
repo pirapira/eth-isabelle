@@ -443,8 +443,10 @@ let next = function
          let acc = <| acc with account_balance = args.createarg_value + old_balance; account_exists = true |> in
          let cctx = <| cctx_this = addr; cctx_program = make_program args.createarg_code; cctx_hash_filter = c.cctx_hash_filter |> in
          let n_state = update_world n_state addr acc in
-         let nv = create_env acc n_state args.createarg_value [] (word256FromInteger v.vctx_gas) c.cctx_this v.vctx_origin v.vctx_block in
-         let v = <| v with vctx_gas = 0 |> in
+         let passed_gas : integer = if word256ToNatural v.vctx_block.block_number >= eip150_block then L v.vctx_gas else v.vctx_gas in
+         let remaining_gas = v.vctx_gas - passed_gas in
+         let nv = create_env acc n_state args.createarg_value [] (word256FromInteger passed_gas) c.cctx_this v.vctx_origin v.vctx_block in
+         let v = <| v with vctx_gas = remaining_gas |> in
          Continue (<| global with g_stack=((state,v,c,CreateAddress addr)::global.g_stack);
                                  g_current=n_state; g_cctx=cctx; g_vmstate=InstructionContinue nv |>)
       | ContractFail _ ->
