@@ -731,9 +731,9 @@ val Gbalance : network -> integer
 let Gbalance n =
   if at_least_eip150 n then 400 else 20
 
-val Gsload : natural -> integer
-let Gsload blocknumber =
-  if blocknumber >= eip150_block then 200 else 50
+val Gsload : network -> integer
+let Gsload n =
+  if at_least_eip150 n then 200 else 50
 
 val Gjumpdest : integer
 let Gjumpdest = 1
@@ -1702,7 +1702,7 @@ let thirdComponentOfC i s0 s1 s2 s3 recipient_empty orig_val new_val remaining_g
   | Misc CREATE -> Gcreate
   | Arith SHA3 -> Gsha3 + Gsha3word * ((uint s1 + 31) / 32)
   | Pc JUMPDEST -> Gjumpdest
-  | Storage SLOAD -> Gsload blocknumber
+  | Storage SLOAD -> Gsload net
   | Misc STOP -> Gzero
   | Misc RETURN -> Gzero
   | Info ADDRESS -> Gbase
