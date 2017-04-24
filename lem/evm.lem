@@ -760,9 +760,9 @@ let Gcreate = 32000
 val Gcodedeposit : integer
 let Gcodedeposit = 200
 
-val Gcall : natural -> integer
-let Gcall blocknumber =
-  if blocknumber >= eip150_block then 700 else 40
+val Gcall : network -> integer
+let Gcall net =
+  if at_least_eip150 net then 700 else 40
 
 val Gcallvalue : integer
 let Gcallvalue = 9000
@@ -1318,8 +1318,8 @@ let Cxfer value = if value = 0 then 0 else Gcallvalue
 
 (* Cextra is the function denoted as C_\text{\tiny EXTRA} in the yellow paper. *)
 (* However, it takes a word indicating the transferred value, and a boolean indicating emptiness *)
-val Cextra : w256 -> bool -> natural -> integer
-let Cextra value emp blocknumber = Gcall blocknumber + Cxfer value + Cnew value emp
+val Cextra : w256 -> bool -> network -> integer
+let Cextra value emp net = Gcall net + Cxfer value + Cnew value emp
 
 (* L is the function denoted as L in the yellow paper. *)
 val L : integer -> integer
@@ -1328,28 +1328,28 @@ let L x = x - x / 64
 (* Cgascap is the function denoted as C_{\text{\tiny GASCAP}} in the yellow paper. *)
 (* However, it takes the two topmost stack elements,
    a boolean indicating emptiness of the recipient, and the remaining gas of the caller *)
-val Cgascap : w256 -> w256 -> bool -> integer -> natural -> integer -> integer
-let Cgascap mu0 mu2 emp remaining_gas blocknumber memu_extra =
-  if remaining_gas >= Cextra mu2 emp blocknumber then
-    integerMin (L (remaining_gas - Cextra mu2 emp blocknumber - memu_extra)) (uint mu0)
+val Cgascap : w256 -> w256 -> bool -> integer -> natural -> network -> integer -> integer
+let Cgascap mu0 mu2 emp remaining_gas blocknumber net memu_extra =
+  if remaining_gas >= Cextra mu2 emp net then
+    integerMin (L (remaining_gas - Cextra mu2 emp net - memu_extra)) (uint mu0)
   else
     uint mu0
 
 (* Ccallgas is the function denoted as C_{\text{\tiny CALLGAS}} in the yellow paper. *)
 (* However, it takes the three topmost stack elements,
    a boolean indicating emptiness of the recipient, and the remaining gas of the caller *)
-val Ccallgas : w256 -> w256 -> w256 -> bool -> integer -> natural -> integer -> integer
-let Ccallgas mu0 mu1 mu2 emp remaining_gas blocknumber memu_extra =
-  ( if blocknumber < eip150_block then word256ToInteger mu0  else Cgascap mu0 mu2 emp remaining_gas blocknumber memu_extra) +
+val Ccallgas : w256 -> w256 -> w256 -> bool -> integer -> natural -> network -> integer -> integer
+let Ccallgas mu0 mu1 mu2 emp remaining_gas blocknumber net memu_extra =
+  ( if blocknumber < eip150_block then word256ToInteger mu0  else Cgascap mu0 mu2 emp remaining_gas blocknumber net memu_extra) +
   ( if mu2 = 0 then 0 else Gcallstipend )
 
 (* Ccall is the function denoted as C_{\text{\tiny CALL}} *)
 (* However, it takes the three topmost stack elements, a boolean indicating
    emptiness of the recipient, and the remaining gas of the caller *)
-val Ccall : w256 -> w256 -> w256 -> bool -> integer -> natural -> integer -> integer
-let Ccall mu0 mu1 mu2 emp remaining_gas blocknumber memu_extra =
-  if blocknumber < eip150_block then integerFromNatural (word256ToNatural mu0) + Cextra mu2 emp blocknumber else
-  Cgascap mu0 mu2 emp remaining_gas blocknumber memu_extra + Cextra mu2 emp blocknumber
+val Ccall : w256 -> w256 -> w256 -> bool -> integer -> natural -> network -> integer -> integer
+let Ccall mu0 mu1 mu2 emp remaining_gas blocknumber net memu_extra =
+  if blocknumber < eip150_block then integerFromNatural (word256ToNatural mu0) + Cextra mu2 emp net else
+  Cgascap mu0 mu2 emp remaining_gas blocknumber net memu_extra + Cextra mu2 emp net
 
 (* Cmem is the function denoted as C_{mem} in the yellow paper. *)
 val Cmem : integer -> integer
@@ -1382,10 +1382,10 @@ let call v c = match v.vctx_stack with
                 vctx_stack = (0 :: rest)
              |>
            ))) *)
-     
+     let bn = word256ToNatural v.vctx_block.block_number in
      InstructionToEnvironment (ContractCall
          <| callarg_gas = word256FromInteger (Ccallgas e0 e1 e2
-                     (not (v.vctx_account_existence (w256_to_address e1))) v.vctx_gas (word256ToNatural v.vctx_block.block_number) (calc_memu_extra v));
+                     (not (v.vctx_account_existence (w256_to_address e1))) v.vctx_gas bn (network_of_block_number bn) (calc_memu_extra v));
             callarg_code = w256_to_address e1;
             callarg_recipient = w256_to_address e1;
             callarg_value = e2;
@@ -1412,10 +1412,11 @@ let delegatecall v c = match v.vctx_stack with
              |>
            ))
      else *)
+       let bn = word256ToNatural v.vctx_block.block_number in
        InstructionToEnvironment
          (ContractDelegateCall
            <| callarg_gas = word256FromInteger (Ccallgas e0 e1 0
-                     (not (v.vctx_account_existence (w256_to_address e1))) v.vctx_gas (word256ToNatural v.vctx_block.block_number) (calc_memu_extra2 v));
+                     (not (v.vctx_account_existence (w256_to_address e1))) v.vctx_gas bn (network_of_block_number bn) (calc_memu_extra2 v));
               callarg_code = w256_to_address e1;
               callarg_recipient = w256_to_address e1;
               callarg_value = v.vctx_value_sent;
@@ -1440,10 +1441,11 @@ let callcode v c = match v.vctx_stack with
              |>
            ))
      else *)
+       let bn = word256ToNatural v.vctx_block.block_number in
        InstructionToEnvironment
          (ContractCall
            <| callarg_gas = word256FromInteger (Ccallgas e0 e1 e2
-                     (not (v.vctx_account_existence (w256_to_address e1))) v.vctx_gas (word256ToNatural v.vctx_block.block_number) (calc_memu_extra v));
+                     (not (v.vctx_account_existence (w256_to_address e1))) v.vctx_gas bn (network_of_block_number bn) (calc_memu_extra v));
               callarg_code = w256_to_address e1;
               callarg_recipient = c.cctx_this;
               callarg_value = e2;
@@ -1693,11 +1695,11 @@ let thirdComponentOfC i s0 s1 s2 s3 recipient_empty orig_val new_val remaining_g
   | Log LOG3 -> Glog + Glogdata * uint s1 + 3 * Glogtopic
   | Log LOG4 -> Glog + Glogdata * uint s1 + 4 * Glogtopic
   | Misc CALL
-    -> Ccall s0 s1 s2 recipient_empty remaining_gas blocknumber memu_extra
+    -> Ccall s0 s1 s2 recipient_empty remaining_gas blocknumber (network_of_block_number blocknumber) memu_extra
   | Misc CALLCODE
-    -> Ccall s0 s1 s2 recipient_empty remaining_gas blocknumber memu_extra
+    -> Ccall s0 s1 s2 recipient_empty remaining_gas blocknumber (network_of_block_number blocknumber) memu_extra
   | Misc DELEGATECALL
-    -> if blocknumber < homestead_block then 0 else Ccall s0 s1 0  recipient_empty remaining_gas blocknumber memu_extra
+    -> if blocknumber < homestead_block then 0 else Ccall s0 s1 0  recipient_empty remaining_gas blocknumber (network_of_block_number blocknumber) memu_extra
   | Misc SUICIDE -> Csuicide recipient_empty net
   | Misc CREATE -> Gcreate
   | Arith SHA3 -> Gsha3 + Gsha3word * ((uint s1 + 31) / 32)
