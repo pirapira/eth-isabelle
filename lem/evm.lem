@@ -161,6 +161,23 @@ val empty_storage : storage
 let empty_storage _ = 0
 
 
+type network =
+  Frontier
+| Homestead
+| EIP150
+| EIP158
+| Metropolis
+
+
+val at_least_eip150 : network -> bool
+let at_least_eip150 n =
+  match n with
+    Frontier -> false
+  | Homestead -> false
+  | EIP150 -> true
+  | EIP158 -> true
+  | Metropolis -> true
+  end
 
 type aenv = <|
   aenv_stack : list (w256);
