@@ -750,9 +750,9 @@ let Rsclear = 15000
 val Rsuicide : integer
 let Rsuicide = 24000
 
-val Gsuicide : natural -> integer
-let Gsuicide blocknumber =
-  if blocknumber >= eip150_block then 5000 else 0
+val Gsuicide : network -> integer
+let Gsuicide n =
+  if at_least_eip150 n then 5000 else 0
 
 val Gcreate : integer
 let Gcreate = 32000
@@ -1362,9 +1362,9 @@ let Csstore orig newer = if not (newer = 0) && orig = 0 then Gsset else Gsreset
 
 (* Csuicide is the function denoted as C_\text{\tiny SUICIDE} in the yellow paper. *)
 (* However, it takes a boolean indicating new account creation. *)
-val Csuicide : bool -> natural -> integer
-let Csuicide recipient_empty blocknumber =
-  Gsuicide blocknumber + (if recipient_empty && blocknumber >= eip150_block then Gnewaccount else 0)
+val Csuicide : bool -> network -> integer
+let Csuicide recipient_empty net =
+  Gsuicide net + (if recipient_empty && at_least_eip150 net then Gnewaccount else 0)
 
 
 let calc_memu_extra v = Cmem (new_memory_consumption (Misc CALL) v) - Cmem v.vctx_memory_usage
@@ -1698,7 +1698,7 @@ let thirdComponentOfC i s0 s1 s2 s3 recipient_empty orig_val new_val remaining_g
     -> Ccall s0 s1 s2 recipient_empty remaining_gas blocknumber memu_extra
   | Misc DELEGATECALL
     -> if blocknumber < homestead_block then 0 else Ccall s0 s1 0  recipient_empty remaining_gas blocknumber memu_extra
-  | Misc SUICIDE -> Csuicide recipient_empty blocknumber
+  | Misc SUICIDE -> Csuicide recipient_empty net
   | Misc CREATE -> Gcreate
   | Arith SHA3 -> Gsha3 + Gsha3word * ((uint s1 + 31) / 32)
   | Pc JUMPDEST -> Gjumpdest
