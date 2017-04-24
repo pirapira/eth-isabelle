@@ -727,9 +727,9 @@ val Gextcode : network -> integer
 let Gextcode net =
   if at_least_eip150 net then 700 else 20
 
-val Gbalance : natural -> integer
-let Gbalance blocknumber =
-  if blocknumber >= eip150_block then 400 else 20
+val Gbalance : network -> integer
+let Gbalance n =
+  if at_least_eip150 n then 400 else 20
 
 val Gsload : natural -> integer
 let Gsload blocknumber =
@@ -1752,7 +1752,7 @@ let thirdComponentOfC i s0 s1 s2 s3 recipient_empty orig_val new_val remaining_g
   | Pc JUMP -> Gmid
   | Pc JUMPI -> Ghigh
   | Info EXTCODESIZE -> Gextcode net
-  | Info BALANCE -> Gbalance blocknumber
+  | Info BALANCE -> Gbalance net
   | Info BLOCKHASH -> Gblockhash
   | _ -> 0 (* How is this case dealt in the yellow paper *)
   end
