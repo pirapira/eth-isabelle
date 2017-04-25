@@ -1691,8 +1691,8 @@ end
 (* thirdComponentOfC is the third component in the definition of C (the gas function). *)
 (* However, it takes the next instruction, the four topmost stack elements,
    a boolean indicating emptiness of the recipient, an original word of sstore, a new word of sstore, and the remaining gas of the caller. *)
-val thirdComponentOfC : inst -> w256 -> w256 -> w256 -> w256 -> bool -> w256 -> w256 -> integer -> natural -> network -> integer -> integer
-let thirdComponentOfC i s0 s1 s2 s3 recipient_empty orig_val new_val remaining_gas blocknumber net = fun memu_extra ->
+val thirdComponentOfC : inst -> w256 -> w256 -> w256 -> w256 -> bool -> w256 -> w256 -> integer -> network -> integer -> integer
+let thirdComponentOfC i s0 s1 s2 s3 recipient_empty orig_val new_val remaining_gas net = fun memu_extra ->
   match i with
   | Storage SSTORE -> Csstore orig_val new_val
   | Arith EXP -> Gexp + if s1 = 0 then 0 else Gexpbyte net * (1 + log256floor (uint s1))
@@ -1776,7 +1776,7 @@ let thirdComponentOfC i s0 s1 s2 s3 recipient_empty orig_val new_val remaining_g
 val C : integer -> integer -> inst -> w256 -> w256 -> w256 -> w256 -> bool -> w256 -> w256 -> integer -> natural -> network -> integer
 let C old_memory_consumption new_memory_consumption i s0 s1 s2 s3 recipient_empty orig new_val remaining_gas blocknumber net =
   Cmem new_memory_consumption  - Cmem old_memory_consumption +
-  thirdComponentOfC i s0 s1 s2 s3 recipient_empty orig new_val remaining_gas blocknumber net (Cmem new_memory_consumption  - Cmem old_memory_consumption)
+  thirdComponentOfC i s0 s1 s2 s3 recipient_empty orig new_val remaining_gas net (Cmem new_memory_consumption  - Cmem old_memory_consumption)
 
 val vctx_next_instruction_default : variable_ctx -> constant_ctx -> inst
 let vctx_next_instruction_default v c =
