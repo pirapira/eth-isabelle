@@ -68,7 +68,7 @@ session "all" = "HOL" +
   theories [document = false]
     "~~/src/HOL/Word/Word"
     "~~/src/HOL/Data_Structures/AVL_Map"
-    "attic/Parse"
+    "Parse"
     ContractSem
     RelationalSem
     "Hoare/Hoare"
@@ -88,3 +88,4 @@ session "light" = "HOL" +
     "~~/src/HOL/Data_Structures/AVL_Map"
     "Hoare/HoareTripleForInstructions"
     "example/FailOnReentrance"
+    "Parse"
