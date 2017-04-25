@@ -1421,7 +1421,6 @@ let delegatecall net v c = match v.vctx_stack with
              |>
            ))
      else *)
-       let bn = word256ToNatural v.vctx_block.block_number in
        InstructionToEnvironment
          (ContractDelegateCall
            <| callarg_gas = word256FromInteger (Ccallgas e0 e1 0
