@@ -23,7 +23,8 @@ When you see `\<Rightarrow>` in the source, try using the [Isabelle2016-1](https
 * [lem](http://www.cl.cam.ac.uk/~pes20/lem/built-doc/lem-manual.html#installation)
 * [OCaml](http://www.ocaml.org/) 4.02.3
 * [opam](https://opam.ocaml.org/) 1.2.2
-* Some opam packages: use `opam install ocamlfind batteries yojson bignum easy-format bisect_ppx ocamlbuild`
+* Some opam packages: use `opam install ocamlfind batteries yojson bignum easy-format bisect_ppx ocamlbuild sha`
+* [ECC-OCaml from mrsmkl](https://github.com/mrsmkl/ECC-OCaml)
 
 ## How to read the proofs
 
@@ -69,7 +70,7 @@ Moreover, it's possible to run the state tests:
 ```
 for j in `ls ../../tests/StateTests/*.json`
 do
-./stateTest.native $j
+./stateTestReturnStatus.native $j || break
 done
 ```
 
@@ -83,6 +84,7 @@ done
 * `make lem-pdf` compiles some of the Lem sources into PDF through LaTeX
 * `make all-isabelle` checks all Isabelle/HOL sources (but not the ones compiled from Lem)
 * `make` does everything above
+* `script/gen_coq.sh` generates a distribution useful for Coq users
 
 ## Links
 

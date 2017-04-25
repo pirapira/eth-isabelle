@@ -38,7 +38,7 @@ lemma log256floor_ge_0:
   apply (induct s rule: log256floor.induct)
   subgoal for x
     by (case_tac "\<not> x \<le> 255")
-       (clarsimp simp: log256floor.simps)+
+       (clarsimp)+
   done
 declare  log256floor.simps[simp del ]
 
@@ -403,7 +403,6 @@ done
 lemmas instruction_sem_simps =
   rw sha3_def vctx_update_storage_def
   vctx_pop_stack_def vctx_advance_pc_def
-blockedInstructionContinue_def blocked_jump_def
 vctx_memory_usage_never_decreases
 
 lemma env_meter_gas :

@@ -637,8 +637,12 @@ lemma pick_ninth_L :
 proof -
  have "i ** a ** b ** c ** d ** e ** f ** g ** h ** rest
      = a ** b ** c ** d ** e ** f ** g ** h ** i ** rest"
+<<<<<<< HEAD
   using first_two
   by auto 
+=======
+  using first_two by auto
+>>>>>>> f6df1f2a1a1f57f686db84d8e8afc36f15e31e1e
  moreover assume "i ** a ** b ** c ** d ** e ** f ** g ** h ** rest = R"
  ultimately show "a ** b ** c ** d ** e ** f ** g ** h ** i ** rest = R"
   by auto

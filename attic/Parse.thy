@@ -174,31 +174,20 @@ value "parse_byte 0xa8"
    result is shorter.
 *)
 
-fun parse_bytes_inner :: "nat \<Rightarrow> inst list \<Rightarrow> byte list \<Rightarrow> (inst list \<times> byte list) option"
-where
-"parse_bytes_inner 0 _ _ = None"
-|
-"parse_bytes_inner _ so_far [] = Some (rev so_far, [])" |
-"parse_bytes_inner (Suc fuel) so_far (b # rest) =
+fun parse_bytes :: "byte list \<Rightarrow> inst list" where
+  "parse_bytes [] = []" 
+| "parse_bytes (b # rest) =
    (case parse_byte b of
      Complete i \<Rightarrow>
-       parse_bytes_inner fuel (i # so_far) rest
+       i # (parse_bytes rest)
    | Incomplete n  \<Rightarrow> (* TODO: maybe do a pattern match on n and rest to make it faster *)
-       parse_bytes_inner fuel (Stack (PUSH_N (take n rest (* this still copies the list... *))) # so_far) (drop n rest)
-   )
-   "
+       (Stack (PUSH_N (take n rest ))) # (parse_bytes (drop n rest))
+   )"
 
-declare parse_bytes_inner.simps [simp]
+declare parse_bytes.simps [simp]
 
-abbreviation parse_bytes :: "byte list \<Rightarrow> (inst list \<times> byte list) option"
-where
-"parse_bytes bs == parse_bytes_inner (length bs) [] bs"
-
-declare parse_byte_def [simp]
-
-(* TODO: fix this
 value "parse_bytes [0x60, 0x60, 0x60, 0x40]"
-*)
+
 
 text "I still want to parse something like 0x6060604052604051"
 text "How do I do that?"
@@ -232,10 +221,13 @@ where
 "bytes_of_hex_content [] = []" |
 "bytes_of_hex_content (m # n # rest) = (word_of_int (int_of_integer ((integer_of_hex_char m) * 16 + integer_of_hex_char n)) # bytes_of_hex_content rest)"
 
+abbreviation parse_bytecode :: "char list \<Rightarrow> inst list" where
+"parse_bytecode c == parse_bytes (bytes_of_hex_content c)"
+
 value "parse_byte 111"
 
-(* TODO: fix this
 value "parse_bytes [111, 200, 75, 166, 188, 149, 72, 64, 8, 246, 54, 47, 147, 22, 14, 243, 229, 99]"
-*)
+
+value "parse_bytecode ''6060604052600035900463ffffffff168063dffeadd014603a575b5b34156041575b6047''"
 
 end

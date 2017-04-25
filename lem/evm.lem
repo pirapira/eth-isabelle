@@ -15,6 +15,7 @@
 (* limitations under the License.                                           *)
 
 open import Pervasives
+open import List
 open import Word
 open import Word256
 open import Word160
@@ -126,8 +127,19 @@ let rec cut_memory_aux idx n memory = match n with
 end
 declare termination_argument cut_memory_aux = automatic
 
+val iota : w256 -> natural -> list w256 -> list w256
+let rec iota start n rev_acc =
+  match n with
+  | 0 -> reverse rev_acc
+  | x + 1 -> iota (start + 1) x (start :: rev_acc)
+  end
+declare termination_argument iota = automatic
+
+val cut_memory_aux_alt : w256 -> natural -> memory -> list byte
+let cut_memory_aux_alt idx n memory = List.map memory (iota idx n [])
+
 val cut_memory : w256 -> w256 -> memory -> list byte
-let cut_memory idx n memory = cut_memory_aux idx (word256ToNatural n) memory
+let cut_memory idx n memory = cut_memory_aux_alt idx (word256ToNatural n) memory
 
 val put_return_values_aux : memory -> list byte -> integer -> natural -> memory
 let rec put_return_values_aux orig lst b s = match s with
@@ -407,7 +419,7 @@ let dup_inst_code m =
   (word8FromInt (word4ToUInt m) + 0X80)
 
 val dup_inst_numbers : dup_inst -> stack_numbers
-let dup_inst_numbers m = (word4ToUInt m + 1, word4ToUInt m + 2)
+let dup_inst_numbers m = (word4ToUInt m, word4ToUInt m + 1)
 
 (* subsection {* Memory Operations *} *)
 
@@ -524,7 +536,7 @@ let swap_inst_code m =
 
 val swap_inst_numbers : swap_inst -> stack_numbers
 let swap_inst_numbers m =
-(word4ToUInt m + 2, word4ToUInt m + 2)
+(word4ToUInt m + 1, word4ToUInt m + 1)
 
 (* subsection {* Logging Instructions *} *)
 
@@ -1342,14 +1354,6 @@ let calc_memu_extra2 v = Cmem (new_memory_consumption (Misc DELEGATECALL) v) - C
 val call : variable_ctx -> constant_ctx -> instruction_result
 let call v c = match v.vctx_stack with
  | e0 :: e1 :: e2 :: e3 :: e4 :: e5 :: e6 :: rest ->
-     (* strict_if (word256ULT (v.vctx_balance c.cctx_this) e2)
-        (fun _ -> (InstructionContinue
-           (vctx_advance_pc c
-             <| v with
-                vctx_stack = (0 :: rest)
-             |>
-           ))) *)
-     
      InstructionToEnvironment (ContractCall
          <| callarg_gas = word256FromInteger (Ccallgas e0 e1 e2
                      (not (v.vctx_account_existence (w256_to_address e1))) v.vctx_gas (word256ToNatural v.vctx_block.block_number) (calc_memu_extra v));
@@ -1359,9 +1363,7 @@ let call v c = match v.vctx_stack with
             callarg_data = cut_memory e3 e4 v.vctx_memory;
             callarg_output_begin = e5;
             callarg_output_size = e6 |>)
-        (<| (vctx_advance_pc c v) with
-           vctx_stack = rest;
-           vctx_balance = update_balance c.cctx_this (fun orig -> orig - e2) v.vctx_balance |>)
+        (<| (vctx_advance_pc c v) with vctx_stack = rest |>)
         (Just (* saving the variable environment for timing *)
            (uint e5, uint e6))
   | _ -> instruction_failure_result v [TooShortStack]
@@ -1371,14 +1373,6 @@ end
 val delegatecall : variable_ctx -> constant_ctx -> instruction_result
 let delegatecall v c = match v.vctx_stack with
  | e0 :: e1 :: e3 :: e4 :: e5 :: e6 :: rest ->
-    (* if word256ULT (v.vctx_balance c.cctx_this) v.vctx_value_sent then
-        (InstructionContinue
-           (vctx_advance_pc c
-             <| v with
-                vctx_stack = (0 :: rest)
-             |>
-           ))
-     else *)
        InstructionToEnvironment
          (ContractDelegateCall
            <| callarg_gas = word256FromInteger (Ccallgas e0 e1 0
@@ -1399,14 +1393,6 @@ end
 val callcode : variable_ctx -> constant_ctx -> instruction_result
 let callcode v c = match v.vctx_stack with
  | e0 :: e1 :: e2 :: e3 :: e4 :: e5 :: e6 :: rest ->
-    (* if word256ULT (v.vctx_balance  c.cctx_this) e2 then
-        (InstructionContinue
-           (vctx_advance_pc c
-             <| v with
-                vctx_stack = (0 :: rest)
-             |>
-           ))
-     else *)
        InstructionToEnvironment
          (ContractCall
            <| callarg_gas = word256FromInteger (Ccallgas e0 e1 e2
@@ -1418,8 +1404,7 @@ let callcode v c = match v.vctx_stack with
               callarg_output_begin = e5;
               callarg_output_size = e6 |>)
           (<| (vctx_advance_pc c v) with
-                  vctx_stack = rest;
-                  vctx_balance = update_balance c.cctx_this (fun orig -> orig - e2) v.vctx_balance |>)
+                  vctx_stack = rest |>)
           (Just (* saving the variable environment *) (uint e5, uint e6))
   | _ -> instruction_failure_result v [TooShortStack]
 end
@@ -1428,21 +1413,11 @@ end
 val create : variable_ctx -> constant_ctx -> instruction_result
 let create v c = match v.vctx_stack with
   | vl :: code_start :: code_len :: rest ->
-      if word256ULT (v.vctx_balance c.cctx_this) vl then
-        (InstructionContinue
-           (vctx_advance_pc c
-             <| v with
-                vctx_stack = (0 :: rest)
-             |>
-           ))
-      else
         let code = cut_memory code_start code_len v.vctx_memory in
-        let new_balance = update_balance c.cctx_this (fun orig -> orig - vl) v.vctx_balance in
         InstructionToEnvironment
            (ContractCreate
              <| createarg_value = vl; createarg_code = code |>)
-            (<| (vctx_advance_pc c v) with vctx_stack = rest;
-                 vctx_balance = new_balance |>)
+            (<| (vctx_advance_pc c v) with vctx_stack = rest |>)
             (Just (* when returning to this invocation, use the following variable environment *)
               (0, 0))
   | _ -> instruction_failure_result v [TooShortStack]

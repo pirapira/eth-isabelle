@@ -1,5 +1,6 @@
 (**)
 (*Copyright 2016 Sami Mäkelä*)
+(*Copyright 2017 Yoichi Hirai*)
 (**)
 (* Licensed under the Apache License, Version 2.0 (the "License"); *)
 (* you may not use this file except in compliance with the License. *)
@@ -16,9 +17,9 @@
 open import Pervasives
 (*
 open import Word
-open import Word160
 *)
 open import Word8
+open import Word160
 open import Word256
 open import Keccak
 open import Evm
@@ -318,6 +319,7 @@ type tr_result = <|
 |>
 
 type global_state =
+ | Unimplemented
  | Continue of global
  | Finished of tr_result
 
@@ -377,21 +379,20 @@ let create_account n_state new_addr bytes =
 
 let next = function
  | Finished st -> Finished st
- | Continue global (* orig stack state c res *) ->
+ | Unimplemented -> Unimplemented
+ | Continue global ->
     let orig = global.g_orig in
     let c = global.g_cctx in
     let state = global.g_current in
-    (* prerr_endline ("balance " ^ Z.format "%d" (word256ToNatural (state c1.cctx_this).account_balance0)); *)
     match global.g_vmstate with
     | InstructionToEnvironment act v stuff ->
       match act with
       | ContractCall args ->
-         (*
-         prerr_endline ("Calling " ^ Z.format "%x" (Word160.word160ToNatural args.callarg_recipient));
-         prerr_endline ("with value " ^ Z.format "%x" (word256ToNatural args.callarg_value));
-         *)
+         if w160Less args.callarg_recipient 256 then
+           Unimplemented (* precompiled contracts *)
+         else
          let n_state = update_return state c.cctx_this v in
-         if (n_state c.cctx_this).account_balance < args.callarg_value || length global.g_stack > 1023 then
+         if word256ULT (n_state c.cctx_this).account_balance args.callarg_value || length global.g_stack > 1023 then
             let nv = <| v with vctx_stack = 0 :: v.vctx_stack; vctx_gas = v.vctx_gas + uint args.callarg_gas |> in
             Continue (<| global with g_current = n_state; g_vmstate = InstructionContinue nv |>) else
          let n_state = update_call n_state c.cctx_this args in
@@ -400,13 +401,12 @@ let next = function
             cctx_this = args.callarg_recipient;
             cctx_program = (n_state args.callarg_code).account_code;
             cctx_hash_filter = c.cctx_hash_filter |> in
-         (* let v = <| v with vctx_gas = v.vctx_gas - word256ToInteger args.callarg_gas |> in *)
          let nv = start_env acc n_state args c.cctx_this v.vctx_origin v.vctx_block in
          Continue (<| global with g_stack=((state,v,c,get_hint stuff)::global.g_stack);
                                  g_current=n_state; g_cctx=cctx; g_vmstate=InstructionContinue nv |>)
       | ContractDelegateCall args ->
          let n_state = update_return state c.cctx_this v in
-         if (n_state c.cctx_this).account_balance < args.callarg_value || length global.g_stack > 1023 then
+         if length global.g_stack > 1023 then
             let nv = <| v with vctx_stack = 0 :: v.vctx_stack; vctx_gas = v.vctx_gas + uint args.callarg_gas |> in
             Continue (<| global with g_current = n_state; g_vmstate = InstructionContinue nv |>) else
          let acc = n_state c.cctx_this in
@@ -418,23 +418,24 @@ let next = function
          Continue (<| global with g_stack=((state,v,c,get_hint stuff)::global.g_stack);
                                  g_current=n_state; g_cctx=cctx; g_vmstate=InstructionContinue nv |>)
       | ContractCreate args ->
+         if word256ULT (state c.cctx_this).account_balance args.createarg_value || length global.g_stack > 1023 then
+            let nv = <| v with vctx_stack = 0 :: v.vctx_stack |> in
+            Continue (<| global with g_current = state; g_vmstate = InstructionContinue nv |>) else
          let state = update_nonce state c.cctx_this in
          let n_state = update_return state c.cctx_this v in
          let n_state = update_tr n_state c.cctx_this args.createarg_value in
          let n_acc = n_state c.cctx_this in
          let addr = w256_to_address (keccak (RLP (Node [RLP_address c.cctx_this; RLP_w256 (n_acc.account_nonce-1)]))) in
-         (*
-         prerr_endline ("creating " ^ Z.format "%x" (Word160.word160ToNatural addr));
-         prerr_endline ("nonce " ^ Z.format "%d" (word256ToNatural n_acc.account_nonce));
-         prerr_endline ("rlp " ^ String.concat "," (List.map (fun x -> Z.to_string (word8ToNatural x)) rlp));
-         *)
+         let old_acc = n_state addr in
+         let old_balance = old_acc.account_balance in
          let acc = empty_account addr in
-         (* let acc = set_account_code acc args.createarg_code in *)
-         let acc = <| acc with account_balance = args.createarg_value; account_exists = true |> in
+         let acc = <| acc with account_balance = args.createarg_value + old_balance; account_exists = true |> in
          let cctx = <| cctx_this = addr; cctx_program = make_program args.createarg_code; cctx_hash_filter = c.cctx_hash_filter |> in
          let n_state = update_world n_state addr acc in
-         let nv = create_env acc n_state args.createarg_value [] (word256FromInteger v.vctx_gas) c.cctx_this v.vctx_origin v.vctx_block in
-         let v = <| v with vctx_gas = 0 |> in
+         let passed_gas : integer = if word256ToNatural v.vctx_block.block_number >= eip150_block then L v.vctx_gas else v.vctx_gas in
+         let remaining_gas = v.vctx_gas - passed_gas in
+         let nv = create_env acc n_state args.createarg_value [] (word256FromInteger passed_gas) c.cctx_this v.vctx_origin v.vctx_block in
+         let v = <| v with vctx_gas = remaining_gas |> in
          Continue (<| global with g_stack=((state,v,c,CreateAddress addr)::global.g_stack);
                                  g_current=n_state; g_cctx=cctx; g_vmstate=InstructionContinue nv |>)
       | ContractFail _ ->
@@ -489,10 +490,6 @@ let next = function
          end
       end
     | a -> 
-      (*
-      let InstructionContinue v = a in
-      prerr_endline ("Gas " ^ Z.to_string v.vctx_gas);
-      *)
       Continue (<| global with g_vmstate = next_state (fun _ -> ()) c a |>)
     end
 end
