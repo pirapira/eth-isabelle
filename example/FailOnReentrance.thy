@@ -98,6 +98,9 @@ lemma discard_check_resources [dest!] :
 apply(auto)
 done
 
+declare network_of_block_number_def [simp]
+declare at_least_eip150.simps [simp]
+
 lemma invariant_kept:
 "no_assertion_failure fail_on_reentrance_invariant"
 apply(simp add: no_assertion_failure_def)
@@ -133,6 +136,7 @@ apply(drule fail_on_reentrance_invariant.cases; auto)
         apply(simp)
        apply(simp)
       apply(simp)
+
      apply(drule fail_on_reentrance_invariant.cases; auto)
      apply(case_tac steps; auto simp add: fail_on_reentrance_invariant.simps)
      apply(case_tac nata; auto simp add: fail_on_reentrance_invariant.simps)
