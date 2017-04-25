@@ -1795,20 +1795,19 @@ let vctx_recipient v c =
   | _ -> 0
   end
 
-val meter_gas : inst -> variable_ctx -> constant_ctx -> integer
-let meter_gas i v c =
-  let blocknumber = word256ToNatural v.vctx_block.block_number in
+val meter_gas : inst -> variable_ctx -> constant_ctx -> network -> integer
+let meter_gas i v c net =
   C v.vctx_memory_usage (new_memory_consumption i v) (vctx_next_instruction_default v c)
     (vctx_stack_default 0 v) (vctx_stack_default 1 v) (vctx_stack_default 2 v) (vctx_stack_default 3 v)
     (not (v.vctx_account_existence (vctx_recipient v c))) (v.vctx_storage (vctx_stack_default 0 v))
-    (vctx_stack_default 1 v) v.vctx_gas (network_of_block_number blocknumber)
+    (vctx_stack_default 1 v) v.vctx_gas net
 
-val check_resources : variable_ctx -> constant_ctx -> list w256 -> inst -> bool
-let check_resources v c s i =
+val check_resources : variable_ctx -> constant_ctx -> list w256 -> inst -> network -> bool
+let check_resources v c s i net =
   match inst_stack_numbers i with
   | (consumed, produced) ->
     (intFromNat (length s) + produced - consumed <= 1024) &&
-    (meter_gas i v c <= v.vctx_gas)
+    (meter_gas i v c net <= v.vctx_gas)
   end
 
 
@@ -1836,9 +1835,9 @@ let signextend len w =
 
 (* Finally, using the above definitions, I can define a function that operates an instruction *)
 (* on the execution environments. *)
-val instruction_sem : variable_ctx -> constant_ctx -> inst -> instruction_result
-let instruction_sem v c inst =
-  subtract_gas (meter_gas inst v c) (new_memory_consumption inst v)
+val instruction_sem : variable_ctx -> constant_ctx -> inst -> network -> instruction_result
+let instruction_sem v c inst net =
+  subtract_gas (meter_gas inst v c net) (new_memory_consumption inst v)
   (match inst with
   | Stack (PUSH_N lst) -> stack_0_1_op v c (word_of_bytes (constant_mark lst))
   | Unknown _ -> instruction_failure_result v [ShouldNotHappen]
@@ -1975,8 +1974,8 @@ let check_annotations v c =
   List.all (fun annot -> annot (build_aenv v c)) annots
 
 
-val next_state: (instruction_result -> unit) -> constant_ctx -> instruction_result -> instruction_result
-let next_state stopper c pr =
+val next_state: (instruction_result -> unit) -> constant_ctx -> network -> instruction_result -> instruction_result
+let next_state stopper c net pr =
   match pr with
   | InstructionToEnvironment _ _ _ ->
     let () = stopper pr in pr
@@ -1989,14 +1988,14 @@ let next_state stopper c pr =
         (*
         prerr_endline ("Inst " ^ String.concat "," (List.map (fun x -> Z.format "%x" (word8ToNatural x)) (inst_code i)));
         *)
-        if check_resources v c v.vctx_stack i then
-          instruction_sem v c i
+        if check_resources v c v.vctx_stack i net then
+          instruction_sem v c i net
         else
           InstructionToEnvironment (ContractFail
               (match inst_stack_numbers i with
                | (consumed, produced) ->
                  (if (intFromNat (length v.vctx_stack) + produced - consumed <= 1024) then [] else [TooLongStack])
-                  ++ (if meter_gas i v c <= v.vctx_gas then [] else [OutOfGas])
+                  ++ (if meter_gas i v c net <= v.vctx_gas then [] else [OutOfGas])
                end
               ))
               v Nothing
@@ -2010,11 +2009,11 @@ let next_state stopper c pr =
 (* Also, during the proofs, I can do case analysis on the number of backwad jumps *)
 (* rather than the number of instructions. *)
 
-val program_sem :  (instruction_result -> unit) -> constant_ctx -> nat -> instruction_result -> instruction_result
-let rec program_sem stopper c fuel pr =
+val program_sem :  (instruction_result -> unit) -> constant_ctx -> nat -> network -> instruction_result -> instruction_result
+let rec program_sem stopper c fuel net pr =
 match fuel with
  | 0 -> pr
- | fuel_pred + 1 -> program_sem stopper c fuel_pred (next_state stopper c pr)
+ | fuel_pred + 1 -> program_sem stopper c fuel_pred net (next_state stopper c net pr)
 end
 declare termination_argument program_sem = automatic
 
