@@ -1346,9 +1346,9 @@ let Ccallgas mu0 mu1 mu2 emp remaining_gas net memu_extra =
 (* Ccall is the function denoted as C_{\text{\tiny CALL}} *)
 (* However, it takes the three topmost stack elements, a boolean indicating
    emptiness of the recipient, and the remaining gas of the caller *)
-val Ccall : w256 -> w256 -> w256 -> bool -> integer -> natural -> network -> integer -> integer
-let Ccall mu0 mu1 mu2 emp remaining_gas blocknumber net memu_extra =
-  if blocknumber < eip150_block then integerFromNatural (word256ToNatural mu0) + Cextra mu2 emp net else
+val Ccall : w256 -> w256 -> w256 -> bool -> integer -> network -> integer -> integer
+let Ccall mu0 mu1 mu2 emp remaining_gas net memu_extra =
+  if at_least_eip150 net then integerFromNatural (word256ToNatural mu0) + Cextra mu2 emp net else
   Cgascap mu0 mu2 emp remaining_gas net memu_extra + Cextra mu2 emp net
 
 (* Cmem is the function denoted as C_{mem} in the yellow paper. *)
@@ -1695,11 +1695,11 @@ let thirdComponentOfC i s0 s1 s2 s3 recipient_empty orig_val new_val remaining_g
   | Log LOG3 -> Glog + Glogdata * uint s1 + 3 * Glogtopic
   | Log LOG4 -> Glog + Glogdata * uint s1 + 4 * Glogtopic
   | Misc CALL
-    -> Ccall s0 s1 s2 recipient_empty remaining_gas blocknumber (network_of_block_number blocknumber) memu_extra
+    -> Ccall s0 s1 s2 recipient_empty remaining_gas (network_of_block_number blocknumber) memu_extra
   | Misc CALLCODE
-    -> Ccall s0 s1 s2 recipient_empty remaining_gas blocknumber (network_of_block_number blocknumber) memu_extra
+    -> Ccall s0 s1 s2 recipient_empty remaining_gas (network_of_block_number blocknumber) memu_extra
   | Misc DELEGATECALL
-    -> if blocknumber < homestead_block then 0 else Ccall s0 s1 0  recipient_empty remaining_gas blocknumber (network_of_block_number blocknumber) memu_extra
+    -> if blocknumber < homestead_block then 0 else Ccall s0 s1 0  recipient_empty remaining_gas (network_of_block_number blocknumber) memu_extra
   | Misc SUICIDE -> Csuicide recipient_empty net
   | Misc CREATE -> Gcreate
   | Arith SHA3 -> Gsha3 + Gsha3word * ((uint s1 + 31) / 32)
