@@ -1712,14 +1712,14 @@ declare meter_gas_def [simp del]
 declare misc_inst_numbers.simps [simp]
 
 definition triple_alt ::
- "failure_reason set \<Rightarrow> (state_element set \<Rightarrow> bool) \<Rightarrow> (int * inst) set \<Rightarrow> (state_element set \<Rightarrow> bool) \<Rightarrow> bool"
+ "network \<Rightarrow> failure_reason set \<Rightarrow> (state_element set \<Rightarrow> bool) \<Rightarrow> (int * inst) set \<Rightarrow> (state_element set \<Rightarrow> bool) \<Rightarrow> bool"
 where
-  "triple_alt allowed_failures pre insts post ==
+  "triple_alt net allowed_failures pre insts post ==
     \<forall> co_ctx presult rest stopper. no_assertion co_ctx \<longrightarrow>
        (code insts ** pre ** rest) (instruction_result_as_set co_ctx presult) \<longrightarrow>
        (\<exists> k.
-         ((post ** code insts ** rest) (instruction_result_as_set co_ctx (program_sem stopper co_ctx k presult)))
-         \<or> failed_for_reasons allowed_failures (program_sem stopper co_ctx k presult))"
+         ((post ** code insts ** rest) (instruction_result_as_set co_ctx (program_sem stopper co_ctx k net presult)))
+         \<or> failed_for_reasons allowed_failures (program_sem stopper co_ctx k net presult))"
 
 lemma code_ac :
   "(code c ** pre ** rest) s =
@@ -1727,7 +1727,7 @@ lemma code_ac :
 by simp
 
 lemma triple_triple_alt :
-  "triple s pre c post = triple_alt s pre c post"
+  "triple net s pre c post = triple_alt net s pre c post"
 apply(simp only: triple_def triple_alt_def code_ac)
 done
 
@@ -1955,11 +1955,11 @@ lemma call_new_balance [simp] :
       "v \<le> fund \<Longrightarrow>
        ThisAccountElm this \<in> instruction_result_as_set co_ctx (InstructionContinue x1) \<Longrightarrow>
        vctx_balance x1 this = fund \<Longrightarrow>
-       meter_gas (Misc CALL) x1 co_ctx \<le> vctx_gas x1 \<Longrightarrow>
+       meter_gas (Misc CALL) x1 co_ctx net \<le> vctx_gas x1 \<Longrightarrow>
        vctx_stack x1 = g # r # v # in_begin # in_size # out_begin # out_size # tf \<Longrightarrow>
        BalanceElm (this, fund - v)
        \<in> instruction_result_as_set co_ctx
-           (subtract_gas (meter_gas (Misc CALL) x1 co_ctx) memu (call x1 co_ctx))"
+           (subtract_gas (meter_gas (Misc CALL) x1 co_ctx net) memu (call x1 co_ctx))"
 apply(clarify)
 apply(auto simp add: call_def failed_for_reasons_def)
 apply(simp add: instruction_result_as_set_def subtract_gas.simps strict_if_def)
@@ -2261,7 +2261,7 @@ begin
 lemma call_memory_no_change [simp] :
   "x \<in> memory_range_elms in_begin input \<Longrightarrow>
    x \<in> instruction_result_as_set co_ctx
-         (subtract_gas (meter_gas (Misc CALL) x1 co_ctx) memu (call x1 co_ctx)) =
+         (subtract_gas (meter_gas (Misc CALL) x1 co_ctx net) memu (call x1 co_ctx)) =
   (x \<in> instruction_result_as_set co_ctx (InstructionContinue x1))"
 apply(simp add: call_def)
 apply(case_tac "vctx_stack x1"; simp)

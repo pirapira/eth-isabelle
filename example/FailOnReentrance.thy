@@ -87,14 +87,14 @@ declare environment_turn.simps [simp]
 declare contract_turn.simps [simp]
 
 lemma check_resources_split [split] :
-"P (if check_resources v con s i then X else k) =
-          (\<not> (\<not> check_resources v con s i \<and> \<not> P k \<or> check_resources v con s i \<and> \<not> P X ))"
+"P (if check_resources v con s i net then X else k) =
+          (\<not> (\<not> check_resources v con s i net \<and> \<not> P k \<or> check_resources v con s i net \<and> \<not> P X ))"
 apply(simp only: if_splits(2))
 apply(auto)
 done
 
 lemma discard_check_resources [dest!] :
-"check_resources v c s i \<Longrightarrow> True"
+"check_resources v c s i net \<Longrightarrow> True"
 apply(auto)
 done
 
@@ -102,7 +102,7 @@ declare network_of_block_number_def [simp]
 declare at_least_eip150.simps [simp]
 
 lemma invariant_kept:
-"no_assertion_failure fail_on_reentrance_invariant"
+"at_least_eip150 net \<Longrightarrow> no_assertion_failure net fail_on_reentrance_invariant"
 apply(simp add: no_assertion_failure_def)
 apply(rule allI)
 apply(rule allI)
@@ -136,7 +136,6 @@ apply(drule fail_on_reentrance_invariant.cases; auto)
         apply(simp)
        apply(simp)
       apply(simp)
-
      apply(drule fail_on_reentrance_invariant.cases; auto)
      apply(case_tac steps; auto simp add: fail_on_reentrance_invariant.simps)
      apply(case_tac nata; auto simp add: fail_on_reentrance_invariant.simps)

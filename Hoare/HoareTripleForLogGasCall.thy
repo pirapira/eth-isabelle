@@ -10,7 +10,7 @@ context
 begin
 
 lemma log0_gas_triple :
-  "triple {OutOfGas}
+  "triple net {OutOfGas}
           (\<langle> h \<le> 1022 \<and> length data = unat logged_size \<rangle> **
            memory_range logged_start data **
            this_account this **
@@ -55,7 +55,7 @@ done
 
 
 lemma log1_gas_triple :
-  "triple {OutOfGas}
+  "triple net {OutOfGas}
           (\<langle> h \<le> 1021 \<and> length data = unat logged_size \<rangle> **
            memory_range logged_start data **
            this_account this **
@@ -101,7 +101,7 @@ done
 
 
 lemma log2_gas_triple :
-  "triple {OutOfGas}
+  "triple net {OutOfGas}
           (\<langle> h \<le> 1020 \<and> length data = unat logged_size \<rangle> **
            memory_range logged_start data **
            this_account this **
@@ -146,7 +146,7 @@ done
 
 
 lemma log3_gas_triple :
-  "triple {OutOfGas}
+  "triple net {OutOfGas}
           (\<langle> h \<le> 1019 \<and> length data = unat logged_size \<rangle> **
            memory_range logged_start data **
            this_account this **
@@ -191,7 +191,7 @@ apply (simp add: create_log_entry_def vctx_returned_bytes_def)
 done
 
 lemma log4_gas_triple :
-  "triple {OutOfGas}
+  "triple net {OutOfGas}
           (\<langle> h \<le> 1018 \<and> length data = unat logged_size \<rangle> **
            memory_range logged_start data **
            this_account this **
@@ -311,7 +311,7 @@ context
 begin
 
 lemma gas_gas_triple :
-  "triple {OutOfGas}
+  "triple net {OutOfGas}
           (\<langle> h \<le> 1023 \<rangle> ** stack_height h ** program_counter k ** gas_pred g ** continuing)
           {(k, Info GAS)}
           (stack_height (h + 1) ** stack h (word_of_int (g - 2))
