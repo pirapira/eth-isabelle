@@ -776,9 +776,9 @@ let Gnewaccount = 25000
 val Gexp : integer
 let Gexp = 10
 
-val Gexpbyte : natural -> integer
-let Gexpbyte blocknumber =
-  if blocknumber >= eip150_block then 50 else 10
+val Gexpbyte : network -> integer
+let Gexpbyte net =
+  if at_least_eip150 net then 50 else 10
 
 val Gmemory : integer
 let Gmemory = 3
@@ -1685,7 +1685,7 @@ val thirdComponentOfC : inst -> w256 -> w256 -> w256 -> w256 -> bool -> w256 -> 
 let thirdComponentOfC i s0 s1 s2 s3 recipient_empty orig_val new_val remaining_gas blocknumber net = fun memu_extra ->
   match i with
   | Storage SSTORE -> Csstore orig_val new_val
-  | Arith EXP -> Gexp + if s1 = 0 then 0 else Gexpbyte blocknumber * (1 + log256floor (uint s1))
+  | Arith EXP -> Gexp + if s1 = 0 then 0 else Gexpbyte net * (1 + log256floor (uint s1))
   | Memory CALLDATACOPY -> Gverylow + Gcopy * ((uint s2 + 31) / 32)
   | Memory CODECOPY -> Gverylow + Gcopy * ((uint s2 + 31) / 32)
   | Memory EXTCODECOPY -> Gextcode net + Gcopy * ((uint s3 + 31) / 32)
