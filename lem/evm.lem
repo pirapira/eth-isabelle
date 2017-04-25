@@ -1382,8 +1382,8 @@ let calc_memu_extra2 v = Cmem (new_memory_consumption (Misc DELEGATECALL) v) - C
 
 (* CALL instruction results in @{term ContractCall} action when there are enough stack elements *)
 (* (and gas, when we introduce the gas accounting). *)
-val call : variable_ctx -> constant_ctx -> instruction_result
-let call v c = match v.vctx_stack with
+val call : network -> variable_ctx -> constant_ctx -> instruction_result
+let call net v c = match v.vctx_stack with
  | e0 :: e1 :: e2 :: e3 :: e4 :: e5 :: e6 :: rest ->
      (* strict_if (word256ULT (v.vctx_balance c.cctx_this) e2)
         (fun _ -> (InstructionContinue
@@ -1392,10 +1392,9 @@ let call v c = match v.vctx_stack with
                 vctx_stack = (0 :: rest)
              |>
            ))) *)
-     let bn = word256ToNatural v.vctx_block.block_number in
      InstructionToEnvironment (ContractCall
          <| callarg_gas = word256FromInteger (Ccallgas e0 e1 e2
-                     (not (v.vctx_account_existence (w256_to_address e1))) v.vctx_gas (network_of_block_number bn) (calc_memu_extra v));
+                     (not (v.vctx_account_existence (w256_to_address e1))) v.vctx_gas net (calc_memu_extra v));
             callarg_code = w256_to_address e1;
             callarg_recipient = w256_to_address e1;
             callarg_value = e2;
@@ -1440,8 +1439,8 @@ let delegatecall v c = match v.vctx_stack with
 end
 
 (* CALLCODE is another variant. *)
-val callcode : variable_ctx -> constant_ctx -> network -> instruction_result
-let callcode v c net = match v.vctx_stack with
+val callcode : network -> variable_ctx -> constant_ctx -> instruction_result
+let callcode net v c = match v.vctx_stack with
  | e0 :: e1 :: e2 :: e3 :: e4 :: e5 :: e6 :: rest ->
     (* if word256ULT (v.vctx_balance  c.cctx_this) e2 then
         (InstructionContinue
@@ -1851,7 +1850,7 @@ let instruction_sem v c inst net =
   | Arith ADD -> stack_2_1_op v c (fun a b -> a + b)
   | Arith SUB -> stack_2_1_op v c (fun a b -> a - b)
   | Arith ISZERO -> stack_1_1_op v c (fun a -> if a = 0 then 1 else 0)
-  | Misc CALL -> call v c
+  | Misc CALL -> call net v c
   | Misc RETURN -> ret v c
   | Misc STOP -> stop v c
   | Dup n -> general_dup n v c
@@ -1948,7 +1947,7 @@ let instruction_sem v c inst net =
   | Log LOG4 -> log 4 v c
   | Swap n -> swap (word4ToNat n) v c
   | Misc CREATE -> create v c
-  | Misc CALLCODE -> callcode v c net
+  | Misc CALLCODE -> callcode net v c
   | Misc SUICIDE -> suicide v c
   | Misc DELEGATECALL ->
      if word256ToNatural v.vctx_block.block_number < homestead_block then instruction_failure_result v [ShouldNotHappen] else delegatecall v c
