@@ -187,6 +187,16 @@ let at_least_eip150 n =
   | Metropolis -> true
   end
 
+val before_homestead : network -> bool
+let before_homestead n =
+  match n with
+    Frontier -> true
+  | Homestead -> false
+  | EIP150 -> false
+  | EIP158 -> false
+  | Metropolis -> false
+  end
+
 type aenv = <|
   aenv_stack : list (w256);
   aenv_memory : memory;
@@ -1695,11 +1705,11 @@ let thirdComponentOfC i s0 s1 s2 s3 recipient_empty orig_val new_val remaining_g
   | Log LOG3 -> Glog + Glogdata * uint s1 + 3 * Glogtopic
   | Log LOG4 -> Glog + Glogdata * uint s1 + 4 * Glogtopic
   | Misc CALL
-    -> Ccall s0 s1 s2 recipient_empty remaining_gas (network_of_block_number blocknumber) memu_extra
+    -> Ccall s0 s1 s2 recipient_empty remaining_gas net memu_extra
   | Misc CALLCODE
-    -> Ccall s0 s1 s2 recipient_empty remaining_gas (network_of_block_number blocknumber) memu_extra
+    -> Ccall s0 s1 s2 recipient_empty remaining_gas net memu_extra
   | Misc DELEGATECALL
-    -> if blocknumber < homestead_block then 0 else Ccall s0 s1 0  recipient_empty remaining_gas (network_of_block_number blocknumber) memu_extra
+    -> if before_homestead net then 0 else Ccall s0 s1 0  recipient_empty remaining_gas net memu_extra
   | Misc SUICIDE -> Csuicide recipient_empty net
   | Misc CREATE -> Gcreate
   | Arith SHA3 -> Gsha3 + Gsha3word * ((uint s1 + 31) / 32)
