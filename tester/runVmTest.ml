@@ -111,7 +111,8 @@ let test_one_case j : testResult =
     ; cctx_hash_filter = (fun _ -> true)
     } in
   let number = Nat_big_num.of_string (Big_int.string_of_big_int test_case.exec.gas) in
-  let ret : instruction_result = Conv.program_sem_wrapper c (Nat_big_num.to_int number) (InstructionContinue v) in
+  let net = Evm.network_of_block_number (Word256.word256ToNatural (v.vctx_block.block_number)) in
+  let ret : instruction_result = Conv.program_sem_wrapper c (Nat_big_num.to_int number) net (InstructionContinue v) in
   match ret with
   | InstructionContinue _ ->
      let () = Printf.printf "InstructionContinue\n" in

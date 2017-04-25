@@ -188,7 +188,7 @@ exception ToEnvironment of instruction_result
 
 let the_stopper r = raise (ToEnvironment r)
 
-let program_sem_wrapper c n r =
+let program_sem_wrapper c n net r =
   try
-    program_sem the_stopper c n r
+    program_sem the_stopper c n net r
   with ToEnvironment a -> a

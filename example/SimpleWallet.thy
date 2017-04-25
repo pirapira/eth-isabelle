@@ -37,7 +37,7 @@ DUP1
 *)
 
 lemma push0_triple :
-   "triple {OutOfGas} (\<langle> h \<le> 1023\<rangle> **
+   "triple net {OutOfGas} (\<langle> h \<le> 1023\<rangle> **
                        stack_height h **
                        program_counter k **
                        gas_pred g **
@@ -112,27 +112,27 @@ qed
 
 
 lemma pre_fifth_pure [simp]:
-  "triple failures (a ** b ** c ** d ** \<langle> P \<rangle>) cod post =
-   (P \<longrightarrow> triple failures (a ** b ** c ** d) cod post)"
+  "triple net failures (a ** b ** c ** d ** \<langle> P \<rangle>) cod post =
+   (P \<longrightarrow> triple net failures (a ** b ** c ** d) cod post)"
 apply(auto simp add: triple_def)
 done
 
 
 lemma pre_sixth_pure [simp]:
-  "triple failures (a ** b ** c ** d ** e ** \<langle> P \<rangle>) cod post =
-   (P \<longrightarrow> triple failures (a ** b ** c ** d ** e) cod post)"
+  "triple net failures (a ** b ** c ** d ** e ** \<langle> P \<rangle>) cod post =
+   (P \<longrightarrow> triple net failures (a ** b ** c ** d ** e) cod post)"
 apply(auto simp add: triple_def)
 done
 
 lemma pre_seventh_pure [simp]:
-  "triple failures (a ** b ** c ** d ** e ** f ** \<langle> P \<rangle>) cod post =
-   (P \<longrightarrow> triple failures (a ** b ** c ** d ** e ** f) cod post)"
+  "triple net failures (a ** b ** c ** d ** e ** f ** \<langle> P \<rangle>) cod post =
+   (P \<longrightarrow> triple net failures (a ** b ** c ** d ** e ** f) cod post)"
 apply(auto simp add: triple_def)
 done
 
 lemma pre_eigth_pure [simp]:
-  "triple failures (a ** b ** c ** d ** e ** f ** g ** \<langle> P \<rangle>) cod post =
-   (P \<longrightarrow> triple failures (a ** b ** c ** d ** e ** f ** g) cod post)"
+  "triple net failures (a ** b ** c ** d ** e ** f ** g ** \<langle> P \<rangle>) cod post =
+   (P \<longrightarrow> triple net failures (a ** b ** c ** d ** e ** f ** g) cod post)"
 apply(auto simp add: triple_def)
 done
 
@@ -142,7 +142,7 @@ apply(auto)
 done
 
 lemma push0dup1_triple :
-   "triple {OutOfGas} (\<langle> h \<le> 1022\<rangle> **
+   "triple net {OutOfGas} (\<langle> h \<le> 1022\<rangle> **
                        stack_height h **
                        program_counter k **
                        gas_pred g **
@@ -177,7 +177,7 @@ using pure_def emp_def apply blast
 done
 
 lemma dup1dup1_triple :
-   "triple {OutOfGas} (\<langle> h \<le> 1021\<rangle> **
+   "triple net {OutOfGas} (\<langle> h \<le> 1021\<rangle> **
                        stack_height (Suc h) **
                        stack h w **
                        program_counter k **
@@ -206,7 +206,7 @@ apply(rule_tac R = "stack h w" in frame_backward)
 done
 
 lemma triple_code_eq :
-  "triple s p c r \<Longrightarrow> c = c' \<Longrightarrow> triple s p c' r"
+  "triple net s p c r \<Longrightarrow> c = c' \<Longrightarrow> triple net s p c' r"
 apply(simp)
 done
 
@@ -235,7 +235,7 @@ lemma pick_thirdL:
   by (simp add: pick_third_L)
 
 lemma pddd_triple :
-"triple {OutOfGas} (\<langle> h \<le> 1020\<rangle> **
+"triple net {OutOfGas} (\<langle> h \<le> 1020\<rangle> **
                        stack_height h **
                        program_counter k **
                        gas_pred g **
@@ -287,8 +287,8 @@ apply(simp add: is_down_def target_size_def source_size_def word_size)
 done
 
 lemma this_balance :
-  "triple {OutOfGas}
-          (\<langle> h \<le> 1023 \<and> unat bn \<ge> 2463000\<rangle>
+  "triple net {OutOfGas}
+          (\<langle> h \<le> 1023 \<and> unat bn \<ge> 2463000 \<and> at_least_eip150 net\<rangle>
            ** block_number_pred bn ** stack_height h ** program_counter k ** this_account t ** 
            balance t b ** gas_pred g ** continuing)
           {(k, Info ADDRESS), (k + 1, Info BALANCE)}
@@ -313,7 +313,7 @@ done
 
 lemma caller_gas :
 "
-triple {OutOfGas}
+triple net {OutOfGas}
           (\<langle> h \<le> 1022 \<rangle> ** stack_height h ** program_counter k ** caller c ** gas_pred g ** continuing)
           {(k, Info CALLER), (k + 1, Stack (PUSH_N [8, 0]))}
           (stack_height (h + 2) ** stack (Suc h) (word_rcat [(8 :: byte), 0]) ** stack h (ucast c)
@@ -341,8 +341,8 @@ proof -
 qed
 
 lemma first_three_args :
-  "triple {OutOfGas}
-          (\<langle> h \<le> 1021 \<and> unat bn \<ge> 2463000\<rangle>
+  "triple net {OutOfGas}
+          (\<langle> h \<le> 1021 \<and> unat bn \<ge> 2463000 \<and> at_least_eip150 net\<rangle>
            ** block_number_pred bn ** caller c ** stack_height h ** program_counter k ** this_account t ** 
            balance t b ** gas_pred g ** continuing)
           {(k, Info ADDRESS), (k + 1, Info BALANCE), (k + 2, Info CALLER), (k + 3, Stack (PUSH_N [8, 0]))}
@@ -404,7 +404,7 @@ done
 
 
 lemma seven_args:
-"triple {OutOfGas} (\<langle> h \<le> 1017 \<and> 2463000 \<le> unat bn\<rangle>
+"triple net {OutOfGas} (\<langle> h \<le> 1017 \<and> 2463000 \<le> unat bn \<and> at_least_eip150 net\<rangle>
                     ** block_number_pred bn ** caller c **
                        stack_height h **
                        program_counter k **
@@ -588,7 +588,7 @@ apply(simp)
 done
 
 lemma seven_args_packed:
-"triple {OutOfGas} (\<langle> h \<le> 1017 \<and> 2463000 \<le> unat bn\<rangle>
+"triple net {OutOfGas} (\<langle> h \<le> 1017 \<and> 2463000 \<le> unat bn \<and> at_least_eip150 net\<rangle>
                     ** block_number_pred bn ** caller c **
                        stack_height h **
                        program_counter k **
@@ -701,7 +701,7 @@ qed
 
 
 lemma call_with_args:
-"triple {OutOfGas} (\<langle> h \<le> 1017 \<and> 2463000 \<le> unat bn\<rangle>
+"triple net {OutOfGas} (\<langle> h \<le> 1017 \<and> 2463000 \<le> unat bn \<and> at_least_eip150 net\<rangle>
                     ** block_number_pred bn ** caller c **
                        stack_height h **
                        program_counter k **
@@ -787,7 +787,7 @@ done
 
 
 lemma push0sload :
-   "triple {OutOfGas} (\<langle> h \<le> 1023 \<and> unat bn \<ge> 2463000 \<rangle> **
+   "triple net {OutOfGas} (\<langle> h \<le> 1023 \<and> unat bn \<ge> 2463000 \<and> at_least_eip150 net\<rangle> **
                        block_number_pred bn **
                        stack_height h **
                        program_counter k **
@@ -801,7 +801,7 @@ lemma push0sload :
                        stack h w **
                        program_counter (3 + k) **
                        storage (word_rcat [0]) w **
-                       gas_pred (g - Gverylow - Gsload (unat bn)) **
+                       gas_pred (g - Gverylow - Gsload net) **
                        continuing
                       )"
 apply(simp only: move_pureL)
@@ -823,7 +823,7 @@ apply(auto simp add: word_rcat_def bin_rcat_def)
 done
 
 lemma caller_eq :
-  "triple {OutOfGas}  ( \<langle> h \<le> 1022 \<rangle> **
+  "triple net {OutOfGas}  ( \<langle> h \<le> 1022 \<rangle> **
                         stack_height (h + 1) **
                         stack h w **
                         program_counter k ** caller c **
@@ -869,7 +869,7 @@ lemma abccba :
   using abel_semigroup.left_commute sep_three set_pred.abel_semigroup_axioms by fastforce
 
 lemma first_four :
-   "triple {OutOfGas} (\<langle> h \<le> 1022 \<and> unat bn \<ge> 2463000 \<rangle> **
+   "triple net {OutOfGas} (\<langle> h \<le> 1022 \<and> unat bn \<ge> 2463000 \<and> at_least_eip150 net\<rangle> **
                        block_number_pred bn **
                        stack_height h **
                        program_counter k ** caller c **
@@ -884,7 +884,7 @@ lemma first_four :
                        stack h (if ucast c = w then((word_of_int 1) ::  256 word) else((word_of_int 0) ::  256 word)) **
                        program_counter (5 + k) ** caller c **
                        storage (word_rcat [0]) w **
-                       gas_pred (g + (- Gsload (unat bn) - 2) - 2 * Gverylow) **
+                       gas_pred (g + (- Gsload net - 2) - 2 * Gverylow) **
                        continuing
                       )"
 apply(simp only: move_pureL)
@@ -898,13 +898,13 @@ apply(rule_tac cL = "{(k, Stack (PUSH_N [0])), (k + 2, Storage SLOAD)}"
  apply(simp)
 apply(rule_tac R = "storage (word_rcat [0]) w ** block_number_pred bn" in frame_backward)
   apply(rule triple_code_eq)
-   apply(rule_tac k = "k + 3" and h = h and w = w and c = c and g = "g - Gverylow - Gsload (unat bn)" in caller_eq)
+   apply(rule_tac k = "k + 3" and h = h and w = w and c = c and g = "g - Gverylow - Gsload net" in caller_eq)
   apply auto
 done
 
 
 lemma pushjumpi_false:
-   "triple {OutOfGas} (\<langle> h \<le> 1022 \<rangle> **
+   "triple net {OutOfGas} (\<langle> h \<le> 1022 \<rangle> **
                        stack_height (h + 1) **
                        stack h 0 **
                        program_counter k **
@@ -930,7 +930,7 @@ apply(rule_tac R = "emp" in frame_backward)
 done
 
 lemma pushjumpistop_false :
-   "triple {OutOfGas} (\<langle> h \<le> 1022 \<rangle> **
+   "triple net {OutOfGas} (\<langle> h \<le> 1022 \<rangle> **
                        stack_height (h + 1) **
                        stack h 0 **
                        program_counter k **
@@ -957,7 +957,7 @@ apply(rule_tac R = "gas_pred (g - Gverylow - Ghigh)" in frame_backward)
 done
 
 lemma prefix_invalid_caller:
-"triple {OutOfGas} (\<langle> h \<le> 1022 \<and> unat bn \<ge> 2463000 \<and> ucast c \<noteq> w\<rangle> **
+"triple net {OutOfGas} (\<langle> h \<le> 1022 \<and> unat bn \<ge> 2463000 \<and> at_least_eip150 net \<and> ucast c \<noteq> w\<rangle> **
                        block_number_pred bn **
                        stack_height h **
                        program_counter k ** caller c **
@@ -973,7 +973,7 @@ lemma prefix_invalid_caller:
                        stack_height h **
                        program_counter (8 + k) ** caller c **
                        storage (word_rcat [0]) w **
-                       gas_pred (g + (- Gsload (unat bn) - 2) - 2 * Gverylow - Gverylow - Ghigh) **
+                       gas_pred (g + (- Gsload net - 2) - 2 * Gverylow - Gverylow - Ghigh) **
                        not_continuing ** action (ContractReturn []))"
 apply(simp only: move_pureL)
 apply(auto)
@@ -988,7 +988,7 @@ apply(rule_tac cL = "{(k, Stack (PUSH_N [0])), (k + 2, Storage SLOAD),
  apply(simp)
 apply(rule_tac R = "block_number_pred bn ** caller c ** storage (word_rcat [0]) w" in frame_backward)
   apply(rule triple_code_eq)
-  apply(rule_tac h = h and k = "k + 5" and x = x and g = "(g + (- Gsload (unat bn) - 2) - 2 * Gverylow)"
+  apply(rule_tac h = h and k = "k + 5" and x = x and g = "(g + (- Gsload net - 2) - 2 * Gverylow)"
         in pushjumpistop_false)
   apply(auto)
 done
@@ -1012,7 +1012,7 @@ done
 
 
 lemma pushjumpi_true:
-   "triple {OutOfGas} (\<langle> h \<le> 1022 \<and> cond \<noteq> 0 \<rangle> **
+   "triple net {OutOfGas} (\<langle> h \<le> 1022 \<and> cond \<noteq> 0 \<rangle> **
                        stack_height (h + 1) **
                        stack h cond **
                        program_counter k **
@@ -1042,7 +1042,7 @@ done
 
 
 lemma prefix_true:
-   "triple {OutOfGas} (\<langle> h \<le> 1022 \<and> unat bn \<ge> 2463000 \<rangle> **
+   "triple net {OutOfGas} (\<langle> h \<le> 1022 \<and> unat bn \<ge> 2463000 \<and> at_least_eip150 net \<rangle> **
                        block_number_pred bn **
                        stack_height h **
                        program_counter k ** caller c **
@@ -1058,7 +1058,7 @@ lemma prefix_true:
                        stack_height h **
                        program_counter (uint d) ** caller c **
                        storage (word_rcat [0]) (ucast c) **
-                       gas_pred (g + (- Gsload (unat bn) - 2) - 3 * Gverylow - Ghigh) **
+                       gas_pred (g + (- Gsload net - 2) - 3 * Gverylow - Ghigh) **
                        continuing
                       )"
 apply(simp only: move_pureL)
@@ -1074,12 +1074,12 @@ apply(rule_tac cL = "{(k, Stack (PUSH_N [0])), (k + 2, Storage SLOAD),
  apply(simp)
 apply(rule_tac R = "block_number_pred bn ** caller c ** storage (word_rcat [0]) (ucast c)" in frame_backward)
   apply(rule triple_code_eq)
-  apply(rule_tac h = h and k = "k + 5" and d = d and cond = 1 and g = "g + (- Gsload (unat bn) - 2) - 2 * Gverylow" in pushjumpi_true)
+  apply(rule_tac h = h and k = "k + 5" and d = d and cond = 1 and g = "g + (- Gsload net - 2) - 2 * Gverylow" in pushjumpi_true)
   apply(auto)
 done
 
 lemma prefix_true_over_JUMPDEST:
-"triple {OutOfGas} (\<langle> h \<le> 1022 \<and> unat bn \<ge> 2463000 \<rangle> **
+"triple net {OutOfGas} (\<langle> h \<le> 1022 \<and> unat bn \<ge> 2463000 \<and> at_least_eip150 net \<rangle> **
                        block_number_pred bn **
                        stack_height h **
                        program_counter k ** caller c **
@@ -1095,7 +1095,7 @@ lemma prefix_true_over_JUMPDEST:
                        stack_height h **
                        program_counter ((uint d) + 1) ** caller c **
                        storage (word_rcat [0]) (ucast c) **
-                       gas_pred (g + (- Gsload (unat bn) - 2) - 3 * Gverylow - Ghigh - Gjumpdest) **
+                       gas_pred (g + (- Gsload net - 2) - 3 * Gverylow - Ghigh - Gjumpdest) **
                        continuing
                       )"
 apply(simp only: move_pureL)
@@ -1114,13 +1114,13 @@ apply(rule_tac cL = "{(k, Stack (PUSH_N [0])), (k + 2, Storage SLOAD),
  apply(simp)
 apply(rule_tac R = "block_number_pred bn **
    caller c ** storage (word_rcat [0]) (ucast c)" in frame_backward)
-  apply(rule_tac h = h and g = "g + (- Gsload (unat bn) - 2) - 3 * Gverylow - Ghigh" in jumpdest_gas_triple)
+  apply(rule_tac h = h and g = "g + (- Gsload net - 2) - 3 * Gverylow - Ghigh" in jumpdest_gas_triple)
  apply(auto)
 done
 
 
 lemma check_pass_whole:
-  "triple {OutOfGas} (\<langle> h \<le> 1017 \<and> unat bn \<ge> 2463000 \<rangle> **
+  "triple net {OutOfGas} (\<langle> h \<le> 1017 \<and> unat bn \<ge> 2463000 \<and> at_least_eip150 net\<rangle> **
                        block_number_pred bn **
                        stack_height h **
                        program_counter k ** caller c **
@@ -1191,10 +1191,11 @@ apply(rule_tac cL = "{(k, Stack (PUSH_N [0])), (k + 2, Storage SLOAD),
 apply(rule_tac R = "storage (word_rcat [0]) (ucast c)" in
       frame_backward)
   apply(rule_tac triple_code_eq)
-   apply(rule_tac bn = bn and  h = h and k = "uint d + 1" and g = "g + (- Gsload (unat bn) - 2) - 3 * Gverylow - Ghigh - Gjumpdest" in call_with_args)
+   apply(rule_tac bn = bn and  h = h and k = "uint d + 1" and g = "g + (- Gsload net - 2) - 3 * Gverylow - Ghigh - Gjumpdest" in call_with_args)
   apply(simp)
- apply(auto)
-done
+(* apply(auto)
+done *)
+oops
 
 (* whole_concrete_program *)
 
@@ -1241,7 +1242,7 @@ x = 16:        6000543314600957005b6000808080303133610800f1
 
 (* check_pass_whole_concrete *)
 lemma check_pass_whole_concrete:
-  "triple {OutOfGas} (\<langle>unat bn \<ge> 2463000 \<rangle> **
+  "triple net {OutOfGas} (\<langle>unat bn \<ge> 2463000 \<and> at_least_eip150 net\<rangle> **
                        block_number_pred bn **
                        stack_height 0 **
                        program_counter 0 ** caller c **
@@ -1283,7 +1284,7 @@ apply(simp add: whole_concrete_program_def)
 done
   
 lemma whole_program_invalid_caller:
-"triple {OutOfGas} (\<langle>unat bn \<ge> 2463000 \<and> ucast c \<noteq> w\<rangle> **
+"triple net {OutOfGas} (\<langle>unat bn \<ge> 2463000 \<and> at_least_eip150 net \<and> ucast c \<noteq> w\<rangle> **
                        block_number_pred bn **
                        stack_height 0 **
                        program_counter 0 ** caller c **
@@ -1296,7 +1297,7 @@ lemma whole_program_invalid_caller:
                        stack_height 0 **
                        program_counter 8 ** caller c **
                        storage (word_rcat [0]) w **
-                       gas_pred (g + (- Gsload (unat bn) - 2) - 2 * Gverylow - Gverylow - Ghigh) **
+                       gas_pred (g + (- Gsload net - 2) - 2 * Gverylow - Gverylow - Ghigh) **
                        not_continuing ** action (ContractReturn []))"
 apply(auto)
 apply(rule code_extension_backward)

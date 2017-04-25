@@ -94,7 +94,7 @@ done
 
 
 lemma iszero_gas_triple :
-   "triple {OutOfGas} (\<langle> h \<le> 1023 \<rangle> **
+   "triple net {OutOfGas} (\<langle> h \<le> 1023 \<rangle> **
                        stack_height (Suc h) **
                        stack h w **
                        program_counter k **
@@ -174,7 +174,7 @@ apply(simp add: tmp000 tmp001 tmp002 List.rev_nth)
 done
 
 lemma swap_gas_triple :
-   "triple {OutOfGas} (\<langle> h \<le> 1024 \<and> Suc (unat n) < h \<rangle> **
+   "triple net {OutOfGas} (\<langle> h \<le> 1024 \<and> Suc (unat n) < h \<rangle> **
                        stack_height h **
                        stack (h - 1) w **
                        stack (h - (unat n) - 2) v **
@@ -257,7 +257,7 @@ apply(simp add: vctx_advance_pc_def inst_size_def inst_code.simps)
 done
 
 lemma dup_gas_triple :
-   "triple {OutOfGas} (\<langle> h \<le> 1023 \<and> unat n < h \<rangle> **
+   "triple net {OutOfGas} (\<langle> h \<le> 1023 \<and> unat n < h \<rangle> **
                        stack_height h **
                        stack (h - (unat n) - 1) w **
                        program_counter k **
@@ -289,7 +289,7 @@ done
 
 
 lemma address_gas_triple :
-  "triple {OutOfGas}
+  "triple net {OutOfGas}
           (\<langle> h \<le> 1023 \<rangle> ** stack_height h ** program_counter k ** this_account t ** gas_pred g ** continuing)
           {(k, Info ADDRESS)}
           (stack_height (h + 1) ** stack h (ucast t)
@@ -322,7 +322,7 @@ done
 
 
 lemma push_gas_triple :
-   "triple {OutOfGas} (\<langle> h \<le> 1023 \<and> length lst > 0 \<and> 32 \<ge> length lst\<rangle> **
+   "triple net {OutOfGas} (\<langle> h \<le> 1023 \<and> length lst > 0 \<and> 32 \<ge> length lst\<rangle> **
                        stack_height h **
                        program_counter k **
                        gas_pred g **
@@ -357,7 +357,7 @@ apply(simp add: inst_size_def inst_code.simps)
 done
 
 lemma jumpi_false_gas_triple :
-   "triple {OutOfGas} (\<langle> h \<le> 1022 \<rangle> **
+   "triple net {OutOfGas} (\<langle> h \<le> 1022 \<rangle> **
                        stack_height (h + 2) **
                        stack (h + 1) d **
                        stack h 0 **
@@ -381,7 +381,7 @@ apply(auto simp add: stack_as_set_def)
 done
 
 lemma jumpi_true_gas_triple :
-   "triple {OutOfGas} (\<langle> h \<le> 1022 \<and> cond \<noteq> 0 \<rangle> **
+   "triple net {OutOfGas} (\<langle> h \<le> 1022 \<and> cond \<noteq> 0 \<rangle> **
                        stack_height (h + 2) **
                        stack (h + 1) d **
                        stack h cond **
@@ -407,7 +407,7 @@ done
 
 
 lemma jump_gas_triple :
-   "triple {OutOfGas} (\<langle> h \<le> 1023 \<rangle> **
+   "triple net {OutOfGas} (\<langle> h \<le> 1023 \<rangle> **
                        stack_height (h + 1) **
                        stack h d **
                        program_counter k **
@@ -476,7 +476,7 @@ apply(case_tac n; auto)
 done
 
 lemma invalid_jumpi_gas_triple :
-   "triple {OutOfGas} (\<langle> h \<le> 1022 \<and> cond \<noteq> 0 \<and> i \<noteq> Pc JUMPDEST \<rangle> **
+   "triple net {OutOfGas} (\<langle> h \<le> 1022 \<and> cond \<noteq> 0 \<and> i \<noteq> Pc JUMPDEST \<rangle> **
                        stack_height (h + 2) **
                        stack (h + 1) d **
                        stack h cond **
@@ -511,7 +511,7 @@ done
 
 
 lemma invalid_jump_gas_triple :
-   "triple {OutOfGas} (\<langle> h \<le> 1023 \<and> i \<noteq> Pc JUMPDEST\<rangle> **
+   "triple net {OutOfGas} (\<langle> h \<le> 1023 \<and> i \<noteq> Pc JUMPDEST\<rangle> **
                        stack_height (h + 1) **
                        stack h d **
                        program_counter k **
@@ -567,7 +567,7 @@ done
 
 
 lemma jumpdest_gas_triple :
-   "triple {OutOfGas} (\<langle> h \<le> 1024 \<rangle> **
+   "triple net {OutOfGas} (\<langle> h \<le> 1024 \<rangle> **
                        stack_height h **
                        program_counter k **
                        gas_pred g **
@@ -596,7 +596,7 @@ apply(simp)
 apply(rename_tac elm; case_tac elm; simp)
 done 
 
-lemma pop_gas_triple : "triple {OutOfGas} (\<langle> h \<le> 1024 \<rangle> **
+lemma pop_gas_triple : "triple net {OutOfGas} (\<langle> h \<le> 1024 \<rangle> **
                             stack_height (h + 1) **
                             stack h v **
                             program_counter k **
@@ -623,8 +623,8 @@ vctx_advance_pc_def
 done
 
 lemma balance_gas_triple :
-  "triple {OutOfGas}
-          (\<langle> h \<le> 1023 \<and> unat bn \<ge> 2463000\<rangle>
+  "triple net {OutOfGas}
+          (\<langle> h \<le> 1023 \<and> unat bn \<ge> 2463000 \<and> at_least_eip150 net\<rangle>
            ** block_number_pred bn ** stack_height (h + 1) ** stack h a
            ** program_counter k ** balance (ucast a) b ** gas_pred g ** continuing)
           {(k, Info BALANCE)}
@@ -677,7 +677,7 @@ apply(rename_tac elm; case_tac elm; auto)
 done
 
 lemma eq_gas_triple :
-  "triple {OutOfGas}  ( \<langle> h \<le> 1023 \<rangle> **
+  "triple net {OutOfGas}  ( \<langle> h \<le> 1023 \<rangle> **
                         stack_height (h + 2) **
                         stack (h + 1) v **
                         stack h w **
@@ -752,7 +752,7 @@ apply(rename_tac elm; case_tac elm; auto)
 done
 
 lemma add_triple :
-   "triple {}
+   "triple net {}
            (\<langle> h \<le> 1023 \<and> g \<ge> Gverylow \<rangle> **
             stack_height (h + 2) **
             stack (h + 1) v **
@@ -791,7 +791,7 @@ done
 
 
 lemma add_gas_triple : 
-   "triple {OutOfGas} 
+   "triple net {OutOfGas} 
       (\<langle> h \<le> 1023\<rangle> **
        stack_height (h + 2) **
        stack (h + 1) v **
@@ -832,7 +832,7 @@ done
 
 
 
-lemma add_instance : "triple {} (\<langle> (h + 1) \<le> 1023 \<and> g \<ge> Gverylow \<rangle> **
+lemma add_instance : "triple net {} (\<langle> (h + 1) \<le> 1023 \<and> g \<ge> Gverylow \<rangle> **
                             stack_height ((h + 1) + 2) **
                             stack ((h + 1) + 1) x **
                             stack (h + 1) v **
@@ -850,7 +850,7 @@ lemma add_instance : "triple {} (\<langle> (h + 1) \<le> 1023 \<and> g \<ge> Gve
 apply(rule add_triple)
 done
 
-lemma add_extended : "triple {} ((\<langle> (h + 1) \<le> 1023 \<and> g \<ge> Gverylow \<rangle> **
+lemma add_extended : "triple net {} ((\<langle> (h + 1) \<le> 1023 \<and> g \<ge> Gverylow \<rangle> **
                             stack_height ((h + 1) + 2) **
                             stack ((h + 1) + 1) x **
                             stack (h + 1) v **
@@ -927,7 +927,7 @@ vctx_stack x1 = v # t \<Longrightarrow>
 apply(auto)
 done
 
-lemma pop_triple : "triple {} (\<langle> h \<le> 1024 \<and> g \<ge> Gbase \<rangle> **
+lemma pop_triple : "triple net {} (\<langle> h \<le> 1024 \<and> g \<ge> Gbase \<rangle> **
                             stack_height (h + 1) **
                             stack h v **
                             program_counter k **
@@ -959,7 +959,7 @@ declare misc_inst_numbers.simps [simp]
 Gzero_def [simp]
 
 lemma stop_gas_triple:
-  "triple {OutOfGas}
+  "triple net {OutOfGas}
           (\<langle> h \<le> 1024 \<rangle> ** stack_height h ** program_counter k ** continuing)
           {(k, Misc STOP)}
           (stack_height h ** program_counter k ** not_continuing ** action (ContractReturn []))"
@@ -1008,7 +1008,7 @@ apply(rename_tac elm; case_tac elm; auto simp add: stack_as_set_def)
 done
 
 lemma caller_gas_triple :
-  "triple {OutOfGas}
+  "triple net {OutOfGas}
           (\<langle> h \<le> 1023 \<rangle> ** stack_height h ** program_counter k ** caller c ** gas_pred g ** continuing)
           {(k, Info CALLER)}
           (stack_height (h + 1) ** stack h (ucast c)

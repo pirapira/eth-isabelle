@@ -89,14 +89,14 @@ let debug_mode = if Array.length Sys.argv > 2 then true else false
 
 exception Skip
 
-let run_tr tr state block =
+let run_tr tr state block net =
   let res = start_transaction tr state block in
   let rec do_run = function
    | Finished fi -> fi
    | Unimplemented -> raise Skip
    | a ->
      if debug_mode then debug_state a;
-     do_run (next a) in
+     do_run (next net a) in
   let fi = do_run res in
   if debug_mode then begin
     prerr_endline ("Bal " ^ w256dec (fi.f_state tr.tr_from).account_balance0);
@@ -120,8 +120,9 @@ let run_test (label, elm) : testResult =
   let pre_st = List.map (fun (a,b,_) -> (a,b)) (make_state_list tc.pre) in
   let post_st = make_state_list tc.post in
   let state x = try List.assoc x pre_st with _ -> empty_account0 x in
+  let net = Evm.network_of_block_number (Word256.word256ToNatural (block_info.block_number)) in
   try
-    let state = run_tr tr state block_info in
+    let state = run_tr tr state block_info net in
     let diff_found = ref false in
     List.iter (fun (a,cmp, storage_list) ->
       let acc = state a in

@@ -218,14 +218,14 @@ where
 text {* As a reply, our contract might make a move, or report an annotation failure.*}
 
 inductive contract_turn ::
-"(account_state * variable_ctx) \<Rightarrow> (account_state * environment_input) \<Rightarrow> bool"
+"network \<Rightarrow> (account_state * variable_ctx) \<Rightarrow> (account_state * environment_input) \<Rightarrow> bool"
 where
   contract_to_environment:
   "(* Under a constant environment built from the old account state, *)
    build_cctx old_account = cctx \<Longrightarrow>
 
    (* if the program behaves like this, *)
-   program_sem k cctx steps (InstructionContinue old_vctx)
+   program_sem k cctx steps net (InstructionContinue old_vctx)
       = InstructionToEnvironment act v opt_v \<Longrightarrow>
 
    (* and if the account state is updated from the program's result, *)
@@ -233,7 +233,7 @@ where
      = update_account_state old_account act v opt_v \<Longrightarrow>
 
    (* the contract makes a move and udates the account state. *)
-   contract_turn (old_account, old_vctx)
+   contract_turn net (old_account, old_vctx)
       (account_state_going_out, Execution (InstructionToEnvironment act v opt_v))"
 
 | contract_annotation_failure:
@@ -241,22 +241,22 @@ where
    build_cctx old_account = cctx \<Longrightarrow>
    
    (* and if the contract execution results in an annotation failure, *)
-   program_sem k cctx steps (InstructionContinue old_vctx) = InstructionAnnotationFailure \<Longrightarrow>
+   program_sem k cctx steps net (InstructionContinue old_vctx) = InstructionAnnotationFailure \<Longrightarrow>
 
    (* the contract makes a move, indicating the annotation failure. *)
-   contract_turn (old_account, old_vctx) (old_account, Execution InstructionAnnotationFailure)"
+   contract_turn net (old_account, old_vctx) (old_account, Execution InstructionAnnotationFailure)"
 
 text {* When we combine the environment's turn and the contract's turn, we get one round.
 The round is a binary relation over a single set.
 *}
 
 inductive one_round ::
-"(account_state \<Rightarrow> bool) \<Rightarrow> 
+"network \<Rightarrow> (account_state \<Rightarrow> bool) \<Rightarrow> 
 (account_state * environment_input) \<Rightarrow> 
 (account_state * environment_input) \<Rightarrow> bool"
 where
 round:
-"environment_turn I a b \<Longrightarrow> contract_turn b c \<Longrightarrow> one_round I a c"
+"environment_turn I a b \<Longrightarrow> contract_turn net b c \<Longrightarrow> one_round net I a c"
 
 subsection {* Repetitions of rounds *}
 
@@ -278,7 +278,7 @@ text {* The next lemma is purely for convenience.
 Actually the rounds can go nowhere after this invocation fails.
 *}
 lemma no_entry_fail [dest!]:
-"star (one_round I)
+"star (one_round net I)
       (a, Execution (InstructionToEnvironment (ContractFail x) v v_opt))
       (b, c) \<Longrightarrow> b = a \<and> c = Execution (InstructionToEnvironment (ContractFail x) v v_opt)"
 apply(drule star_case; simp)
@@ -287,7 +287,7 @@ done
 
 text {* Similarly, the rounds can go nowhere after this invocation returns. *}
 lemma no_entry_return [dest!]:
-"star (one_round I)
+"star (one_round net I)
       (a, Execution (InstructionToEnvironment (ContractReturn data) v v_opt))
       (b, c) \<Longrightarrow> b = a \<and> c = Execution (InstructionToEnvironment (ContractReturn data) v v_opt)"
 apply(drule star_case; simp)
@@ -298,7 +298,7 @@ text {* Also similarly, the rounds can go nowhere after this invocation
 causes our contract to destroy itself.
 *}
 lemma no_entry_suicide [dest!]:
-"star (one_round I)
+"star (one_round net I)
       (a, Execution (InstructionToEnvironment (ContractSuicide dst) v v_opt))
       (b, c) \<Longrightarrow> b = a \<and> c = Execution (InstructionToEnvironment (ContractSuicide dst) v v_opt)"
 apply(drule star_case; simp)
@@ -307,7 +307,7 @@ done
 
 text {* And then the rounds can go nowhere after an annotation failure. *}
 lemma no_entry_annotation_failure [dest!]:
-"star (one_round I)
+"star (one_round net I)
       (a, Execution InstructionAnnotationFailure)
       (b, c) \<Longrightarrow> b = a \<and> c = Execution InstructionAnnotationFailure"
 apply(drule star_case; simp)
@@ -316,7 +316,7 @@ done
 
 subsection {* How to State an Invariant *}
 
-text {* For any invariant @{term I} over account states, now @{term "star (one_round I)"}
+text {* For any invariant @{term I} over account states, now @{term "star net (one_round I)"}
 relation shows all possibilities during one invocation\footnote{More precisely,
 this transitive closure of rounds guides us through all the possible states when the contract loses the control flow.}, assuming that the
 invariant is kept during external calls\footnote{This assumption about deeper reentrancy should
@@ -360,7 +360,7 @@ When the contract calls an account, the invocation does not finish so
 I need to verify further final states against the postconditions, after
 the call finishes.
 The repetition is captured by the transitive closure
-@{term "star (one_round I)"}.
+@{term "star (one_round net I)"}.
 
 We prove the invariant when our contract calls out,
 and we assume that reentrancy into this contract will
@@ -373,15 +373,15 @@ reentrancy in Why ML.
 I have not justified the idea in Isabelle/HOL.
 *}
 
-definition no_assertion_failure :: "(account_state \<Rightarrow> bool) \<Rightarrow> bool"
+definition no_assertion_failure :: "network \<Rightarrow> (account_state \<Rightarrow> bool) \<Rightarrow> bool"
 where
-"no_assertion_failure (I :: account_state \<Rightarrow> bool) \<equiv>
+"no_assertion_failure net (I :: account_state \<Rightarrow> bool) \<equiv>
   (\<forall> addr str code bal ongoing killed callenv.
     I \<lparr> account_address = addr, account_storage = str, account_code = code,
        account_balance = bal,
        account_ongoing_calls = ongoing,
        account_killed = killed \<rparr> \<longrightarrow>
-  (\<forall> fin. star (one_round I) (
+  (\<forall> fin. star (one_round net I) (
     \<lparr> account_address = addr, account_storage = str, account_code = code,
       account_balance = bal, 
       account_ongoing_calls = ongoing,
@@ -444,10 +444,11 @@ All these requirements are captured by the transitive closure of @{term one_roun
 *}
 
 definition pre_post_conditions ::
-"(account_state \<Rightarrow> bool) \<Rightarrow> (account_state \<Rightarrow> call_env \<Rightarrow> bool) \<Rightarrow>
+"network \<Rightarrow> (account_state \<Rightarrow> bool) \<Rightarrow> (account_state \<Rightarrow> call_env \<Rightarrow> bool) \<Rightarrow>
  (account_state \<Rightarrow> call_env \<Rightarrow> (account_state \<times> environment_input) \<Rightarrow> bool) \<Rightarrow> bool"
 where
 "pre_post_conditions
+  net
   (I :: account_state \<Rightarrow> bool)
   (precondition :: account_state \<Rightarrow> call_env\<Rightarrow> bool)
   (postcondition :: account_state \<Rightarrow> call_env \<Rightarrow>
@@ -459,7 +460,7 @@ where
      precondition initial_account initial_call \<longrightarrow>
      
   (* for any final state that are reachable from these initial conditions, *)
-  (\<forall> fin. star (one_round I) (initial_account, Init initial_call) fin \<longrightarrow>
+  (\<forall> fin. star (one_round net I) (initial_account, Init initial_call) fin \<longrightarrow>
   
   (* the annotations have not failed *)
   snd fin \<noteq> Execution InstructionAnnotationFailure \<and>
