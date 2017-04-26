@@ -45,7 +45,7 @@ type block =
   ; blockNumber : Big_int.big_int
   ; blockRLP : string
   ; blockTransactions : transaction list
-  ; uncleHeaders : blockHeader list (* ?? *)
+  ; blockUncleHeaders : blockHeader list (* ?? *)
   }
 
 val parse_block : json -> block

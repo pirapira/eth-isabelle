@@ -115,7 +115,7 @@ type block =
   ; blockNumber : Big_int.big_int
   ; blockRLP : string
   ; blockTransactions : transaction list
-  ; uncleHeaders : blockHeader list (* ?? *)
+  ; blockUncleHeaders : blockHeader list (* ?? *)
   }
 
 let parse_block (j : json) : block =
@@ -129,7 +129,7 @@ let parse_block (j : json) : block =
   ; blockRLP = to_string (member "rlp" j)
   ; blockTransactions =
       List.map parse_transaction (to_list (member "transactions" j))
-  ; uncleHeaders =
+  ; blockUncleHeaders =
       List.map parse_block_header (to_list (member "uncleHeaders" j))
   }
 
@@ -142,6 +142,6 @@ let format_block (b : block) : Easy_format.t =
     ; Label ((Atom ("transactions", atom), label),
              List (("[", ",", "]", list), List.map format_transaction b.blockTransactions))
     ; Label ((Atom ("uncleHeaders", atom), label),
-             List (("[", ",", "]", list), List.map format_block_header b.uncleHeaders))
+             List (("[", ",", "]", list), List.map format_block_header b.blockUncleHeaders))
     ] in
   List (("{", ",", "}", list), lst)
