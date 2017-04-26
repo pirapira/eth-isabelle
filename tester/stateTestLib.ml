@@ -39,19 +39,19 @@ let convert_storage lst =
   (fun x -> try List.assoc x conv with _ -> zero)
 
 let convert_state addr st = {
-  account_storage0 = convert_storage st.Jsonparser.storage;
+  account_storage0 = convert_storage st.VmTestParser.storage;
   account_address0 = addr;
   account_exists = true;
-  account_balance0 = Conv.word256_of_big_int st.Jsonparser.balance;
-  account_nonce = Conv.word256_of_big_int st.Jsonparser.nonce;
-  account_code0 = fst (Hexparser.parse_code st.Jsonparser.code);
+  account_balance0 = Conv.word256_of_big_int st.VmTestParser.balance;
+  account_nonce = Conv.word256_of_big_int st.VmTestParser.nonce;
+  account_code0 = fst (Hexparser.parse_code st.VmTestParser.code);
   account_hascode = false;
 }
 
 let make_state_list lst =
   List.map (fun (a,st) ->
      let addr = Conv.word160_of_big_int (Big_int.big_int_of_string ("0x"^a)) in
-     let stor_lst = List.map (fun (p,v) -> (Conv.word256_of_big_int p, string_to_w256 v)) st.Jsonparser.storage in
+     let stor_lst = List.map (fun (p,v) -> (Conv.word256_of_big_int p, string_to_w256 v)) st.VmTestParser.storage in
      (addr, convert_state addr st, stor_lst)) lst
 
 let construct_tr a = {

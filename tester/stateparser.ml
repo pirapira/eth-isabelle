@@ -3,7 +3,7 @@ open Yojson.Basic
 open Keccak
 open Evm
 open Block
-open Jsonparser
+open VmTestParser
 
 open EccPrimitives
 open Ecdh
