@@ -28,17 +28,17 @@ let () =
   let addr_s = Conv.string_of_address addr_w in
   let () = assert (addr_s = "000000000000000000000000000000000000000f") in
 
-  let blockHeaderSample : json = Yojson.Basic.from_file "./block_header_sample.json" in
+  let blockHeaderSample : json = Yojson.Basic.from_file "./sample_json/block_header_sample.json" in
   let blockHeader = parse_block_header blockHeaderSample in
   let () = Printf.printf "something parsed from block_header_sample.json\n" in
   let () = Easy_format.Pretty.to_stdout (format_block_header blockHeader) in
 
-  let transactionSample : json = Yojson.Basic.from_file "./block_transaction_sample.json" in
+  let transactionSample : json = Yojson.Basic.from_file "./sample_json/block_transaction_sample.json" in
   let tr = BlockchainTestParser.parse_transaction transactionSample in
   let () = Printf.printf "something parsed from block_transaction_sample.json\n" in
   let () = Easy_format.Pretty.to_stdout (format_transaction tr) in
 
-  let blockSample : json = Yojson.Basic.from_file "./block_sample.json" in
+  let blockSample : json = Yojson.Basic.from_file "./sample_json/block_sample.json" in
   let b = BlockchainTestParser.parse_block blockSample in
   let () = Printf.printf "something parsed from block_sample.json" in
   let () = Easy_format.Pretty.to_stdout (format_block b) in
