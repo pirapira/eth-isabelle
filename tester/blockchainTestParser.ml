@@ -112,7 +112,7 @@ let format_transaction (t : transaction) : Easy_format.t =
 
 type block =
   { blockHeader : blockHeader
-  ; blockNumber : Big_int.big_int option
+  ; blockNumber : Big_int.big_int option (* This field is just informational *)
   ; blockRLP : string
   ; blockTransactions : transaction list
   ; blockUncleHeaders : blockHeader list (* ?? *)
@@ -120,30 +120,29 @@ type block =
 
 exception UnsupportedEncoding
 
+let print_and_forward_exception str x =
+  try x with e ->
+    let () = Printf.eprintf str in
+    raise e
+
 let parse_block (j : json) : block =
   let open Util in
   { blockHeader =
-      (try parse_block_header (member "blockHeader" j)
-       with e ->
-         let () = Printf.eprintf "error in parsing blockHeader\n%!" in
-         raise e)
+      print_and_forward_exception
+        "error in parsing blockHeader\n%!"
+        (parse_block_header (member "blockHeader" j))
   ; blockNumber =
       (try Some (parse_big_int_from_field "blocknumber" j)
        with _ -> None)
   ; blockRLP = to_string (member "rlp" j)
   ; blockTransactions =
-      (try List.map parse_transaction (to_list (member "transactions" j))
-       with e ->
-         let () = Printf.eprintf "error in parsing transactions\n%!" in
-         raise e
-      )
+      print_and_forward_exception
+        "error in parsing transactions\n%!"
+        (List.map parse_transaction (to_list (member "transactions" j)))
   ; blockUncleHeaders =
-      (try List.map parse_block_header (to_list (member "uncleHeaders" j))
-       with Yojson.Basic.Util.Type_error _ ->
-            raise UnsupportedEncoding
-          | e ->
-             let () = Printf.eprintf "error in parsing uncle headers\n%!" in
-             raise e)
+      print_and_forward_exception
+        "error in parsing uncle headers\n%!"
+        (List.map parse_block_header (to_list (member "uncleHeaders" j)))
   }
 
 let format_block (b : block) : Easy_format.t =
@@ -175,35 +174,29 @@ let parse_test_case (j : json) : testCase =
   let open Util in
   { bcCaseBlocks =
       (let block_list = to_list (member "blocks" j) in
-       try parse_blocks block_list
-       with e ->
-         let () = Printf.eprintf "error while parsing blocks\n%!" in
-         raise e)
+       print_and_forward_exception
+         "error while parsing blocks\n%!"
+         (parse_blocks block_list))
   ; bcCaseGenesisBlockHeader =
-      (try parse_block_header (member "genesisBlockHeader" j)
-       with e ->
-         let () = Printf.eprintf "error while parsing genesis block header\n%!" in
-         raise e)
+      print_and_forward_exception
+        "error while parsing genesis block header\n%!"
+        (parse_block_header (member "genesisBlockHeader" j))
   ; bcCaseGenesisRLP =
-      (try to_string (member "genesisRLP" j)
-       with e ->
-         let () = Printf.eprintf "error while parsing genesis RLP\n%!" in
-         raise e)
+      print_and_forward_exception
+        "error while parsing genesis RLP\n%!"
+        (to_string (member "genesisRLP" j))
   ; bcCaseLastBlockhash =
-      (try to_string (member "lastblockhash" j)
-       with e ->
-         let () = Printf.eprintf "error while parsing last block hash\n%!" in
-         raise e)
+      print_and_forward_exception
+        "error while parsing last block hash\n%!"
+        (to_string (member "lastblockhash" j))
   ; bcCasePostState =
-      (try VmTestParser.parse_states (to_assoc (member "postState" j))
-       with e ->
-         let () = Printf.eprintf "error while parsing post state\n%!" in
-         raise e)
+      print_and_forward_exception
+        "error while parsing post state\n%!"
+        (VmTestParser.parse_states (to_assoc (member "postState" j)))
   ; bcCasePreState =
-      (try VmTestParser.parse_states (to_assoc (member "pre" j))
-       with e ->
-         let () = Printf.eprintf "error while parsing pre state\n%!" in
-         raise e)
+      print_and_forward_exception
+        "error while parsing pre state\n%!"
+        (VmTestParser.parse_states (to_assoc (member "pre" j)))
   }
 
 let format_blocks (bs : block list) =
