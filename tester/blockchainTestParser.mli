@@ -47,3 +47,7 @@ type block =
   ; blockTransactions : transaction list
   ; uncleHeaders : blockHeader list (* ?? *)
   }
+
+val parse_block : json -> block
+
+val format_block : block -> Easy_format.t
