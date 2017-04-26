@@ -339,6 +339,29 @@ lemma solution :
 apply (simp add:uint_add uint_sub)
 done
 
+lemma total_balance_update :
+"v \<le> account_balance0 (acc addr) \<Longrightarrow>
+ account_balance0 (acc recv) \<le>
+    account_balance0 (acc recv) + v \<Longrightarrow>
+ total_balance (transfer_balance acc addr recv v) = 
+ total_balance acc"
+apply (cases "addr = recv")
+subgoal
+apply (auto simp add: total_balance_def
+ update_return_def update_world_def update_call_def
+ transfer_balance_def add_balance_def sub_balance_def Let_def
+ balance_same2 update_if if_distrib abal_def)
+apply metis
+done
+apply (auto simp add:
+ update_return_def update_world_def update_call_def
+ transfer_balance_def Let_def
+ balance_same2 update_if if_distrib add_balance_def sub_balance_def 
+ total_balance_update_world)
+apply (rule solution)
+apply auto
+done
+
 lemma total_balance_update_call :
 "callarg_value args \<le> account_balance0 (acc addr) \<Longrightarrow>
  account_balance0 (acc (callarg_recipient args)) \<le>
@@ -346,29 +369,14 @@ lemma total_balance_update_call :
     callarg_value args \<Longrightarrow>
  total_balance (update_call acc addr args) = 
  total_balance acc"
-apply (cases "addr = callarg_recipient args")
-subgoal
-apply (auto simp add: total_balance_def
- update_return_def update_world_def update_call_def
- update_tr_def Let_def
- balance_same2 update_if if_distrib abal_def)
-apply metis
-done
-apply (auto simp add:
- update_return_def update_world_def update_call_def
- update_tr_def Let_def
- balance_same2 update_if if_distrib
- total_balance_update_world)
-apply (rule solution)
-apply auto
-done
+  by (simp add: total_balance_update update_call_def)
 
 lemma total_balance_update_call2 :
 "addr = callarg_recipient args \<Longrightarrow>
  total_balance (update_call acc addr args) = total_balance acc"
 apply (auto simp add: total_balance_def
  update_return_def update_world_def update_call_def
- update_tr_def Let_def
+ transfer_balance_def add_balance_def sub_balance_def Let_def
  balance_same2 update_if if_distrib abal_def)
 apply metis
 done
@@ -499,6 +507,202 @@ lemma account_balance_return :
 "account_balance0 (update_return st1 addr v r) =
  account_balance0 (st1 r)"
 by (simp add:update_return_def update_world_def)
+
+definition states :: "global0 \<Rightarrow> world_state list" where
+"states g = (g_current g#map (%e. let (x,_,_,_) = e in x) (g_stack g))"
+
+(* sorted lists *)
+definition balance_inv :: "global0 \<Rightarrow> bool" where
+"balance_inv g ==
+   sorted (map total_balance (states g)) \<and>
+   total_balance (last (states g)) \<le> total_balance (g_orig g)"
+
+lemma tr_orig :
+   "next0 (Continue st1) = Continue st2 \<Longrightarrow>
+    g_orig st1 = g_orig st2"
+apply (simp add:next0_def Let_def)
+apply (cases "g_vmstate st1"; auto)
+subgoal for act v zz
+apply (cases act; auto simp add:Let_def)
+apply (case_tac "callarg_recipient x1 <s 256";auto)
+apply (auto simp add:Let_def)
+apply (case_tac
+   "account_balance0
+               (update_return (g_current st1)
+                 (cctx_this (g_cctx st1)) v
+                 (cctx_this (g_cctx st1)))
+              < callarg_value x1 \<or>
+              1023 < length (g_stack st1)";auto)
+apply (auto simp add:Let_def)
+apply (case_tac "1023 < length (g_stack st1)"; auto)
+apply (case_tac "account_balance0
+               (g_current st1 (cctx_this (g_cctx st1)))
+              < createarg_value x3 \<or>
+              1023 < length (g_stack st1)";
+       auto simp add:Let_def)
+apply(case_tac "g_stack st1"; auto)
+apply(case_tac "g_stack st1"; auto simp add:Let_def)
+apply(case_tac "list = [] \<and> g_create st1"; auto simp add:Let_def)
+apply(case_tac "g_stack st1"; auto simp add:Let_def)
+apply(case_tac "b"; auto)
+apply(case_tac "x6 = [] \<and> list = [] \<and> g_create st1"; auto)
+apply(case_tac "vctx_gas v
+                < 200 * int (length x6) \<and>
+                homestead_block
+                \<le> unat
+                    (block_number
+                      (vctx_block v))"; auto)
+apply(case_tac "vctx_gas v
+                < 200 * int (length x6)"; auto)
+apply(case_tac "vctx_gas v
+                < 200 * int (length x6) \<and>
+                homestead_block
+                \<le> unat
+                    (block_number
+                      (vctx_block v))"; auto)
+apply(case_tac "vctx_gas v
+                < 200 * int (length x6)"; auto)
+apply(case_tac "vctx_gas v
+                < 200 * int (length x6) \<and>
+                homestead_block
+                \<le> unat
+                    (block_number
+                      (vctx_block v))"; auto)
+apply(case_tac "vctx_gas v
+                < 200 * int (length x6)"; auto)
+done
+done
+
+lemma inv_depend :
+   "balance_inv st1 \<Longrightarrow>
+    g_orig st1 = g_orig st2 \<Longrightarrow>
+    g_current st1 = g_current st2 \<Longrightarrow>
+    g_stack st1 = g_stack st2 \<Longrightarrow>
+    balance_inv st2"
+apply (simp add: balance_inv_def states_def)
+done
+
+lemma inv_current :
+   "balance_inv st1 \<Longrightarrow>
+    g_orig st1 = g_orig st2 \<Longrightarrow>
+    total_balance (g_current st1) \<ge> total_balance (g_current st2) \<Longrightarrow>
+    g_stack st1 = g_stack st2 \<Longrightarrow>
+    balance_inv st2"
+apply (auto simp add: balance_inv_def states_def)
+  by (smt sorted_Cons)
+
+lemma sorted_pop : "sorted (a#lst) \<Longrightarrow> sorted lst"
+  by (simp add: sorted_Cons)
+
+lemma sorted_dup : "sorted (a#lst) \<Longrightarrow> sorted (a#a#lst)"
+  by simp
+
+
+lemma inv_pop_states :
+   "balance_inv st1 \<Longrightarrow>
+    g_orig st1 = g_orig st2 \<Longrightarrow>
+    states st1 = a # states st2 \<Longrightarrow>
+    balance_inv st2"
+apply (auto simp add: balance_inv_def)
+using sorted_pop
+apply force
+  by (simp add: states_def)
+
+lemma inv_pop :
+   "balance_inv st1 \<Longrightarrow>
+    g_orig st1 = g_orig st2 \<Longrightarrow>
+    (g_current st2,e1,e2,e3) # g_stack st2 = g_stack st1 \<Longrightarrow>
+    balance_inv st2"
+apply (rule inv_pop_states [of st1 st2 "g_current st1"])
+apply (auto simp add:states_def)
+  by (metis (mono_tags, lifting) case_prod_conv list.simps(9))
+
+lemma states_not_nil : "states st = [] \<Longrightarrow> False"
+  by (simp add: states_def)
+
+lemma inv_dup_states :
+   "balance_inv st1 \<Longrightarrow>
+    g_orig st1 = g_orig st2 \<Longrightarrow>
+    states st2 = hd (states st1) # states st1 \<Longrightarrow>
+    balance_inv st2"
+apply (auto simp add: balance_inv_def)
+using states_not_nil apply force
+using sorted_dup
+  by (metis hd_Cons_tl hd_map sorted_single)
+
+lemma inv_dup :
+   "balance_inv st1 \<Longrightarrow>
+    g_orig st1 = g_orig st2 \<Longrightarrow>
+    g_current st1 = g_current st2 \<Longrightarrow>
+    (g_current st1,e1,e2,e3) # g_stack st1 = g_stack st2 \<Longrightarrow>
+    balance_inv st2"
+apply (rule inv_dup_states [of st1 st2])
+apply (auto simp add:states_def)
+  by (metis (mono_tags, lifting) case_prod_conv list.simps(9))
+
+lemma inv_return :
+  "balance_inv st \<Longrightarrow>
+   balance_inv (st\<lparr>g_current := update_return (g_current st) addr v\<rparr>)"
+using inv_current
+  by (simp add: total_balance_update_return)
+
+(* push state *)
+lemma inv_push :
+   "balance_inv st1 \<Longrightarrow>
+    g_orig st1 = g_orig st2 \<Longrightarrow>
+    total_balance (g_current st2) \<le> total_balance (g_current st1) \<Longrightarrow>
+    (g_current st1,e1,e2,e3) # g_stack st1 = g_stack st2 \<Longrightarrow>
+    balance_inv st2"
+using inv_current [of "st2\<lparr> g_current := g_current st1\<rparr>" st2]
+ and inv_dup by force
+
+lemma tr_balance :
+   "next0 (Continue st1) = Continue st2 \<Longrightarrow>
+    total_balance (g_current st1) < 2^256 \<Longrightarrow>
+    balance_inv st1 \<Longrightarrow>
+    balance_inv st2"
+apply (simp add:next0_def Let_def)
+apply (cases "g_vmstate st1"; auto)
+using inv_depend apply force
+using inv_depend apply force
+subgoal for act v zz
+apply (cases act; auto simp add:Let_def)
+apply (case_tac "callarg_recipient x1 <s 256";auto)
+apply (auto simp add:Let_def)
+apply (case_tac
+   "account_balance0
+               (update_return (g_current st1)
+                 (cctx_this (g_cctx st1)) v
+                 (cctx_this (g_cctx st1)))
+              < callarg_value x1 \<or>
+              1023 < length (g_stack st1)";auto)
+apply (rule inv_depend[of "st1
+         \<lparr>g_current := update_return (g_current st1)
+             (cctx_this (g_cctx st1)) v \<rparr>"])
+apply (auto)
+using inv_return apply force
+apply (rule inv_depend[of "st1
+         \<lparr>g_current := update_return (g_current st1)
+             (cctx_this (g_cctx st1)) v \<rparr>"])
+apply (auto)
+using inv_return apply force
+apply (simp add:Let_def)
+apply(rule inv_push [of st1 st2])
+apply auto
+
+subgoal for args
+apply (cases "cctx_this (g_cctx st1) = callarg_recipient args")
+
+apply (subst total_balance_update_call2)
+apply (auto simp:total_balance_update_return
+  account_balance_return)
+apply (subst total_balance_update_call)
+apply (auto simp:total_balance_update_return
+  account_balance_return)
+apply (rule overflow [of "g_current st1" "callarg_value args"
+  "cctx_this (g_cctx st1)" "callarg_recipient args"])
+apply auto
+done
 
 lemma tr_balance :
    "next0 (Continue st1) = Continue st2 \<Longrightarrow>

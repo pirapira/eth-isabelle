@@ -353,20 +353,24 @@ let set_account_code acc bytes = <| acc with account_code = make_program bytes |
 val update_world : world_state -> address -> account -> world_state
 let update_world state a_addr n_acc a = if a = a_addr then n_acc else state a
 
-let update_tr state addr value =
+let sub_balance state addr value =
   let acc = state addr in
   let acc = <| acc with account_balance = acc.account_balance - value |> in
+  update_world state addr acc
+
+let add_balance state addr value =
+  let acc = state addr in
+  let acc = <| acc with account_balance = acc.account_balance + value |> in
   update_world state addr acc
 
 let update_return state addr v =
   update_world state addr (<| (state addr) with account_storage = v.vctx_storage |>)
 
-let update_call state addr args =
-  let state = update_tr state addr args.callarg_value in
-  let to_acc = state args.callarg_recipient in
-  let to_acc = <| to_acc with account_balance = to_acc.account_balance + args.callarg_value |> in
-  let state = update_world state args.callarg_recipient to_acc in
-  state
+let transfer_balance state addr recv v =
+  let state = sub_balance state addr v in
+  add_balance state recv v
+
+let update_call state addr args = transfer_balance state addr args.callarg_recipient args.callarg_value
 
 let update_nonce state addr =
   let acc = state addr in
@@ -423,7 +427,6 @@ let next = function
             Continue (<| global with g_current = state; g_vmstate = InstructionContinue nv |>) else
          let state = update_nonce state c.cctx_this in
          let n_state = update_return state c.cctx_this v in
-         let n_state = update_tr n_state c.cctx_this args.createarg_value in
          let n_acc = n_state c.cctx_this in
          let addr = w256_to_address (keccak (RLP (Node [RLP_address c.cctx_this; RLP_w256 (n_acc.account_nonce-1)]))) in
          let old_acc = n_state addr in
@@ -432,6 +435,7 @@ let next = function
          let acc = <| acc with account_balance = args.createarg_value + old_balance; account_exists = true |> in
          let cctx = <| cctx_this = addr; cctx_program = make_program args.createarg_code; cctx_hash_filter = c.cctx_hash_filter |> in
          let n_state = update_world n_state addr acc in
+         let n_state = transfer_balance n_state c.cctx_this addr args.createarg_value in
          let passed_gas : integer = if word256ToNatural v.vctx_block.block_number >= eip150_block then L v.vctx_gas else v.vctx_gas in
          let remaining_gas = v.vctx_gas - passed_gas in
          let nv = create_env acc n_state args.createarg_value [] (word256FromInteger passed_gas) c.cctx_this v.vctx_origin v.vctx_block in
