@@ -247,11 +247,9 @@ context
   includes sep_crunch simp_for_triples
 begin
 
-(* not correct anymore, gas for called is calculated
- differently
 lemma call_gas_triple:
-  "triple {OutOfGas}
-          (\<langle> h \<le> 1017 \<and> fund \<ge> v \<and> length input = unat in_size \<rangle> ** 
+  "triple net {OutOfGas}
+          (\<langle> h \<le> 1017 \<and> fund \<ge> v \<and> length input = unat in_size \<and> at_least_eip150 net \<rangle> ** 
            program_counter k ** memory_range in_begin input **
            stack_topmost h [out_size, out_begin, in_size, in_begin, v, r, g] **
            gas_pred own_gas **
@@ -268,13 +266,16 @@ lemma call_gas_triple:
            gas_any **
            memory_usage (M (M u in_begin in_size) out_begin out_size) **
            not_continuing **
-           action (ContractCall \<lparr> callarg_gas = g
-                                , callarg_code = ucast r
-                                , callarg_recipient = ucast r
-                                , callarg_value = v
-                                , callarg_data = input
-                                , callarg_output_begin = out_begin
-                                , callarg_output_size = out_size \<rparr>))"
+           action (ContractCall
+             \<lparr> callarg_gas = (word_of_int (Ccallgas g r v
+                     (\<not> ((vctx_account_existence   v) (Word.ucast r))) own_gas net
+                     (calc_memu_extra u g r value1 in_begin in_size out_begin out_size)))
+             , callarg_code = ucast r
+             , callarg_recipient = ucast r
+             , callarg_value = v
+             , callarg_data = input
+             , callarg_output_begin = out_begin
+             , callarg_output_size = out_size \<rparr>))"
 apply(simp only: triple_triple_alt)
 apply(auto simp add: triple_alt_def)
 apply(rule_tac x = 1 in exI)
@@ -302,7 +303,6 @@ apply(clarsimp)
 apply(rename_tac elm; case_tac elm; simp)
 apply(auto)
 done
-*)
 
 end
 
