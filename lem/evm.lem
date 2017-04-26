@@ -1384,7 +1384,7 @@ let calc_memu_extra2 v = Cmem (new_memory_consumption (Misc DELEGATECALL) v) - C
 (* (and gas, when we introduce the gas accounting). *)
 val call : network -> variable_ctx -> constant_ctx -> instruction_result
 let call net v c = match v.vctx_stack with
- | e0 :: e1 :: e2 :: e3 :: e4 :: e5 :: e6 :: rest ->
+ | g :: r :: value :: in_begin :: in_size :: out_begin :: out_size :: rest ->
      (* strict_if (word256ULT (v.vctx_balance c.cctx_this) e2)
         (fun _ -> (InstructionContinue
            (vctx_advance_pc c
@@ -1393,19 +1393,19 @@ let call net v c = match v.vctx_stack with
              |>
            ))) *)
      InstructionToEnvironment (ContractCall
-         <| callarg_gas = word256FromInteger (Ccallgas e0 e1 e2
-                     (not (v.vctx_account_existence (w256_to_address e1))) v.vctx_gas net (calc_memu_extra v));
-            callarg_code = w256_to_address e1;
-            callarg_recipient = w256_to_address e1;
-            callarg_value = e2;
-            callarg_data = cut_memory e3 e4 v.vctx_memory;
-            callarg_output_begin = e5;
-            callarg_output_size = e6 |>)
+         <| callarg_gas = word256FromInteger (Ccallgas g r value
+                     (not (v.vctx_account_existence (w256_to_address r))) v.vctx_gas net (calc_memu_extra v));
+            callarg_code = w256_to_address r;
+            callarg_recipient = w256_to_address r;
+            callarg_value = value;
+            callarg_data = cut_memory in_begin in_size v.vctx_memory;
+            callarg_output_begin = out_begin;
+            callarg_output_size = out_size |>)
         (<| (vctx_advance_pc c v) with
            vctx_stack = rest;
-           vctx_balance = update_balance c.cctx_this (fun orig -> orig - e2) v.vctx_balance |>)
+           vctx_balance = update_balance c.cctx_this (fun orig -> orig - value) v.vctx_balance |>)
         (Just (* saving the variable environment for timing *)
-           (uint e5, uint e6))
+           (uint out_begin, uint out_size))
   | _ -> instruction_failure_result v [TooShortStack]
 end
 
