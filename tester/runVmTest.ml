@@ -1,5 +1,5 @@
 open Yojson.Basic
-open Jsonparser
+open VmTestParser
 open Constant
 open TestResult
 

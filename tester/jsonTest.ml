@@ -1,5 +1,5 @@
 open Yojson.Basic
-open Jsonparser
+open VmTestParser
 
 let () =
 (*  let vm_arithmetic_test : json = Yojson.Basic.from_file "../tests/VMTests/vmArithmeticTest.json" in
