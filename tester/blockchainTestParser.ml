@@ -112,32 +112,45 @@ let format_transaction (t : transaction) : Easy_format.t =
 
 type block =
   { blockHeader : blockHeader
-  ; blockNumber : Big_int.big_int
+  ; blockNumber : Big_int.big_int option
   ; blockRLP : string
   ; blockTransactions : transaction list
   ; blockUncleHeaders : blockHeader list (* ?? *)
   }
 
+exception UnsupportedEncoding
+
 let parse_block (j : json) : block =
   let open Util in
-  { blockHeader = parse_block_header (member "blockHeader" j)
-  ; blockNumber =
-      (try parse_big_int_from_field "blocknumber" j
+  { blockHeader =
+      (try parse_block_header (member "blockHeader" j)
        with e ->
-         let () = Printf.eprintf "error in parsing blockNumber\n%!" in
+         let () = Printf.eprintf "error in parsing blockHeader\n%!" in
          raise e)
+  ; blockNumber =
+      (try Some (parse_big_int_from_field "blocknumber" j)
+       with _ -> None)
   ; blockRLP = to_string (member "rlp" j)
   ; blockTransactions =
-      List.map parse_transaction (to_list (member "transactions" j))
+      (try List.map parse_transaction (to_list (member "transactions" j))
+       with e ->
+         let () = Printf.eprintf "error in parsing transactions\n%!" in
+         raise e
+      )
   ; blockUncleHeaders =
-      List.map parse_block_header (to_list (member "uncleHeaders" j))
+      (try List.map parse_block_header (to_list (member "uncleHeaders" j))
+       with Yojson.Basic.Util.Type_error _ ->
+            raise UnsupportedEncoding
+          | e ->
+             let () = Printf.eprintf "error in parsing uncle headers\n%!" in
+             raise e)
   }
 
 let format_block (b : block) : Easy_format.t =
   let open Easy_format in
   let lst : t list =
     [ Label ((Atom ("blockHeader", atom), label), format_block_header b.blockHeader)
-    ; Label ((Atom ("blockNumber", atom), label), Atom (Big_int.string_of_big_int b.blockNumber, atom))
+    ; Label ((Atom ("blockNumber", atom), label), Atom ((match b.blockNumber with Some bn -> Big_int.string_of_big_int bn | None -> "(null)"), atom))
     ; Label ((Atom ("rlp", atom), label), Atom (b.blockRLP, atom))
     ; Label ((Atom ("transactions", atom), label),
              List (("[", ",", "]", list), List.map format_transaction b.blockTransactions))
@@ -151,12 +164,47 @@ type testCase =
   ; bcCaseGenesisBlockHeader : blockHeader
   ; bcCaseGenesisRLP : string
   ; bcCaseLastBlockhash : string
-  ; bcCasePostState : (string * Evm.account_state) list
-  ; bcCasePreState : (string * Evm.account_state) list
+  ; bcCasePostState : (string * VmTestParser.account_state) list
+  ; bcCasePreState : (string * VmTestParser.account_state) list
   }
 
+let parse_blocks (js : json list) : block list =
+  List.map parse_block js
+
 let parse_test_case (j : json) : testCase =
-  failwith "ptc not implemented"
+  let open Util in
+  { bcCaseBlocks =
+      (let block_list = to_list (member "blocks" j) in
+       try parse_blocks block_list
+       with e ->
+         let () = Printf.eprintf "error while parsing blocks\n%!" in
+         raise e)
+  ; bcCaseGenesisBlockHeader =
+      (try parse_block_header (member "genesisBlockHeader" j)
+       with e ->
+         let () = Printf.eprintf "error while parsing genesis block header\n%!" in
+         raise e)
+  ; bcCaseGenesisRLP =
+      (try to_string (member "genesisRLP" j)
+       with e ->
+         let () = Printf.eprintf "error while parsing genesis RLP\n%!" in
+         raise e)
+  ; bcCaseLastBlockhash =
+      (try to_string (member "lastblockhash" j)
+       with e ->
+         let () = Printf.eprintf "error while parsing last block hash\n%!" in
+         raise e)
+  ; bcCasePostState =
+      (try VmTestParser.parse_states (to_assoc (member "postState" j))
+       with e ->
+         let () = Printf.eprintf "error while parsing post state\n%!" in
+         raise e)
+  ; bcCasePreState =
+      (try VmTestParser.parse_states (to_assoc (member "pre" j))
+       with e ->
+         let () = Printf.eprintf "error while parsing pre state\n%!" in
+         raise e)
+  }
 
 let format_test_case (t : testCase) : Easy_format.t =
   failwith "ftc not implemented"

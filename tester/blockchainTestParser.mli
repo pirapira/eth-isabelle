@@ -42,12 +42,16 @@ val format_transaction : transaction -> Easy_format.t
 
 type block =
   { blockHeader : blockHeader
-  ; blockNumber : Big_int.big_int
+  ; blockNumber : Big_int.big_int option
   ; blockRLP : string
   ; blockTransactions : transaction list
   ; blockUncleHeaders : blockHeader list (* ?? *)
   }
 
+exception UnsupportedEncoding
+
+(** [parse_block] parses a Json document into a block.  When the Json document does not contain fields, throws
+    [UnsupportedEncoding] exception. *)
 val parse_block : json -> block
 
 val format_block : block -> Easy_format.t
@@ -59,8 +63,8 @@ type testCase =
   ; bcCaseGenesisBlockHeader : blockHeader
   ; bcCaseGenesisRLP : string
   ; bcCaseLastBlockhash : string
-  ; bcCasePostState : (string * Evm.account_state) list
-  ; bcCasePreState : (string * Evm.account_state) list
+  ; bcCasePostState : (string * VmTestParser.account_state) list
+  ; bcCasePreState : (string * VmTestParser.account_state) list
   }
 
 val parse_test_case : json -> testCase
