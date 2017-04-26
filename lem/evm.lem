@@ -1374,7 +1374,8 @@ let Csuicide recipient_empty net =
   Gsuicide net + (if recipient_empty && at_least_eip150 net then Gnewaccount else 0)
 
 
-let calc_memu_extra v s0 s1 s2 s3 s4 s5 s6 = Cmem (new_memory_consumption (Misc CALL) v.vctx_memory_usage s0 s1 s2 s3 s4 s5 s6) - Cmem v.vctx_memory_usage
+let calc_memu_extra orig_memory_usage s0 s1 s2 s3 s4 s5 s6 =
+  Cmem (new_memory_consumption (Misc CALL) orig_memory_usage s0 s1 s2 s3 s4 s5 s6) - Cmem orig_memory_usage
 let calc_memu_extra2 v s0 s1 s2 s3 s4 s5 s6 = Cmem (new_memory_consumption (Misc DELEGATECALL) v.vctx_memory_usage s0 s1 s2 s3 s4 s5 s6) - Cmem v.vctx_memory_usage
 
 (* CALL instruction results in @{term ContractCall} action when there are enough stack elements *)
@@ -1391,7 +1392,7 @@ let call net v c = match v.vctx_stack with
            ))) *)
      InstructionToEnvironment (ContractCall
          <| callarg_gas = word256FromInteger (Ccallgas g r value
-                     (not (v.vctx_account_existence (w256_to_address r))) v.vctx_gas net (calc_memu_extra v g r value in_begin in_size out_begin out_size));
+                     (not (v.vctx_account_existence (w256_to_address r))) v.vctx_gas net (calc_memu_extra v.vctx_memory_usage g r value in_begin in_size out_begin out_size));
             callarg_code = w256_to_address r;
             callarg_recipient = w256_to_address r;
             callarg_value = value;
@@ -1450,7 +1451,7 @@ let callcode net v c = match v.vctx_stack with
          (ContractCall
            <| callarg_gas = word256FromInteger (Ccallgas e0 e1 e2
                      (not (v.vctx_account_existence (w256_to_address e1))) v.vctx_gas net
-                     (calc_memu_extra v e0 e1 e2 e3 e4 e5 e6));
+                     (calc_memu_extra v.vctx_memory_usage e0 e1 e2 e3 e4 e5 e6));
               callarg_code = w256_to_address e1;
               callarg_recipient = c.cctx_this;
               callarg_value = e2;
