@@ -1,5 +1,4 @@
 open Yojson.Basic
-open VmTestParser
 open BlockchainTestParser
 
 let () =
@@ -16,7 +15,7 @@ let () =
   let () =
     List.iter (fun (label, elm) ->
         let () = Printf.printf "%s\n%!" label in
-        let _ : test_case = parse_test_case elm in
+        let _ : VmTestParser.test_case = VmTestParser.parse_test_case elm in
         ()
       ) vm_arithmetic_test_assoc
   in

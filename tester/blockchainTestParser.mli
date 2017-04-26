@@ -51,3 +51,18 @@ type block =
 val parse_block : json -> block
 
 val format_block : block -> Easy_format.t
+
+(* I think I can reuse existing parsers for genesisBlockHeader, genesisRLP, lastblockhash and postState *)
+
+type testCase =
+  { bcCaseBlocks : block list
+  ; bcCaseGenesisBlockHeader : blockHeader
+  ; bcCaseGenesisRLP : string
+  ; bcCaseLastBlockhash : string
+  ; bcCasePostState : (string * Evm.account_state) list
+  ; bcCasePreState : (string * Evm.account_state) list
+  }
+
+val parse_test_case : json -> testCase
+
+val format_test_case : testCase -> Easy_format.t

@@ -145,3 +145,18 @@ let format_block (b : block) : Easy_format.t =
              List (("[", ",", "]", list), List.map format_block_header b.blockUncleHeaders))
     ] in
   List (("{", ",", "}", list), lst)
+
+type testCase =
+  { bcCaseBlocks : block list
+  ; bcCaseGenesisBlockHeader : blockHeader
+  ; bcCaseGenesisRLP : string
+  ; bcCaseLastBlockhash : string
+  ; bcCasePostState : (string * Evm.account_state) list
+  ; bcCasePreState : (string * Evm.account_state) list
+  }
+
+let parse_test_case (j : json) : testCase =
+  failwith "ptc not implemented"
+
+let format_test_case (t : testCase) : Easy_format.t =
+  failwith "ftc not implemented"
