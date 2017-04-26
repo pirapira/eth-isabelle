@@ -14,10 +14,12 @@ type blockHeader =
   ; bhNumber : Big_int.big_int
   ; bhParentHash : string
   ; bhReceiptTrie : string
-  ; bhStateRoot : Big_int.big_int
+  ; bhStateRoot : string
   ; bhTimestamp : Big_int.big_int
   ; bhTransactionsTrie : string
   ; bhUncleHash : string
   }
 
 val parse_block_header : json -> blockHeader
+
+val format_block_header : blockHeader -> Easy_format.t

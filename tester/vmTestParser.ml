@@ -66,7 +66,7 @@ let parse_env (j : json) : env =
 
 let format_env (e : env) : Easy_format.t =
   let open Easy_format in
-  let lst : Easy_format.t list =
+  let lst : t list =
     [ Label ((Atom ("currentCoinbase", atom), label), Atom (Big_int.string_of_big_int e.currentCoinbase, atom))
     ; Label ((Atom ("currentDifficulty", atom), label), Atom (Big_int.string_of_big_int e.currentDifficulty, atom))
     ] in

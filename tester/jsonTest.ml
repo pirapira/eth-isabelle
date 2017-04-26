@@ -28,7 +28,8 @@ let () =
   let addr_s = Conv.string_of_address addr_w in
   let () = assert (addr_s = "000000000000000000000000000000000000000f") in
   let blockHeaderSample : json = Yojson.Basic.from_file "./block_header_sample.json" in
-  let () = ignore (parse_block_header blockHeaderSample) in
+  let blockHeader = parse_block_header blockHeaderSample in
   let () = Printf.printf "something parsed from block_header_sample.json\n" in
+  let () = Easy_format.Pretty.to_stdout (format_block_header blockHeader) in
 
   ()
