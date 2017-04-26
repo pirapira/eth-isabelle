@@ -34,6 +34,8 @@ let () =
   let () = Easy_format.Pretty.to_stdout (format_block_header blockHeader) in
 
   let transactionSample : json = Yojson.Basic.from_file "./block_transaction_sample.json" in
-  let () = ignore (BlockchainTestParser.parse_transaction transactionSample) in
+  let tr = BlockchainTestParser.parse_transaction transactionSample in
+  let () = Printf.printf "something parsed from block_transaction_sample.json\n" in
+  let () = Easy_format.Pretty.to_stdout (format_transaction tr) in
 
   ()
