@@ -206,5 +206,17 @@ let parse_test_case (j : json) : testCase =
          raise e)
   }
 
+let format_blocks (bs : block list) =
+  Easy_format.(List (("[", ",", "]", list), List.map format_block bs))
+
 let format_test_case (t : testCase) : Easy_format.t =
-  failwith "ftc not implemented"
+  let open Easy_format in
+  let lst =
+    [ Label ((Atom ("blocks", atom), label), format_blocks t.bcCaseBlocks)
+    ; Label ((Atom ("geneisBlockHeader", atom), label), format_block_header t.bcCaseGenesisBlockHeader)
+    ; Label ((Atom ("genesisRLP", atom), label), Atom (t.bcCaseGenesisRLP, atom))
+    ; Label ((Atom ("lastblockhash", atom), label), Atom (t.bcCaseLastBlockhash, atom))
+    ; Label ((Atom ("postState", atom), label), Atom ("(printing not implemented)", atom))
+    ; Label ((Atom ("pre", atom), label), Atom ("(printing not implemented)", atom))
+    ] in
+  List (("{", ",", "}", list), lst)
