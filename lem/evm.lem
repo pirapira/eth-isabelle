@@ -1176,37 +1176,34 @@ let vctx_stack_default idx v =
   end
 
 (* Calculate active memory (i.e. vctx_memory_usage) after the execution of an instruction: *)
-val new_memory_consumption : inst -> variable_ctx -> integer
-let new_memory_consumption i v =
+val new_memory_consumption : inst -> integer -> w256 -> w256 -> w256 -> w256 -> w256 -> w256 -> w256 -> integer
+let new_memory_consumption i original_memory_usage s0 s1 s2 s3 s4 s5 s6 =
   match i with
-  | Arith SHA3 -> M v.vctx_memory_usage (vctx_stack_default 0 v) (vctx_stack_default 1 v)
+  | Arith SHA3 -> M original_memory_usage s0 s1
   | Memory CALLDATACOPY ->
-    M v.vctx_memory_usage (vctx_stack_default 0 v) (vctx_stack_default 2 v)
+    M original_memory_usage s0 s2
   | Memory CODECOPY ->
-    M v.vctx_memory_usage (vctx_stack_default 0 v) (vctx_stack_default 2 v)
+    M original_memory_usage s0 s2
   | Memory EXTCODECOPY ->
-    M v.vctx_memory_usage (vctx_stack_default 1 v) (vctx_stack_default 3 v)
+    M original_memory_usage s1 s3
   | Memory MLOAD ->
-    M v.vctx_memory_usage (vctx_stack_default 0 v) 32
+    M original_memory_usage s0 32
   | Memory MSTORE ->
-    M v.vctx_memory_usage (vctx_stack_default 0 v) 32
+    M original_memory_usage s0 32
   | Memory MSTORE8 ->
-    M v.vctx_memory_usage (vctx_stack_default 0 v) 1
+    M original_memory_usage s0 1
   | Misc CREATE ->
-    M v.vctx_memory_usage (vctx_stack_default 1 v) (vctx_stack_default 2 v)
+    M original_memory_usage s1 s2
   | Misc CALL ->
-    M (M v.vctx_memory_usage (vctx_stack_default 3 v) (vctx_stack_default 4 v))
-      (vctx_stack_default 5 v) (vctx_stack_default 6 v)
+    M (M original_memory_usage s3 s4) s5 s6
   | Misc CALLCODE ->
-    M (M v.vctx_memory_usage (vctx_stack_default 3 v) (vctx_stack_default 4 v))
-      (vctx_stack_default 5 v) (vctx_stack_default 6 v)
+    M (M original_memory_usage s3 s4) s5 s6
   | Misc DELEGATECALL ->
-    M (M v.vctx_memory_usage (vctx_stack_default 2 v) (vctx_stack_default 3 v))
-      (vctx_stack_default 4 v) (vctx_stack_default 5 v)
+    M (M original_memory_usage s2 s3) s4 s5
   | Misc RETURN ->
-    M v.vctx_memory_usage (vctx_stack_default 0 v) (vctx_stack_default 1 v)
-  | Log _ -> M v.vctx_memory_usage (vctx_stack_default 0 v) (vctx_stack_default 1 v)
-  | _ -> v.vctx_memory_usage
+    M original_memory_usage s0 s1
+  | Log _ -> M original_memory_usage s0 s1
+  | _ -> original_memory_usage
   end
 
 (* subsection {* Definition of EVM Operations *} *)
@@ -1377,8 +1374,8 @@ let Csuicide recipient_empty net =
   Gsuicide net + (if recipient_empty && at_least_eip150 net then Gnewaccount else 0)
 
 
-let calc_memu_extra v = Cmem (new_memory_consumption (Misc CALL) v) - Cmem v.vctx_memory_usage
-let calc_memu_extra2 v = Cmem (new_memory_consumption (Misc DELEGATECALL) v) - Cmem v.vctx_memory_usage
+let calc_memu_extra v s0 s1 s2 s3 s4 s5 s6 = Cmem (new_memory_consumption (Misc CALL) v.vctx_memory_usage s0 s1 s2 s3 s4 s5 s6) - Cmem v.vctx_memory_usage
+let calc_memu_extra2 v s0 s1 s2 s3 s4 s5 s6 = Cmem (new_memory_consumption (Misc DELEGATECALL) v.vctx_memory_usage s0 s1 s2 s3 s4 s5 s6) - Cmem v.vctx_memory_usage
 
 (* CALL instruction results in @{term ContractCall} action when there are enough stack elements *)
 (* (and gas, when we introduce the gas accounting). *)
@@ -1394,7 +1391,7 @@ let call net v c = match v.vctx_stack with
            ))) *)
      InstructionToEnvironment (ContractCall
          <| callarg_gas = word256FromInteger (Ccallgas g r value
-                     (not (v.vctx_account_existence (w256_to_address r))) v.vctx_gas net (calc_memu_extra v));
+                     (not (v.vctx_account_existence (w256_to_address r))) v.vctx_gas net (calc_memu_extra v g r value in_begin in_size out_begin out_size));
             callarg_code = w256_to_address r;
             callarg_recipient = w256_to_address r;
             callarg_value = value;
@@ -1424,7 +1421,7 @@ let delegatecall net v c = match v.vctx_stack with
        InstructionToEnvironment
          (ContractDelegateCall
            <| callarg_gas = word256FromInteger (Ccallgas e0 e1 0
-                     (not (v.vctx_account_existence (w256_to_address e1))) v.vctx_gas net (calc_memu_extra2 v));
+                     (not (v.vctx_account_existence (w256_to_address e1))) v.vctx_gas net (calc_memu_extra2 v e0 e1 e3 e4 e5 e6 0));
               callarg_code = w256_to_address e1;
               callarg_recipient = w256_to_address e1;
               callarg_value = v.vctx_value_sent;
@@ -1452,7 +1449,8 @@ let callcode net v c = match v.vctx_stack with
        InstructionToEnvironment
          (ContractCall
            <| callarg_gas = word256FromInteger (Ccallgas e0 e1 e2
-                     (not (v.vctx_account_existence (w256_to_address e1))) v.vctx_gas net (calc_memu_extra v));
+                     (not (v.vctx_account_existence (w256_to_address e1))) v.vctx_gas net
+                     (calc_memu_extra v e0 e1 e2 e3 e4 e5 e6));
               callarg_code = w256_to_address e1;
               callarg_recipient = c.cctx_this;
               callarg_value = e2;
@@ -1794,7 +1792,10 @@ let vctx_recipient v c =
 
 val meter_gas : inst -> variable_ctx -> constant_ctx -> network -> integer
 let meter_gas i v c net =
-  C v.vctx_memory_usage (new_memory_consumption i v) (vctx_next_instruction_default v c)
+  C v.vctx_memory_usage
+   (new_memory_consumption i v.vctx_memory_usage (vctx_stack_default 0 v) (vctx_stack_default 1 v) (vctx_stack_default 2 v) (vctx_stack_default 3 v)
+      (vctx_stack_default 4 v) (vctx_stack_default 5 v) (vctx_stack_default 6 v))
+   (vctx_next_instruction_default v c)
     (vctx_stack_default 0 v) (vctx_stack_default 1 v) (vctx_stack_default 2 v) (vctx_stack_default 3 v)
     (not (v.vctx_account_existence (vctx_recipient v c))) (v.vctx_storage (vctx_stack_default 0 v))
     (vctx_stack_default 1 v) v.vctx_gas net
@@ -1834,7 +1835,7 @@ let signextend len w =
 (* on the execution environments. *)
 val instruction_sem : variable_ctx -> constant_ctx -> inst -> network -> instruction_result
 let instruction_sem v c inst net =
-  subtract_gas (meter_gas inst v c net) (new_memory_consumption inst v)
+  subtract_gas (meter_gas inst v c net) (new_memory_consumption inst v.vctx_memory_usage (vctx_stack_default 0 v) (vctx_stack_default 1 v) (vctx_stack_default 2 v) (vctx_stack_default 3 v) (vctx_stack_default 4 v) (vctx_stack_default 5 v) (vctx_stack_default 6 v))
   (match inst with
   | Stack (PUSH_N lst) -> stack_0_1_op v c (word_of_bytes (constant_mark lst))
   | Unknown _ -> instruction_failure_result v [ShouldNotHappen]
