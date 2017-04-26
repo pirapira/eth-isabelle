@@ -23,3 +23,27 @@ type blockHeader =
 val parse_block_header : json -> blockHeader
 
 val format_block_header : blockHeader -> Easy_format.t
+
+type transaction =
+  { transactionData : string
+  ; transactionGasLimit : Big_int.big_int
+  ; transactionGasPrice : Big_int.big_int
+  ; transactionNonce : Big_int.big_int
+  ; transactionR : Big_int.big_int
+  ; transactionS : Big_int.big_int
+  ; transactionTo : Big_int.big_int
+  ; transactionV : Big_int.big_int
+  ; transactionValue : Big_int.big_int
+  }
+
+val parse_transaction : json -> transaction
+
+val format_transaction : transaction -> Easy_format.t
+
+type block =
+  { blockHeader : blockHeader
+  ; blockNumber : Big_int.big_int
+  ; blockRLP : string
+  ; blockTransactions : transaction list
+  ; uncleHeaders : blockHeader list (* ?? *)
+  }

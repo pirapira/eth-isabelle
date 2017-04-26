@@ -27,9 +27,13 @@ let () =
   let () = Printf.printf "address_printed %s\n" (BatBig_int.to_string_in_hexa (Conv.big_int_of_word160 addr_w)) in
   let addr_s = Conv.string_of_address addr_w in
   let () = assert (addr_s = "000000000000000000000000000000000000000f") in
+
   let blockHeaderSample : json = Yojson.Basic.from_file "./block_header_sample.json" in
   let blockHeader = parse_block_header blockHeaderSample in
   let () = Printf.printf "something parsed from block_header_sample.json\n" in
   let () = Easy_format.Pretty.to_stdout (format_block_header blockHeader) in
+
+  let transactionSample : json = Yojson.Basic.from_file "./block_transaction_sample.json" in
+  let () = ignore (BlockchainTestParser.parse_transaction transactionSample) in
 
   ()
