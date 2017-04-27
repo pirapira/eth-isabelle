@@ -665,7 +665,7 @@ lemma inv_push :
 using inv_current [of "st2\<lparr> g_current := g_current st1\<rparr>" st2]
  and inv_dup by force
 
-lemma inv_discard :
+lemma inv_discard_aux :
    "balance_inv st1 \<Longrightarrow>
     g_orig st1 = g_orig st2 \<Longrightarrow>
     total_balance (g_current st2) \<le> total_balance (g_current st1) \<Longrightarrow>
@@ -773,7 +773,35 @@ using inv_depend
 apply force
 done
 
-lemma tr_balance :
+lemma inv_depend_normal :
+"balance_inv
+     (st1\<lparr>g_stack := rest,
+          g_current := cur\<rparr>) \<Longrightarrow>
+ balance_inv
+     (st1\<lparr>g_stack := rest,
+          g_current := cur,
+          g_cctx := ctx,
+          g_vmstate := vmstate \<rparr>)"
+using inv_depend
+apply force
+done
+
+lemma inv_head :
+  "balance_inv st1 \<Longrightarrow>
+   g_stack st1 = (a, aa, aaa, b) # list \<Longrightarrow>
+   total_balance (g_current st1) \<le> total_balance a"
+by (auto simp add:balance_inv_def states_def)
+
+lemma inv_discard :
+   "balance_inv st1 \<Longrightarrow>
+    g_orig st1 = g_orig st2 \<Longrightarrow>
+    total_balance (g_current st2) \<le> total_balance (g_current st1) \<Longrightarrow>
+    (disc,e1,e2,e3) # g_stack st2 = g_stack st1 \<Longrightarrow>
+    balance_inv st2"
+using inv_discard_aux [of st1 st2 disc e1 e2 e3]
+  inv_head [of st1 disc e1 e2 e3 "g_stack st2"] by force
+
+lemma tr_balance_continue :
    "next0 (Continue st1) = Continue st2 \<Longrightarrow>
     total_balance (g_current st1) < 2^256 \<Longrightarrow>
     balance_inv st1 \<Longrightarrow>
@@ -977,18 +1005,52 @@ using overflow [of "g_current st1"
  "cctx_this (g_cctx st1)" dst]
 apply (simp add: uint_plus_simple_iff)
 done
+apply force
+done
+apply (cases "g_stack st1"; auto)
+apply (case_tac b; auto)
+subgoal for x6 saved_state aa ab list x2
+apply (cases "x6 = [] \<and> list = [] \<and> g_create st1"; simp)
+apply (cases "vctx_gas v < 200 * int (length x6) \<and>
+             homestead_block
+             \<le> unat (block_number (vctx_block v))"; simp)
+apply clarsimp
+using inv_pop apply force
+apply (cases "vctx_gas v < 200 * int (length x6)"; clarsimp)
+apply (rule inv_depend_normal)
+subgoal
+apply(rule inv_discard[of st1 _ saved_state])
+apply (auto simp add:total_balance_update_world
+account_balance_return
+  total_balance_update_return
+  tb_update_nonce account_balance_nonce
+  account_balance_same update_world_def)
+done
+apply (rule inv_depend_normal)
+apply(rule inv_discard[of st1 _ saved_state])
+apply (auto simp add:total_balance_update_world
+account_balance_return
+  total_balance_update_return
+  tb_update_nonce account_balance_nonce
+  account_balance_same update_world_def
+  tb_create_account)
+done
+subgoal for x6 saved_state aa ab list x31 x32
+apply (rule inv_depend_normal)
+apply(rule inv_discard[of st1 _ saved_state])
+apply (auto simp add:total_balance_update_world
+account_balance_return
+  total_balance_update_return
+  tb_update_nonce account_balance_nonce
+  account_balance_same update_world_def
+  tb_create_account)
+done
+done
+done
 
 lemma uint_fact :
    "x \<le> x+y \<Longrightarrow>
    uint (x+y) - uint x- uint y = 0"
   by (simp add: uint_plus_simple_iff)
-
-
-using inv_discard [of st1 _ a]
-
-using inv_pop
-  [of "st1\<lparr> g_current := g_current st2 \<rparr>"
-    "st1 \<lparr>g_stack := list,  g_current := g_current st2 \<rparr>"]
-
 
 end
