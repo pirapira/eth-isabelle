@@ -951,6 +951,50 @@ lemma log_num_advance [simp] :
 apply(simp add: contexts_as_set_def)
 done
 
+lemma account_existence_not_in_constant [simp] :
+  "AccountExistenceElm p \<notin> constant_ctx_as_set co_ctx"
+apply(simp add: constant_ctx_as_set_def program_as_set_def)
+done
+
+lemma account_existence_not_in_stack [simp] :
+  "AccountExistenceElm p \<notin> stack_as_set (vctx_stack x1)"
+apply(simp add: stack_as_set_def)
+done
+
+lemma account_existence_not_in_balance [simp] :
+  "AccountExistenceElm p \<notin> balance_as_set (vctx_balance x1)"
+apply(simp add: balance_as_set_def)
+done
+
+lemma account_existence_not_ext [simp] :
+  "AccountExistenceElm p \<notin> ext_program_as_set (vctx_ext_program x1)"
+apply(simp add: ext_program_as_set_def)
+done
+
+lemma account_existence_elm_means [simp] :
+  "AccountExistenceElm p \<in> variable_ctx_as_set x =
+   (vctx_account_existence x (fst p) = snd p)"
+apply(case_tac p)
+apply(auto simp add: variable_ctx_as_set_def)
+done
+
+lemma account_existence_elm_means_c [simp] :
+  "AccountExistenceElm p \<in> contexts_as_set x c =
+   (vctx_account_existence x (fst p) = snd p)"
+apply(auto simp add: contexts_as_set_def)
+done
+
+lemma account_existence_advance [simp] :
+  "AccountExistenceElm (aa, x) \<in> contexts_as_set (vctx_advance_pc co_ctx x1) co_ctx =
+  (AccountExistenceElm (aa, x) \<in> contexts_as_set x1 co_ctx)"
+apply(simp add: contexts_as_set_def vctx_advance_pc_def)
+done
+
+lemma account_existence_advance_v [simp] :
+  "vctx_account_existence (vctx_advance_pc co_ctx x1) aa =
+  (vctx_account_existence x1 aa)"
+apply(simp add: vctx_advance_pc_def)
+done
 
 lemma balance0 [simp] :
 "length list = h \<Longrightarrow>
@@ -2175,6 +2219,13 @@ apply(induction input)
 apply(simp add: memory_range_elms.simps)
 done
 
+lemma account_existence_not_memory [simp] :
+  "\<forall> in_begin. AccountExistenceElm x29 \<notin> memory_range_elms in_begin input"
+apply(induction input)
+ apply(simp add: memory_range_elms.simps)
+apply(simp add: memory_range_elms.simps)
+done
+
 lemma memory_range_stack [simp] :
 "      x \<in> memory_range_elms in_begin input \<Longrightarrow>
        x \<in> variable_ctx_as_set (x1\<lparr>vctx_stack := sta\<rparr>)
@@ -2997,6 +3048,18 @@ lemma log_num_in_v_means [simp] :
   (length (vctx_logs v) = x6)"
 apply(simp add: variable_ctx_as_set_def)
 apply auto
+done
+
+lemma account_existence_means_v [simp] :
+  "AccountExistenceElm x29 \<in> variable_ctx_as_set v =
+   (vctx_account_existence v (fst x29) = snd x29)"
+apply(auto simp add: variable_ctx_as_set_def)
+ apply(rule_tac x = "fst x29" in exI)
+ apply(case_tac x29)
+ apply simp
+apply(rule_tac x = "fst x29" in exI)
+apply(case_tac x29)
+apply simp
 done
 
 lemma vctx_gas_changed [simp] :

@@ -51,6 +51,7 @@ datatype state_element =
   | DifficultyElm "w256"
   | GaslimitElm "w256"
   | GaspriceElm "w256"
+  | AccountExistenceElm "address * bool"
 
 abbreviation blockhash_as_elm :: "(w256 \<Rightarrow> w256) \<Rightarrow> state_element set"
 where "blockhash_as_elm f == { BlockhashElm (n, h) | n h. f n = h}"
@@ -60,6 +61,11 @@ where "block_info_as_set b ==
   blockhash_as_elm (block_blockhash b) \<union> { CoinbaseElm (block_coinbase b),
   TimestampElm (block_timestamp b), DifficultyElm (block_difficulty b),
   GaslimitElm (block_gaslimit b), GaspriceElm (block_gasprice b), BlockNumberElm (block_number b) }"
+
+abbreviation account_existence_as_set :: "(address \<Rightarrow> bool) \<Rightarrow> state_element set"
+where
+"account_existence_as_set f ==
+  { AccountExistenceElm (a, e) | a e. f a = e }"
 
 definition contract_action_as_set :: "contract_action \<Rightarrow> state_element set"
   where "contract_action_as_set act == { ContractActionElm act }"
@@ -122,6 +128,7 @@ definition variable_ctx_as_set :: "variable_ctx \<Rightarrow> state_element set"
     \<union> block_info_as_set (vctx_block v)
     \<union> data_sent_as_set (vctx_data_sent v)
     \<union> ext_program_as_set (vctx_ext_program v)
+    \<union> account_existence_as_set (vctx_account_existence v)
     \<union> { MemoryUsageElm (vctx_memory_usage v)
       , CallerElm (vctx_caller v)
       , SentValueElm (vctx_value_sent v)
