@@ -9,6 +9,11 @@ context
 
 begin
 
+lemma account_existence_not_stack_top [simp] :
+  "\<forall> len. AccountExistenceElm x29 \<notin> stack_topmost_elms len ss"
+apply(induction ss; auto simp add: stack_topmost_elms.simps)
+done
+
 lemma log0_gas_triple :
   "triple net {OutOfGas}
           (\<langle> h \<le> 1022 \<and> length data = unat logged_size \<rangle> **

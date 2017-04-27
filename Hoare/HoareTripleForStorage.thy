@@ -74,8 +74,6 @@ apply(case_tac presult; auto simp add: instruction_result_as_set_def sstore_def)
 (* somehow. *)
 (* maybe establish that the result cannot be that thing *)
 (* see what I'm doing with annotation failure *)
-
-
 apply(rule leibniz)
  apply blast
 apply(rule Set.equalityI; clarify)
