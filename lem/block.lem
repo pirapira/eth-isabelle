@@ -432,7 +432,7 @@ let next = function
          let old_acc = n_state addr in
          let old_balance = old_acc.account_balance in
          let acc = empty_account addr in
-         let acc = <| acc with account_balance = args.createarg_value + old_balance; account_exists = true |> in
+         let acc = <| acc with account_balance = old_balance; account_exists = true |> in
          let cctx = <| cctx_this = addr; cctx_program = make_program args.createarg_code; cctx_hash_filter = c.cctx_hash_filter |> in
          let n_state = update_world n_state addr acc in
          let n_state = transfer_balance n_state c.cctx_this addr args.createarg_value in

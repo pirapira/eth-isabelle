@@ -381,6 +381,15 @@ apply (auto simp add: total_balance_def
 apply metis
 done
 
+lemma total_balance_update_same :
+"total_balance (transfer_balance acc addr addr v) = 
+ total_balance acc"
+apply (auto simp add: total_balance_def
+ update_return_def update_world_def update_call_def
+ transfer_balance_def add_balance_def sub_balance_def Let_def
+ balance_same2 update_if if_distrib abal_def)
+apply metis
+done
 
 lemma sum_split_one :
   "l \<le> k \<Longrightarrow> k \<le> n \<Longrightarrow>
@@ -656,6 +665,114 @@ lemma inv_push :
 using inv_current [of "st2\<lparr> g_current := g_current st1\<rparr>" st2]
  and inv_dup by force
 
+lemma inv_discard :
+   "balance_inv st1 \<Longrightarrow>
+    g_orig st1 = g_orig st2 \<Longrightarrow>
+    total_balance (g_current st2) \<le> total_balance (g_current st1) \<Longrightarrow>
+    total_balance (g_current st1) \<le> total_balance disc \<Longrightarrow>
+    (disc,e1,e2,e3) # g_stack st2 = g_stack st1 \<Longrightarrow>
+    balance_inv st2"
+using inv_current [of "st2\<lparr> g_current := disc\<rparr>" st2]
+  inv_pop [of st1 "st2\<lparr> g_current := disc\<rparr>" e1 e2 e3]
+ by force
+
+lemma tb_update_nonce :
+  "total_balance (update_nonce st x) = total_balance st"
+apply (auto simp add:update_nonce_def Let_def
+  total_balance_update_world)
+done
+
+lemma tb_create_account :
+  "total_balance (create_account st x y) = total_balance st"
+apply (auto simp add:create_account_def Let_def
+  total_balance_update_world set_account_code_def)
+done
+
+lemma inv_stack_same :
+  "balance_inv st \<Longrightarrow>
+   total_balance a = total_balance b \<Longrightarrow>
+   g_stack st = (a,x,y,z)#rest \<Longrightarrow>
+   balance_inv (st\<lparr> g_stack := (b,x2,y2,z2) # rest \<rparr>)"
+apply (auto simp add:balance_inv_def states_def)
+done
+
+lemma inv_stack_same2 :
+  "balance_inv st \<Longrightarrow>
+   total_balance a = total_balance b \<Longrightarrow>
+   g_stack st = (a,x,y,z)#rest \<Longrightarrow>
+   g_stack st2 = (b,x2,y2,z2) # rest \<Longrightarrow>
+   g_current st2 = g_current st \<Longrightarrow>
+   g_orig st2 = g_orig st \<Longrightarrow>
+   balance_inv st2"
+apply (auto simp add:balance_inv_def states_def)
+done
+
+lemma account_balance_nonce :
+"account_balance0 (update_nonce st1 v r) =
+ account_balance0 (st1 r)"
+by (simp add:update_nonce_def update_world_def Let_def)
+
+lemma account_balance_same :
+"account_balance0 acc = account_balance0 (st1 v) \<Longrightarrow> 
+ account_balance0 (update_world st1 v acc r) =
+ account_balance0 (st1 r)"
+by (simp add:update_nonce_def update_world_def Let_def)
+
+lemma sort_out_create :
+  "total_balance (g_current st1) < 2^256 \<Longrightarrow>
+   balance_inv st1 \<Longrightarrow>
+   g_stack st2 = (b,x2,y2,z2)#g_stack st1 \<Longrightarrow>
+   g_orig st1 = g_orig st2 \<Longrightarrow>
+   b = update_nonce (g_current st1) sender \<Longrightarrow>
+   account_balance0 new_acc =
+     account_balance0 (g_current st1 new_addr) \<Longrightarrow>
+   account_balance0 (g_current st1 sender) \<ge> v \<Longrightarrow>
+   g_current st2 =
+      transfer_balance
+          (update_world
+               (update_return
+                 (update_nonce (g_current st1) sender)
+                      sender vc) new_addr new_acc)
+      sender new_addr v \<Longrightarrow>
+   balance_inv st2"
+apply (rule inv_stack_same2 [of "st2\<lparr> g_stack :=
+  (g_current st1, x2, y2, z2) # g_stack st1\<rparr>" "g_current st1"
+  "update_nonce (g_current st1) sender" x2 y2 z2
+   "g_stack st1" st2])
+apply (auto simp:tb_update_nonce)
+apply (rule inv_push)
+apply auto
+apply (cases "new_addr = sender")
+apply simp
+apply (subst total_balance_update_same)
+apply (simp add:total_balance_update_world
+account_balance_return
+  total_balance_update_return
+  tb_update_nonce account_balance_nonce)
+(* new_addr \<noteq> sender *)
+apply (subst total_balance_update)
+apply (auto simp add:total_balance_update_world
+account_balance_return
+  total_balance_update_return
+  tb_update_nonce account_balance_nonce
+  account_balance_same)
+using overflow apply force
+done
+
+lemma inv_depend_suicide :
+"balance_inv
+     (st1\<lparr>g_stack := rest,
+          g_current := cur\<rparr>) \<Longrightarrow>
+ balance_inv
+     (st1\<lparr>g_stack := rest,
+          g_current := cur,
+          g_cctx := ctx,
+          g_vmstate := vmstate,
+          g_killed := killed \<rparr>)"
+using inv_depend
+apply force
+done
+
 lemma tr_balance :
    "next0 (Continue st1) = Continue st2 \<Longrightarrow>
     total_balance (g_current st1) < 2^256 \<Longrightarrow>
@@ -703,49 +820,175 @@ apply (rule overflow [of "g_current st1" "callarg_value args"
   "cctx_this (g_cctx st1)" "callarg_recipient args"])
 apply auto
 done
-
-lemma tr_balance :
-   "next0 (Continue st1) = Continue st2 \<Longrightarrow>
-    total_balance (g_current st1) < 2^256 \<Longrightarrow>
-    total_balance (g_current st1) \<ge>
-    total_balance (g_current st2)"
-apply (simp add:next0_def Let_def)
-apply (cases "g_vmstate st1"; auto)
-subgoal for act v zz
-apply (cases act; auto simp add:Let_def)
-apply (case_tac "callarg_recipient x1 <s 256";auto)
-apply (auto simp add:Let_def)
-apply (case_tac
-   "account_balance0
-               (update_return (g_current st1)
-                 (cctx_this (g_cctx st1)) v
-                 (cctx_this (g_cctx st1)))
-              < callarg_value x1 \<or>
-              1023 < length (g_stack st1)";auto)
-apply (simp add: total_balance_def abal_def
- update_return_def update_world_def)
-apply (simp add:balance_same1)
-apply (simp add: total_balance_def
- update_return_def update_world_def abal_def
- balance_same1)
-apply (auto simp add:Let_def)
+(* delegate call  *)
 subgoal for args
-apply (cases "cctx_this (g_cctx st1) = callarg_recipient args")
-
-apply (subst total_balance_update_call2)
-apply (auto simp:total_balance_update_return
-  account_balance_return)
-apply (subst total_balance_update_call)
-apply (auto simp:total_balance_update_return
-  account_balance_return)
-apply (rule overflow [of "g_current st1" "callarg_value args"
-  "cctx_this (g_cctx st1)" "callarg_recipient args"])
+apply (cases "1023 < length (g_stack st1)";auto)
+apply (rule inv_depend [of "st1\<lparr> g_current :=
+       update_return (g_current st1)
+        (cctx_this (g_cctx st1)) v\<rparr>" _])
 apply auto
+using inv_depend [of "st2\<lparr> g_current :=
+       update_return (g_current st1)
+        (cctx_this (g_cctx st1)) v\<rparr>" st2]
+using inv_return apply force
+apply(rule inv_push [of st1 _])
+apply (auto simp:total_balance_update_return)
+done
+(* contract creation *)
+subgoal for args
+apply (cases "account_balance0
+         (g_current st1 (cctx_this (g_cctx st1)))
+        < createarg_value args \<or>
+        1023 < length (g_stack st1)"; auto)
+using inv_depend apply force
+using inv_depend apply force
+apply (simp add: Let_def)
+apply (rule sort_out_create [of st1 st2 _ _ _ _ _
+"(empty_account0
+         (ucast
+           (keccak
+             (RLP (Node [RLP_address (cctx_this (g_cctx st1)),
+                         RLP_w256
+                          (account_nonce
+                            (update_return
+                              (update_nonce (g_current st1) (cctx_this (g_cctx st1)))
+                              (cctx_this (g_cctx st1)) v (cctx_this (g_cctx st1))) -
+                           1)]))))
+        \<lparr>account_balance0 :=
+           account_balance0
+            (update_return (update_nonce (g_current st1) (cctx_this (g_cctx st1)))
+              (cctx_this (g_cctx st1)) v
+              (ucast
+                (keccak
+                  (RLP (Node [RLP_address (cctx_this (g_cctx st1)),
+                              RLP_w256
+                               (account_nonce
+                                 (update_return
+                                   (update_nonce (g_current st1)
+                                     (cctx_this (g_cctx st1)))
+                                   (cctx_this (g_cctx st1)) v (cctx_this (g_cctx st1))) -
+                                1)]))))),
+           account_exists := True\<rparr>)"
+"(ucast
+       (keccak
+         (RLP (Node [RLP_address (cctx_this (g_cctx st1)),
+                     RLP_w256
+                      (account_nonce
+                        (update_return
+                          (update_nonce (g_current st1) (cctx_this (g_cctx st1)))
+                          (cctx_this (g_cctx st1)) v (cctx_this (g_cctx st1))) -
+                       1)]))))"
+  "createarg_value args"])
+apply auto
+apply (auto simp add:account_balance_return
+account_balance_nonce)
+done
+subgoal for failure
+apply (cases "g_stack st1"; auto)
+subgoal for a aa ab b list
+apply (rule inv_depend [of "st1\<lparr>g_stack := list, g_current := a\<rparr>"])
+apply auto
+using   inv_pop
+apply force
+done done
+(* suicide *)
+apply (cases "g_stack st1"; auto)
+subgoal for dst a aa aaa b list
+apply (auto simp add:Let_def)
+apply (cases "list = [] \<and> g_create st1";simp)
+apply clarsimp
+apply (rule inv_depend_suicide)
+apply (rule inv_discard[of st1 _ a])
+apply clarsimp
+apply clarsimp
+apply clarsimp
+apply (cases b)
+apply clarsimp
+subgoal
+apply (simp add:total_balance_update_world
+account_balance_return
+  total_balance_update_return
+  tb_update_nonce account_balance_nonce
+  account_balance_same)
+apply (cases "dst = cctx_this (g_cctx st1)")
+apply (simp add:total_balance_update_world
+account_balance_return
+  total_balance_update_return
+  tb_update_nonce account_balance_nonce
+  account_balance_same update_world_def)
+apply (simp add:total_balance_update_world
+account_balance_return
+  total_balance_update_return
+  tb_update_nonce account_balance_nonce
+  account_balance_same update_world_def)
+using overflow [of "g_current st1"
+  "account_balance0
+       (g_current st1 (cctx_this (g_cctx st1)))"
+ "cctx_this (g_cctx st1)" dst]
+apply (simp add: uint_plus_simple_iff)
+done
+subgoal
+apply (simp add:total_balance_update_world
+account_balance_return
+  tb_create_account
+  total_balance_update_return
+  tb_update_nonce account_balance_nonce
+  account_balance_same)
+apply (cases "dst = cctx_this (g_cctx st1)")
+apply (simp add:total_balance_update_world
+account_balance_return
+  total_balance_update_return
+  tb_update_nonce account_balance_nonce
+  tb_create_account
+  account_balance_same update_world_def)
+apply (simp add:total_balance_update_world
+account_balance_return
+  total_balance_update_return
+  tb_update_nonce account_balance_nonce
+  account_balance_same update_world_def)
+using overflow [of "g_current st1"
+  "account_balance0
+       (g_current st1 (cctx_this (g_cctx st1)))"
+ "cctx_this (g_cctx st1)" dst]
+apply (simp add: uint_plus_simple_iff)
+done
+subgoal
+apply (simp add:total_balance_update_world
+account_balance_return
+  tb_create_account
+  total_balance_update_return
+  tb_update_nonce account_balance_nonce
+  account_balance_same)
+apply (cases "dst = cctx_this (g_cctx st1)")
+apply (simp add:total_balance_update_world
+account_balance_return
+  total_balance_update_return
+  tb_update_nonce account_balance_nonce
+  tb_create_account
+  account_balance_same update_world_def)
+apply (simp add:total_balance_update_world
+account_balance_return
+  total_balance_update_return
+  tb_update_nonce account_balance_nonce
+  account_balance_same update_world_def)
+using overflow [of "g_current st1"
+  "account_balance0
+       (g_current st1 (cctx_this (g_cctx st1)))"
+ "cctx_this (g_cctx st1)" dst]
+apply (simp add: uint_plus_simple_iff)
 done
 
-apply (simp add: total_balance_def
- update_return_def update_world_def
- update_call_def update_tr_def Let_def)
+lemma uint_fact :
+   "x \<le> x+y \<Longrightarrow>
+   uint (x+y) - uint x- uint y = 0"
+  by (simp add: uint_plus_simple_iff)
 
-apply auto
+
+using inv_discard [of st1 _ a]
+
+using inv_pop
+  [of "st1\<lparr> g_current := g_current st2 \<rparr>"
+    "st1 \<lparr>g_stack := list,  g_current := g_current st2 \<rparr>"]
+
+
 end
