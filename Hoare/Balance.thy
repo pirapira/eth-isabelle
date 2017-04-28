@@ -1412,17 +1412,48 @@ apply (auto simp add:start_transaction_def Let_def
  split:option.split_asm if_split_asm)
 done
 
+lemma again2 :
+  "uint (sender::w256) \<ge> uint price * uint limit \<Longrightarrow>
+   uint (sender - price * limit) =
+   uint sender - (uint price * uint limit)"
+  by (metis (no_types, hide_lams) int_mod_eq' le_less_trans uint_lt uint_mul_compare uint_mult_ge0 uint_sub uint_word_ariths(3))
+
+(*
+lemma again_step1 :
+  "unat (sender::w256) \<ge> x + unat price * unat limit \<Longrightarrow>
+   unat (sender::w256) \<ge> unat price * unat limit"
+*)
+
+lemma again_step2 :
+  "a \<ge> 0 \<Longrightarrow> b \<ge> 0 \<Longrightarrow> c \<ge> 0 \<Longrightarrow>
+   nat a \<ge> nat b * nat c \<Longrightarrow>
+   a \<ge> b * c"
+  by (simp add: le_nat_iff)
+
+
+lemma again_step3 :
+  "unat (sender::w256) \<ge> unat (price::w256) * unat (limit::w256) \<Longrightarrow>
+   uint sender \<ge> uint price * uint limit"
+  by (simp add: unat_def le_nat_iff)
+
+lemma again :
+  "unat (sender::w256) \<ge> x + unat price * unat limit \<Longrightarrow>
+   uint (sender - price * limit) - uint sender =
+    - (uint price * uint limit)"
+using again2 again_step3 by force
 
 lemma prepare_total_balance_normal :
   "start_transaction tr state block = Continue st \<Longrightarrow>
    total_balance state < 2^256 \<Longrightarrow>
    tr_to tr = Some recv \<Longrightarrow>
    total_balance (g_orig st) =
-   total_balance state - uint (tr_gas_price tr) * uint (tr_gas_limit tr)"
+   total_balance state -
+    uint (tr_gas_price tr) * uint (tr_gas_limit tr)"
 apply (auto simp add:start_transaction_def Let_def
   total_balance_update_world
  split:option.split_asm if_split_asm)
-
+using again [of "unat (tr_value tr)"]
+by force
 
 lemma duh : "unat v + x \<le> unat sender \<Longrightarrow> v \<le> sender"
   by (simp add: word_le_nat_alt)
