@@ -67,12 +67,9 @@ Another way is to run the VM Test and measure the coverage.
 $ sh measure_coverage.sh
 ```
 
-Moreover, it's possible to run the state tests:
+Moreover, it's possible to run Blockchain Tests.
 ```
-for j in `ls ../../tests/StateTests/*.json`
-do
-./stateTestReturnStatus.native $j || break
-done
+$ ./runBlockchainTest.native
 ```
 
 ## Makefile goals
