@@ -1697,6 +1697,42 @@ proof -
     by auto
 qed
 
+lemma sep_account_existence_sep :
+"(p ** account_existence a b ** q) s =
+ ( AccountExistenceElm (a, b) \<in> s \<and> (p ** q) (s - {AccountExistenceElm (a, b)}))"
+apply(auto simp add: sep_def account_existence_def)
+done
+
+lemma sep_sep_account_existence_sep :
+"(n ** p ** account_existence a b ** q) s =
+ ( AccountExistenceElm (a, b) \<in> s \<and> (n ** p ** q) (s - {AccountExistenceElm (a, b)}))"
+proof -
+  have "(n ** p ** account_existence a b ** q) s = ((n ** p) ** account_existence a b ** q) s"
+    by auto
+  moreover have "((n ** p) ** account_existence a b ** q) s =
+    ( AccountExistenceElm (a, b) \<in> s \<and> ((n ** p) ** q) (s - {AccountExistenceElm (a, b)}))"
+    by (rule "sep_account_existence_sep")
+  moreover have "( AccountExistenceElm (a, b) \<in> s \<and> ((n ** p) ** q) (s - {AccountExistenceElm (a, b)})) =
+     ( AccountExistenceElm (a, b) \<in> s \<and> (n ** p ** q) (s - {AccountExistenceElm (a, b)}))"
+    by auto
+  ultimately show ?thesis
+    by auto
+qed
+
+
+
+
+lemma account_existence_sep :
+"(account_existence a b ** q) s =
+ ( AccountExistenceElm (a, b) \<in> s \<and> q (s - {AccountExistenceElm (a, b)}))"
+apply(auto simp add: sep_def account_existence_def)
+done
+
+lemma sep_account_existence :
+"(p ** account_existence a b ) s =
+ ( AccountExistenceElm (a, b) \<in> s \<and> p (s - {AccountExistenceElm (a, b)}))"
+apply(auto simp add: sep_def account_existence_def)
+done
 
 lemma continuging_not_memory_range [simp] :
   "\<forall> in_begin. ContinuingElm False \<notin> memory_range_elms in_begin input"
@@ -1850,6 +1886,18 @@ lemma memory_range_elms_not_pc [simp] :
 apply(auto)
 done
 
+lemma account_ex_is_not_memory_range [simp] :
+  "\<forall> in_begin. AccountExistenceElm p \<notin> memory_range_elms in_begin input"
+apply(induction input)
+ apply(simp add: memory_range_elms.simps)
+apply(simp add: memory_range_elms.simps)
+done
+
+lemma memory_range_elms_not_account_existence [simp] :
+  "(memory_range_elms in_begin input \<subseteq> s - {AccountExistenceElm p}) =
+   (memory_range_elms in_begin input \<subseteq> s)"
+apply auto
+done
 
 lemma memory_range_elms_not_code [simp] :
   "(memory_range_elms in_begin input
@@ -1882,6 +1930,19 @@ lemma stack_topmost_not_pc [simp] :
      (stack_topmost_elms h lst \<subseteq> s)"
 apply(auto)
 done
+
+lemma ae_not_stack_topmost [simp] :
+  "\<forall> h. AccountExistenceElm p \<notin> stack_topmost_elms h lst"
+apply(induction lst; auto simp add: stack_topmost_elms.simps)
+done
+
+lemma stack_topmost_not_account_existence [simp] :
+  "\<forall> h. stack_topmost_elms h lst
+       \<subseteq> s - {AccountExistenceElm p} =
+     (stack_topmost_elms h lst \<subseteq> s)"
+apply(auto)
+done
+
 
 lemma stack_topmost_not_code [simp] :
   "\<forall> h. stack_topmost_elms h lst
@@ -3062,6 +3123,11 @@ apply(case_tac x29)
 apply simp
 done
 
+lemma account_existence_not_stack [simp] :
+  "AccountExistenceElm p \<notin> stack_as_set ta"
+apply(simp add: stack_as_set_def)
+done
+
 lemma vctx_gas_changed [simp] :
    "variable_ctx_as_set
              (v \<lparr> vctx_gas := g \<rparr>) =
@@ -3158,6 +3224,10 @@ bundle sep_crunch = caller_sep [simp]
                     sep_action [simp]
                     sep_action_sep [simp]
                     sep_stack_topmost [simp]
+                    sep_account_existence_sep [simp]
+                    sep_account_existence [simp]
+                    account_existence_sep [simp]
+                    sep_sep_account_existence_sep [simp]
 
 end
 

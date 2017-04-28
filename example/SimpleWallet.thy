@@ -708,6 +708,7 @@ lemma call_with_args:
                        this_account t **
                        balance t b **
                        gas_pred g **
+                       account_existence c existence **
                        continuing ** memory_usage u
 
                       )
@@ -728,8 +729,12 @@ lemma call_with_args:
                        this_account t **
                        balance t 0 **
                        gas_any **
+                       account_existence c existence **
                        not_continuing **
-                       action (ContractCall \<lparr> callarg_gas = word_rcat [(8 :: byte), 0]
+                       action (ContractCall \<lparr>
+                                  callarg_gas = (word_of_int (Ccallgas 128 (ucast c) b
+                                      (\<not> existence) own_gas net
+                                      (calc_memu_extra u 128 (ucast c) b 0 0 0 0)))
                                 , callarg_code = c
                                 , callarg_recipient = c
                                 , callarg_value = b
@@ -759,7 +764,7 @@ apply(rule_tac R = "block_number_pred bn **
         and in_size = "word_rcat [0]" and in_begin = "word_rcat [0]"
         and out_size = "word_rcat [0]" and out_begin = "word_rcat [0]"
         and g = "word_rcat [(8 :: byte), 0]" and r = "ucast c"
-        and this = t and u = u
+        and this = t and u = u and existence = existence
         in call_gas_triple)
  apply(simp add: word_rcat_def bin_rcat_def)
  apply(rule cons_eq)

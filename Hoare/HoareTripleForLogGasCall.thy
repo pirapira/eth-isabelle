@@ -245,6 +245,7 @@ end
 
 context
   includes sep_crunch simp_for_triples
+  notes meter_gas_def [simp del]
 begin
 
 lemma call_gas_triple:
@@ -256,6 +257,7 @@ lemma call_gas_triple:
            memory_usage u **
            this_account this **
            balance this fund **
+           account_existence (Word.ucast r) existence **
            continuing)
           {(k, Misc CALL)}
           (memory_range in_begin input **
@@ -265,11 +267,12 @@ lemma call_gas_triple:
            program_counter (k + 1) ** 
            gas_any **
            memory_usage (M (M u in_begin in_size) out_begin out_size) **
+           account_existence (Word.ucast r) existence **
            not_continuing **
            action (ContractCall
              \<lparr> callarg_gas = (word_of_int (Ccallgas g r v
-                     (\<not> ((vctx_account_existence   v) (Word.ucast r))) own_gas net
-                     (calc_memu_extra u g r value1 in_begin in_size out_begin out_size)))
+                     (\<not> existence) own_gas net
+                     (calc_memu_extra u g r v in_begin in_size out_begin out_size)))
              , callarg_code = ucast r
              , callarg_recipient = ucast r
              , callarg_value = v
@@ -282,9 +285,10 @@ apply(rule_tac x = 1 in exI)
 apply(case_tac presult; simp)
 apply(clarify)
 apply(simp add: call_def)
-apply(rule_tac x = "vctx_gas x1 - meter_gas (Misc CALL) x1 co_ctx" in exI)
+
+apply(rule_tac x = "vctx_gas x1 - meter_gas (Misc CALL) x1 co_ctx net" in exI)
 apply(simp add: instruction_result_as_set_def)
-apply(simp add: sep_memory_range_sep sep_memory_range failed_for_reasons_def )
+apply(simp add: sep_memory_range_sep sep_memory_range memory_range_sep failed_for_reasons_def)
 apply(simp add: vctx_stack_default_def)
 apply(rule leibniz)
  apply blast
