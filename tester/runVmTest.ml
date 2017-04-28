@@ -159,7 +159,7 @@ let test_one_case j : testResult =
      let () = Printf.printf "ProgramAnnotationFailure\n" in
      TestFailure
 
-let test_one_file (path : string) ((num_success : int ref), (num_failure : int ref), (num_skipped : int ref)) (case_name : string option) : unit =
+let test_one_file ((num_success : int ref), (num_failure : int ref), (num_skipped : int ref)) (case_name : string option) (path : string) : unit =
   let vm_arithmetic_test : json = Yojson.Basic.from_file path in
   let vm_arithmetic_test_assoc : (string * json) list = Util.to_assoc vm_arithmetic_test in
   let () =  List.iter
@@ -197,7 +197,7 @@ let () =
     Array.iter
       (fun filename ->
         let path = "../tests/VMTests/"^filename in
-        if not (BatSys.is_directory path) then test_one_file path counters case_name
+        if not (BatSys.is_directory path) then test_one_file counters case_name path
       )
       vmtests in
   let randomtests = BatSys.readdir "../tests/VMTests/RandomTests" in
@@ -205,7 +205,7 @@ let () =
     Array.iter
       (fun filename ->
         let path = "../tests/VMTests/RandomTests/"^filename in
-        if not (BatSys.is_directory path) then test_one_file path counters case_name
+        if not (BatSys.is_directory path) then test_one_file counters case_name path
       )
       randomtests in
   let () = Printf.printf "success: %i\n" !num_success in
