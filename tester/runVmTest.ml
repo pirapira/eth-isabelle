@@ -192,22 +192,7 @@ let () =
   let num_failure = ref 0 in
   let num_skipped = ref 0 in
   let counters = (num_success, num_failure, num_skipped) in
-  let vmtests = BatSys.readdir "../tests/VMTests" in
-  let () =
-    Array.iter
-      (fun filename ->
-        let path = "../tests/VMTests/"^filename in
-        if not (BatSys.is_directory path) then test_one_file counters case_name path
-      )
-      vmtests in
-  let randomtests = BatSys.readdir "../tests/VMTests/RandomTests" in
-  let () =
-    Array.iter
-      (fun filename ->
-        let path = "../tests/VMTests/RandomTests/"^filename in
-        if not (BatSys.is_directory path) then test_one_file counters case_name path
-      )
-      randomtests in
+  let () = TraverseJsons.traverse "../tests/VMTests" (test_one_file counters case_name) in
   let () = Printf.printf "success: %i\n" !num_success in
   let () = Printf.printf "failure: %i\n" !num_failure in
   let () = Printf.printf "skipped: %i\n" !num_skipped in
