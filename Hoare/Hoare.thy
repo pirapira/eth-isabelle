@@ -211,6 +211,10 @@ definition logged :: "nat \<Rightarrow> log_entry \<Rightarrow> state_element se
 where
 "logged n l s == s = {LogElm (n, l)}"
 
+definition account_existence :: "address \<Rightarrow> bool \<Rightarrow> state_element set \<Rightarrow> bool"
+where
+"account_existence a b s == s = {AccountExistenceElm (a, b)}"
+
 lemma sep_logged [simp]:
   "(a ** logged n l) s =
    (LogElm (n, l) \<in> s \<and> a (s - {LogElm (n, l)}))"
