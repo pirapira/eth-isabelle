@@ -1266,12 +1266,119 @@ lemma unat_mul_compare :
    "unat (a::w256) * unat b \<le> unat c \<Longrightarrow>
     a*b \<le> c"
 using uint_mul_compare [of a b c]
+  le_unat_uoi word_le_nat_alt by fastforce
 
 
 lemma gas_compare :
-   "unat x + unat a * unat b \<le> unat c \<Longrightarrow>
+   "unat x + unat (a::w256) * unat b \<le> unat c \<Longrightarrow>
     a*b \<le> c"
+using unat_mul_compare [of a b c]
+  le_add2 order_trans by blast
 
+lemma uint_stuff_aux :
+"value \<le> sender \<Longrightarrow>
+ recv \<le> recv + value \<Longrightarrow>
+ uint (sender - value) +
+(uint (recv + value) - uint recv) \<le> uint sender"
+  using solution by fastforce
+
+lemma uint_stuff :
+"value \<le> sender - gas_value \<Longrightarrow>
+ value \<le> sender \<Longrightarrow>
+ recv \<le> recv + value \<Longrightarrow>
+ uint (sender - gas_value - value) +
+(uint (recv + value) - uint recv) \<le> uint (sender - gas_value)"
+apply (rule uint_stuff_aux [of "value" "sender-gas_value" recv], auto)
+done
+
+lemma prepare_normal_aux :
+"g_orig st = update_world state sender
+               (state sender
+                \<lparr>account_nonce := nonce,
+                   account_balance0 :=
+                     account_balance0 (state sender) -
+                     gas_value \<rparr>) \<Longrightarrow>
+ g_stack st = [] \<Longrightarrow>
+ value \<le> account_balance0 (state sender) - gas_value \<Longrightarrow>
+ value \<le> account_balance0 (state sender) \<Longrightarrow>
+ account_balance0 (state recv) \<le> account_balance0 (state recv) + value \<Longrightarrow>
+ g_current st = update_world
+                 (update_world state sender
+                   (state sender
+                    \<lparr>account_nonce := nonce,
+                       account_balance0 :=
+                         account_balance0 (state sender) -
+                         gas_value - value\<rparr>)) recv 
+                    (update_world state sender
+                      (state sender
+                       \<lparr>account_nonce := nonce,
+                          account_balance0 :=
+                            account_balance0 (state sender) -
+                            gas_value -
+                            value\<rparr>)
+                      recv
+                     \<lparr>account_balance0 :=
+                        account_balance0
+                         (update_world state sender
+                           (state sender
+                            \<lparr>account_nonce := nonce,
+                               account_balance0 :=
+                                 account_balance0 (state sender) -
+                                 gas_value -
+                                 value\<rparr>)
+                           recv) +
+                        value\<rparr>)
+ \<Longrightarrow> balance_inv st"
+apply (simp add: balance_inv_def states_def
+  total_balance_update_world)
+apply (cases "sender = recv")
+apply (simp add: balance_inv_def states_def
+  total_balance_update_world update_world_def)
+apply (simp add: balance_inv_def states_def
+  total_balance_update_world update_world_def)
+using uint_stuff [of "value" "account_balance0 (state sender)"
+  gas_value "account_balance0 (state recv)"]
+ apply force
+done
+
+lemma prepare_normal_same :
+"g_orig st = update_world state sender
+               (state sender
+                \<lparr>account_nonce := nonce,
+                   account_balance0 :=
+                     account_balance0 (state sender) -
+                     gas_value \<rparr>) \<Longrightarrow>
+ g_stack st = [] \<Longrightarrow>
+ g_current st = update_world
+                 (update_world state sender
+                   (state sender
+                    \<lparr>account_nonce := nonce,
+                       account_balance0 :=
+                         account_balance0 (state sender) -
+                         gas_value - value\<rparr>)) sender
+                    (update_world state sender
+                      (state sender
+                       \<lparr>account_nonce := nonce,
+                          account_balance0 :=
+                            account_balance0 (state sender) -
+                            gas_value -
+                            value\<rparr>)
+                      sender
+                     \<lparr>account_balance0 :=
+                        account_balance0
+                         (update_world state sender
+                           (state sender
+                            \<lparr>account_nonce := nonce,
+                               account_balance0 :=
+                                 account_balance0 (state sender) -
+                                 gas_value -
+                                 value\<rparr>)
+                           sender) +
+                        value\<rparr>)
+ \<Longrightarrow> balance_inv st"
+apply (simp add: balance_inv_def states_def
+  total_balance_update_world update_world_def)
+done
 
 lemma prepare_balance :
   "start_transaction tr state block = Continue st \<Longrightarrow>
@@ -1282,19 +1389,43 @@ apply (simp add:start_transaction_def Let_def
 apply (rule prepare_create_aux [of st state
   "tr_gas_price tr * tr_gas_limit tr"
   "tr_from tr"], auto)
+using gas_compare [of "tr_value tr"]
+ apply force
+subgoal for recv
+apply (cases "tr_from tr \<noteq> recv")
+apply (rule prepare_normal_aux, auto)
+  using linorder_not_less word_less_nat_alt apply auto[1]
+apply (simp add: word_le_nat_alt)
+using overflow [of state "tr_value tr" "tr_from tr" recv]
+  word_le_nat_alt
+apply force
+apply (rule prepare_normal_same, auto)
+done
+done
 
-(*
-apply (case_tac "tr_nonce tr \<noteq> account_nonce (state (tr_from tr))"; auto)
-apply (case_tac "unat
-         (account_balance0
-           (state (tr_from tr)))
-        < unat (tr_value tr) +
-          unat (tr_gas_price tr) *
-          unat (tr_gas_limit tr)"; auto simp:Let_def)
-apply (case_tac " unat (block_gaslimit block)
-        < unat (tr_gas_limit tr)"; auto)
-apply (case_tac "unat (tr_gas_limit tr)
-        < nat \<bar>calc_igas tr state block\<bar>"; auto)
-*)
+lemma prepare_total_balance_create :
+  "start_transaction tr state block = Continue st \<Longrightarrow>
+   total_balance state < 2^256 \<Longrightarrow>
+   tr_to tr = None \<Longrightarrow>
+   g_orig st = state"
+apply (auto simp add:start_transaction_def Let_def
+ split:option.split_asm if_split_asm)
+done
+
+
+lemma prepare_total_balance_normal :
+  "start_transaction tr state block = Continue st \<Longrightarrow>
+   total_balance state < 2^256 \<Longrightarrow>
+   tr_to tr = Some recv \<Longrightarrow>
+   total_balance (g_orig st) =
+   total_balance state - uint (tr_gas_price tr) * uint (tr_gas_limit tr)"
+apply (auto simp add:start_transaction_def Let_def
+  total_balance_update_world
+ split:option.split_asm if_split_asm)
+
+
+lemma duh : "unat v + x \<le> unat sender \<Longrightarrow> v \<le> sender"
+  by (simp add: word_le_nat_alt)
+
 
 end
