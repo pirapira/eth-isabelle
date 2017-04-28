@@ -801,6 +801,175 @@ lemma inv_discard :
 using inv_discard_aux [of st1 st2 disc e1 e2 e3]
   inv_head [of st1 disc e1 e2 e3 "g_stack st2"] by force
 
+lemma sorted_first_last :
+  "sorted (a#lst) \<Longrightarrow>
+   a \<le> last (a#lst)"
+  by (simp add: sorted_Cons)
+
+lemma inv_orig_current :
+   "balance_inv st \<Longrightarrow>
+    total_balance (g_current st) \<le> total_balance (g_orig st)"
+apply (simp add: balance_inv_def states_def)
+using sorted_first_last [of "total_balance (g_current st)"
+  "map (total_balance \<circ> (\<lambda>(x, u1, u2, u3). x))
+       (g_stack st)"]
+  by (smt List.map.compositionality last.simps last_map map_is_Nil_conv)
+
+lemma compare_uint : "x \<le> y \<Longrightarrow>  x - uint b \<le> y"
+  using diff_mono by fastforce
+
+lemma tr_balance_finished :
+   "next0 (Continue st1) = Finished st2 \<Longrightarrow>
+    total_balance (g_current st1) < 2^256 \<Longrightarrow>
+    balance_inv st1 \<Longrightarrow>
+    total_balance (f_state st2) \<le> total_balance (g_orig st1)"
+apply (simp add:next0_def Let_def)
+apply (cases "g_vmstate st1"; auto simp add:Let_def)
+apply (case_tac "x31"; auto)
+apply (case_tac "callarg_recipient x1 <s 256"; auto simp add:next0_def Let_def)
+apply (case_tac "account_balance0
+            (update_return (g_current st1)
+              (cctx_this (g_cctx st1)) x32
+              (cctx_this (g_cctx st1)))
+           < callarg_value x1 \<or>
+           1023 < length (g_stack st1)"; auto simp add: Let_def)
+apply (cases "1023 < length (g_stack st1)"; auto simp add:Let_def)
+apply (case_tac " account_balance0
+            (g_current st1
+              (cctx_this (g_cctx st1)))
+           < createarg_value x3 \<or>
+           1023 < length (g_stack st1)"; auto simp add:Let_def)
+apply (case_tac "g_stack st1"; auto simp add:Let_def)
+apply (auto simp add:Let_def)
+apply (case_tac "g_stack st1"; auto simp add:Let_def)
+subgoal for x32 x33 dst
+apply (simp add:total_balance_update_world
+account_balance_return
+  tb_create_account
+  total_balance_update_return
+  tb_update_nonce account_balance_nonce
+  account_balance_same)
+apply (cases "dst = cctx_this (g_cctx st1)")
+apply (simp add:total_balance_update_world
+account_balance_return
+  total_balance_update_return
+  tb_update_nonce account_balance_nonce
+  tb_create_account
+  account_balance_same update_world_def)
+using inv_orig_current [of st1] compare_uint apply force
+
+apply (simp add:total_balance_update_world
+account_balance_return
+  total_balance_update_return
+  tb_update_nonce account_balance_nonce
+  account_balance_same update_world_def)
+using overflow [of "g_current st1"
+  "account_balance0
+       (g_current st1 (cctx_this (g_cctx st1)))"
+ "cctx_this (g_cctx st1)" dst]
+inv_orig_current [of st1] compare_uint
+apply (simp add: uint_plus_simple_iff)
+done
+apply (case_tac "list = [] \<and> g_create st1"; auto)
+apply (case_tac b; auto)
+subgoal for x32 x33 dst a aa ab
+apply (simp add:total_balance_update_world
+account_balance_return
+  tb_create_account
+  total_balance_update_return
+  tb_update_nonce account_balance_nonce
+  account_balance_same)
+apply (cases "dst = cctx_this (g_cctx st1)")
+apply (simp add:total_balance_update_world
+account_balance_return
+  total_balance_update_return
+  tb_update_nonce account_balance_nonce
+  tb_create_account
+  account_balance_same update_world_def)
+
+using inv_orig_current [of st1] compare_uint apply force
+
+apply (simp add:total_balance_update_world
+account_balance_return
+  total_balance_update_return
+  tb_update_nonce account_balance_nonce
+  account_balance_same update_world_def)
+using overflow [of "g_current st1"
+  "account_balance0
+       (g_current st1 (cctx_this (g_cctx st1)))"
+ "cctx_this (g_cctx st1)" dst]
+inv_orig_current [of st1] compare_uint
+apply (simp add: uint_plus_simple_iff)
+done
+subgoal for x32 x33 dst a aa ab
+apply (simp add:total_balance_update_world
+account_balance_return
+  tb_create_account
+  total_balance_update_return
+  tb_update_nonce account_balance_nonce
+  account_balance_same)
+apply (cases "dst = cctx_this (g_cctx st1)")
+apply (simp add:total_balance_update_world
+account_balance_return
+  total_balance_update_return
+  tb_update_nonce account_balance_nonce
+  tb_create_account
+  account_balance_same update_world_def)
+
+using inv_orig_current [of st1] compare_uint apply force
+
+apply (simp add:total_balance_update_world
+account_balance_return
+  total_balance_update_return
+  tb_update_nonce account_balance_nonce
+  account_balance_same update_world_def)
+using overflow [of "g_current st1"
+  "account_balance0
+       (g_current st1 (cctx_this (g_cctx st1)))"
+ "cctx_this (g_cctx st1)" dst]
+inv_orig_current [of st1] compare_uint
+apply (simp add: uint_plus_simple_iff)
+done
+subgoal for x32 x33 dst a aa ab
+apply (simp add:total_balance_update_world
+account_balance_return
+  tb_create_account
+  total_balance_update_return
+  tb_update_nonce account_balance_nonce
+  account_balance_same)
+apply (cases "dst = cctx_this (g_cctx st1)")
+apply (simp add:total_balance_update_world
+account_balance_return
+  total_balance_update_return
+  tb_update_nonce account_balance_nonce
+  tb_create_account
+  account_balance_same update_world_def)
+
+using inv_orig_current [of st1] compare_uint apply force
+
+apply (simp add:total_balance_update_world
+account_balance_return
+  total_balance_update_return
+  tb_update_nonce account_balance_nonce
+  account_balance_same update_world_def)
+using overflow [of "g_current st1"
+  "account_balance0
+       (g_current st1 (cctx_this (g_cctx st1)))"
+ "cctx_this (g_cctx st1)" dst]
+inv_orig_current [of st1] compare_uint
+apply (simp add: uint_plus_simple_iff)
+done
+apply (case_tac "g_stack st1"; auto)
+  apply (simp add: inv_orig_current total_balance_update_return)
+apply (case_tac b; auto)
+apply (case_tac "x6 = [] \<and> list = [] \<and> g_create st1"; simp)
+  apply (auto simp add: inv_orig_current total_balance_update_return)[1]
+apply (case_tac "vctx_gas x32 < 200 * int (length x6) \<and>
+                homestead_block
+                \<le> unat (block_number (vctx_block x32))"; simp)
+apply (case_tac "vctx_gas x32 < 200 * int (length x6)"; auto)
+done
+
 lemma tr_balance_continue :
    "next0 (Continue st1) = Continue st2 \<Longrightarrow>
     total_balance (g_current st1) < 2^256 \<Longrightarrow>
@@ -1052,5 +1221,80 @@ lemma uint_fact :
    "x \<le> x+y \<Longrightarrow>
    uint (x+y) - uint x- uint y = 0"
   by (simp add: uint_plus_simple_iff)
+
+lemma prepare_create_aux :
+"g_orig st = state \<Longrightarrow>
+ g_stack st = [] \<Longrightarrow>
+ account_balance0 (state sender) \<ge> gas_value \<Longrightarrow>
+ g_current st =
+         update_world state sender
+          (state sender
+           \<lparr>account_balance0 :=
+              account_balance0 (state sender) -
+              gas_value\<rparr>) \<Longrightarrow>
+ balance_inv st"
+apply (simp add: balance_inv_def states_def
+  total_balance_update_world)
+  using word_le_def word_sub_le by auto
+
+lemma uint_minus : "x \<le> y \<Longrightarrow> uint (y - x) \<le> uint y"
+  using word_le_def word_sub_le by auto
+
+
+lemma uint_mul_small :
+   "uint (a::w256) * uint b < 2^256 \<Longrightarrow>
+    uint (a*b) = uint a * uint b"
+  by (simp add: mod_pos_pos_trivial uint_word_ariths(3))
+
+lemma uint_mul_compare :
+   "uint (a::w256) * uint b \<le> uint c \<Longrightarrow>
+    a*b \<le> c"
+using uint_mul_small [of a b]
+proof -
+  assume a1: "uint a * uint b \<le> uint c"
+  then have "\<exists>i. \<not> uint (word_of_int i::256 word) < uint a * uint b"
+    by (metis (no_types) not_le word_of_int_uint)
+    then have "\<not> 2 ^ 256 \<le> uint a * uint b"
+      by (metis (no_types) Divides.pos_mod_bound find_mod not_le order_trans zless2p)
+    then have "uint a * uint b < 2 ^ 256"
+      by (metis not_le)
+  then show ?thesis
+    using a1 by (metis (no_types) \<open>uint a * uint b < 2 ^ 256 \<Longrightarrow> uint (a * b) = uint a * uint b\<close> word_le_def)
+qed
+
+lemma unat_mul_compare :
+   "unat (a::w256) * unat b \<le> unat c \<Longrightarrow>
+    a*b \<le> c"
+using uint_mul_compare [of a b c]
+
+
+lemma gas_compare :
+   "unat x + unat a * unat b \<le> unat c \<Longrightarrow>
+    a*b \<le> c"
+
+
+lemma prepare_balance :
+  "start_transaction tr state block = Continue st \<Longrightarrow>
+   total_balance state < 2^256 \<Longrightarrow>
+   balance_inv st"
+apply (simp add:start_transaction_def Let_def
+ split:option.split_asm if_split_asm)
+apply (rule prepare_create_aux [of st state
+  "tr_gas_price tr * tr_gas_limit tr"
+  "tr_from tr"], auto)
+
+(*
+apply (case_tac "tr_nonce tr \<noteq> account_nonce (state (tr_from tr))"; auto)
+apply (case_tac "unat
+         (account_balance0
+           (state (tr_from tr)))
+        < unat (tr_value tr) +
+          unat (tr_gas_price tr) *
+          unat (tr_gas_limit tr)"; auto simp:Let_def)
+apply (case_tac " unat (block_gaslimit block)
+        < unat (tr_gas_limit tr)"; auto)
+apply (case_tac "unat (tr_gas_limit tr)
+        < nat \<bar>calc_igas tr state block\<bar>"; auto)
+*)
 
 end

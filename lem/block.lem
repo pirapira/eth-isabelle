@@ -504,10 +504,12 @@ let rec txdatacost lst = match lst with
  | b::lst -> (if b = 0 then 4 else 68) + txdatacost lst
 end
 
+(*
 let charge_gas state addr gas_value =
   let s_acc = state addr in
   let s_acc = <| s_acc with account_balance = s_acc.account_balance - gas_value |> in
   update_world state addr s_acc
+*)
 
 let calc_igas tr state block =
   let igas = 21000 + txdatacost tr.tr_data in
@@ -522,7 +524,7 @@ let start_transaction tr state block =
   let gas_value = word256ToNatural tr.tr_gas_price * word256ToNatural tr.tr_gas_limit in
   let igas = calc_igas tr state block in
   let nothing_happens = Finished <|
-    f_state=charge_gas state tr.tr_from (tr.tr_gas_price * tr.tr_gas_limit);
+    f_state=sub_balance state tr.tr_from (tr.tr_gas_price * tr.tr_gas_limit);
     f_killed=[];
     f_logs = [];
     f_gas=uint tr.tr_gas_limit;
