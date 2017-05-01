@@ -1380,17 +1380,20 @@ apply (simp add: balance_inv_def states_def
   total_balance_update_world update_world_def)
 done
 
+lemma prepare_create_aux2 :
+"g_orig st = g_current st \<Longrightarrow>
+ g_stack st = [] \<Longrightarrow>
+ balance_inv st"
+by (simp add: balance_inv_def states_def
+  total_balance_update_world)
+
 lemma prepare_balance :
   "start_transaction tr state block = Continue st \<Longrightarrow>
    total_balance state < 2^256 \<Longrightarrow>
    balance_inv st"
 apply (simp add:start_transaction_def Let_def
  split:option.split_asm if_split_asm)
-apply (rule prepare_create_aux [of st state
-  "tr_gas_price tr * tr_gas_limit tr"
-  "tr_from tr"], auto)
-using gas_compare [of "tr_value tr"]
- apply force
+apply (rule prepare_create_aux2, auto)
 subgoal for recv
 apply (cases "tr_from tr \<noteq> recv")
 apply (rule prepare_normal_aux, auto)
@@ -1401,15 +1404,6 @@ using overflow [of state "tr_value tr" "tr_from tr" recv]
 apply force
 apply (rule prepare_normal_same, auto)
 done
-done
-
-lemma prepare_total_balance_create :
-  "start_transaction tr state block = Continue st \<Longrightarrow>
-   total_balance state < 2^256 \<Longrightarrow>
-   tr_to tr = None \<Longrightarrow>
-   g_orig st = state"
-apply (auto simp add:start_transaction_def Let_def
- split:option.split_asm if_split_asm)
 done
 
 lemma again2 :
@@ -1442,21 +1436,189 @@ lemma again :
     - (uint price * uint limit)"
 using again2 again_step3 by force
 
-lemma prepare_total_balance_normal :
+lemma prepare_total_balance :
   "start_transaction tr state block = Continue st \<Longrightarrow>
    total_balance state < 2^256 \<Longrightarrow>
-   tr_to tr = Some recv \<Longrightarrow>
    total_balance (g_orig st) =
    total_balance state -
-    uint (tr_gas_price tr) * uint (tr_gas_limit tr)"
+   uint (tr_gas_price tr) * uint (tr_gas_limit tr)"
 apply (auto simp add:start_transaction_def Let_def
   total_balance_update_world
  split:option.split_asm if_split_asm)
 using again [of "unat (tr_value tr)"]
-by force
+apply force
+using again [of "unat (tr_value tr)"]
+apply force
+done
 
 lemma duh : "unat v + x \<le> unat sender \<Longrightarrow> v \<le> sender"
   by (simp add: word_le_nat_alt)
 
+lemma funext : "(\<forall>x. f x = g x) \<Longrightarrow> f = g" by auto
+
+lemma add_balance_zero :
+  "add_balance state addr 0 = state"
+apply (rule funext)
+apply (simp add:add_balance_def update_world_def)
+done
+
+lemma sub_add_balance :
+  "add_balance (sub_balance state addr x) addr x = state"
+apply (rule funext)
+apply (simp add:sub_balance_def add_balance_def update_world_def Let_def)
+done
+
+lemma helper :
+"word256FromNatural (nat (uint a) * unat b) = a*b"
+  by (simp add: unat_def word256FromNatural_def word_arith_nat_mult word_of_nat)
+
+lemma end_transaction_nothing :
+  "end_transaction (nothing_happens state tr) tr block
+   = state"
+apply (auto simp: nothing_happens_def end_transaction_def Let_def
+   kill_accounts.simps helper add_balance_zero )
+  by (simp add: mult.commute sub_add_balance)
+
+lemma nothing_happens_other :
+ "addr \<noteq> tr_from tr \<Longrightarrow>
+  account_balance0 (f_state (nothing_happens state tr) addr) =
+  account_balance0 (state addr)"
+by (simp add:nothing_happens_def
+  sub_balance_def update_world_def Let_def)
+
+lemma simple_transaction_other :
+  "start_transaction tr state block = Finished st \<Longrightarrow>
+   addr \<noteq> tr_from tr \<Longrightarrow>
+   account_balance0 (f_state st addr) =
+   account_balance0 (state addr)"
+by (auto simp add:start_transaction_def Let_def
+  total_balance_update_world nothing_happens_other
+  account_balance_nonce update_world_def
+ split:option.split_asm if_split_asm)
+
+lemma nothing_happens_sender :
+ "account_balance0 (f_state (nothing_happens state tr) (tr_from tr)) =
+  account_balance0 (state (tr_from tr)) - tr_gas_price tr * tr_gas_limit tr"
+by (simp add:nothing_happens_def
+  sub_balance_def update_world_def Let_def)
+
+lemma simple_transaction_sender :
+  "start_transaction tr state block = Finished st \<Longrightarrow>
+   account_balance0 (f_state st (tr_from tr)) =
+   account_balance0 (state (tr_from tr)) -
+   tr_gas_price tr * tr_gas_limit tr"
+by (auto simp add:start_transaction_def Let_def
+  total_balance_update_world nothing_happens_sender
+  account_balance_nonce update_world_def
+ split:option.split_asm if_split_asm)
+
+lemma simple_transaction_overflow :
+  "start_transaction tr state block = Finished st \<Longrightarrow>
+   unat (tr_gas_price tr) * unat (tr_gas_limit tr) >
+   unat (account_balance0 (state (tr_from tr))) \<Longrightarrow>
+   st = nothing_happens state tr"
+apply (auto simp add:start_transaction_def Let_def
+  total_balance_update_world nothing_happens_sender
+  account_balance_nonce update_world_def
+ split:option.split_asm if_split_asm)
+done
+
+lemma end_transaction_zero_price :
+  "tr_gas_price tr = 0 \<Longrightarrow>
+   f_killed st = [] \<Longrightarrow>
+   end_transaction st tr block = f_state st"
+by (auto simp: nothing_happens_def end_transaction_def Let_def
+   kill_accounts.simps helper add_balance_zero word256FromNatural_def)
+
+lemma simple_calc :
+ "uint a + uint b < 2^256 \<Longrightarrow>
+  uint (a + b) - uint (a::w256) = uint b"
+  by (simp add: overflow_plus)
+
+lemma calc_aux :
+"part \<le> totl \<Longrightarrow>
+ uint (sender::w256) + uint part < 2^256 \<Longrightarrow>
+ uint cb + uint (totl-part) < 2^256 \<Longrightarrow>
+ uint (sender + part) +
+    (uint (cb + (totl - part)) -
+     uint cb -
+     uint sender) =
+ uint totl"
+  by (simp add: uint_sub overflow_plus)
+
+lemma overflow_le : assumes
+  a1: "part \<le> totl" and
+  a2: "uint sender + uint totl < 2 ^ 256"
+shows "uint sender + uint part < 2 ^ 256"
+proof -
+  have "uint part \<le> uint totl"
+    using a1 by (metis word_le_def)
+  then show "uint sender + uint part < 2 ^ 256"
+    using a2 by linarith
+qed
+
+
+lemma calc :
+"part \<le> totl \<Longrightarrow>
+ uint (sender::w256) + uint totl < 2^256 \<Longrightarrow>
+ uint cb + uint totl < 2^256 \<Longrightarrow>
+ uint (sender + part) +
+    (uint (cb + (totl - part)) -
+     uint cb -
+     uint sender) =
+ uint totl"
+apply (rule calc_aux)
+apply (simp add:overflow_le)
+using overflow_le apply force
+  using overflow_le word_sub_le by blast
+
+lemma foo :
+   "uint (tr_gas_price tr * tr_gas_limit tr) = 
+    uint (tr_gas_limit tr * tr_gas_price tr)"
+by auto
+
+lemma tb_end_transaction :
+"gas_left \<ge> 0 \<Longrightarrow>
+ gas_left \<le> uint (tr_gas_limit tr) \<Longrightarrow>
+ uint (account_balance0 (state (tr_from tr))) +
+ uint (tr_gas_limit tr * tr_gas_price tr) < 2^256 \<Longrightarrow>
+ uint (account_balance0 (state (block_coinbase block))) +
+ uint (tr_gas_limit tr * tr_gas_price tr) < 2^256 \<Longrightarrow>
+ total_balance (end_transaction
+    \<lparr>f_state = state, f_killed = [], f_gas = gas_left, f_refund = 0, f_logs = []\<rparr>
+    tr block) =
+ total_balance state + (uint (tr_gas_price tr * tr_gas_limit tr))"
+apply (simp add: end_transaction_def Let_def kill_accounts.simps
+  add_balance_def total_balance_update_world)
+apply (auto simp add:update_world_def)
+using simple_calc apply force
+apply (simp add: foo)
+apply (rule calc, auto)
+apply (simp add :word256FromNatural_def)
+
+lemma grugbr :
+  "0 \<le> gas_left \<Longrightarrow>
+   gas_left \<le> uint (limit :: w256) \<Longrightarrow>
+   word_of_int (gas_left * uint price) \<le> limit * price"
+
+lemma end_simple_transaction :
+  "start_transaction tr state block = Finished st \<Longrightarrow>
+   unat (tr_gas_price tr) * unat (tr_gas_limit tr) \<le>
+   unat (account_balance0 (state (tr_from tr))) \<Longrightarrow>
+   total_balance state = total_balance (end_transaction st tr block)"
+apply (auto simp add:start_transaction_def Let_def
+  total_balance_update_world nothing_happens_sender
+  account_balance_nonce update_world_def end_transaction_nothing
+ split:option.split_asm if_split_asm)
+apply (subst end_transaction_zero_price, auto)
+using tb_update_nonce apply force
+apply (auto simp add:start_transaction_def Let_def
+  total_balance_update_world nothing_happens_sender
+  end_transaction_def add_balance_def
+  account_balance_nonce update_world_def end_transaction_nothing
+  kill_accounts.simps tb_update_nonce
+word256FromNatural_def unat_def)
+
 
 end
+
