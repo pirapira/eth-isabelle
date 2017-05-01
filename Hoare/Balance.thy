@@ -1577,9 +1577,41 @@ lemma foo :
     uint (tr_gas_limit tr * tr_gas_price tr)"
 by auto
 
+lemma grugbr_aux1 :
+  "0 \<le> gas_left \<Longrightarrow>
+   gas_left \<le> uint (limit :: w256) \<Longrightarrow>
+   uint limit * uint (price::w256) < 2^256 \<Longrightarrow>
+   gas_left * uint price < 2^256"
+  by (meson le_less_trans mult_right_mono uint_range_size)
+
+lemma grugbr_aux2 :
+  "0 \<le> gas_left \<Longrightarrow>
+   gas_left \<le> uint (limit :: w256) \<Longrightarrow>
+   uint limit * uint (price::w256) < 2^256 \<Longrightarrow>
+   gas_left * uint price \<le> uint (limit * price)"
+  by (simp add: mult_right_mono uint_mul_small)
+
+lemma grugbr :
+  "0 \<le> gas_left \<Longrightarrow>
+   gas_left \<le> uint (limit :: w256) \<Longrightarrow>
+   uint limit * uint price < 2^256 \<Longrightarrow>
+   word_of_int (gas_left * uint price) \<le> limit * price"
+using grugbr_aux1 [of gas_left limit price]
+   grugbr_aux2 [of gas_left limit price]
+  by (metis (no_types, hide_lams) int_mod_eq' int_word_uint le_less_trans uint_lt uint_mul_compare wi_hom_mult word_of_int_uint)
+
+lemma grugbr2 :
+  "0 \<le> gas_left \<Longrightarrow>
+   gas_left \<le> uint (limit :: w256) \<Longrightarrow>
+   uint limit * uint price < 2^256 \<Longrightarrow>
+   word_of_int (gas_left * int (unat price)) \<le> limit * price"
+by (metis grugbr uint_mul_small uint_nat)
+
+
 lemma tb_end_transaction :
 "gas_left \<ge> 0 \<Longrightarrow>
  gas_left \<le> uint (tr_gas_limit tr) \<Longrightarrow>
+ uint (tr_gas_limit tr) * uint (tr_gas_price tr) < 2^256 \<Longrightarrow>
  uint (account_balance0 (state (tr_from tr))) +
  uint (tr_gas_limit tr * tr_gas_price tr) < 2^256 \<Longrightarrow>
  uint (account_balance0 (state (block_coinbase block))) +
@@ -1595,16 +1627,82 @@ using simple_calc apply force
 apply (simp add: foo)
 apply (rule calc, auto)
 apply (simp add :word256FromNatural_def)
+apply (rule grugbr2, auto)
+done
 
-lemma grugbr :
-  "0 \<le> gas_left \<Longrightarrow>
-   gas_left \<le> uint (limit :: w256) \<Longrightarrow>
-   word_of_int (gas_left * uint price) \<le> limit * price"
+lemma txdatacost_nonneg : "txdatacost lst \<ge> 0"
+apply (induction lst)
+apply (auto simp add:txdatacost.simps)
+done
+
+lemma igas_nonneg : "calc_igas tr state block \<ge> 0"
+by (auto simp add:calc_igas_def Let_def txdatacost_nonneg
+  split:option.split)
+
+lemma aux_1 :
+  "unat (tr_gas_limit tr) \<ge> nat \<bar>calc_igas tr state block\<bar> \<Longrightarrow>
+   int (unat (tr_gas_limit tr)) -
+    calc_igas tr state block
+    \<le> uint (tr_gas_limit tr)"
+by (auto simp add:igas_nonneg unat_def)
+
+lemma aux_2 :
+  "sender \<ge> vl + price * limit \<Longrightarrow>
+   sender < 2^256 \<Longrightarrow>
+   int limit * int price < 2 ^ 256"
+  by (metis add_leE le_less_trans mult.commute numeral_pow of_nat_less_iff of_nat_mult of_nat_numeral)
+
+lemma unat_small : "unat (x::w256) < 2^256"
+proof -
+  { assume "\<exists>i. \<not> uint x < i \<and> 0 < i \<and> (0::int) \<noteq> numeral (Num.pow (num.Bit0 num.One) (num.Bit0 (num.Bit0 (num.Bit0 (num.Bit0 (num.Bit0 (num.Bit0 (num.Bit0 (num.Bit0 num.One)))))))))"
+    then have "\<not> uint x \<le> 0 \<and> (0::int) \<noteq> numeral (Num.pow (num.Bit0 num.One) (num.Bit0 (num.Bit0 (num.Bit0 (num.Bit0 (num.Bit0 (num.Bit0 (num.Bit0 (num.Bit0 num.One)))))))))"
+      by (meson le_less_trans)
+    then have "uint x < numeral (Num.pow (num.Bit0 num.One) (num.Bit0 (num.Bit0 (num.Bit0 (num.Bit0 (num.Bit0 (num.Bit0 (num.Bit0 (num.Bit0 num.One)))))))))"
+      by (metis (no_types) find_mod numeral_pow word_of_int_uint zmod_trival_iff) }
+  then show ?thesis
+    by (metis (no_types) numeral_pow of_nat_less_iff of_nat_numeral power_not_zero uint_nat zero_less_power zero_not_eq_two zless2)
+qed
+
+lemma aux_3 :
+  "unat (sender :: w256) \<ge> vl +
+   unat (price) * unat (limit) \<Longrightarrow>
+   uint (sender - price * limit) + uint (limit*price) < 2^256"
+proof -
+  assume a1: "vl + unat price * unat limit \<le> unat sender"
+  have f2: "\<forall>w. int (unat (w::256 word)) < numeral (Num.pow (num.Bit0 num.One) (num.Bit0 (num.Bit0 (num.Bit0 (num.Bit0 (num.Bit0 (num.Bit0 (num.Bit0 (num.Bit0 num.One)))))))))"
+    by (metis (no_types) less_imp_of_nat_less numeral_pow of_nat_numeral unat_small)
+  have "limit * price \<le> sender"
+    using a1 by (simp add: semiring_normalization_rules(7) unat_mul_compare)
+    then show ?thesis
+      using f2 by (metis (no_types) add.commute diff_add_cancel numeral_pow semiring_normalization_rules(7) uint_add uint_nat)
+  qed
+
+lemma cool :
+ "uint (cb::w256) +
+  uint (sender::w256) < 2^256 \<Longrightarrow>
+  gas_value \<le> sender \<Longrightarrow>
+  uint cb +
+  uint (gas_value::w256)
+    < 115792089237316195423570985008687907853269984665640564039457584007913129639936"
+using Balance.overflow_le by auto
+
+lemma handle_minus :
+  "b \<le> a \<Longrightarrow>
+   uint a - uint b = uint (a-b)"
+  by (simp add: uint_minus_simple_alt)
+
+lemma aux_4 :
+ "gas_value \<le> sender \<Longrightarrow>
+  uint (sender - gas_value) +
+    (uint gas_value - uint sender) = 0"
+using handle_minus by force
 
 lemma end_simple_transaction :
   "start_transaction tr state block = Finished st \<Longrightarrow>
    unat (tr_gas_price tr) * unat (tr_gas_limit tr) \<le>
    unat (account_balance0 (state (tr_from tr))) \<Longrightarrow>
+   uint (account_balance0 (state (tr_from tr))) +
+   uint (account_balance0 (state (block_coinbase block))) < 2^256 \<Longrightarrow>
    total_balance state = total_balance (end_transaction st tr block)"
 apply (auto simp add:start_transaction_def Let_def
   total_balance_update_world nothing_happens_sender
@@ -1612,13 +1710,38 @@ apply (auto simp add:start_transaction_def Let_def
  split:option.split_asm if_split_asm)
 apply (subst end_transaction_zero_price, auto)
 using tb_update_nonce apply force
-apply (auto simp add:start_transaction_def Let_def
-  total_balance_update_world nothing_happens_sender
-  end_transaction_def add_balance_def
-  account_balance_nonce update_world_def end_transaction_nothing
-  kill_accounts.simps tb_update_nonce
-word256FromNatural_def unat_def)
-
+apply (subst tb_end_transaction)
+apply (auto simp add:igas_nonneg)[1]
+apply (auto simp add:igas_nonneg unat_def)[1]
+apply (subst Word.uint_nat)
+apply (subst Word.uint_nat)
+apply (rule aux_2[of "unat (tr_value tr)"
+ _ _ "unat (account_balance0 (state (tr_from tr)))"], auto)
+using unat_small apply force
+apply (simp add:account_balance_nonce
+  update_world_def)
+using aux_3 [of "unat (tr_value tr)"
+  "tr_gas_price tr" "tr_gas_limit tr"
+  "account_balance0 (state (tr_from tr))"]
+apply force
+apply (simp add:account_balance_nonce
+  update_world_def)
+subgoal
+apply auto
+using aux_3 [of "unat (tr_value tr)"
+  "tr_gas_price tr" "tr_gas_limit tr"
+  "account_balance0 (state (tr_from tr))"]
+apply force
+apply (rule cool[of "account_balance0
+       (state (block_coinbase block))"
+  "account_balance0
+       (state (tr_from tr))"
+"tr_gas_limit tr * tr_gas_price tr"], auto)
+  by (simp add: gas_compare linorder_not_less mult.commute)
+apply (simp add:tb_update_nonce
+  total_balance_update_world)
+apply (rule aux_4)
+  using gas_compare linorder_not_less by blast
 
 end
 
