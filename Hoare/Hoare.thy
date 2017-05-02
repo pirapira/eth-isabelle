@@ -331,12 +331,14 @@ lemma stack_sound0 :
 apply(auto simp add: sep_def stack_def)
 done
 
-lemma stack_sound1 :
-  "StackElm (pos, w) \<in> contexts_as_set var con \<Longrightarrow> rev (vctx_stack var) ! pos = w"
-  apply(simp add: contexts_as_set_def variable_ctx_as_set_def constant_ctx_as_set_def
+lemmas context_rw = contexts_as_set_def variable_ctx_as_set_def constant_ctx_as_set_def
       stack_as_set_def memory_as_set_def
       balance_as_set_def storage_as_set_def log_as_set_def program_as_set_def data_sent_as_set_def
-      ext_program_as_set_def)
+      ext_program_as_set_def account_existence_as_set_def
+
+lemma stack_sound1 :
+  "StackElm (pos, w) \<in> contexts_as_set var con \<Longrightarrow> rev (vctx_stack var) ! pos = w"
+  apply(simp add: context_rw)
   done
 
 lemma stack_sem :
@@ -561,40 +563,25 @@ lemma sep_memory_usage_sep [simp] :
 lemma stackHeightElmEquiv [simp] : "StackHeightElm h \<in> contexts_as_set v c =
   (length (vctx_stack v) = h)
   "
-apply(auto simp add: contexts_as_set_def constant_ctx_as_set_def variable_ctx_as_set_def
-      program_as_set_def stack_as_set_def memory_as_set_def storage_as_set_def
-      balance_as_set_def log_as_set_def data_sent_as_set_def ext_program_as_set_def)
-  done
+by (auto simp add:context_rw)
 
 lemma stackElmEquiv [simp] : "StackElm (pos, w) \<in> contexts_as_set v c =
   (pos < length (vctx_stack v) \<and> rev (vctx_stack v) ! pos = w)"
-apply(auto simp add: contexts_as_set_def constant_ctx_as_set_def variable_ctx_as_set_def
-      program_as_set_def stack_as_set_def memory_as_set_def storage_as_set_def
-      balance_as_set_def log_as_set_def data_sent_as_set_def ext_program_as_set_def)
-done
+by (auto simp add:context_rw)
 
 lemma pcElmEquiv [simp] : "PcElm k \<in> contexts_as_set va_ctx co_ctx =
   (vctx_pc va_ctx = k)"
-apply(auto simp add: contexts_as_set_def constant_ctx_as_set_def variable_ctx_as_set_def
-      program_as_set_def stack_as_set_def memory_as_set_def storage_as_set_def
-      balance_as_set_def log_as_set_def data_sent_as_set_def ext_program_as_set_def)
-done
+by (auto simp add:context_rw)
 
 lemma gasElmEquiv [simp] : "GasElm g \<in> contexts_as_set va_ctx co_ctx =
   (vctx_gas va_ctx = g)"
-apply(auto simp add: contexts_as_set_def constant_ctx_as_set_def variable_ctx_as_set_def
-      program_as_set_def stack_as_set_def memory_as_set_def storage_as_set_def
-      balance_as_set_def log_as_set_def data_sent_as_set_def ext_program_as_set_def)
-done
+by (auto simp add:context_rw)
 
 lemma codeElmEquiv [simp] :
   "CodeElm (pos, i) \<in> contexts_as_set va_ctx co_ctx =
    ((program_content (cctx_program co_ctx) pos = Some i) \<or>
    (program_content (cctx_program co_ctx) pos = None) \<and> i = Misc STOP)"
-apply(auto simp add: contexts_as_set_def constant_ctx_as_set_def variable_ctx_as_set_def
-      program_as_set_def stack_as_set_def memory_as_set_def storage_as_set_def
-      balance_as_set_def log_as_set_def data_sent_as_set_def ext_program_as_set_def)
-done
+by (auto simp add:context_rw)
 
 lemma insert_minus : "a \<noteq> b \<Longrightarrow> insert a s - { b } = insert a (s - {b})"
   apply(simp add: insert_Diff_if)
