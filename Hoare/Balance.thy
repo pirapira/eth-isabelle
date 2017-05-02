@@ -2,8 +2,9 @@ theory Balance
   imports "EvmFacts" "../lem/Block"
 begin
 
+(*
 lemma balance_env :
-"instruction_sem v c inst =
+"instruction_sem v c inst net =
  InstructionToEnvironment act v2 x33 \<Longrightarrow>
  vctx_balance v2 = vctx_balance v"
 apply (simp only: instruction_sem_def)
@@ -34,7 +35,7 @@ apply(case_tac "\<not> cctx_hash_filter c ( cut_memory x21 x21a (vctx_memory v))
 done
 
 lemma balance_continue :
-"instruction_sem v c inst =
+"instruction_sem v c inst net =
  InstructionContinue v2 \<Longrightarrow>
  vctx_balance v2 = vctx_balance v"
 apply (simp only: instruction_sem_def)
@@ -86,7 +87,6 @@ apply (case_tac " check_resources v c (vctx_stack v) a"; auto)
 using balance_env apply simp
 done
 
-(*
 
 fun sum_aux :: "(address \<Rightarrow> w256) \<Rightarrow> nat \<Rightarrow> nat" where
 "sum_aux bal 0 = 0"
@@ -527,7 +527,7 @@ definition balance_inv :: "global0 \<Rightarrow> bool" where
    total_balance (last (states g)) \<le> total_balance (g_orig g)"
 
 lemma tr_orig :
-   "next0 (Continue st1) = Continue st2 \<Longrightarrow>
+   "next0 net (Continue st1) = Continue st2 \<Longrightarrow>
     g_orig st1 = g_orig st2"
 apply (simp add:next0_def Let_def)
 apply (cases "g_vmstate st1"; auto)
@@ -588,8 +588,7 @@ lemma inv_depend :
     g_current st1 = g_current st2 \<Longrightarrow>
     g_stack st1 = g_stack st2 \<Longrightarrow>
     balance_inv st2"
-apply (simp add: balance_inv_def states_def)
-done
+by (simp add: balance_inv_def states_def)
 
 lemma inv_current :
    "balance_inv st1 \<Longrightarrow>
@@ -819,7 +818,7 @@ lemma compare_uint : "x \<le> y \<Longrightarrow>  x - uint b \<le> y"
   using diff_mono by fastforce
 
 lemma tr_balance_finished :
-   "next0 (Continue st1) = Finished st2 \<Longrightarrow>
+   "next0 net (Continue st1) = Finished st2 \<Longrightarrow>
     total_balance (g_current st1) < 2^256 \<Longrightarrow>
     balance_inv st1 \<Longrightarrow>
     total_balance (f_state st2) \<le> total_balance (g_orig st1)"
@@ -971,7 +970,7 @@ apply (case_tac "vctx_gas x32 < 200 * int (length x6)"; auto)
 done
 
 lemma tr_balance_continue :
-   "next0 (Continue st1) = Continue st2 \<Longrightarrow>
+   "next0 net (Continue st1) = Continue st2 \<Longrightarrow>
     total_balance (g_current st1) < 2^256 \<Longrightarrow>
     balance_inv st1 \<Longrightarrow>
     balance_inv st2"

@@ -68,18 +68,18 @@ using Ccall_gt_0
 
 
 lemma Csuicide_gt_0:
-  "Gsuicide blocknumber \<noteq> 0 \<Longrightarrow> 0 < Csuicide recipient_empty blocknumber"
+  "at_least_eip150 net \<Longrightarrow> 0 < Csuicide recipient_empty net"
   unfolding Csuicide_def
   by (auto split: if_splits
            simp add: gas_simps Gsuicide_def)
 
 lemma thirdComponentOfC_gt_0:
   "i \<noteq> Misc STOP \<Longrightarrow> i \<noteq> Misc RETURN \<Longrightarrow> (\<forall>v. i \<noteq> Unknown v) \<Longrightarrow>
-   i = Misc SUICIDE \<longrightarrow> Gsuicide blocknumber \<noteq> 0 \<Longrightarrow>
-   i = Misc DELEGATECALL \<longrightarrow> blocknumber \<ge> homestead_block  \<Longrightarrow>
+   i = Misc SUICIDE \<longrightarrow> at_least_eip150 net \<Longrightarrow>
+   i = Misc DELEGATECALL \<longrightarrow> \<not> (before_homestead net)  \<Longrightarrow>
    memu \<ge> 0 \<Longrightarrow>
   0 < thirdComponentOfC i s0 s1 s2 s3 recipient_empty orig_val
-      new_val remaining_gas blocknumber memu + memu"
+      new_val remaining_gas net memu + memu"
   unfolding thirdComponentOfC_def
   apply (case_tac i ; simp add: gas_simps )
             apply fastforce
@@ -102,7 +102,7 @@ lemma thirdComponentOfC_gt_0:
          apply (clarsimp split: misc_inst.splits)
          apply (rule conjI, clarsimp simp add: gas_simps L_def)
          apply (rule conjI)
-          apply (auto simp add: Ccall_gt_0)+
+          apply (auto simp add: Ccall_gt_0 at_least_eip150.simps)+
          apply (smt Csuicide_gt_0)
          apply (smt Csuicide_gt_0)
 done
@@ -110,7 +110,7 @@ done
 lemma thirdComponentOfC_ge_0:
   "memu \<ge> 0 \<Longrightarrow>
   0 \<le> thirdComponentOfC i s0 s1 s2 s3 recipient_empty orig_val
-      new_val remaining_gas blocknumber memu + memu"
+      new_val remaining_gas net memu + memu"
   unfolding thirdComponentOfC_def
   apply (case_tac i ; simp add: gas_simps )
            apply (case_tac x2; simp add: gas_simps)
@@ -150,42 +150,76 @@ lemma Cmem_lift:
   apply (rule mult_mono ; simp)
   done
 
+(*
 lemma thirdComponentOfC_gt_0_massaged :
   "i \<noteq> Misc STOP \<Longrightarrow> i \<noteq> Misc RETURN \<Longrightarrow> (\<forall>v. i \<noteq> Unknown v) \<Longrightarrow>
-   i = Misc SUICIDE \<longrightarrow> Gsuicide blocknumber \<noteq> 0 \<Longrightarrow>
-   i = Misc DELEGATECALL \<longrightarrow> blocknumber \<ge> homestead_block  \<Longrightarrow>
+   i = Misc SUICIDE \<longrightarrow> at_least_eip150 net \<Longrightarrow>
+   i = Misc DELEGATECALL \<longrightarrow> \<not> before_homestead net \<Longrightarrow>
    x \<ge> y \<Longrightarrow>
   0 < x - y + thirdComponentOfC i s0 s1 s2 s3 recipient_empty orig_val
-      new_val remaining_gas blocknumber (x-y)"
+      new_val remaining_gas net (x-y)"
   by (metis add.commute diff_ge_0_iff_ge thirdComponentOfC_gt_0)
+*)
 
 lemma vctx_memory_usage_never_decreases:
-  "vctx_memory_usage var \<le> new_memory_consumption inst var"
+  "orig \<le> new_memory_consumption inst orig s0 s1 s2 s3 s4 s5 s6"
   by (case_tac inst)
      (rename_tac x, case_tac x; auto simp add: new_memory_consumption.simps M_def)+
+
+lemma obvious_principle :
+"0 < (t::int) + (m1-m2) \<Longrightarrow>
+ m1 \<ge> m2 \<Longrightarrow>
+ m2 \<ge> 0 \<Longrightarrow>
+ 0 < m1 - m2 + t"
+by auto
+
+lemma Cmem_zero : "Cmem 0 = 0"
+by (auto simp:Cmem_def)
 
 lemma meter_gas_gt_0:
   " inst \<noteq> Misc STOP \<Longrightarrow>
     inst \<noteq> Misc RETURN \<Longrightarrow>
-   blocknumber = (unat (block_number (vctx_block var))) \<Longrightarrow>
-   inst = Misc SUICIDE \<longrightarrow> Gsuicide blocknumber \<noteq> 0 \<Longrightarrow>
-   inst = Misc DELEGATECALL \<longrightarrow> blocknumber \<ge> homestead_block  \<Longrightarrow>
+   inst = Misc SUICIDE \<longrightarrow> at_least_eip150 net \<Longrightarrow>
+   inst = Misc DELEGATECALL \<longrightarrow> \<not>before_homestead net  \<Longrightarrow>
     inst \<notin> range Unknown \<Longrightarrow>
    0 \<le> vctx_memory_usage var \<Longrightarrow>
-   0 < meter_gas inst var const"
-  using Cmem_lift[OF _ vctx_memory_usage_never_decreases[where inst=inst and var=var]]
+   0 < meter_gas inst var const net"
   apply (simp add: C_def meter_gas_def)
-apply (rule thirdComponentOfC_gt_0_massaged)
-apply auto
+apply (rule obvious_principle)
+apply (rule thirdComponentOfC_gt_0)
+apply simp
+apply simp
+apply force
+apply simp
+apply simp
+using Cmem_lift vctx_memory_usage_never_decreases
+apply force
+using Cmem_lift vctx_memory_usage_never_decreases
+apply force
+using Cmem_lift Cmem_zero
+apply force
 done
+
+lemma obvious_principle2 :
+"0 \<le> (t::int) + (m1-m2) \<Longrightarrow>
+ m1 \<ge> m2 \<Longrightarrow>
+ m2 \<ge> 0 \<Longrightarrow>
+ 0 \<le> m1 - m2 + t"
+by auto
 
 lemma meter_gas_ge_0:
   "0 \<le> vctx_memory_usage var \<Longrightarrow>
-   0 \<le> meter_gas inst var const"
-  using Cmem_lift[OF _ vctx_memory_usage_never_decreases[where inst=inst and var=var]]
+   0 \<le> meter_gas inst var const net"
   apply (simp add: C_def meter_gas_def)
-using thirdComponentOfC_ge_0
-  by (simp add: add.commute)
+apply (rule obvious_principle2)
+apply (rule thirdComponentOfC_ge_0)
+using Cmem_lift vctx_memory_usage_never_decreases
+apply force
+using Cmem_lift vctx_memory_usage_never_decreases
+apply force
+using Cmem_lift Cmem_zero
+apply force
+done
 
 definition all :: "state_element set_pred" where
 "all s = True"
@@ -253,7 +287,7 @@ lemmas rw = instruction_sem_def instruction_failure_result_def
 blockedInstructionContinue_def
 
 lemma inst_no_reasons :
-"instruction_sem v c aa \<noteq>
+"instruction_sem v c aa net \<noteq>
        InstructionToEnvironment
         (ContractFail []) a b"
 apply (cases aa)
@@ -297,64 +331,37 @@ done
 
 lemma no_reasons_next :
    "failed_for_reasons {}
-   (next_state stopper c (InstructionContinue v)) = False"
-apply (auto simp:failed_for_reasons_def)
-(*
-apply (cases "vctx_next_instruction v c"; auto)
-apply (auto simp:check_resources_def)
-apply (case_tac "case inst_stack_numbers aa of
-        (consumed, produced) \<Rightarrow>
-          int (length (vctx_stack v)) +
-          produced -
-          consumed
-          \<le> 1024 \<and>
-          meter_gas aa v c \<le> vctx_gas v")
-apply auto
-using inst_no_reasons apply fastforce
-using length_greater_0_conv apply fastforce
-using n_not_Suc_n apply fastforce
-*)
-done
+   (next_state stopper c net (InstructionContinue v)) = False"
+by (auto simp:failed_for_reasons_def)
 
 lemma program_annotation :
-"program_sem stopper c n InstructionAnnotationFailure =
+"program_sem stopper c n net InstructionAnnotationFailure =
  InstructionAnnotationFailure"
-apply (induction n)
-apply (auto simp:program_sem.simps)
-done
+by (induction n, auto simp:program_sem.simps)
 
 lemma program_environment :
-"program_sem stopper c n (InstructionToEnvironment a b d) =
+"program_sem stopper c n net (InstructionToEnvironment a b d) =
  (InstructionToEnvironment a b d)"
-apply (induction n)
-apply (auto simp:program_sem.simps)
-done
+by (induction n, auto simp:program_sem.simps)
 
 declare next_state_def [simp del]
 
 lemma no_reasons [simp] :
    "failed_for_reasons {}
-   (program_sem stopper c n (InstructionContinue v)) = False"
+   (program_sem stopper c n net (InstructionContinue v)) = False"
 apply (induction n arbitrary:v)
 apply (simp add:program_sem.simps failed_for_reasons_def
   program_annotation no_reasons_next)
 apply (simp add:program_sem.simps no_reasons_next
   failed_for_reasons_def)
-(*
-apply (case_tac "next_state stopper c
-             (InstructionContinue v)")
-using no_reasons_next
-apply force
-using program_annotation
-apply force
-using no_reasons_next 
-apply (auto simp add: program_environment failed_for_reasons_def)
-*)
 done
 
+(*
 lemmas context_rw = contexts_as_set_def constant_ctx_as_set_def variable_ctx_as_set_def
       program_as_set_def stack_as_set_def memory_as_set_def storage_as_set_def
       balance_as_set_def log_as_set_def data_sent_as_set_def ext_program_as_set_def
+      account_balance_as_set_def
+*)
 
 lemma not_cont_insert :
  "x (s-{ContinuingElm False}) \<Longrightarrow>
@@ -394,11 +401,10 @@ done
 
 
 lemma meter_gas_check :
-  "\<not> meter_gas a x1 co_ctx \<le> vctx_gas x1 \<Longrightarrow>
-   check_resources x1 co_ctx (vctx_stack x1) a \<Longrightarrow>
+  "\<not> meter_gas a x1 co_ctx net \<le> vctx_gas x1 \<Longrightarrow>
+   check_resources x1 co_ctx (vctx_stack x1) a net \<Longrightarrow>
    False"
-apply (simp add:check_resources_def)
-done
+by (simp add:check_resources_def)
 
 lemmas instruction_sem_simps =
   rw sha3_def vctx_update_storage_def
@@ -406,9 +412,9 @@ lemmas instruction_sem_simps =
 vctx_memory_usage_never_decreases
 
 lemma env_meter_gas :
-"instruction_sem v1 c inst =
+"instruction_sem v1 c inst net =
  InstructionToEnvironment act v2 x33 \<Longrightarrow>
- vctx_gas v2 = vctx_gas v1 - meter_gas inst v1 c"
+ vctx_gas v2 = vctx_gas v1 - meter_gas inst v1 c net"
 apply (simp only: instruction_sem_def)
   apply (case_tac inst; clarsimp)
 apply (case_tac x1 ; 
@@ -437,9 +443,9 @@ apply(case_tac "\<not> cctx_hash_filter c ( cut_memory x21 x21a (vctx_memory v1)
 done
 
 lemma continue_meter_gas :
-"instruction_sem v1 c inst =
+"instruction_sem v1 c inst net =
  InstructionContinue v2 \<Longrightarrow>
- vctx_gas v2 = vctx_gas v1 - meter_gas inst v1 c"
+ vctx_gas v2 = vctx_gas v1 - meter_gas inst v1 c net"
 apply (simp only: instruction_sem_def)
   apply (case_tac inst; clarsimp)
 apply (case_tac x1 ; 
@@ -468,7 +474,7 @@ apply(case_tac "\<not> cctx_hash_filter c ( cut_memory x21 x21a (vctx_memory v1)
 done
 
 lemma memu_good :
-"instruction_sem v1 c inst = InstructionContinue v2 \<Longrightarrow>
+"instruction_sem v1 c inst net = InstructionContinue v2 \<Longrightarrow>
  vctx_memory_usage v2 \<ge> vctx_memory_usage v1"
 apply (simp only: instruction_sem_def)
   apply (case_tac inst; clarsimp)
@@ -498,7 +504,7 @@ apply(case_tac "\<not> cctx_hash_filter c ( cut_memory x21 x21a (vctx_memory v1)
 done
 
 lemma memu_good_env :
-"instruction_sem v1 c inst = InstructionToEnvironment act v2 zz \<Longrightarrow>
+"instruction_sem v1 c inst net = InstructionToEnvironment act v2 zz \<Longrightarrow>
  vctx_memory_usage v2 \<ge> vctx_memory_usage v1"
 apply (simp only: instruction_sem_def)
   apply (case_tac inst; clarsimp)
@@ -528,7 +534,7 @@ apply(case_tac "\<not> cctx_hash_filter c ( cut_memory x21 x21a (vctx_memory v1)
 done
 
 lemma no_annotation_inst :
-"instruction_sem v c a \<noteq> InstructionAnnotationFailure"
+"instruction_sem v c a net \<noteq> InstructionAnnotationFailure"
 apply (cases a)
 apply (simp add:rw)
 apply (rename_tac inst; case_tac inst;auto simp:rw split:list.split)
@@ -569,7 +575,7 @@ done
 done
 
 lemma call_instruction :
-"instruction_sem v c inst =
+"instruction_sem v c inst net =
  InstructionToEnvironment (ContractCall args) x32 x33 \<Longrightarrow>
  inst = Misc CALL \<or> inst = Misc CALLCODE"
 apply (simp only: instruction_sem_def)
@@ -600,7 +606,7 @@ apply(case_tac "\<not> cctx_hash_filter c ( cut_memory x21 x21a (vctx_memory v))
 done
 
 lemma create_instruction :
-"instruction_sem v c inst =
+"instruction_sem v c inst net =
  InstructionToEnvironment (ContractCreate args) x32 x33 \<Longrightarrow>
  inst = Misc CREATE"
 apply (simp only: instruction_sem_def)
@@ -632,7 +638,7 @@ done
 
 
 lemma continue_instruction :
- "instruction_sem v c inst = InstructionContinue v2 \<Longrightarrow>
+ "instruction_sem v c inst net = InstructionContinue v2 \<Longrightarrow>
   inst \<noteq> Misc STOP \<and> inst \<noteq> Misc RETURN \<and>
   inst \<noteq> Misc SUICIDE \<and> inst \<noteq> Misc DELEGATECALL \<and>
   inst \<notin> range Unknown"
@@ -644,10 +650,9 @@ apply (case_tac "x13"; clarsimp simp: instruction_sem_simps
 done
 
 lemma delegatecall_instruction :
-"instruction_sem v c inst =
+"instruction_sem v c inst net =
  InstructionToEnvironment (ContractDelegateCall args) x32 x33 \<Longrightarrow>
- inst = Misc DELEGATECALL \<and>
- unat (block_number (vctx_block v)) \<ge> homestead_block"
+ inst = Misc DELEGATECALL \<and> \<not> before_homestead net"
 apply (simp only: instruction_sem_def)
   apply (case_tac inst; clarsimp)
 apply (case_tac x1 ; 
@@ -676,22 +681,22 @@ apply(case_tac "\<not> cctx_hash_filter c ( cut_memory x21 x21a (vctx_memory v))
 done
 
 lemma delegatecall_decr_gas :
-   assumes a:"instruction_sem v1 co_ctx a =
+   assumes a:"instruction_sem v1 co_ctx a net =
        InstructionToEnvironment (ContractDelegateCall x1a)
         v2 x33"
    and good:"vctx_memory_usage v1 \<ge> 0"
   shows  "vctx_gas v1 > vctx_gas v2"
 proof -
   have inst: "a = Misc DELEGATECALL \<and>
- unat (block_number (vctx_block v1)) \<ge> homestead_block"
+ \<not> before_homestead net"
    using delegatecall_instruction and a by force
-  then have "meter_gas a v1 co_ctx > 0"
+  then have "meter_gas a v1 co_ctx net > 0"
    using good and meter_gas_gt_0 by blast
   then show ?thesis using env_meter_gas and a by force
 qed
 
 lemma create_decr_gas :
-   assumes a:"instruction_sem v1 co_ctx a =
+   assumes a:"instruction_sem v1 co_ctx a net =
        InstructionToEnvironment (ContractCreate x1a)
         v2 x33"
    and good:"vctx_memory_usage v1 \<ge> 0"
@@ -699,13 +704,13 @@ lemma create_decr_gas :
 proof -
   have inst: "a = Misc CREATE"
    using create_instruction and a by force
-  then have "meter_gas a v1 co_ctx > 0"
+  then have "meter_gas a v1 co_ctx net > 0"
    using good and meter_gas_gt_0 by blast
   then show ?thesis using env_meter_gas and a by force
 qed
 
 lemma call_decr_gas :
-   assumes a:"instruction_sem v1 co_ctx a =
+   assumes a:"instruction_sem v1 co_ctx a net =
        InstructionToEnvironment (ContractCall x1a)
         v2 x33"
    and good:"vctx_memory_usage v1 \<ge> 0"
@@ -713,17 +718,17 @@ lemma call_decr_gas :
 proof -
   have inst: "a = Misc CALL \<or> a = Misc CALLCODE"
    using call_instruction and a by force
-  then have "meter_gas a v1 co_ctx > 0"
+  then have "meter_gas a v1 co_ctx net > 0"
    using good and meter_gas_gt_0 by blast
   then show ?thesis using env_meter_gas and a by force
 qed
 
 lemma continue_decr_gas :
-   assumes a:"instruction_sem v1 co_ctx a = InstructionContinue v2"
+   assumes a:"instruction_sem v1 co_ctx a net = InstructionContinue v2"
    and good:"vctx_memory_usage v1 \<ge> 0"
   shows  "vctx_gas v1 > vctx_gas v2"
 proof -
-  have "meter_gas a v1 co_ctx > 0"
+  have "meter_gas a v1 co_ctx net > 0"
    using a and good and meter_gas_gt_0 and continue_instruction
    by auto
   then show ?thesis using continue_meter_gas and a by force
@@ -1001,14 +1006,14 @@ lemma program_from_context :
 lemma program_inst_same :
    "program_inst p1 = program_inst p2 \<Longrightarrow>
     program_as_set p1 = program_as_set p2"
-apply (auto simp:program_as_set_def program_inst_def
+apply (auto simp:program_as_set_def
   program_as_set2_def program_inst_def split:option.split)
-  apply (metis option.case_eq_if option.expand option.sel option.simps(3) option.the_def program_inst_def)
-  apply (metis option.case_eq_if option.expand option.sel option.simps(3) option.the_def program_inst_def)
-  apply (metis option.case_eq_if option.expand option.sel option.simps(3) option.the_def program_inst_def)
-  apply (metis option.case_eq_if option.expand option.sel option.simps(3) option.the_def program_inst_def)
-  apply (metis option.case_eq_if option.expand option.sel option.simps(3) option.the_def program_inst_def)
-  apply (metis option.case_eq_if option.expand option.sel option.simps(3) option.the_def program_inst_def)
+  apply (metis option.case_eq_if option.expand option.sel option.simps(3) program_inst_def)
+  apply (metis option.case_eq_if option.sel option.simps(3) program_inst_def)
+  apply (metis option.case_eq_if  option.sel option.simps(3) program_inst_def)
+  apply (metis option.case_eq_if option.expand option.sel option.simps(3) program_inst_def)
+  apply (metis option.case_eq_if  option.sel option.simps(3) program_inst_def)
+  apply (metis option.case_eq_if  option.sel option.simps(3) program_inst_def)
 done
 
 (* reconstruct logs *)
@@ -1115,6 +1120,26 @@ lemma ext_program_same :
 apply(simp add:ext_program_as_set_def)
 done
 
+(* account existence *)
+
+lemma maximality_existence :
+ "account_existence_as_set m1 \<subseteq> account_existence_as_set m2 \<Longrightarrow>
+  m1 = m2"
+apply(auto simp add:context_rw)
+done
+
+lemma existence_at_context :
+ "account_existence_as_set s1 \<subseteq> contexts_as_set v2 c2 \<Longrightarrow>
+  account_existence_as_set s1 \<subseteq> account_existence_as_set (vctx_account_existence v2)"
+apply(auto simp add:context_rw)
+done
+
+lemma existence_from_context :
+ "account_existence_as_set s1 \<subseteq> contexts_as_set v2 c2 \<Longrightarrow>
+  vctx_account_existence v2 = s1"
+ by (metis existence_at_context maximality_existence)
+
+
 (* lemmas for all obvious subsets *)
 
 lemma stack_subset :
@@ -1131,6 +1156,10 @@ by(auto simp add:context_rw)
 
 lemma balance_subset :
   "balance_as_set (vctx_balance v1) \<subseteq> contexts_as_set v1 c1"
+by (auto simp add:context_rw)
+
+lemma existence_subset :
+  "account_existence_as_set (vctx_account_existence v1) \<subseteq> contexts_as_set v1 c1"
 by (auto simp add:context_rw)
 
 lemma data_sent_subset :
@@ -1206,6 +1235,7 @@ lemma eq_class :
     vctx_memory v1 = vctx_memory v2 \<Longrightarrow>
     vctx_storage v1 = vctx_storage v2 \<Longrightarrow>
     vctx_balance v1 = vctx_balance v2 \<Longrightarrow>
+    vctx_account_existence v1 = vctx_account_existence v2 \<Longrightarrow>
     program_inst (cctx_program c1) = program_inst (cctx_program c2) \<Longrightarrow>
     cctx_this c1 = cctx_this c2 \<Longrightarrow>
     (\<forall>addr. program_length (vctx_ext_program v1 addr) =
@@ -1250,6 +1280,7 @@ apply force
 using storage_from_context and storage_subset
 apply force
 using balance_from_context and balance_subset apply force
+using existence_from_context and existence_subset apply force
 using program_from_context and program_subset apply force
 apply(simp add:context_rw)
 using ext_length_from_context and ext_program_subset apply force
@@ -1269,21 +1300,21 @@ lemma zero_mul : "zero ** a = zero"
 apply (simp add:zero_def sep_def)
 done
 
-lemma zero_triple : "triple {} zero {} p"
+lemma zero_triple : "triple net {} zero {} p"
 apply (auto simp add:zero_mul triple_def zero_def sep_def)
 done
 
 lemma loop_triple :
-  "(\<forall>x. \<exists>y. y < x \<and> triple {} (p x) {} (p y ## q)) \<Longrightarrow>
+  "(\<forall>x. \<exists>y. y < x \<and> triple net {} (p x) {} (p y ## q)) \<Longrightarrow>
     p (0::nat) = zero \<Longrightarrow>
-    triple {} (p x) {} q"
+    triple net {} (p x) {} q"
 apply auto
 done
 
 lemma triple_three :
-  "triple {} p2 {} (q ## p1) \<Longrightarrow>
-   triple {} p1 {} (q ## p0) \<Longrightarrow>
-   triple {} p2 {} (q ## p0)"
+  "triple net {} p2 {} (q ## p1) \<Longrightarrow>
+   triple net {} p1 {} (q ## p0) \<Longrightarrow>
+   triple net {} p2 {} (q ## p0)"
 apply (auto simp:triple_def failed_for_reasons_def)
 apply(drule_tac x = co_ctx in spec)
 apply(drule_tac x = co_ctx in spec)
@@ -1294,7 +1325,7 @@ apply auto
 apply(drule_tac x = stopper in spec)
 apply auto
 apply (auto simp:sep_add_def)
-apply(drule_tac x = "program_sem stopper co_ctx k presult" in spec)
+apply(drule_tac x = "program_sem stopper co_ctx k net presult" in spec)
 apply(drule_tac x = rest in spec)
 apply auto
 apply(drule_tac x = stopper in spec)
@@ -1302,8 +1333,8 @@ apply auto
 done
 
 lemma loop_triple2 :
-  "(\<forall>x. triple {} (p x) {} (p (x-1) ## q)) \<Longrightarrow>
-    triple {} (p x) {} (p (0::nat) ## q)"
+  "(\<forall>x. triple net {} (p x) {} (p (x-1) ## q)) \<Longrightarrow>
+    triple net {} (p x) {} (p (0::nat) ## q)"
 apply (induction x)
 apply auto
   apply (metis diff_0_eq_0)
@@ -1314,8 +1345,8 @@ apply auto
 done
 
 lemma loop_triple_int :
-  "(\<forall>x. triple {} (p x) {} (p (x-1) ## q)) \<Longrightarrow>
-    \<exists>y. y < (0::int) \<and> triple {} (p x) {} (p y ## q)"
+  "(\<forall>x. triple net {} (p x) {} (p (x-1) ## q)) \<Longrightarrow>
+    \<exists>y. y < (0::int) \<and> triple net {} (p x) {} (p y ## q)"
 apply (induction x)
 subgoal for n
 apply (induction n)
@@ -1327,29 +1358,29 @@ using triple_three
   by blast
   by force
 
-definition stable :: "state_element set_pred \<Rightarrow> bool" where
-"stable pre ==
+definition stable :: "network \<Rightarrow> state_element set_pred \<Rightarrow> bool" where
+"stable net pre ==
     \<forall> co_ctx presult rest stopper. no_assertion co_ctx \<longrightarrow>
        (pre ** rest) (instruction_result_as_set co_ctx presult) \<longrightarrow>
        (\<forall> k.
-         (pre ** rest) (instruction_result_as_set co_ctx (program_sem stopper co_ctx k presult)))"
+         (pre ** rest) (instruction_result_as_set co_ctx (program_sem stopper co_ctx k net presult)))"
 
 
 lemma triple_stable :
-   "triple {} p {} (q##r) \<Longrightarrow>
-    triple {} (p##r) {} (q##r)"
+   "triple net {} p {} (q##r) \<Longrightarrow>
+    triple net {} (p##r) {} (q##r)"
   using triple_tauto triple_three by fastforce
 
 lemma triple_stable2 :
-   "triple {} p {} (q##s) \<Longrightarrow>
-    triple {} s {} r \<Longrightarrow>
-    triple {} (p##r) {} (q##r)"
+   "triple net {} p {} (q##s) \<Longrightarrow>
+    triple net {} s {} r \<Longrightarrow>
+    triple net {} (p##r) {} (q##r)"
   by (metis sep_add_def triple_stable triple_three weaken_post)
 
 lemma loop_triple_int2 :
-  "(\<forall>x. triple {} (p x) {} (p (x-1) ## q x)) \<Longrightarrow>
-   (\<forall>x. triple {} (q x) {} (q (x+1))) \<Longrightarrow>
-   \<exists>y. y < (0::int) \<and> triple {} (p x) {} (p y ## q x)"
+  "(\<forall>x. triple net {} (p x) {} (p (x-1) ## q x)) \<Longrightarrow>
+   (\<forall>x. triple net {} (q x) {} (q (x+1))) \<Longrightarrow>
+   \<exists>y. y < (0::int) \<and> triple net {} (p x) {} (p y ## q x)"
 apply (induction x)
 subgoal for n
 apply (induction n)
@@ -1366,9 +1397,9 @@ done
   by (smt negative_zle)
 
 lemma loop_triple_int3 :
-  "(\<forall>x. triple {} (p x) {} (p (x-1) ## q x)) \<Longrightarrow>
-   (\<forall>x. triple {} (q x) {} (q (x+1))) \<Longrightarrow>
-   \<exists>y. y < (0::int) \<and> y \<le> x \<and> triple {} (p x) {} (p y ## q x)"
+  "(\<forall>x. triple net {} (p x) {} (p (x-1) ## q x)) \<Longrightarrow>
+   (\<forall>x. triple net {} (q x) {} (q (x+1))) \<Longrightarrow>
+   \<exists>y. y < (0::int) \<and> y \<le> x \<and> triple net {} (p x) {} (p y ## q x)"
 apply (induction x)
 subgoal for n
 apply (induction n)
@@ -1390,15 +1421,15 @@ done
 definition ex_pred :: "('b \<Rightarrow> 'a set_pred) \<Rightarrow> 'a set_pred" where
 "ex_pred pred = (\<lambda>s. \<exists>y. pred y s)"
 
-definition s_triple :: "state_element set_pred \<Rightarrow> state_element set_pred \<Rightarrow> bool" where
-"s_triple pre post ==
+definition s_triple :: "network \<Rightarrow> state_element set_pred \<Rightarrow> state_element set_pred \<Rightarrow> bool" where
+"s_triple net pre post ==
     \<forall> co_ctx presult rest stopper. no_assertion co_ctx \<longrightarrow>
        (pre ** rest) (instruction_result_as_set co_ctx presult) \<longrightarrow>
        (\<exists> k.
-         (post ** rest) (instruction_result_as_set co_ctx (program_sem stopper co_ctx k presult)))"
+         (post ** rest) (instruction_result_as_set co_ctx (program_sem stopper co_ctx k net presult)))"
 
 
-lemma s_triple_eq : "s_triple p q = triple {} p {} q"
+lemma s_triple_eq : "s_triple net p q = triple net {} p {} q"
 apply (auto simp add: triple_def s_triple_def failed_for_reasons_def)
 done
 
@@ -1409,14 +1440,14 @@ definition failures :: "failure_reason set \<Rightarrow> state_element set_pred"
     ContractActionElm (ContractFail lst)})"
 
 lemma s_triple_eq2 :
-   "s_triple (p**code c) (q**code c) = triple {} p c q"
+   "s_triple net (p**code c) (q**code c) = triple net {} p c q"
 apply (auto simp add: triple_def s_triple_def failed_for_reasons_def)
 done
 
 lemma no_annotation_failure :
  "no_assertion co_ctx \<Longrightarrow>
   presult \<noteq> InstructionAnnotationFailure \<Longrightarrow>
-  program_sem stopper co_ctx k presult \<noteq> InstructionAnnotationFailure"
+  program_sem stopper co_ctx k net presult \<noteq> InstructionAnnotationFailure"
 apply(cases presult)
 apply (simp add:program_sem.simps failed_for_reasons_def
   program_annotation no_reasons_next)
@@ -1424,14 +1455,14 @@ subgoal for v1
 apply (induction k arbitrary:v1 presult)
 apply (auto simp add:program_sem.simps failed_for_reasons_def
   program_annotation no_reasons_next)
-apply (case_tac "next_state stopper co_ctx
+apply (case_tac "next_state stopper co_ctx net
              (InstructionContinue v1)")
 apply auto
 defer
   apply (simp add: program_environment)
 apply(simp add:next_state_def)
 apply(case_tac "vctx_next_instruction v1 co_ctx"; auto)
-apply(case_tac "check_resources v1 co_ctx (vctx_stack v1) a"; auto)
+apply(case_tac "check_resources v1 co_ctx (vctx_stack v1) a net"; auto)
 using no_annotation_inst by force
   apply (auto simp add: program_environment)
 done
@@ -1440,18 +1471,18 @@ lemma code_elm_preserved :
 "no_assertion co_ctx \<Longrightarrow>
  CodeElm (pos, i) \<in> instruction_result_as_set co_ctx presult \<Longrightarrow>
  CodeElm (pos, i) \<in> instruction_result_as_set co_ctx
- (program_sem stopper co_ctx k  presult)"
+ (program_sem stopper co_ctx k net presult)"
 apply (cases presult; auto)
-apply(case_tac "program_sem stopper co_ctx k
+apply(case_tac "program_sem stopper co_ctx k net
              (InstructionContinue x1)")
 apply (auto simp add:context_rw instruction_result_as_set_def)
 using no_annotation_failure apply force
 using no_annotation_failure apply force
-apply(case_tac "program_sem stopper co_ctx k
+apply(case_tac "program_sem stopper co_ctx k net
              presult")
 apply (auto simp add:context_rw instruction_result_as_set_def)
 using no_annotation_failure apply force
-apply(case_tac "program_sem stopper co_ctx k
+apply(case_tac "program_sem stopper co_ctx k net
              presult")
 apply (auto simp add:context_rw instruction_result_as_set_def)
 using no_annotation_failure apply force
@@ -1473,7 +1504,8 @@ apply(auto simp:context_rw instruction_result_as_set_def)
 done
 
 lemma s_triple_imp :
-   "s_triple (p**code c) (q**code c ##failures f) \<Longrightarrow> triple f p c q"
+   "s_triple net (p**code c) (q**code c ##failures f) \<Longrightarrow>
+    triple net f p c q"
 apply (auto simp add: triple_def s_triple_def sep_add_def)
 apply (drule_tac x = co_ctx in spec)
 apply clarsimp
@@ -1494,7 +1526,7 @@ apply (rule exI [of _ "(va -
 apply auto
 proof -
   assume a1: "rest ua"
-  assume a2: "ua \<union> va = instruction_result_as_set co_ctx (program_sem stopper co_ctx k presult)"
+  assume a2: "ua \<union> va = instruction_result_as_set co_ctx (program_sem stopper co_ctx k net presult)"
   assume a3: "ua \<inter> va = {}"
   assume "{CodeElm (pos, i) |pos i. (pos, i) \<in> c} \<subseteq> va"
   then have f4: "ua \<inter> {CodeElm (i, ia) |i ia. (i, ia) \<in> c} = {}"
@@ -1503,10 +1535,10 @@ proof -
     using a3 by blast
   then have "(va - {CodeElm (i, ia) |i ia. (i, ia) \<in> c}) \<inter> ua = {} \<and> ua \<union> va - {CodeElm (i, ia) |i ia. (i, ia) \<in> c} = ua \<union> (va - {CodeElm (i, ia) |i ia. (i, ia) \<in> c})"
     using f4 by (simp add: Diff_triv Un_Diff)
-  then show "\<exists>S. rest S \<and> va - {CodeElm (i, ia) |i ia. (i, ia) \<in> c} \<union> S = instruction_result_as_set co_ctx (program_sem stopper co_ctx k presult) - {CodeElm (i, ia) |i ia. (i, ia) \<in> c} \<and> (va - {CodeElm (i, ia) |i ia. (i, ia) \<in> c}) \<inter> S = {}"
+  then show "\<exists>S. rest S \<and> va - {CodeElm (i, ia) |i ia. (i, ia) \<in> c} \<union> S = instruction_result_as_set co_ctx (program_sem stopper co_ctx k net presult) - {CodeElm (i, ia) |i ia. (i, ia) \<in> c} \<and> (va - {CodeElm (i, ia) |i ia. (i, ia) \<in> c}) \<inter> S = {}"
     using a2 a1 by auto
 qed
-apply (cases "program_sem stopper co_ctx k presult")
+apply (cases "program_sem stopper co_ctx k net presult")
 apply simp
 subgoal for u ua v lst x1
 using continue_elm_false[of co_ctx x1]
@@ -1533,7 +1565,7 @@ using get_action_elm
   apply (metis contract_action.distinct insertI1 insert_commute)
   by (metis \<open>ContractActionElm (ContractFail lst) \<in> instruction_result_as_set co_ctx (InstructionToEnvironment act vctx x33) \<Longrightarrow> ContractFail lst = act\<close> contract_action.inject(4) insertI1 insert_commute)
 
-apply (cases "program_sem stopper co_ctx k presult")
+apply (cases "program_sem stopper co_ctx k net presult")
 apply simp
 
 subgoal for u ua v va x1
@@ -1568,13 +1600,13 @@ proof -
   assume a2: "ua \<inter> va = {}"
   assume a3: "{CodeElm (pos, i) |pos i. (pos, i) \<in> c} \<subseteq> va"
   assume a4: "q (va - {CodeElm (pos, i) |pos i. (pos, i) \<in> c})"
-  assume "program_sem stopper co_ctx k presult = InstructionToEnvironment act vctx x33"
-  assume a5: "ua \<union> va = instruction_result_as_set co_ctx (program_sem stopper co_ctx k presult)"
+  assume "program_sem stopper co_ctx k net presult = InstructionToEnvironment act vctx x33"
+  assume a5: "ua \<union> va = instruction_result_as_set co_ctx (program_sem stopper co_ctx k net presult)"
   have "ua \<inter> {CodeElm (i, ia) |i ia. (i, ia) \<in> c} = {}"
     using a3 a2 by blast
   then have "va - {CodeElm (i, ia) |i ia. (i, ia) \<in> c} \<union> ua = ua \<union> va - {CodeElm (i, ia) |i ia. (i, ia) \<in> c} \<and> (va - {CodeElm (i, ia) |i ia. (i, ia) \<in> c}) \<inter> ua = {}"
     using a2 by (simp add: Diff_Int_distrib Diff_triv Un_Diff inf_sup_aci(1) inf_sup_aci(5))
-  then show "q (va - {CodeElm (i, ia) |i ia. (i, ia) \<in> c}) \<and> (\<exists>S. rest S \<and> va - {CodeElm (i, ia) |i ia. (i, ia) \<in> c} \<union> S = instruction_result_as_set co_ctx (program_sem stopper co_ctx k presult) - {CodeElm (i, ia) |i ia. (i, ia) \<in> c} \<and> (va - {CodeElm (i, ia) |i ia. (i, ia) \<in> c}) \<inter> S = {})"
+  then show "q (va - {CodeElm (i, ia) |i ia. (i, ia) \<in> c}) \<and> (\<exists>S. rest S \<and> va - {CodeElm (i, ia) |i ia. (i, ia) \<in> c} \<union> S = instruction_result_as_set co_ctx (program_sem stopper co_ctx k net presult) - {CodeElm (i, ia) |i ia. (i, ia) \<in> c} \<and> (va - {CodeElm (i, ia) |i ia. (i, ia) \<in> c}) \<inter> S = {})"
     using a5 a4 a1 by auto
 qed
 done
@@ -1587,7 +1619,7 @@ definition failures2 :: "failure_reason set \<Rightarrow> state_element set_pred
    ContractActionElm (ContractFail lst) \<in> s)"
 
 lemma s_triple_imp2 :
-   "s_triple (p**code c) (q**code c ##failures2 f) \<Longrightarrow> triple f p c q"
+   "s_triple net (p**code c) (q**code c ##failures2 f) \<Longrightarrow> triple net f p c q"
 apply (auto simp add: triple_def s_triple_def sep_add_def)
 apply (drule_tac x = co_ctx in spec)
 apply clarsimp
@@ -1608,7 +1640,7 @@ apply (rule exI [of _ "(va -
 apply auto
 proof -
   assume a1: "rest ua"
-  assume a2: "ua \<union> va = instruction_result_as_set co_ctx (program_sem stopper co_ctx k presult)"
+  assume a2: "ua \<union> va = instruction_result_as_set co_ctx (program_sem stopper co_ctx k net presult)"
   assume a3: "ua \<inter> va = {}"
   assume "{CodeElm (pos, i) |pos i. (pos, i) \<in> c} \<subseteq> va"
   then have f4: "ua \<inter> {CodeElm (i, ia) |i ia. (i, ia) \<in> c} = {}"
@@ -1617,17 +1649,17 @@ proof -
     using a3 by blast
   then have "(va - {CodeElm (i, ia) |i ia. (i, ia) \<in> c}) \<inter> ua = {} \<and> ua \<union> va - {CodeElm (i, ia) |i ia. (i, ia) \<in> c} = ua \<union> (va - {CodeElm (i, ia) |i ia. (i, ia) \<in> c})"
     using f4 by (simp add: Diff_triv Un_Diff)
-  then show "\<exists>S. rest S \<and> va - {CodeElm (i, ia) |i ia. (i, ia) \<in> c} \<union> S = instruction_result_as_set co_ctx (program_sem stopper co_ctx k presult) - {CodeElm (i, ia) |i ia. (i, ia) \<in> c} \<and> (va - {CodeElm (i, ia) |i ia. (i, ia) \<in> c}) \<inter> S = {}"
+  then show "\<exists>S. rest S \<and> va - {CodeElm (i, ia) |i ia. (i, ia) \<in> c} \<union> S = instruction_result_as_set co_ctx (program_sem stopper co_ctx k net presult) - {CodeElm (i, ia) |i ia. (i, ia) \<in> c} \<and> (va - {CodeElm (i, ia) |i ia. (i, ia) \<in> c}) \<inter> S = {}"
     using a2 a1 by auto
 qed
-apply (cases "program_sem stopper co_ctx k presult")
+apply (cases "program_sem stopper co_ctx k net presult")
 apply simp
 subgoal for u ua v va lst x1
 using continue_elm_false[of co_ctx x1]
 apply auto
 done
 apply auto
-apply (cases "program_sem stopper co_ctx k presult")
+apply (cases "program_sem stopper co_ctx k net presult")
 apply auto
 subgoal for u ua v va lst x31 x32 x33
 apply (rule exI [of _ "(va -
@@ -1641,21 +1673,21 @@ apply (rule exI [of _ "(va -
 apply auto
 proof -
   assume a1: "rest ua"
-  assume a2: "ua \<union> va = instruction_result_as_set co_ctx (program_sem stopper co_ctx k presult)"
+  assume a2: "ua \<union> va = instruction_result_as_set co_ctx (program_sem stopper co_ctx k net presult)"
   assume a3: "ua \<inter> va = {}"
   assume "{CodeElm (pos, i) |pos i. (pos, i) \<in> c} \<subseteq> va"
   then have "ua \<inter> {} = ua \<inter> {CodeElm (i, ia) |i ia. (i, ia) \<in> c}"
   using a3 by auto
   then have "ua \<union> va - {CodeElm (i, ia) |i ia. (i, ia) \<in> c} = va - {CodeElm (i, ia) |i ia. (i, ia) \<in> c} \<union> ua"
     by auto
-  then show "\<exists>S. rest S \<and> va - {CodeElm (i, ia) |i ia. (i, ia) \<in> c} \<union> S = instruction_result_as_set co_ctx (program_sem stopper co_ctx k presult) - {CodeElm (i, ia) |i ia. (i, ia) \<in> c} \<and> (va - {CodeElm (i, ia) |i ia. (i, ia) \<in> c}) \<inter> S = {}"
+  then show "\<exists>S. rest S \<and> va - {CodeElm (i, ia) |i ia. (i, ia) \<in> c} \<union> S = instruction_result_as_set co_ctx (program_sem stopper co_ctx k net presult) - {CodeElm (i, ia) |i ia. (i, ia) \<in> c} \<and> (va - {CodeElm (i, ia) |i ia. (i, ia) \<in> c}) \<inter> S = {}"
     using a3 a2 a1 by auto
   qed
 done
 done
 
 lemma s_triple_imp2 :
-   "triple f p c q \<Longrightarrow> s_triple (p**code c) (q**code c ##failures2 f)"
+   "triple net f p c q \<Longrightarrow> s_triple net (p**code c) (q**code c ##failures2 f)"
 apply (auto simp add: triple_def s_triple_def sep_add_def)
 apply (drule_tac x = co_ctx in spec)
 apply clarsimp
@@ -1677,7 +1709,7 @@ apply (rule exI [of _
 apply auto
   by (metis (no_types, lifting) Diff_cancel Int_Diff Un_Diff inf_commute inf_sup_absorb inf_sup_aci(1) sup_bot.right_neutral)
 
-apply (cases "program_sem stopper co_ctx k presult")
+apply (cases "program_sem stopper co_ctx k net presult")
 apply (simp add:failed_for_reasons_def)
 apply (simp add:failed_for_reasons_def)
 apply (simp add:failed_for_reasons_def)

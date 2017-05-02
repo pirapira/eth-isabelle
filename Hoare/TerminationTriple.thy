@@ -56,9 +56,9 @@ then have "(?base ** not_continuing) (insert (ContinuingElm False) ?set)"
   using context_cont1 not_cont_insert by presburger
 then have "(?base ** not_continuing)
    (insert (ContinuingElm False) ?set-{ContractActionElm (ContractFail lst)})"
-  by (metis (full_types) Diff_empty Diff_insert2 context_cont context_cont1 contexts_as_set_def insert_minus state_element.distinct(685))
+  using Diff_insert0 Diff_insert2 action_not_context by auto
 then show ?thesis
-  by (metis failing_insert insert_commute sep_three set_pred.commute) 
+  by (metis failing_insert insert_commute sep_three set_pred.commute)
 qed
 
 lemma funext : "(\<forall>x. f x = g x) \<Longrightarrow> f = g"
@@ -110,7 +110,7 @@ done
 
 lemma normal_case : assumes
  a:"(rest ** all_with_gas g) (contexts_as_set v1 co_ctx)" and
- b:"instruction_sem v1 co_ctx inst = InstructionContinue v2"
+ b:"instruction_sem v1 co_ctx net inst = InstructionContinue v2"
  shows  "(rest ** all_with_less_gas g) (contexts_as_set v2 co_ctx)"
 proof -
   from a have "vctx_memory_usage v1 \<ge> 0 \<and> vctx_gas v1 = g"
@@ -122,7 +122,7 @@ qed
 
 lemma call_case : assumes
  a:"(rest ** all_with_gas g) (contexts_as_set v1 co_ctx)" and
- b:"instruction_sem v1 co_ctx inst =
+ b:"instruction_sem v1 co_ctx net inst =
     InstructionToEnvironment (ContractCall x1) v2 x33"
  shows "(calling ** not_continuing **
            rest ** all_with_less_gas g)
@@ -144,7 +144,7 @@ qed
 
 lemma delegatecall_case : assumes
  a:"(rest ** all_with_gas g) (contexts_as_set v1 co_ctx)" and
- b:"instruction_sem v1 co_ctx inst =
+ b:"instruction_sem v1 co_ctx inst net =
     InstructionToEnvironment (ContractDelegateCall x1) v2 x33"
  shows "(delegating ** not_continuing **
            rest ** all_with_less_gas g)
@@ -166,7 +166,7 @@ qed
 
 lemma create_case : assumes
  a:"(rest ** all_with_gas g) (contexts_as_set v1 co_ctx)" and
- b:"instruction_sem v1 co_ctx inst =
+ b:"instruction_sem v1 co_ctx inst net =
     InstructionToEnvironment (ContractCreate x1) v2 x33"
  shows "(creating ** not_continuing **
            rest ** all_with_less_gas g)
@@ -188,7 +188,7 @@ qed
 
 lemma fail_case : assumes
  a:"(rest ** all_with_gas g) (contexts_as_set v1 co_ctx)" and
- b:"instruction_sem v1 co_ctx inst =
+ b:"instruction_sem v1 co_ctx inst net =
     InstructionToEnvironment (ContractFail x1) v2 x33"
  shows "(failing ** not_continuing **
            rest ** all_perhaps_less_gas g)
@@ -214,7 +214,7 @@ qed
 
 lemma suicide_case : assumes
  a:"(rest ** all_with_gas g) (contexts_as_set v1 co_ctx)" and
- b:"instruction_sem v1 co_ctx inst =
+ b:"instruction_sem v1 co_ctx net inst =
     InstructionToEnvironment (ContractSuicide x1) v2 x33"
  shows "(destructing ** not_continuing **
            rest ** all_perhaps_less_gas g)
@@ -241,7 +241,7 @@ qed
 
 lemma return_case : assumes
  a:"(rest ** all_with_gas g) (contexts_as_set v1 co_ctx)" and
- b:"instruction_sem v1 co_ctx inst =
+ b:"instruction_sem v1 co_ctx net inst =
     InstructionToEnvironment (ContractReturn x1) v2 x33"
  shows "(returning ** not_continuing **
            rest ** all_perhaps_less_gas g)
@@ -269,7 +269,7 @@ apply (simp add:instruction_result_as_set_def)
 done
 
 lemma using_gas_triple :
-   "triple {} (all_with_gas g ** continuing) {}
+   "triple net {} (all_with_gas g ** continuing) {}
     (all_with_less_gas g ** continuing 
     ## all_with_less_gas g ** not_continuing **
       (delegating ## calling ## creating)
@@ -292,7 +292,7 @@ using meter_gas_check apply force
 apply (simp add: instruction_result_as_set_def)
 using case_1 apply force
 subgoal for co_ctx rest v1 inst
-apply (case_tac "instruction_sem v1 co_ctx inst"; auto)
+apply (case_tac "instruction_sem v1 co_ctx inst net"; auto)
 apply (simp add: instruction_result_as_set_def)
 using no_annotation_inst apply simp
 apply (case_tac x31; auto simp:simple)
@@ -304,7 +304,7 @@ using suicide_case apply force
 using return_case apply force
 done
 subgoal for co_ctx rest v1 inst
-apply (case_tac "instruction_sem v1 co_ctx inst"; auto)
+apply (case_tac "instruction_sem v1 co_ctx inst net"; auto)
 apply (simp add: instruction_result_as_set_def)
 using normal_case apply simp
 using no_annotation_inst apply simp
@@ -341,7 +341,7 @@ from a have "(?base ** not_continuing) (insert (ContinuingElm False) ?set)"
   using context_cont1 not_cont_insert by presburger
 then have "(?base ** not_continuing)
    (insert (ContinuingElm False) ?set-{ContractActionElm (ContractFail lst)})"
-  by (metis (full_types) Diff_empty Diff_insert2 context_cont context_cont1 contexts_as_set_def insert_minus state_element.distinct(685))
+  by auto
 then show ?thesis
   by (metis failing_insert insert_commute sep_three set_pred.commute) 
 qed
@@ -365,7 +365,7 @@ lemma perhaps_gas_gas :
 
 lemma normal_case2 : assumes
  a:"(rest ** all_perhaps_less_gas g) (contexts_as_set v1 co_ctx)" and
- b:"instruction_sem v1 co_ctx inst = InstructionContinue v2"
+ b:"instruction_sem v1 co_ctx inst net = InstructionContinue v2"
  shows  "(rest ** all_with_less_gas g) (contexts_as_set v2 co_ctx)"
 proof -
   from a have "vctx_memory_usage v1 \<ge> 0 \<and> vctx_gas v1 \<le> g"
@@ -378,7 +378,7 @@ qed
 
 lemma call_case2 : assumes
  a:"(rest ** all_perhaps_less_gas g) (contexts_as_set v1 co_ctx)" and
- b:"instruction_sem v1 co_ctx inst =
+ b:"instruction_sem v1 co_ctx inst net =
     InstructionToEnvironment (ContractCall x1) v2 x33"
  shows "(calling ** not_continuing **
            rest ** all_with_less_gas g)
@@ -400,7 +400,7 @@ qed
 
 lemma delegatecall_case2 : assumes
  a:"(rest ** all_perhaps_less_gas g) (contexts_as_set v1 co_ctx)" and
- b:"instruction_sem v1 co_ctx inst =
+ b:"instruction_sem v1 co_ctx inst net =
     InstructionToEnvironment (ContractDelegateCall x1) v2 x33"
  shows "(delegating ** not_continuing **
            rest ** all_with_less_gas g)
@@ -422,7 +422,7 @@ qed
 
 lemma create_case2 : assumes
  a:"(rest ** all_perhaps_less_gas g) (contexts_as_set v1 co_ctx)" and
- b:"instruction_sem v1 co_ctx inst =
+ b:"instruction_sem v1 co_ctx inst net =
     InstructionToEnvironment (ContractCreate x1) v2 x33"
  shows "(creating ** not_continuing **
            rest ** all_with_less_gas g)
@@ -444,7 +444,7 @@ qed
 
 lemma fail_case2 : assumes
  a:"(rest ** all_perhaps_less_gas g) (contexts_as_set v1 co_ctx)" and
- b:"instruction_sem v1 co_ctx inst =
+ b:"instruction_sem v1 co_ctx inst net =
     InstructionToEnvironment (ContractFail x1) v2 x33"
  shows "(failing ** not_continuing **
            rest ** all_perhaps_less_gas g)
@@ -470,7 +470,7 @@ qed
 
 lemma suicide_case2 : assumes
  a:"(rest ** all_perhaps_less_gas g) (contexts_as_set v1 co_ctx)" and
- b:"instruction_sem v1 co_ctx inst =
+ b:"instruction_sem v1 co_ctx inst net =
     InstructionToEnvironment (ContractSuicide x1) v2 x33"
  shows "(destructing ** not_continuing **
            rest ** all_perhaps_less_gas g)
@@ -497,7 +497,7 @@ qed
 
 lemma return_case2 : assumes
  a:"(rest ** all_perhaps_less_gas g) (contexts_as_set v1 co_ctx)" and
- b:"instruction_sem v1 co_ctx inst =
+ b:"instruction_sem v1 co_ctx inst net =
     InstructionToEnvironment (ContractReturn x1) v2 x33"
  shows "(returning ** not_continuing **
            rest ** all_perhaps_less_gas g)
@@ -518,7 +518,7 @@ proof -
 qed
 
 lemma using_gas_triple2 :
-   "triple {} (all_perhaps_less_gas g ** continuing) {}
+   "triple net {} (all_perhaps_less_gas g ** continuing) {}
     (all_with_less_gas g ** continuing 
     ## all_with_less_gas g ** not_continuing **
       (delegating ## calling ## creating)
@@ -541,7 +541,7 @@ using meter_gas_check apply force
 apply (simp add: instruction_result_as_set_def)
 using case_2 apply force
 subgoal for co_ctx rest v1 inst
-apply (case_tac "instruction_sem v1 co_ctx inst"; auto)
+apply (case_tac "instruction_sem v1 co_ctx inst net"; auto)
 apply (simp add: instruction_result_as_set_def)
 using no_annotation_inst apply simp
 apply (case_tac x31; auto simp:simple)
@@ -553,7 +553,7 @@ using suicide_case2 apply force
 using return_case2 apply force
 done
 subgoal for co_ctx rest v1 inst
-apply (case_tac "instruction_sem v1 co_ctx inst"; auto)
+apply (case_tac "instruction_sem v1 co_ctx inst net"; auto)
 apply (simp add: instruction_result_as_set_def)
 using normal_case2 apply simp
 using no_annotation_inst apply simp
@@ -568,7 +568,7 @@ done
 done
 
 lemma using_gas_triple3 :
-   "triple {} (all_perhaps_less_gas g ** continuing
+   "triple net {} (all_perhaps_less_gas g ** continuing
     ## all_with_less_gas g ** not_continuing **
       (delegating ## calling ## creating)
     ## all_perhaps_less_gas g ** not_continuing **
@@ -595,19 +595,18 @@ apply (auto simp:zero_def pure_def)
 done
 
 lemma simple_triple :
-  "(\<forall>x. p x \<longrightarrow> r x) \<Longrightarrow>
-   triple {} p {} r"
+  "(\<forall>x. p x \<longrightarrow> r x) \<Longrightarrow> triple net {} p {} r"
   by (simp add: pre_imp triple_tauto)
 
 lemma termination_triple :
    "\<exists>y. y < 0 \<and> y \<le> g \<and>
-    triple {} (all_perhaps_less_gas g ** continuing) {}
+    triple net {} (all_perhaps_less_gas g ** continuing) {}
     (all_perhaps_less_gas y ** continuing ##
       (all_with_less_gas g ** not_continuing **
       (delegating ## calling ## creating)
     ## all_perhaps_less_gas g ** not_continuing **
        (failing ## returning  ## destructing)))"
-apply (rule loop_triple_int3 [of "\<lambda>g. all_perhaps_less_gas g ** continuing"
+apply (rule loop_triple_int3 [of net "\<lambda>g. all_perhaps_less_gas g ** continuing"
   "\<lambda>g. all_with_less_gas g ** not_continuing **
       (delegating ## calling ## creating)
     ## all_perhaps_less_gas g ** not_continuing **
@@ -656,13 +655,13 @@ from a have "(?base ** not_continuing) (insert (ContinuingElm False) ?set)"
   using context_cont1 not_cont_insert by presburger
 then have "(?base ** not_continuing)
    (insert (ContinuingElm False) ?set-{ContractActionElm (ContractFail lst)})"
-  by (metis (full_types) Diff_empty Diff_insert2 context_cont context_cont1 contexts_as_set_def insert_minus state_element.distinct(685))
+  by auto
 then show ?thesis
   by (metis failing_insert insert_commute sep_three set_pred.commute) 
 qed
 
 lemma no_gas :
-   "triple {} (all_with_less_gas 0 ** continuing) {}
+   "triple net {} (all_with_less_gas 0 ** continuing) {}
     (all_with_less_gas 0 ** not_continuing ** failing)"
 apply(auto simp add: triple_def)
  apply(rule_tac x = 1 in exI)
@@ -682,7 +681,7 @@ done
 
 lemma no_gas2 :
    "y \<le> 0 \<Longrightarrow>
-    triple {} (all_with_less_gas y ** continuing) {}
+    triple net {} (all_with_less_gas y ** continuing) {}
     (all_with_less_gas y ** not_continuing ** failing)"
 apply(auto simp add: triple_def)
  apply(rule_tac x = 1 in exI)
@@ -702,24 +701,24 @@ done
 
 lemma no_gas3 :
    "y < 0 \<Longrightarrow>
-    triple {} (all_perhaps_less_gas y ** continuing) {}
+    triple net {} (all_perhaps_less_gas y ** continuing) {}
     (all_perhaps_less_gas y ** not_continuing ** failing)"
 using no_gas2 perhaps_less
 apply force
 done
 
 lemma triple_x :
-  "triple {} p {} (q1##r) \<Longrightarrow>
-   triple {} q1 {} q2 \<Longrightarrow>
-   triple {} p {} (q2##r)"
+  "triple net {} p {} (q1##r) \<Longrightarrow>
+   triple net {} q1 {} q2 \<Longrightarrow>
+   triple net {} p {} (q2##r)"
 proof -
-  assume a1: "triple {} p {} (q1 ## r)"
-  assume a2: "triple {} q1 {} q2"
-  have "triple {} zero {} (q2 ## r)"
+  assume a1: "triple net {} p {} (q1 ## r)"
+  assume a2: "triple net {} q1 {} q2"
+  have "triple net {} zero {} (q2 ## r)"
     by (metis zero_triple)
-  then have "triple {} q1 {} (q2 ## r)"
+  then have "triple net {} q1 {} (q2 ## r)"
     using a2 by (metis (no_types) sep_add_commute triple_three zero_add)
-  then have "\<exists>pa pb. triple {} pa {} (q2 ## r) \<and> triple {} pb {} (pa ## q2) \<and> triple {} p {} (pa ## pb)"
+  then have "\<exists>pa pb. triple net {} pa {} (q2 ## r) \<and> triple net {} pb {} (pa ## q2) \<and> triple net {} p {} (pa ## pb)"
     using a1 by (metis (no_types) sep_add_commute triple_stable zero_add zero_triple)
   then show ?thesis
   by (metis (full_types) sep_add_commute triple_three)
@@ -728,19 +727,19 @@ qed
 
 lemma termination_triple2 :
    "\<exists>y<0. y \<le> g \<and>
-    triple {} (all_perhaps_less_gas g ** continuing) {}
+    triple net {} (all_perhaps_less_gas g ** continuing) {}
     ((all_perhaps_less_gas y ** not_continuing ** failing) ##
       (all_with_less_gas g ** not_continuing **
       (delegating ## calling ## creating)
     ## all_perhaps_less_gas g ** not_continuing **
        (failing ## returning  ## destructing)))"
-using termination_triple [of g]
+using termination_triple [of g net]
 apply auto
 subgoal for y
 apply (rule exI [of _ y])
 apply auto
 using no_gas3 [of y]
-  triple_x [of "continuing ** all_perhaps_less_gas g"
+  triple_x [of net "continuing ** all_perhaps_less_gas g"
    "continuing ** all_perhaps_less_gas y"
    "delegating ** not_continuing ** all_with_less_gas g ##
       calling ** not_continuing ** all_with_less_gas g ##
@@ -777,17 +776,17 @@ apply (auto simp add:failing_def
 done
 
 lemma termination_triple3 :
-   "triple {} (all_perhaps_less_gas g ** continuing) {}
+   "triple net {} (all_perhaps_less_gas g ** continuing) {}
     ( not_continuing **
     (all_with_less_gas g ** (delegating ## calling ## creating)
     ## all_perhaps_less_gas g ** (failing ## returning  ## destructing)))"
-using termination_triple2 [of g]
+using termination_triple2 [of g net]
 apply auto
 subgoal for y
 using perhaps_less_less [of y g]
 proof -
   assume a1: "y \<le> g"
-  assume a2: "triple {} (continuing ** all_perhaps_less_gas g) {} (failing ** not_continuing ** all_perhaps_less_gas y ## delegating ** not_continuing ** all_with_less_gas g ## calling ** not_continuing ** all_with_less_gas g ## creating ** not_continuing ** all_with_less_gas g ## failing ** not_continuing ** all_perhaps_less_gas g ## destructing ** not_continuing ** all_perhaps_less_gas g ## returning ** not_continuing ** all_perhaps_less_gas g)"
+  assume a2: "triple net {} (continuing ** all_perhaps_less_gas g) {} (failing ** not_continuing ** all_perhaps_less_gas y ## delegating ** not_continuing ** all_with_less_gas g ## calling ** not_continuing ** all_with_less_gas g ## creating ** not_continuing ** all_with_less_gas g ## failing ** not_continuing ** all_perhaps_less_gas g ## destructing ** not_continuing ** all_perhaps_less_gas g ## returning ** not_continuing ** all_perhaps_less_gas g)"
   assume a3: "\<And>s. \<lbrakk>y \<le> g; all_perhaps_less_gas y s\<rbrakk> \<Longrightarrow> all_perhaps_less_gas g s"
   have f4: "\<forall>p pa pb. (pb::state_element set \<Rightarrow> bool) ## p ## pa = pa ## pb ## p"
     using sep_add_assoc by force
@@ -799,9 +798,6 @@ proof -
     using f5 f4 a2 by (metis sep_add_commute sep_add_distr)
 qed
 done
-
-
-
 
 
 

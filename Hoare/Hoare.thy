@@ -62,7 +62,7 @@ where "block_info_as_set b ==
   TimestampElm (block_timestamp b), DifficultyElm (block_difficulty b),
   GaslimitElm (block_gaslimit b), GaspriceElm (block_gasprice b), BlockNumberElm (block_number b) }"
 
-abbreviation account_existence_as_set :: "(address \<Rightarrow> bool) \<Rightarrow> state_element set"
+definition account_existence_as_set :: "(address \<Rightarrow> bool) \<Rightarrow> state_element set"
 where
 "account_existence_as_set f ==
   { AccountExistenceElm (a, e) | a e. f a = e }"
