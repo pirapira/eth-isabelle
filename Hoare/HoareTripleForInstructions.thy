@@ -951,6 +951,50 @@ lemma log_num_advance [simp] :
 apply(simp add: contexts_as_set_def)
 done
 
+lemma account_existence_not_in_constant [simp] :
+  "AccountExistenceElm p \<notin> constant_ctx_as_set co_ctx"
+apply(simp add: constant_ctx_as_set_def program_as_set_def)
+done
+
+lemma account_existence_not_in_stack [simp] :
+  "AccountExistenceElm p \<notin> stack_as_set (vctx_stack x1)"
+apply(simp add: stack_as_set_def)
+done
+
+lemma account_existence_not_in_balance [simp] :
+  "AccountExistenceElm p \<notin> balance_as_set (vctx_balance x1)"
+apply(simp add: balance_as_set_def)
+done
+
+lemma account_existence_not_ext [simp] :
+  "AccountExistenceElm p \<notin> ext_program_as_set (vctx_ext_program x1)"
+apply(simp add: ext_program_as_set_def)
+done
+
+lemma account_existence_elm_means [simp] :
+  "AccountExistenceElm p \<in> variable_ctx_as_set x =
+   (vctx_account_existence x (fst p) = snd p)"
+apply(case_tac p)
+apply(auto simp add: variable_ctx_as_set_def)
+done
+
+lemma account_existence_elm_means_c [simp] :
+  "AccountExistenceElm p \<in> contexts_as_set x c =
+   (vctx_account_existence x (fst p) = snd p)"
+apply(auto simp add: contexts_as_set_def)
+done
+
+lemma account_existence_advance [simp] :
+  "AccountExistenceElm (aa, x) \<in> contexts_as_set (vctx_advance_pc co_ctx x1) co_ctx =
+  (AccountExistenceElm (aa, x) \<in> contexts_as_set x1 co_ctx)"
+apply(simp add: contexts_as_set_def vctx_advance_pc_def)
+done
+
+lemma account_existence_advance_v [simp] :
+  "vctx_account_existence (vctx_advance_pc co_ctx x1) aa =
+  (vctx_account_existence x1 aa)"
+apply(simp add: vctx_advance_pc_def)
+done
 
 lemma balance0 [simp] :
 "length list = h \<Longrightarrow>
@@ -1653,6 +1697,42 @@ proof -
     by auto
 qed
 
+lemma sep_account_existence_sep :
+"(p ** account_existence a b ** q) s =
+ ( AccountExistenceElm (a, b) \<in> s \<and> (p ** q) (s - {AccountExistenceElm (a, b)}))"
+apply(auto simp add: sep_def account_existence_def)
+done
+
+lemma sep_sep_account_existence_sep :
+"(n ** p ** account_existence a b ** q) s =
+ ( AccountExistenceElm (a, b) \<in> s \<and> (n ** p ** q) (s - {AccountExistenceElm (a, b)}))"
+proof -
+  have "(n ** p ** account_existence a b ** q) s = ((n ** p) ** account_existence a b ** q) s"
+    by auto
+  moreover have "((n ** p) ** account_existence a b ** q) s =
+    ( AccountExistenceElm (a, b) \<in> s \<and> ((n ** p) ** q) (s - {AccountExistenceElm (a, b)}))"
+    by (rule "sep_account_existence_sep")
+  moreover have "( AccountExistenceElm (a, b) \<in> s \<and> ((n ** p) ** q) (s - {AccountExistenceElm (a, b)})) =
+     ( AccountExistenceElm (a, b) \<in> s \<and> (n ** p ** q) (s - {AccountExistenceElm (a, b)}))"
+    by auto
+  ultimately show ?thesis
+    by auto
+qed
+
+
+
+
+lemma account_existence_sep :
+"(account_existence a b ** q) s =
+ ( AccountExistenceElm (a, b) \<in> s \<and> q (s - {AccountExistenceElm (a, b)}))"
+apply(auto simp add: sep_def account_existence_def)
+done
+
+lemma sep_account_existence :
+"(p ** account_existence a b ) s =
+ ( AccountExistenceElm (a, b) \<in> s \<and> p (s - {AccountExistenceElm (a, b)}))"
+apply(auto simp add: sep_def account_existence_def)
+done
 
 lemma continuging_not_memory_range [simp] :
   "\<forall> in_begin. ContinuingElm False \<notin> memory_range_elms in_begin input"
@@ -1712,14 +1792,14 @@ declare meter_gas_def [simp del]
 declare misc_inst_numbers.simps [simp]
 
 definition triple_alt ::
- "failure_reason set \<Rightarrow> (state_element set \<Rightarrow> bool) \<Rightarrow> (int * inst) set \<Rightarrow> (state_element set \<Rightarrow> bool) \<Rightarrow> bool"
+ "network \<Rightarrow> failure_reason set \<Rightarrow> (state_element set \<Rightarrow> bool) \<Rightarrow> (int * inst) set \<Rightarrow> (state_element set \<Rightarrow> bool) \<Rightarrow> bool"
 where
-  "triple_alt allowed_failures pre insts post ==
+  "triple_alt net allowed_failures pre insts post ==
     \<forall> co_ctx presult rest stopper. no_assertion co_ctx \<longrightarrow>
        (code insts ** pre ** rest) (instruction_result_as_set co_ctx presult) \<longrightarrow>
        (\<exists> k.
-         ((post ** code insts ** rest) (instruction_result_as_set co_ctx (program_sem stopper co_ctx k presult)))
-         \<or> failed_for_reasons allowed_failures (program_sem stopper co_ctx k presult))"
+         ((post ** code insts ** rest) (instruction_result_as_set co_ctx (program_sem stopper co_ctx k net presult)))
+         \<or> failed_for_reasons allowed_failures (program_sem stopper co_ctx k net presult))"
 
 lemma code_ac :
   "(code c ** pre ** rest) s =
@@ -1727,7 +1807,7 @@ lemma code_ac :
 by simp
 
 lemma triple_triple_alt :
-  "triple s pre c post = triple_alt s pre c post"
+  "triple net s pre c post = triple_alt net s pre c post"
 apply(simp only: triple_def triple_alt_def code_ac)
 done
 
@@ -1806,6 +1886,18 @@ lemma memory_range_elms_not_pc [simp] :
 apply(auto)
 done
 
+lemma account_ex_is_not_memory_range [simp] :
+  "\<forall> in_begin. AccountExistenceElm p \<notin> memory_range_elms in_begin input"
+apply(induction input)
+ apply(simp add: memory_range_elms.simps)
+apply(simp add: memory_range_elms.simps)
+done
+
+lemma memory_range_elms_not_account_existence [simp] :
+  "(memory_range_elms in_begin input \<subseteq> s - {AccountExistenceElm p}) =
+   (memory_range_elms in_begin input \<subseteq> s)"
+apply auto
+done
 
 lemma memory_range_elms_not_code [simp] :
   "(memory_range_elms in_begin input
@@ -1839,6 +1931,19 @@ lemma stack_topmost_not_pc [simp] :
 apply(auto)
 done
 
+lemma ae_not_stack_topmost [simp] :
+  "\<forall> h. AccountExistenceElm p \<notin> stack_topmost_elms h lst"
+apply(induction lst; auto simp add: stack_topmost_elms.simps)
+done
+
+lemma stack_topmost_not_account_existence [simp] :
+  "\<forall> h. stack_topmost_elms h lst
+       \<subseteq> s - {AccountExistenceElm p} =
+     (stack_topmost_elms h lst \<subseteq> s)"
+apply(auto)
+done
+
+
 lemma stack_topmost_not_code [simp] :
   "\<forall> h. stack_topmost_elms h lst
        \<subseteq> s - {CodeElm (vctx_pc x1, Misc CALL)} =
@@ -1865,7 +1970,7 @@ lemma stack_height_after_call [simp] :
         (StackHeightElm (h + 7) \<in>
           instruction_result_as_set co_ctx (InstructionContinue x1)) \<Longrightarrow>
         (StackHeightElm h
-          \<in> instruction_result_as_set co_ctx (subtract_gas g memu (call x1 co_ctx)))
+          \<in> instruction_result_as_set co_ctx (subtract_gas g memu (call net x1 co_ctx)))
         "
 apply(simp add: call_def)
 apply(case_tac "vctx_stack x1"; simp)
@@ -1955,11 +2060,11 @@ lemma call_new_balance [simp] :
       "v \<le> fund \<Longrightarrow>
        ThisAccountElm this \<in> instruction_result_as_set co_ctx (InstructionContinue x1) \<Longrightarrow>
        vctx_balance x1 this = fund \<Longrightarrow>
-       meter_gas (Misc CALL) x1 co_ctx \<le> vctx_gas x1 \<Longrightarrow>
+       meter_gas (Misc CALL) x1 co_ctx net \<le> vctx_gas x1 \<Longrightarrow>
        vctx_stack x1 = g # r # v # in_begin # in_size # out_begin # out_size # tf \<Longrightarrow>
        BalanceElm (this, fund - v)
        \<in> instruction_result_as_set co_ctx
-           (subtract_gas (meter_gas (Misc CALL) x1 co_ctx) memu (call x1 co_ctx))"
+           (subtract_gas (meter_gas (Misc CALL) x1 co_ctx net) memu (call net x1 co_ctx))"
 apply(clarify)
 apply(auto simp add: call_def failed_for_reasons_def)
 apply(simp add: instruction_result_as_set_def subtract_gas.simps strict_if_def)
@@ -2175,6 +2280,13 @@ apply(induction input)
 apply(simp add: memory_range_elms.simps)
 done
 
+lemma account_existence_not_memory [simp] :
+  "\<forall> in_begin. AccountExistenceElm x29 \<notin> memory_range_elms in_begin input"
+apply(induction input)
+ apply(simp add: memory_range_elms.simps)
+apply(simp add: memory_range_elms.simps)
+done
+
 lemma memory_range_stack [simp] :
 "      x \<in> memory_range_elms in_begin input \<Longrightarrow>
        x \<in> variable_ctx_as_set (x1\<lparr>vctx_stack := sta\<rparr>)
@@ -2261,7 +2373,7 @@ begin
 lemma call_memory_no_change [simp] :
   "x \<in> memory_range_elms in_begin input \<Longrightarrow>
    x \<in> instruction_result_as_set co_ctx
-         (subtract_gas (meter_gas (Misc CALL) x1 co_ctx) memu (call x1 co_ctx)) =
+         (subtract_gas (meter_gas (Misc CALL) x1 co_ctx net) memu (call net x1 co_ctx)) =
   (x \<in> instruction_result_as_set co_ctx (InstructionContinue x1))"
 apply(simp add: call_def)
 apply(case_tac "vctx_stack x1"; simp)
@@ -2276,7 +2388,7 @@ done
 
 lemma memory_call [simp] :
   "x \<in> memory_range_elms in_begin input \<Longrightarrow>
-    x \<in> instruction_result_as_set co_ctx (call x1 co_ctx) =
+    x \<in> instruction_result_as_set co_ctx (call net x1 co_ctx) =
     (x \<in> instruction_result_as_set co_ctx (InstructionContinue x1))"
 apply(simp add: call_def)
 apply(case_tac "vctx_stack x1"; simp)
@@ -2999,6 +3111,23 @@ apply(simp add: variable_ctx_as_set_def)
 apply auto
 done
 
+lemma account_existence_means_v [simp] :
+  "AccountExistenceElm x29 \<in> variable_ctx_as_set v =
+   (vctx_account_existence v (fst x29) = snd x29)"
+apply(auto simp add: variable_ctx_as_set_def)
+ apply(rule_tac x = "fst x29" in exI)
+ apply(case_tac x29)
+ apply simp
+apply(rule_tac x = "fst x29" in exI)
+apply(case_tac x29)
+apply simp
+done
+
+lemma account_existence_not_stack [simp] :
+  "AccountExistenceElm p \<notin> stack_as_set ta"
+apply(simp add: stack_as_set_def)
+done
+
 lemma vctx_gas_changed [simp] :
    "variable_ctx_as_set
              (v \<lparr> vctx_gas := g \<rparr>) =
@@ -3095,6 +3224,10 @@ bundle sep_crunch = caller_sep [simp]
                     sep_action [simp]
                     sep_action_sep [simp]
                     sep_stack_topmost [simp]
+                    sep_account_existence_sep [simp]
+                    sep_account_existence [simp]
+                    account_existence_sep [simp]
+                    sep_sep_account_existence_sep [simp]
 
 end
 

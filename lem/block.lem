@@ -382,7 +382,7 @@ let create_account n_state new_addr bytes =
   let new_acc = set_account_code new_acc bytes in
   update_world n_state new_addr new_acc
 
-let next = function
+let next net = function
  | Finished st -> Finished st
  | Unimplemented -> Unimplemented
  | Continue global ->
@@ -495,7 +495,7 @@ let next = function
          end
       end
     | a -> 
-      Continue (<| global with g_vmstate = next_state (fun _ -> ()) c a |>)
+      Continue (<| global with g_vmstate = next_state (fun _ -> ()) c net a |>)
     end
 end
 

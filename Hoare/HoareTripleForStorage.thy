@@ -56,7 +56,7 @@ context
 begin
 
 lemma sstore_gas_triple :
-  "triple {OutOfGas}
+  "triple net {OutOfGas}
           (\<langle> h \<le> 1024\<rangle>
            ** stack_height (h + 2)
            ** stack (h + 1) idx
@@ -74,8 +74,6 @@ apply(case_tac presult; auto simp add: instruction_result_as_set_def sstore_def)
 (* somehow. *)
 (* maybe establish that the result cannot be that thing *)
 (* see what I'm doing with annotation failure *)
-
-
 apply(rule leibniz)
  apply blast
 apply(rule Set.equalityI; clarify)
@@ -93,14 +91,14 @@ done
 
 
 lemma sload_gas_triple :
-  "triple {OutOfGas}
-          (\<langle> h \<le> 1023 \<and> unat bn \<ge> 2463000\<rangle>
+  "triple net {OutOfGas}
+          (\<langle> h \<le> 1023 \<and> unat bn \<ge> 2463000 \<and> at_least_eip150 net\<rangle>
            ** block_number_pred bn ** stack_height (h + 1)
            ** stack h idx
            ** program_counter k ** storage idx w ** gas_pred g ** continuing)
           {(k, Storage SLOAD)}
           (block_number_pred bn ** stack_height (h + 1) ** stack h w
-           ** program_counter (k + 1) ** storage idx w ** gas_pred (g - Gsload (unat bn)) ** continuing )"
+           ** program_counter (k + 1) ** storage idx w ** gas_pred (g - Gsload net) ** continuing )"
 apply(auto simp add: triple_def)
 apply(rule_tac x = 1 in exI)
 apply(case_tac presult; auto simp add: instruction_result_as_set_def)

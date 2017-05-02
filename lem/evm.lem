@@ -164,6 +164,41 @@ val empty_storage : storage
 let empty_storage _ = 0
 
 
+type network =
+  Frontier
+| Homestead
+| EIP150
+| EIP158
+| Metropolis
+
+
+val network_of_block_number : natural -> network
+let network_of_block_number bn =
+  if bn < 1150000 then Frontier
+  else if bn < 2463000 then Homestead
+  else if bn < 2675000 then EIP150
+  else EIP158
+(* This needs to be updated when a new fork is planned. *)
+
+val at_least_eip150 : network -> bool
+let at_least_eip150 n =
+  match n with
+    Frontier -> false
+  | Homestead -> false
+  | EIP150 -> true
+  | EIP158 -> true
+  | Metropolis -> true
+  end
+
+val before_homestead : network -> bool
+let before_homestead n =
+  match n with
+    Frontier -> true
+  | Homestead -> false
+  | EIP150 -> false
+  | EIP158 -> false
+  | Metropolis -> false
+  end
 
 type aenv = <|
   aenv_stack : list (w256);
@@ -701,17 +736,17 @@ let inline eip150_block = 2463*1000
 val homestead_block : natural
 let homestead_block = 1150*1000
 
-val Gextcode : natural -> integer
-let Gextcode blocknumber =
-  if blocknumber >= eip150_block then 700 else 20
+val Gextcode : network -> integer
+let Gextcode net =
+  if at_least_eip150 net then 700 else 20
 
-val Gbalance : natural -> integer
-let Gbalance blocknumber =
-  if blocknumber >= eip150_block then 400 else 20
+val Gbalance : network -> integer
+let Gbalance n =
+  if at_least_eip150 n then 400 else 20
 
-val Gsload : natural -> integer
-let Gsload blocknumber =
-  if blocknumber >= eip150_block then 200 else 50
+val Gsload : network -> integer
+let Gsload n =
+  if at_least_eip150 n then 200 else 50
 
 val Gjumpdest : integer
 let Gjumpdest = 1
@@ -728,9 +763,9 @@ let Rsclear = 15000
 val Rsuicide : integer
 let Rsuicide = 24000
 
-val Gsuicide : natural -> integer
-let Gsuicide blocknumber =
-  if blocknumber >= eip150_block then 5000 else 0
+val Gsuicide : network -> integer
+let Gsuicide n =
+  if at_least_eip150 n then 5000 else 0
 
 val Gcreate : integer
 let Gcreate = 32000
@@ -738,9 +773,9 @@ let Gcreate = 32000
 val Gcodedeposit : integer
 let Gcodedeposit = 200
 
-val Gcall : natural -> integer
-let Gcall blocknumber =
-  if blocknumber >= eip150_block then 700 else 40
+val Gcall : network -> integer
+let Gcall net =
+  if at_least_eip150 net then 700 else 40
 
 val Gcallvalue : integer
 let Gcallvalue = 9000
@@ -754,9 +789,9 @@ let Gnewaccount = 25000
 val Gexp : integer
 let Gexp = 10
 
-val Gexpbyte : natural -> integer
-let Gexpbyte blocknumber =
-  if blocknumber >= eip150_block then 50 else 10
+val Gexpbyte : network -> integer
+let Gexpbyte net =
+  if at_least_eip150 net then 50 else 10
 
 val Gmemory : integer
 let Gmemory = 3
@@ -1144,37 +1179,34 @@ let vctx_stack_default idx v =
   end
 
 (* Calculate active memory (i.e. vctx_memory_usage) after the execution of an instruction: *)
-val new_memory_consumption : inst -> variable_ctx -> integer
-let new_memory_consumption i v =
+val new_memory_consumption : inst -> integer -> w256 -> w256 -> w256 -> w256 -> w256 -> w256 -> w256 -> integer
+let new_memory_consumption i original_memory_usage s0 s1 s2 s3 s4 s5 s6 =
   match i with
-  | Arith SHA3 -> M v.vctx_memory_usage (vctx_stack_default 0 v) (vctx_stack_default 1 v)
+  | Arith SHA3 -> M original_memory_usage s0 s1
   | Memory CALLDATACOPY ->
-    M v.vctx_memory_usage (vctx_stack_default 0 v) (vctx_stack_default 2 v)
+    M original_memory_usage s0 s2
   | Memory CODECOPY ->
-    M v.vctx_memory_usage (vctx_stack_default 0 v) (vctx_stack_default 2 v)
+    M original_memory_usage s0 s2
   | Memory EXTCODECOPY ->
-    M v.vctx_memory_usage (vctx_stack_default 1 v) (vctx_stack_default 3 v)
+    M original_memory_usage s1 s3
   | Memory MLOAD ->
-    M v.vctx_memory_usage (vctx_stack_default 0 v) 32
+    M original_memory_usage s0 32
   | Memory MSTORE ->
-    M v.vctx_memory_usage (vctx_stack_default 0 v) 32
+    M original_memory_usage s0 32
   | Memory MSTORE8 ->
-    M v.vctx_memory_usage (vctx_stack_default 0 v) 1
+    M original_memory_usage s0 1
   | Misc CREATE ->
-    M v.vctx_memory_usage (vctx_stack_default 1 v) (vctx_stack_default 2 v)
+    M original_memory_usage s1 s2
   | Misc CALL ->
-    M (M v.vctx_memory_usage (vctx_stack_default 3 v) (vctx_stack_default 4 v))
-      (vctx_stack_default 5 v) (vctx_stack_default 6 v)
+    M (M original_memory_usage s3 s4) s5 s6
   | Misc CALLCODE ->
-    M (M v.vctx_memory_usage (vctx_stack_default 3 v) (vctx_stack_default 4 v))
-      (vctx_stack_default 5 v) (vctx_stack_default 6 v)
+    M (M original_memory_usage s3 s4) s5 s6
   | Misc DELEGATECALL ->
-    M (M v.vctx_memory_usage (vctx_stack_default 2 v) (vctx_stack_default 3 v))
-      (vctx_stack_default 4 v) (vctx_stack_default 5 v)
+    M (M original_memory_usage s2 s3) s4 s5
   | Misc RETURN ->
-    M v.vctx_memory_usage (vctx_stack_default 0 v) (vctx_stack_default 1 v)
-  | Log _ -> M v.vctx_memory_usage (vctx_stack_default 0 v) (vctx_stack_default 1 v)
-  | _ -> v.vctx_memory_usage
+    M original_memory_usage s0 s1
+  | Log _ -> M original_memory_usage s0 s1
+  | _ -> original_memory_usage
   end
 
 (* subsection {* Definition of EVM Operations *} *)
@@ -1297,8 +1329,8 @@ let Cxfer value = if value = 0 then 0 else Gcallvalue
 
 (* Cextra is the function denoted as C_\text{\tiny EXTRA} in the yellow paper. *)
 (* However, it takes a word indicating the transferred value, and a boolean indicating emptiness *)
-val Cextra : w256 -> bool -> natural -> integer
-let Cextra value emp blocknumber = Gcall blocknumber + Cxfer value + Cnew value emp
+val Cextra : w256 -> bool -> network -> integer
+let Cextra value emp net = Gcall net + Cxfer value + Cnew value emp
 
 (* L is the function denoted as L in the yellow paper. *)
 val L : integer -> integer
@@ -1307,28 +1339,28 @@ let L x = x - x / 64
 (* Cgascap is the function denoted as C_{\text{\tiny GASCAP}} in the yellow paper. *)
 (* However, it takes the two topmost stack elements,
    a boolean indicating emptiness of the recipient, and the remaining gas of the caller *)
-val Cgascap : w256 -> w256 -> bool -> integer -> natural -> integer -> integer
-let Cgascap mu0 mu2 emp remaining_gas blocknumber memu_extra =
-  if remaining_gas >= Cextra mu2 emp blocknumber then
-    integerMin (L (remaining_gas - Cextra mu2 emp blocknumber - memu_extra)) (uint mu0)
+val Cgascap : w256 -> w256 -> bool -> integer -> network -> integer -> integer
+let Cgascap mu0 mu2 emp remaining_gas net memu_extra =
+  if remaining_gas >= Cextra mu2 emp net then
+    integerMin (L (remaining_gas - Cextra mu2 emp net - memu_extra)) (uint mu0)
   else
     uint mu0
 
 (* Ccallgas is the function denoted as C_{\text{\tiny CALLGAS}} in the yellow paper. *)
 (* However, it takes the three topmost stack elements,
    a boolean indicating emptiness of the recipient, and the remaining gas of the caller *)
-val Ccallgas : w256 -> w256 -> w256 -> bool -> integer -> natural -> integer -> integer
-let Ccallgas mu0 mu1 mu2 emp remaining_gas blocknumber memu_extra =
-  ( if blocknumber < eip150_block then integerFromNatural (word256ToNatural mu0) else Cgascap mu0 mu2 emp remaining_gas blocknumber memu_extra) +
+val Ccallgas : w256 -> w256 -> w256 -> bool -> integer -> network -> integer -> integer
+let Ccallgas mu0 mu1 mu2 emp remaining_gas net memu_extra =
+  ( if at_least_eip150 net then uint mu0  else Cgascap mu0 mu2 emp remaining_gas net memu_extra) +
   ( if mu2 = 0 then 0 else Gcallstipend )
 
 (* Ccall is the function denoted as C_{\text{\tiny CALL}} *)
 (* However, it takes the three topmost stack elements, a boolean indicating
    emptiness of the recipient, and the remaining gas of the caller *)
-val Ccall : w256 -> w256 -> w256 -> bool -> integer -> natural -> integer -> integer
-let Ccall mu0 mu1 mu2 emp remaining_gas blocknumber memu_extra =
-  if blocknumber < eip150_block then integerFromNatural (word256ToNatural mu0) + Cextra mu2 emp blocknumber else
-  Cgascap mu0 mu2 emp remaining_gas blocknumber memu_extra + Cextra mu2 emp blocknumber
+val Ccall : w256 -> w256 -> w256 -> bool -> integer -> network -> integer -> integer
+let Ccall mu0 mu1 mu2 emp remaining_gas net memu_extra =
+  if at_least_eip150 net then integerFromNatural (word256ToNatural mu0) + Cextra mu2 emp net else
+  Cgascap mu0 mu2 emp remaining_gas net memu_extra + Cextra mu2 emp net
 
 (* Cmem is the function denoted as C_{mem} in the yellow paper. *)
 val Cmem : integer -> integer
@@ -1341,42 +1373,45 @@ let Csstore orig newer = if not (newer = 0) && orig = 0 then Gsset else Gsreset
 
 (* Csuicide is the function denoted as C_\text{\tiny SUICIDE} in the yellow paper. *)
 (* However, it takes a boolean indicating new account creation. *)
-val Csuicide : bool -> natural -> integer
-let Csuicide recipient_empty blocknumber =
-  Gsuicide blocknumber + (if recipient_empty && blocknumber >= eip150_block then Gnewaccount else 0)
+val Csuicide : bool -> network -> integer
+let Csuicide recipient_empty net =
+  Gsuicide net + (if recipient_empty && at_least_eip150 net then Gnewaccount else 0)
 
 
-let calc_memu_extra v = Cmem (new_memory_consumption (Misc CALL) v) - Cmem v.vctx_memory_usage
-let calc_memu_extra2 v = Cmem (new_memory_consumption (Misc DELEGATECALL) v) - Cmem v.vctx_memory_usage
+let calc_memu_extra orig_memory_usage s0 s1 s2 s3 s4 s5 s6 =
+  Cmem (new_memory_consumption (Misc CALL) orig_memory_usage s0 s1 s2 s3 s4 s5 s6) - Cmem orig_memory_usage
+let calc_memu_extra2 v s0 s1 s2 s3 s4 s5 s6 = Cmem (new_memory_consumption (Misc DELEGATECALL) v.vctx_memory_usage s0 s1 s2 s3 s4 s5 s6) - Cmem v.vctx_memory_usage
 
 (* CALL instruction results in @{term ContractCall} action when there are enough stack elements *)
 (* (and gas, when we introduce the gas accounting). *)
-val call : variable_ctx -> constant_ctx -> instruction_result
-let call v c = match v.vctx_stack with
- | e0 :: e1 :: e2 :: e3 :: e4 :: e5 :: e6 :: rest ->
+val call : network -> variable_ctx -> constant_ctx -> instruction_result
+let call net v c = match v.vctx_stack with
+ | g :: r :: value :: in_begin :: in_size :: out_begin :: out_size :: rest ->
      InstructionToEnvironment (ContractCall
-         <| callarg_gas = word256FromInteger (Ccallgas e0 e1 e2
-                     (not (v.vctx_account_existence (w256_to_address e1))) v.vctx_gas (word256ToNatural v.vctx_block.block_number) (calc_memu_extra v));
-            callarg_code = w256_to_address e1;
-            callarg_recipient = w256_to_address e1;
-            callarg_value = e2;
-            callarg_data = cut_memory e3 e4 v.vctx_memory;
-            callarg_output_begin = e5;
-            callarg_output_size = e6 |>)
-        (<| (vctx_advance_pc c v) with vctx_stack = rest |>)
+         <| callarg_gas = word256FromInteger (Ccallgas g r value
+                     (not (v.vctx_account_existence (w256_to_address r))) v.vctx_gas net (calc_memu_extra v.vctx_memory_usage g r value in_begin in_size out_begin out_size));
+            callarg_code = w256_to_address r;
+            callarg_recipient = w256_to_address r;
+            callarg_value = value;
+            callarg_data = cut_memory in_begin in_size v.vctx_memory;
+            callarg_output_begin = out_begin;
+            callarg_output_size = out_size |>)
+        (<| (vctx_advance_pc c v) with
+           vctx_stack = rest;
+           vctx_balance = update_balance c.cctx_this (fun orig -> orig - value) v.vctx_balance |>)
         (Just (* saving the variable environment for timing *)
-           (uint e5, uint e6))
+           (uint out_begin, uint out_size))
   | _ -> instruction_failure_result v [TooShortStack]
 end
 
 (* DELEGATECALL is slightly different. *)
-val delegatecall : variable_ctx -> constant_ctx -> instruction_result
-let delegatecall v c = match v.vctx_stack with
+val delegatecall : network -> variable_ctx -> constant_ctx -> instruction_result
+let delegatecall net v c = match v.vctx_stack with
  | e0 :: e1 :: e3 :: e4 :: e5 :: e6 :: rest ->
        InstructionToEnvironment
          (ContractDelegateCall
            <| callarg_gas = word256FromInteger (Ccallgas e0 e1 0
-                     (not (v.vctx_account_existence (w256_to_address e1))) v.vctx_gas (word256ToNatural v.vctx_block.block_number) (calc_memu_extra2 v));
+                     (not (v.vctx_account_existence (w256_to_address e1))) v.vctx_gas net (calc_memu_extra2 v e0 e1 e3 e4 e5 e6 0));
               callarg_code = w256_to_address e1;
               callarg_recipient = w256_to_address e1;
               callarg_value = v.vctx_value_sent;
@@ -1390,13 +1425,14 @@ let delegatecall v c = match v.vctx_stack with
 end
 
 (* CALLCODE is another variant. *)
-val callcode : variable_ctx -> constant_ctx -> instruction_result
-let callcode v c = match v.vctx_stack with
+val callcode : network -> variable_ctx -> constant_ctx -> instruction_result
+let callcode net v c = match v.vctx_stack with
  | e0 :: e1 :: e2 :: e3 :: e4 :: e5 :: e6 :: rest ->
        InstructionToEnvironment
          (ContractCall
            <| callarg_gas = word256FromInteger (Ccallgas e0 e1 e2
-                     (not (v.vctx_account_existence (w256_to_address e1))) v.vctx_gas (word256ToNatural v.vctx_block.block_number) (calc_memu_extra v));
+                     (not (v.vctx_account_existence (w256_to_address e1))) v.vctx_gas net
+                     (calc_memu_extra v.vctx_memory_usage e0 e1 e2 e3 e4 e5 e6));
               callarg_code = w256_to_address e1;
               callarg_recipient = c.cctx_this;
               callarg_value = e2;
@@ -1621,30 +1657,30 @@ end
 (* thirdComponentOfC is the third component in the definition of C (the gas function). *)
 (* However, it takes the next instruction, the four topmost stack elements,
    a boolean indicating emptiness of the recipient, an original word of sstore, a new word of sstore, and the remaining gas of the caller. *)
-val thirdComponentOfC : inst -> w256 -> w256 -> w256 -> w256 -> bool -> w256 -> w256 -> integer -> natural -> integer -> integer
-let thirdComponentOfC i s0 s1 s2 s3 recipient_empty orig_val new_val remaining_gas blocknumber = fun memu_extra ->
+val thirdComponentOfC : inst -> w256 -> w256 -> w256 -> w256 -> bool -> w256 -> w256 -> integer -> network -> integer -> integer
+let thirdComponentOfC i s0 s1 s2 s3 recipient_empty orig_val new_val remaining_gas net = fun memu_extra ->
   match i with
   | Storage SSTORE -> Csstore orig_val new_val
-  | Arith EXP -> Gexp + if s1 = 0 then 0 else Gexpbyte blocknumber * (1 + log256floor (uint s1))
+  | Arith EXP -> Gexp + if s1 = 0 then 0 else Gexpbyte net * (1 + log256floor (uint s1))
   | Memory CALLDATACOPY -> Gverylow + Gcopy * ((uint s2 + 31) / 32)
   | Memory CODECOPY -> Gverylow + Gcopy * ((uint s2 + 31) / 32)
-  | Memory EXTCODECOPY -> Gextcode blocknumber + Gcopy * ((uint s3 + 31) / 32)
+  | Memory EXTCODECOPY -> Gextcode net + Gcopy * ((uint s3 + 31) / 32)
   | Log LOG0 -> Glog + Glogdata * uint s1
   | Log LOG1 -> Glog + Glogdata * uint s1 + Glogtopic
   | Log LOG2 -> Glog + Glogdata * uint s1 + 2 * Glogtopic
   | Log LOG3 -> Glog + Glogdata * uint s1 + 3 * Glogtopic
   | Log LOG4 -> Glog + Glogdata * uint s1 + 4 * Glogtopic
   | Misc CALL
-    -> Ccall s0 s1 s2 recipient_empty remaining_gas blocknumber memu_extra
+    -> Ccall s0 s1 s2 recipient_empty remaining_gas net memu_extra
   | Misc CALLCODE
-    -> Ccall s0 s1 s2 recipient_empty remaining_gas blocknumber memu_extra
+    -> Ccall s0 s1 s2 recipient_empty remaining_gas net memu_extra
   | Misc DELEGATECALL
-    -> if blocknumber < homestead_block then 0 else Ccall s0 s1 0  recipient_empty remaining_gas blocknumber memu_extra
-  | Misc SUICIDE -> Csuicide recipient_empty blocknumber
+    -> if before_homestead net then 0 else Ccall s0 s1 0  recipient_empty remaining_gas net memu_extra
+  | Misc SUICIDE -> Csuicide recipient_empty net
   | Misc CREATE -> Gcreate
   | Arith SHA3 -> Gsha3 + Gsha3word * ((uint s1 + 31) / 32)
   | Pc JUMPDEST -> Gjumpdest
-  | Storage SLOAD -> Gsload blocknumber
+  | Storage SLOAD -> Gsload net
   | Misc STOP -> Gzero
   | Misc RETURN -> Gzero
   | Info ADDRESS -> Gbase
@@ -1693,8 +1729,8 @@ let thirdComponentOfC i s0 s1 s2 s3 recipient_empty orig_val new_val remaining_g
   | Arith MULMOD -> Gmid
   | Pc JUMP -> Gmid
   | Pc JUMPI -> Ghigh
-  | Info EXTCODESIZE -> Gextcode blocknumber
-  | Info BALANCE -> Gbalance blocknumber
+  | Info EXTCODESIZE -> Gextcode net
+  | Info BALANCE -> Gbalance net
   | Info BLOCKHASH -> Gblockhash
   | _ -> 0 (* How is this case dealt in the yellow paper *)
   end
@@ -1703,10 +1739,10 @@ let thirdComponentOfC i s0 s1 s2 s3 recipient_empty orig_val new_val remaining_g
 (* It takes the new memory consumption, the old memory consumption, the next instruction the four
    topmost stack elements, a boolean indicating emptiness of the recipient, an original word of sstore,
    a new word of sstore, and the remaining gas of the caller. *)
-val C : integer -> integer -> inst -> w256 -> w256 -> w256 -> w256 -> bool -> w256 -> w256 -> integer -> natural -> integer
-let C old_memory_consumption new_memory_consumption i s0 s1 s2 s3 recipient_empty orig new_val remaining_gas blocknumber =
+val C : integer -> integer -> inst -> w256 -> w256 -> w256 -> w256 -> bool -> w256 -> w256 -> integer -> network -> integer
+let C old_memory_consumption new_memory_consumption i s0 s1 s2 s3 recipient_empty orig new_val remaining_gas net =
   Cmem new_memory_consumption  - Cmem old_memory_consumption +
-  thirdComponentOfC i s0 s1 s2 s3 recipient_empty orig new_val remaining_gas blocknumber (Cmem new_memory_consumption  - Cmem old_memory_consumption)
+  thirdComponentOfC i s0 s1 s2 s3 recipient_empty orig new_val remaining_gas net (Cmem new_memory_consumption - Cmem old_memory_consumption)
 
 val vctx_next_instruction_default : variable_ctx -> constant_ctx -> inst
 let vctx_next_instruction_default v c =
@@ -1725,19 +1761,22 @@ let vctx_recipient v c =
   | _ -> 0
   end
 
-val meter_gas : inst -> variable_ctx -> constant_ctx -> integer
-let meter_gas i v c =
-  C v.vctx_memory_usage (new_memory_consumption i v) i
+val meter_gas : inst -> variable_ctx -> constant_ctx -> network -> integer
+let meter_gas i v c net =
+  C v.vctx_memory_usage
+   (new_memory_consumption i v.vctx_memory_usage (vctx_stack_default 0 v) (vctx_stack_default 1 v) (vctx_stack_default 2 v) (vctx_stack_default 3 v)
+      (vctx_stack_default 4 v) (vctx_stack_default 5 v) (vctx_stack_default 6 v))
+      i
     (vctx_stack_default 0 v) (vctx_stack_default 1 v) (vctx_stack_default 2 v) (vctx_stack_default 3 v)
     (not (v.vctx_account_existence (vctx_recipient v c))) (v.vctx_storage (vctx_stack_default 0 v))
-    (vctx_stack_default 1 v) v.vctx_gas (word256ToNatural v.vctx_block.block_number)
+    (vctx_stack_default 1 v) v.vctx_gas net
 
-val check_resources : variable_ctx -> constant_ctx -> list w256 -> inst -> bool
-let check_resources v c s i =
+val check_resources : variable_ctx -> constant_ctx -> list w256 -> inst -> network -> bool
+let check_resources v c s i net =
   match inst_stack_numbers i with
   | (consumed, produced) ->
     (intFromNat (length s) + produced - consumed <= 1024) &&
-    (meter_gas i v c <= v.vctx_gas)
+    (meter_gas i v c net <= v.vctx_gas)
   end
 
 
@@ -1765,9 +1804,9 @@ let signextend len w =
 
 (* Finally, using the above definitions, I can define a function that operates an instruction *)
 (* on the execution environments. *)
-val instruction_sem : variable_ctx -> constant_ctx -> inst -> instruction_result
-let instruction_sem v c inst =
-  subtract_gas (meter_gas inst v c) (new_memory_consumption inst v)
+val instruction_sem : variable_ctx -> constant_ctx -> inst -> network -> instruction_result
+let instruction_sem v c inst net =
+  subtract_gas (meter_gas inst v c net) (new_memory_consumption inst v.vctx_memory_usage (vctx_stack_default 0 v) (vctx_stack_default 1 v) (vctx_stack_default 2 v) (vctx_stack_default 3 v) (vctx_stack_default 4 v) (vctx_stack_default 5 v) (vctx_stack_default 6 v))
   (match inst with
   | Stack (PUSH_N lst) -> stack_0_1_op v c (word_of_bytes (constant_mark lst))
   | Unknown _ -> instruction_failure_result v [ShouldNotHappen]
@@ -1782,7 +1821,7 @@ let instruction_sem v c inst =
   | Arith ADD -> stack_2_1_op v c (fun a b -> a + b)
   | Arith SUB -> stack_2_1_op v c (fun a b -> a - b)
   | Arith ISZERO -> stack_1_1_op v c (fun a -> if a = 0 then 1 else 0)
-  | Misc CALL -> call v c
+  | Misc CALL -> call net v c
   | Misc RETURN -> ret v c
   | Misc STOP -> stop v c
   | Dup n -> general_dup n v c
@@ -1879,10 +1918,10 @@ let instruction_sem v c inst =
   | Log LOG4 -> log 4 v c
   | Swap n -> swap (word4ToNat n) v c
   | Misc CREATE -> create v c
-  | Misc CALLCODE -> callcode v c
+  | Misc CALLCODE -> callcode net v c
   | Misc SUICIDE -> suicide v c
   | Misc DELEGATECALL ->
-     if word256ToNatural v.vctx_block.block_number < homestead_block then instruction_failure_result v [ShouldNotHappen] else delegatecall v c
+     if before_homestead net then instruction_failure_result v [ShouldNotHappen] else delegatecall net v c
   | Info GAS -> stack_0_1_op v c (gas v - 2)
   | Memory MSIZE -> stack_0_1_op v c (32 * word256FromInteger v.vctx_memory_usage)
   end)
@@ -1904,8 +1943,8 @@ let check_annotations v c =
   List.all (fun annot -> annot (build_aenv v c)) annots
 
 
-val next_state: (instruction_result -> unit) -> constant_ctx -> instruction_result -> instruction_result
-let next_state stopper c pr =
+val next_state: (instruction_result -> unit) -> constant_ctx -> network -> instruction_result -> instruction_result
+let next_state stopper c net pr =
   match pr with
   | InstructionToEnvironment _ _ _ ->
     let () = stopper pr in pr
@@ -1918,14 +1957,14 @@ let next_state stopper c pr =
         (*
         prerr_endline ("Inst " ^ String.concat "," (List.map (fun x -> Z.format "%x" (word8ToNatural x)) (inst_code i)));
         *)
-        if check_resources v c v.vctx_stack i then
-          instruction_sem v c i
+        if check_resources v c v.vctx_stack i net then
+          instruction_sem v c i net
         else
           InstructionToEnvironment (ContractFail
               (match inst_stack_numbers i with
                | (consumed, produced) ->
                  (if (intFromNat (length v.vctx_stack) + produced - consumed <= 1024) then [] else [TooLongStack])
-                  ++ (if meter_gas i v c <= v.vctx_gas then [] else [OutOfGas])
+                  ++ (if meter_gas i v c net <= v.vctx_gas then [] else [OutOfGas])
                end
               ))
               v Nothing
@@ -1939,11 +1978,11 @@ let next_state stopper c pr =
 (* Also, during the proofs, I can do case analysis on the number of backwad jumps *)
 (* rather than the number of instructions. *)
 
-val program_sem :  (instruction_result -> unit) -> constant_ctx -> nat -> instruction_result -> instruction_result
-let rec program_sem stopper c fuel pr =
+val program_sem :  (instruction_result -> unit) -> constant_ctx -> nat -> network -> instruction_result -> instruction_result
+let rec program_sem stopper c fuel net pr =
 match fuel with
  | 0 -> pr
- | fuel_pred + 1 -> program_sem stopper c fuel_pred (next_state stopper c pr)
+ | fuel_pred + 1 -> program_sem stopper c fuel_pred net (next_state stopper c net pr)
 end
 declare termination_argument program_sem = automatic
 
