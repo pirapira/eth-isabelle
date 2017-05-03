@@ -1377,6 +1377,24 @@ val Csuicide : bool -> network -> integer
 let Csuicide recipient_empty net =
   Gsuicide net + (if recipient_empty && at_least_eip150 net then Gnewaccount else 0)
 
+val vctx_next_instruction_default : variable_ctx -> constant_ctx -> inst
+let vctx_next_instruction_default v c =
+    match vctx_next_instruction v c with
+    | Just i -> i
+    | Nothing -> Misc STOP
+    end
+
+val vctx_recipient : variable_ctx -> constant_ctx -> address
+let vctx_recipient v c =
+  match vctx_next_instruction_default v c with
+  | Misc SUICIDE -> w256_to_address (vctx_stack_default 0 v)
+  | Misc CALL -> w256_to_address (vctx_stack_default 1 v)
+  | Misc CALLCODE -> c.cctx_this
+  | Misc DELEGATECALL -> c.cctx_this
+  | _ -> 0
+  end
+
+
 
 let calc_memu_extra orig_memory_usage s0 s1 s2 s3 s4 s5 s6 =
   Cmem (new_memory_consumption (Misc CALL) orig_memory_usage s0 s1 s2 s3 s4 s5 s6) - Cmem orig_memory_usage
@@ -1389,7 +1407,8 @@ let call net v c = match v.vctx_stack with
  | g :: r :: value :: in_begin :: in_size :: out_begin :: out_size :: rest ->
      InstructionToEnvironment (ContractCall
          <| callarg_gas = word256FromInteger (Ccallgas g r value
-                     (not (v.vctx_account_existence (w256_to_address r))) v.vctx_gas net (calc_memu_extra v.vctx_memory_usage g r value in_begin in_size out_begin out_size));
+                     (not (v.vctx_account_existence (vctx_recipient v c)))
+                     v.vctx_gas net (calc_memu_extra v.vctx_memory_usage g r value in_begin in_size out_begin out_size));
             callarg_code = w256_to_address r;
             callarg_recipient = w256_to_address r;
             callarg_value = value;
@@ -1411,7 +1430,7 @@ let delegatecall net v c = match v.vctx_stack with
        InstructionToEnvironment
          (ContractDelegateCall
            <| callarg_gas = word256FromInteger (Ccallgas e0 e1 0
-                     (not (v.vctx_account_existence (w256_to_address e1))) v.vctx_gas net (calc_memu_extra2 v e0 e1 e3 e4 e5 e6 0));
+                     (not (v.vctx_account_existence (vctx_recipient v c))) v.vctx_gas net (calc_memu_extra2 v e0 e1 e3 e4 e5 e6 0));
               callarg_code = w256_to_address e1;
               callarg_recipient = w256_to_address e1;
               callarg_value = v.vctx_value_sent;
@@ -1431,7 +1450,7 @@ let callcode net v c = match v.vctx_stack with
        InstructionToEnvironment
          (ContractCall
            <| callarg_gas = word256FromInteger (Ccallgas e0 e1 e2
-                     (not (v.vctx_account_existence (w256_to_address e1))) v.vctx_gas net
+                     (not (v.vctx_account_existence (vctx_recipient v c))) v.vctx_gas net
                      (calc_memu_extra v.vctx_memory_usage e0 e1 e2 e3 e4 e5 e6));
               callarg_code = w256_to_address e1;
               callarg_recipient = c.cctx_this;
@@ -1743,23 +1762,6 @@ val C : integer -> integer -> inst -> w256 -> w256 -> w256 -> w256 -> bool -> w2
 let C old_memory_consumption new_memory_consumption i s0 s1 s2 s3 recipient_empty orig new_val remaining_gas net =
   Cmem new_memory_consumption  - Cmem old_memory_consumption +
   thirdComponentOfC i s0 s1 s2 s3 recipient_empty orig new_val remaining_gas net (Cmem new_memory_consumption - Cmem old_memory_consumption)
-
-val vctx_next_instruction_default : variable_ctx -> constant_ctx -> inst
-let vctx_next_instruction_default v c =
-    match vctx_next_instruction v c with
-    | Just i -> i
-    | Nothing -> Misc STOP
-    end
-
-val vctx_recipient : variable_ctx -> constant_ctx -> address
-let vctx_recipient v c =
-  match vctx_next_instruction_default v c with
-  | Misc SUICIDE -> w256_to_address (vctx_stack_default 0 v)
-  | Misc CALL -> w256_to_address (vctx_stack_default 1 v)
-  | Misc CALLCODE -> c.cctx_this
-  | Misc DELEGATECALL -> c.cctx_this
-  | _ -> 0
-  end
 
 val meter_gas : inst -> variable_ctx -> constant_ctx -> network -> integer
 let meter_gas i v c net =
