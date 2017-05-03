@@ -46,6 +46,9 @@ lemma Cextra_gt_0:
   "0 < Cextra  a b c"
   by (simp add:  gas_simps)
 
+lemma L_compare : "x \<ge> 0 \<Longrightarrow> L x \<ge> 0"
+by (simp add:L_def)
+
 lemma Cgascap_gt_0:
   "f \<ge> 0 \<Longrightarrow> 0 \<le> Cgascap a b c d e f + f"
 apply (auto simp add:  gas_simps L_def min_def)
@@ -58,7 +61,8 @@ lemma Ccall_gt_0:
   unfolding Ccall_def
 apply (auto)
   apply (simp add: Cextra_gt_0 add.commute add_nonneg_pos)
-  by (metis Cextra_gt_0 Cgascap_gt_0 add.commute add.left_commute add_strict_increasing)
+  apply (metis Cextra_gt_0 Cgascap_gt_0 add.commute add.left_commute add_strict_increasing)
+  by (simp add: Cextra_gt_0 add.commute add_nonneg_pos)
 
 lemma Ccall_ge_0:
   "memu \<ge> 0 \<Longrightarrow>  0 \<le> Ccall s0 s1 s2 recipient_empty

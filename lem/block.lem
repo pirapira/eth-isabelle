@@ -91,7 +91,7 @@ type block = <|
   block_difficulty : w256;
   block_number : w256;
   block_gas_limit : w256;
-  block_timestampt : w256;
+  block_timestamp : w256;
   block_nonce : w256;
 |>
 *)
