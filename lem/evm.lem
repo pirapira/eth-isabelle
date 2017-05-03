@@ -1430,7 +1430,7 @@ let delegatecall net v c = match v.vctx_stack with
        InstructionToEnvironment
          (ContractDelegateCall
            <| callarg_gas = word256FromInteger (Ccallgas e0 e1 0
-                     (not (v.vctx_account_existence (vctx_recipient v c))) v.vctx_gas net (calc_memu_extra2 v e0 e1 e3 e4 e5 e6 0));
+                     (not (v.vctx_account_existence (vctx_recipient v c))) v.vctx_gas net (calc_memu_extra2 v e0 e1 e3 e4 e5 e6 (vctx_stack_default 6 v)));
               callarg_code = w256_to_address e1;
               callarg_recipient = w256_to_address e1;
               callarg_value = v.vctx_value_sent;
@@ -1835,8 +1835,7 @@ let instruction_sem v c inst net =
   | Bits inst_OR -> stack_2_1_op v c (fun a b -> a lor b)
   | Bits inst_XOR -> stack_2_1_op v c (fun a b -> a lxor b)
   | Bits inst_NOT -> stack_1_1_op v c (fun a -> lnot a)
-  | Bits BYTE ->
-      stack_2_1_op v c get_byte
+  | Bits BYTE -> stack_2_1_op v c get_byte
   | Sarith SDIV -> stack_2_1_op v c
        (fun n divisor -> if divisor = 0 then 0 else
                          let divisor = sintFromW256 divisor in

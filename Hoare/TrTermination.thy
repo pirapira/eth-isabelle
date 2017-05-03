@@ -234,6 +234,11 @@ lemma memu_extra_ge0 :
  calc_memu_extra memu x21 x21a x21b x21c x21d x21e x21f \<ge> 0"
 by (simp add:calc_memu_extra_def cmem_new)
 
+lemma memu_extra2_ge0 :
+"vctx_memory_usage v \<ge> 0 \<Longrightarrow>
+ calc_memu_extra2 v a b c x21c x21d x21e x21f \<ge> 0"
+by (simp add:calc_memu_extra2_def cmem_new)
+
 lemma callgas_ge0 :
   "memu \<ge> 0 \<Longrightarrow>
    Ccallgas x21 x21a x21b aex gas1 net memu \<ge> 0"
@@ -296,6 +301,14 @@ apply (simp add:vctx_recipient_def vctx_next_instruction_default_def
 using callgas_ge0 memu_extra_ge0 apply force
 done
 
+lemma memory_weird :
+"new_memory_consumption (Misc DELEGATECALL)
+        (vctx_memory_usage v1) x21 x21a x21b x21c
+        x21d x21e (x22e ! k) = 
+ new_memory_consumption (Misc DELEGATECALL)
+        (vctx_memory_usage v1) x21 x21a x21b x21c
+        x21d x21e 0"
+by (simp add:new_memory_consumption.simps)
 
 lemma delegate_gas_compare :
  "\<not> before_homestead net \<Longrightarrow>
@@ -305,13 +318,14 @@ lemma delegate_gas_compare :
         (\<not> vctx_account_existence v1 (vctx_recipient v1 c))
         (vctx_gas v1) net
         (calc_memu_extra2 v1 x21 x21a x21b x21c
-          x21d x21e 0)
+          x21d x21e (vctx_stack_default 6 v))
        < meter_gas (Misc DELEGATECALL) v1 c net"
-apply (cases x22e)
-apply (auto simp add:gas_simps  Ccallgas_def meter_gas_def C_def
+by (auto simp add:gas_simps  Ccallgas_def meter_gas_def C_def
   thirdComponentOfC_def Gcallstipend_def vctx_stack_default_def
   uint_nat cmem_new_helper  cmem_new_helper2
-calc_memu_extra2_def min_L_helper min_L_helper2)
+calc_memu_extra2_def min_L_helper min_L_helper2
+memory_weird
+split:option.splits)
 
 lemma delegate_system_gas :
 "instruction_sem v1 c (Misc DELEGATECALL) net =
@@ -321,12 +335,11 @@ lemma delegate_system_gas :
  vctx_gas v1 > vctx_gas v2 + uint (callarg_gas args)"
 apply (auto simp:instruction_sem_simps Let_def split:split_inst)
 apply (rule aux)
-apply (rule callcode_gas_compare, auto)
+apply (rule delegate_gas_compare, auto)
 apply (simp add:vctx_recipient_def vctx_next_instruction_default_def
   vctx_stack_default_def)
-ussing callgas_ge0 memu_extra_ge0 apply force
+using callgas_ge0 memu_extra2_ge0 apply force
 done
-
 
 
 (* calls without value (do not increase gas) *)
