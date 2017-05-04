@@ -115,7 +115,7 @@ by (auto simp add:next0_def next_state_def Let_def
    contract_action.split_asm stack_hint.split_asm)
 
 lemma call_to_env :
-"inst \<in> {Misc CALL, Misc CALLCODE, Misc DELEGATECALL} \<Longrightarrow>
+"inst \<in> {Misc CALL, Misc STOP, Misc RETURN, Misc SUICIDE, Misc CALLCODE, Misc DELEGATECALL} \<Longrightarrow>
  \<exists>act v2 x33. instruction_sem v1 c inst net =
  InstructionToEnvironment act v2 x33"
 apply (simp only: instruction_sem_def)
@@ -340,6 +340,174 @@ apply (simp add:vctx_recipient_def vctx_next_instruction_default_def
   vctx_stack_default_def)
 using callgas_ge0 memu_extra2_ge0 apply force
 done
+
+fun system_vms_vm :: "instruction_result \<Rightarrow> variable_ctx list" where
+"system_vms_vm (InstructionContinue v) = [v]"
+| "system_vms_vm (InstructionToEnvironment act v hint) = [v]"
+| "system_vms_vm _ = []"
+
+fun tuple_4_2 :: "world_state * variable_ctx * constant_ctx * stack_hint \<Rightarrow> variable_ctx" where
+"tuple_4_2 (_,v,_,_) = v"
+
+definition system_vms :: "global0 \<Rightarrow> variable_ctx list" where
+"system_vms g = system_vms_vm (g_vmstate g) @ map tuple_4_2 (g_stack g)"
+
+definition memu_invariant :: "global0 \<Rightarrow> bool" where
+"memu_invariant g = (\<forall>v \<in> set (system_vms g). vctx_memory_usage v \<ge> 0)"
+
+lemma memu_next_state :
+  "vctx_memory_usage v \<ge> 0 \<Longrightarrow>
+   v2 \<in> set (system_vms_vm (next_state stopper c net (InstructionContinue v))) \<Longrightarrow>
+   vctx_memory_usage v2 \<ge> 0"
+apply (auto simp add:next_state_def Let_def
+  split:if_split_asm option.split_asm list.split_asm
+   contract_action.split_asm stack_hint.split_asm
+   instruction_result.splits)
+apply (case_tac "instruction_sem v c x2 net", auto)
+  using memu_good apply force
+  using memu_good_env by fastforce
+
+lemma memu_next_aux1 :
+ "memu_invariant st1 \<Longrightarrow>
+  g_vmstate st1 = InstructionContinue x1 \<Longrightarrow>
+  memu_invariant
+        (st1 \<lparr>g_vmstate := next_state stopper
+             c net
+             (InstructionContinue x1)\<rparr>)"
+apply (auto simp add: memu_invariant_def system_vms_def)
+using memu_next_state by metis
+
+lemma memu_next_aux2 :
+ "memu_invariant st1 \<Longrightarrow>
+  g_vmstate st1 = InstructionToEnvironment act v1 hint \<Longrightarrow>
+  memu_invariant (st1 \<lparr>g_vmstate :=
+     InstructionContinue
+             (v1 \<lparr>vctx_stack := st, vctx_gas := gs \<rparr>)\<rparr>)"
+by (auto simp add: memu_invariant_def system_vms_def)
+
+lemma memu_simp1 :
+ "memu_invariant (st1
+         \<lparr>g_current := st, g_vmstate := x\<rparr>) =
+  memu_invariant (st1 \<lparr>g_vmstate := x\<rparr>)"
+by (auto simp add: memu_invariant_def system_vms_def)
+
+
+lemma next_state_anno :
+"next_state stopper c net InstructionAnnotationFailure
+ = InstructionAnnotationFailure"
+by (simp add: next_state_def)
+
+lemma memu_start :
+ "0 \<le> vctx_memory_usage (start_env a b c d e f)"
+by (simp add: start_env_def)
+
+lemma memu_create :
+"0 \<le> vctx_memory_usage (create_env a b c d e f g h)"
+by (simp add: create_env_def)
+
+lemma memu_update_world :
+ "vctx_memory_usage (vctx_update_from_world v w x y) =
+  vctx_memory_usage v"
+by (simp add: vctx_update_from_world_def)
+
+lemma memu_next :
+  "memu_invariant st1 \<Longrightarrow>
+   Continue st2 = next0 net (Continue st1) \<Longrightarrow>
+   memu_invariant st2"
+apply (auto simp add:next0_def Let_def  memu_next_aux1
+  memu_simp1 next_state_anno
+  memu_invariant_def system_vms_def
+  memu_start memu_create memu_update_world
+  split:if_split_asm option.split_asm list.split_asm
+   contract_action.split_asm stack_hint.split_asm
+   instruction_result.splits)
+using memu_next_state apply metis
+using memu_next_state apply metis
+done
+
+lemma delegate_failure_sem :
+"before_homestead net \<Longrightarrow>
+ instruction_sem v1 c (Misc DELEGATECALL) net =
+ InstructionToEnvironment act v2 x33 \<Longrightarrow>
+ act \<in> range ContractFail"
+by (auto simp:instruction_sem_simps Let_def split:split_inst)
+
+lemma delegate_failure_next_state :
+"before_homestead net \<Longrightarrow>
+ vctx_next_instruction v c = Some (Misc DELEGATECALL) \<Longrightarrow>
+ next_state stopper c net (InstructionContinue v) =
+    InstructionToEnvironment act v2 x33 \<Longrightarrow>
+ act \<in> range ContractFail"
+by (auto simp:next_state_def delegate_failure_sem Let_def split:split_inst)
+
+lemma stop_return :
+"vctx_next_instruction v c = Some (Misc STOP) \<Longrightarrow>
+ next_state stopper c net (InstructionContinue v) =
+    InstructionToEnvironment act v2 x33 \<Longrightarrow>
+ act \<in> range ContractFail \<union> range ContractReturn"
+by (auto simp:next_state_def instruction_sem_simps Let_def split:split_inst)
+
+lemma return_return :
+"vctx_next_instruction v c = Some (Misc RETURN) \<Longrightarrow>
+ next_state stopper c net (InstructionContinue v) =
+    InstructionToEnvironment act v2 x33 \<Longrightarrow>
+ act \<in> range ContractFail \<union> range ContractReturn"
+by (auto simp:next_state_def instruction_sem_simps Let_def split:split_inst)
+
+lemma suicide_return :
+"vctx_next_instruction v c = Some (Misc SUICIDE) \<Longrightarrow>
+ next_state stopper c net (InstructionContinue v) =
+    InstructionToEnvironment act v2 x33 \<Longrightarrow>
+ act \<in> range ContractFail \<union> range ContractSuicide"
+by (auto simp:next_state_def instruction_sem_simps Let_def split:split_inst)
+
+lemma fail_stack :
+"next0 net (Continue st1) = Continue st2 \<Longrightarrow>
+ g_vmstate st1 = InstructionToEnvironment (ContractFail lst) v hint \<Longrightarrow>
+ length (g_stack st2) + 1 = length (g_stack st1)"
+by (auto simp add:next0_def Let_def
+  split:if_split_asm option.split_asm list.split_asm
+   contract_action.split_asm stack_hint.split_asm
+   instruction_result.splits)
+
+lemma return_stack :
+"next0 net (Continue st1) = Continue st2 \<Longrightarrow>
+ g_vmstate st1 = InstructionToEnvironment (ContractReturn lst) v hint \<Longrightarrow>
+ length (g_stack st2) + 1 = length (g_stack st1)"
+by (auto simp add:next0_def Let_def
+  split:if_split_asm option.split_asm list.split_asm
+   contract_action.split_asm stack_hint.split_asm
+   instruction_result.splits)
+
+lemma suicide_stack :
+"next0 net (Continue st1) = Continue st2 \<Longrightarrow>
+ g_vmstate st1 = InstructionToEnvironment (ContractSuicide lst) v hint \<Longrightarrow>
+ length (g_stack st2) + 1 = length (g_stack st1)"
+by (auto simp add:next0_def Let_def
+  split:if_split_asm option.split_asm list.split_asm
+   contract_action.split_asm stack_hint.split_asm
+   instruction_result.splits)
+
+lemma env_stack :
+  "g_vmstate st1 = InstructionContinue v1 \<Longrightarrow>
+   Continue st2 = next0 net (Continue st1) \<Longrightarrow>
+   g_stack st2 = g_stack st1"
+by (auto simp add:next0_def next_state_def Let_def
+  continue_meter_gas
+  split:if_split_asm option.split_asm list.split_asm
+   contract_action.split_asm stack_hint.split_asm)
+
+lemma call_success :
+  "g_vmstate st1 = InstructionContinue v1 \<Longrightarrow>
+   g_vmstate st2 = InstructionToEnvironment (ContractCall args) v2 hint \<Longrightarrow>
+   Continue st2 = next0 net (Continue st1) \<Longrightarrow>
+   Some (Misc CALL) = vctx_next_instruction v1 (g_cctx st1) \<Longrightarrow>
+   vctx_memory_usage v1 \<ge> 0 \<Longrightarrow>
+   system_gas st1 > system_gas st2"
+by (auto simp add:next0_def next_state_def Let_def
+  system_gas_def vm_gas_def call_system_gas
+  split:if_split_asm option.split_asm list.split_asm
+   contract_action.split_asm stack_hint.split_asm)
 
 
 (* calls without value (do not increase gas) *)
