@@ -491,7 +491,7 @@ let next net = function
            let nv = <| nv with vctx_stack = address_to_w256 new_addr::nv.vctx_stack |> in
            let nv = vctx_update_from_world nv acc n_state v in
            Continue (<| global with g_stack=rest; g_current=n_state; g_cctx=c; g_vmstate=InstructionContinue nv |>)
-         | _ -> Finished (<| f_state=orig; f_killed=[]; f_gas=0; f_refund=0; f_logs = [] |>) (* should be impossible *)
+         | _ -> Unimplemented (* should be impossible *)
          end
       end
     | a -> 

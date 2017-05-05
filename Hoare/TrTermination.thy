@@ -940,5 +940,51 @@ using suicide_stack apply force
 using gas_le apply force
 done
 
+(* gas cannot be zero *)
+
+definition gas_invariant :: "global0 \<Rightarrow> bool" where
+"gas_invariant g = (\<forall>v \<in> set (system_vms g). vctx_gas v \<ge> 0)"
+
+lemma next_state_gas_continue :
+  "next_state stopper c next res = InstructionContinue v2 \<Longrightarrow>
+   vctx_gas v2 \<ge> 0"
+by (auto simp add:next0_def next_state_def Let_def
+  check_resources_def continue_meter_gas
+  split:if_split_asm option.split_asm list.split_asm
+   contract_action.split_asm stack_hint.split_asm
+   instruction_result.splits)
+
+lemma next_state_gas_env :
+  "vctx_gas v1 \<ge> 0 \<Longrightarrow>
+   next_state stopper c next (InstructionContinue v1) =
+      InstructionToEnvironment act v2 hint \<Longrightarrow>
+   vctx_gas v2 \<ge> 0"
+by (auto simp add:next0_def next_state_def Let_def
+  check_resources_def env_meter_gas
+  split:if_split_asm option.split_asm list.split_asm
+   contract_action.split_asm stack_hint.split_asm
+   instruction_result.splits)
+
+lemma gas_next :
+  "gas_invariant st1 \<Longrightarrow>
+   Continue st2 = next0 net (Continue st1) \<Longrightarrow>
+   gas_invariant st2"
+apply (auto simp add:next0_def Let_def
+  gas_invariant_def system_vms_def next_state_anno
+  gas_update_world gas_create_env gas_start_env L_def
+  split:if_split_asm option.split_asm list.split_asm
+   contract_action.split_asm stack_hint.split_asm
+   instruction_result.splits)
+
+apply (case_tac "next_state (\<lambda>_. ()) (g_cctx st1) net
+                 (InstructionContinue x1)", auto)
+using next_state_gas_continue apply force
+using next_state_gas_env apply force
+apply (case_tac "next_state (\<lambda>_. ()) (g_cctx st1) net
+                 (InstructionContinue x1)", auto)
+using next_state_gas_continue apply force
+using next_state_gas_env apply force
+done
+
 end
 
