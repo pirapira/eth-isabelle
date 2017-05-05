@@ -99,8 +99,9 @@ lemma call_tight :
    g_vmstate st1 = InstructionContinue v1 \<Longrightarrow>
    g_vmstate st2 = InstructionToEnvironment (ContractCall args) v2 hint \<Longrightarrow>
    Continue st2 = next0 net (Continue st1) \<Longrightarrow>
-   vctx_memory_usage v1 \<ge> 0 \<Longrightarrow>
+   memu_invariant st1 \<Longrightarrow>
    system_gas st1 > system_gas st2 + 699"
+apply (simp add: memu_invariant_def system_vms_def)
 using call_success_tight callcode_success_tight call_success2
 by metis
 
@@ -110,58 +111,235 @@ fun count_call :: "global_state \<Rightarrow> int" where
  | _ \<Rightarrow> 0)"
 | "count_call _ = 0"
 
-(*
-
 fun iter_next :: "network \<Rightarrow> global_state \<Rightarrow> nat \<Rightarrow> global_state" where
 "iter_next net g 0 = g"
 | "iter_next net g (Suc n) = iter_next net (next0 net g) n"
 
-fun count_calls :: "network \<Rightarrow> global_state \<Rightarrow> nat \<Rightarrow> int" where
-"count_calls net g n = (\<Sum>i=1..n. count_call (iter_next net g i))"
+fun seq_next :: "network \<Rightarrow> global_state \<Rightarrow> nat \<Rightarrow> global_state list" where
+"seq_next net g 0 = [g]"
+| "seq_next net g (Suc n) = g # seq_next net (next0 net g) n"
 
-lemma iter_next_next :
-  "iter_next net (next0 net st) i = iter_next net st (Suc i)"
-by auto
+lemma seq_next_nil : "seq_next net g n = [] \<Longrightarrow> False"
+by (cases n, auto)
 
-declare iter_next.simps [simp del]
-declare count_calls.simps [simp del]
+lemma iter_seq : "last (seq_next net g n) = iter_next net g n"
+apply (induction n arbitrary:g, auto)
+using seq_next_nil apply force
+done
+
+definition count_calls :: "network \<Rightarrow> global_state \<Rightarrow> nat \<Rightarrow> int" where
+"count_calls net g n =
+   sum_list (map count_call (seq_next net g n))"
 
 lemma count_calls_next :
   "count_calls net (next0 net st) num +
-   count_call (next0 net st) =
+   count_call st =
    count_calls net st (num+1)"
-apply auto
-apply (subst count_calls.simps)
-apply (subst count_calls.simps)
-apply (subst iter_next_next)
+by (auto simp:count_calls_def)
+
+lemma gas_le2 :
+  "Continue st =
+  next0 net (Continue st1) \<Longrightarrow>
+  memu_invariant st1 \<Longrightarrow>
+  gas_invariant st1 \<Longrightarrow>
+  system_gas st \<le> system_gas st1"
+by (rule gas_le [of st net st1],
+   auto simp:gas_invariant_def system_vms_def vm_gas_def
+     split:instruction_result.splits contract_action.splits)
 
 lemma estimate_calls_continue :
-"      at_least_eip150 net \<Longrightarrow>
-       iter_next net (Continue st) num = Continue st2 \<Longrightarrow>
-       count_calls net (Continue st) num * 699
-           \<le> system_gas st - system_gas st2 \<Longrightarrow>
-       at_least_eip150 net \<Longrightarrow>
+"(\<forall>st1 v1.(g_vmstate st1 = InstructionContinue v1 \<longrightarrow>
+        memu_invariant st1 \<longrightarrow>
+        gas_invariant st1 \<longrightarrow>
+        iter_next net (Continue st1) num =
+        Continue st2 \<longrightarrow>
+        count_calls net (Continue st1) num * 699
+        \<le> system_gas st1 - system_gas st2)) \<Longrightarrow>
+
+      g_vmstate st = InstructionContinue v \<Longrightarrow>
+       iter_next net (Continue st) num =
+           Continue st2 \<Longrightarrow>
+   memu_invariant st \<Longrightarrow> gas_invariant st \<Longrightarrow>
+   memu_invariant st1 \<Longrightarrow> gas_invariant st1 \<Longrightarrow>
        Continue st = next0 net (Continue st1) \<Longrightarrow>
-       iter_next net (Continue st1) (Suc num) = Continue st2 \<Longrightarrow>
-       g_vmstate st2 = InstructionContinue x1 \<Longrightarrow>
+       g_vmstate st1 = InstructionContinue v1 \<Longrightarrow>
+       iter_next net (Continue st1) (Suc num) =
+         Continue st2 \<Longrightarrow>
        count_calls net (Continue st1) (Suc num) * 699
-       \<le> system_gas st1 - system_gas st2"
-apply auto
+          \<le> system_gas st1 - system_gas st2"
+unfolding count_calls_def
+using gas_le2 [of st net st1] by force
+
+lemma unimp_cont :
+"iter_next net Unimplemented num = Continue st2 \<Longrightarrow> False"
+by (induction num; auto simp:next0_def)
+
+lemma finished_cont :
+"iter_next net (Finished f) num = Continue st2 \<Longrightarrow> False"
+by (induction num; auto simp:next0_def)
+
+lemma anno_stuck :
+   "g_vmstate st1 = InstructionAnnotationFailure \<Longrightarrow>
+    Continue st2 = next0 net (Continue st1) \<Longrightarrow>
+    g_vmstate st2 = InstructionAnnotationFailure"
+by (simp add:next0_def next_state_def)
+
+lemma anno_count :
+   "g_vmstate st1 = InstructionAnnotationFailure \<Longrightarrow>
+    count_calls net (Continue st1) num * 699 = 0"
+by(induction num arbitrary:st1;
+   simp add:count_calls_def next0_def next_state_def)
+
+lemma anno_simp :
+"g_vmstate st1 = InstructionAnnotationFailure \<Longrightarrow>
+ st1\<lparr>g_vmstate := InstructionAnnotationFailure\<rparr> = st1"
+by simp
+
+lemma anno_stuck_gas :
+   "g_vmstate st1 = InstructionAnnotationFailure \<Longrightarrow>
+    iter_next net (Continue st1) num = Continue st2 \<Longrightarrow>
+    system_gas st1 = system_gas st2"
+by(induction num arbitrary:st1 st2;
+   auto simp add:count_calls_def next0_def next_state_def
+     anno_simp)
+
+lemma more_aux : "x = (0::int) \<Longrightarrow> z\<ge>y \<Longrightarrow> x \<le> z - y"
+by simp
+
+lemma count_calls_cont :
+ "g_vmstate st1 = InstructionContinue v1 \<Longrightarrow>
+  Continue st = next0 net (Continue st1) \<Longrightarrow>
+  count_calls net (Continue st1) (Suc num) =
+  count_calls net (Continue st) num"
+by(simp add:count_calls_def)
+
+lemma split_compare :
+ "iter_next net (Continue st) num =
+    Continue st2 \<Longrightarrow>
+  Continue st = next0 net (Continue st1) \<Longrightarrow>
+  count_call (Continue st1) * 699 \<le> system_gas st1 - system_gas st \<Longrightarrow>
+  count_calls net (Continue st) num * 699
+    \<le> system_gas st - system_gas st2 \<Longrightarrow>
+  count_calls net (Continue st1) (Suc num) * 699
+    \<le> system_gas st1 - system_gas st2"
+by (simp add:count_calls_def)
+
+lemma split_compare2 :
+ "iter_next net (Continue st) num =
+    Continue st2 \<Longrightarrow>
+  Continue st = next0 net (Continue st1) \<Longrightarrow>
+  count_call (Continue st1) * 699 +
+  count_calls net (Continue st) num * 699
+    \<le> system_gas st1 - system_gas st2 \<Longrightarrow>
+  count_calls net (Continue st1) (Suc num) * 699
+    \<le> system_gas st1 - system_gas st2"
+by (simp add:count_calls_def)
+
+lemma split_compare3 :
+ "Continue st_b = next0 net (Continue st1) \<Longrightarrow>
+  Continue st = next0 net (Continue st_b) \<Longrightarrow>
+  count_call (Continue st_b) * 699 \<le>
+    system_gas st1 - system_gas st_b \<Longrightarrow>
+  count_calls net (Continue st) num * 699
+    \<le> system_gas st_b - system_gas st2 \<Longrightarrow>
+  count_calls net (Continue st_b) (Suc num) * 699
+    \<le> system_gas st1 - system_gas st2"
+by (simp add:count_calls_def)
+
+lemma mega_rule :
+"next0 net (Continue st_b) = Continue st \<Longrightarrow>
+ g_vmstate st = InstructionContinue v \<Longrightarrow>
+ memu_invariant st_b \<Longrightarrow>
+ gas_invariant st_b \<Longrightarrow>
+ ( memu_invariant st_b \<longrightarrow>
+   gas_invariant st_b \<longrightarrow>
+   count_calls net (Continue st) num3 * 699
+    \<le> system_gas st - system_gas st2 ) \<Longrightarrow>
+ count_calls net (Continue st) num3 * 699
+    \<le> system_gas st_b - system_gas st2"
+using gas_le2 [of st net st_b] by force
 
 lemma estimate_calls :
   "at_least_eip150 net \<Longrightarrow>
+   g_vmstate st1 = InstructionContinue v1 \<Longrightarrow>
+   memu_invariant st1 \<Longrightarrow>
+   gas_invariant st1 \<Longrightarrow>
    iter_next net (Continue st1) num = Continue st2 \<Longrightarrow>
    count_calls net (Continue st1) num * 699 \<le>
    system_gas st1 - system_gas st2"
-apply (induction num arbitrary:st1 st2, simp)
-apply (case_tac "g_vmstate st2",auto)
+apply (induction num arbitrary:st1 v1  rule:less_induct)
+subgoal for num st1 v1
+apply (case_tac num, auto)
+apply (simp add:count_calls_def)
+apply (case_tac "next0 net (Continue st1)", auto)
+using unimp_cont apply force
+defer
+using finished_cont apply force
+apply (case_tac "g_vmstate x2")
+apply (rule split_compare, auto)
+subgoal for num2 st v
+using gas_le2 [of st net st1]
+apply force
+done
+apply (metis gas_next lessI memu_next)
+subgoal for num2 st
+apply (rule more_aux)
+using anno_count [of st net num2] count_calls_next
+apply (simp add:count_calls_cont)
+using gas_le2 [of st net st1]
+  anno_stuck_gas  [of st net num2 st2]
+apply force
+done
 
-*)
+subgoal for num2 st_b act v_b x33
+apply (case_tac num2, auto)
+apply (cases act; auto simp add:count_calls_def)
+using call_tight apply force
+using gas_le2 [of st2 net st1] apply force
+using gas_le2 [of st2 net st1] apply force
+using gas_le2 [of st2 net st1] apply force
+using gas_le2 [of st2 net st1] apply force
+using gas_le2 [of st2 net st1] apply force
+subgoal for num3
+apply (rule split_compare2, auto)
+apply (case_tac "next0 net (Continue st_b)", auto)
+using unimp_cont apply force
+defer
+using finished_cont apply force
 
-(*
-"count_calls net g 0 = 0"
-| "count_calls net g (Suc n) =
-     count_call g + count_calls net (next0 net g) n"
-*)
+apply (rule split_compare3, auto)
+apply (cases act; auto simp add:count_calls_def)
+subgoal for st args
+using call_tight [of net st1 v1 st_b args v_b x33]
+by force
+subgoal for st args
+using gas_le2 [of st_b net st1] by force
+subgoal for st args
+using gas_le2 [of st_b net st1] by force
+subgoal for st args
+using gas_le2 [of st_b net st1] by force
+subgoal for st args
+using gas_le2 [of st_b net st1] by force
+subgoal for st args
+using gas_le2 [of st_b net st1] by force
+
+apply(case_tac "g_vmstate x2")
+defer
+
+subgoal for st
+using env_continue [of st_b act v_b x33 st net]
+by force
+
+subgoal for st
+using env_continue [of st_b act v_b x33 st net]
+by force
+
+subgoal for st v
+apply (rule mega_rule, auto)
+using memu_next apply metis
+using gas_next apply metis
+using memu_next gas_next
+  by (metis Suc_lessD lessI)
+done done done done
 
 end
