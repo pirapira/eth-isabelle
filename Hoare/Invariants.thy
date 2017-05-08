@@ -60,9 +60,79 @@ by (auto simp add:next0_def Let_def
    contract_action.split_asm stack_hint.split_asm
    instruction_result.splits)
 
-(* storage changes *)
+(* account existence *)
+
+lemma exist_return :
+  "account_exists (update_return st1 addr2 x32 addr) =
+   account_exists (st1 addr)"
+by (auto simp add:update_return_def update_world_def)
+
+lemma exist_call :
+  "account_exists (update_call st1 addr2 x32 addr) =
+   account_exists (st1 addr)"
+by (auto simp add:update_call_def transfer_balance_def
+   add_balance_def sub_balance_def Let_def update_world_def)
+
+lemma exist_transfer :
+  "account_exists (transfer_balance st1 addr2 x32 v addr) =
+   account_exists (st1 addr)"
+by (auto simp add:update_call_def transfer_balance_def
+   add_balance_def sub_balance_def Let_def update_world_def)
+
+lemma exist_update :
+  "account_exists (update_world st1 addr2 acc addr) =
+   ( if addr2 = addr then account_exists acc
+     else account_exists (st1 addr))"
+by (auto simp add:update_call_def transfer_balance_def
+   add_balance_def sub_balance_def Let_def update_world_def)
+
+lemma exist_nonce :
+  "account_exists (update_nonce st1 addr2 addr) =
+   account_exists (st1 addr)"
+by (auto simp add:update_nonce_def transfer_balance_def
+   add_balance_def sub_balance_def Let_def update_world_def)
+
+lemma exist_same :
+  "Continue st2 = next0 net (Continue st1) \<Longrightarrow>
+   g_stack st2 = g_stack st1 \<Longrightarrow>
+   account_exists (g_current st1 addr) =
+   account_exists (g_current st2 addr)"
+by (auto simp add:next0_def Let_def
+  exist_return
+  split:if_split_asm option.split_asm list.split_asm
+   contract_action.split_asm stack_hint.split_asm
+   instruction_result.splits)
+
+lemma tl_wf : "(tl x22 = a # x22) = False"
+by (auto simp add:tl_def split:list.splits)
+
+lemma exist_push :
+  "Continue st2 = next0 net (Continue st1) \<Longrightarrow>
+   tl (g_stack st2) = g_stack st1 \<Longrightarrow>
+   account_exists (g_current st1 addr) \<Longrightarrow>
+   account_exists (g_current st2 addr)"
+by (auto simp add:next0_def Let_def
+  exist_return exist_call exist_transfer
+  exist_update exist_nonce tl_wf
+  split:if_split_asm option.split_asm list.split_asm
+   contract_action.split_asm stack_hint.split_asm
+   instruction_result.splits)
+
+lemma exist_pop :
+  "Continue st2 = next0 net (Continue st1) \<Longrightarrow>
+   g_stack st2 = (a,b,c,d) # g_stack st1 \<Longrightarrow>
+   account_exists (a addr) \<Longrightarrow>
+   account_exists (g_current st2 addr)"
+by (auto simp add:next0_def Let_def
+  exist_return exist_call exist_transfer
+  exist_update exist_nonce
+  split:if_split_asm option.split_asm list.split_asm
+   contract_action.split_asm stack_hint.split_asm
+   instruction_result.splits)
 
 (* code changes *)
+
+(* storage changes *)
 
 (* balance changes *)
 
