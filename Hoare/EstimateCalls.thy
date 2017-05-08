@@ -111,21 +111,7 @@ fun count_call :: "global_state \<Rightarrow> int" where
  | _ \<Rightarrow> 0)"
 | "count_call _ = 0"
 
-fun iter_next :: "network \<Rightarrow> global_state \<Rightarrow> nat \<Rightarrow> global_state" where
-"iter_next net g 0 = g"
-| "iter_next net g (Suc n) = iter_next net (next0 net g) n"
 
-fun seq_next :: "network \<Rightarrow> global_state \<Rightarrow> nat \<Rightarrow> global_state list" where
-"seq_next net g 0 = [g]"
-| "seq_next net g (Suc n) = g # seq_next net (next0 net g) n"
-
-lemma seq_next_nil : "seq_next net g n = [] \<Longrightarrow> False"
-by (cases n, auto)
-
-lemma iter_seq : "last (seq_next net g n) = iter_next net g n"
-apply (induction n arbitrary:g, auto)
-using seq_next_nil apply force
-done
 
 definition count_calls :: "network \<Rightarrow> global_state \<Rightarrow> nat \<Rightarrow> int" where
 "count_calls net g n =
