@@ -382,6 +382,8 @@ let create_account n_state new_addr bytes =
   let new_acc = set_account_code new_acc bytes in
   update_world n_state new_addr new_acc
 
+let calc_address addr nonce = w256_to_address (keccak (RLP (Node [RLP_address addr; RLP_w256 nonce])))
+
 let next net = function
  | Finished st -> Finished st
  | Unimplemented -> Unimplemented
@@ -423,13 +425,12 @@ let next net = function
          Continue (<| global with g_stack=((state,v,c,get_hint stuff)::global.g_stack);
                                  g_current=n_state; g_cctx=cctx; g_vmstate=InstructionContinue nv |>)
       | ContractCreate args ->
-         if word256ULT (state c.cctx_this).account_balance args.createarg_value || length global.g_stack > 1023 then
+         let addr = calc_address c.cctx_this (state c.cctx_this).account_nonce in
+         if word256ULT (state c.cctx_this).account_balance args.createarg_value || length global.g_stack > 1023 || (state addr).account_exists then
             let nv = <| v with vctx_stack = 0 :: v.vctx_stack |> in
             Continue (<| global with g_current = state; g_vmstate = InstructionContinue nv |>) else
          let state = update_nonce state c.cctx_this in
          let n_state = update_return state c.cctx_this v in
-         let n_acc = n_state c.cctx_this in
-         let addr = w256_to_address (keccak (RLP (Node [RLP_address c.cctx_this; RLP_w256 (n_acc.account_nonce-1)]))) in
          let old_acc = n_state addr in
          let old_balance = old_acc.account_balance in
          let acc = empty_account addr in
@@ -474,7 +475,7 @@ let next net = function
          let n_state = update_return state c.cctx_this v in
          match global.g_stack with
          | [] -> Finished <| f_state = n_state; f_killed = global.g_killed; f_refund = v.vctx_refund; f_gas = v.vctx_gas; f_logs = v.vctx_logs |>
-         | (_,nv,c,ReturnTo mem_start mem_size) :: rest -> 
+         | (_,nv,c,ReturnTo mem_start mem_size) :: rest ->
            let acc = n_state c.cctx_this in
            let nv = <| nv with vctx_stack = 1::nv.vctx_stack; vctx_memory = put_return_values nv.vctx_memory bytes mem_start mem_size |> in
            let nv = vctx_update_from_world nv acc n_state v in

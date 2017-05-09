@@ -529,58 +529,10 @@ definition balance_inv :: "global0 \<Rightarrow> bool" where
 lemma tr_orig :
    "next0 net (Continue st1) = Continue st2 \<Longrightarrow>
     g_orig st1 = g_orig st2"
-apply (simp add:next0_def Let_def)
-apply (cases "g_vmstate st1"; auto)
-subgoal for act v zz
-apply (cases act; auto simp add:Let_def)
-apply (case_tac "callarg_recipient x1 <s 256";auto)
-apply (auto simp add:Let_def)
-apply (case_tac
-   "account_balance0
-               (update_return (g_current st1)
-                 (cctx_this (g_cctx st1)) v
-                 (cctx_this (g_cctx st1)))
-              < callarg_value x1 \<or>
-              1023 < length (g_stack st1)";auto)
-apply (auto simp add:Let_def)
-apply (case_tac "1023 < length (g_stack st1)"; auto)
-apply (case_tac "account_balance0
-               (g_current st1 (cctx_this (g_cctx st1)))
-              < createarg_value x3 \<or>
-              1023 < length (g_stack st1)";
-       auto simp add:Let_def)
-apply(case_tac "g_stack st1"; auto)
-apply(case_tac "g_stack st1"; auto simp add:Let_def)
-apply(case_tac "list = [] \<and> g_create st1"; auto simp add:Let_def)
-apply(case_tac "g_stack st1"; auto simp add:Let_def)
-apply(case_tac "b"; auto)
-apply(case_tac "x6 = [] \<and> list = [] \<and> g_create st1"; auto)
-apply(case_tac "vctx_gas v
-                < 200 * int (length x6) \<and>
-                homestead_block
-                \<le> unat
-                    (block_number
-                      (vctx_block v))"; auto)
-apply(case_tac "vctx_gas v
-                < 200 * int (length x6)"; auto)
-apply(case_tac "vctx_gas v
-                < 200 * int (length x6) \<and>
-                homestead_block
-                \<le> unat
-                    (block_number
-                      (vctx_block v))"; auto)
-apply(case_tac "vctx_gas v
-                < 200 * int (length x6)"; auto)
-apply(case_tac "vctx_gas v
-                < 200 * int (length x6) \<and>
-                homestead_block
-                \<le> unat
-                    (block_number
-                      (vctx_block v))"; auto)
-apply(case_tac "vctx_gas v
-                < 200 * int (length x6)"; auto)
-done
-done
+by (auto simp add:next0_def Let_def
+  split:if_split_asm option.split_asm list.split_asm
+   contract_action.split_asm stack_hint.split_asm
+   instruction_result.splits)
 
 lemma inv_depend :
    "balance_inv st1 \<Longrightarrow>
@@ -677,23 +629,20 @@ using inv_current [of "st2\<lparr> g_current := disc\<rparr>" st2]
 
 lemma tb_update_nonce :
   "total_balance (update_nonce st x) = total_balance st"
-apply (auto simp add:update_nonce_def Let_def
+by (auto simp add:update_nonce_def Let_def
   total_balance_update_world)
-done
 
 lemma tb_create_account :
   "total_balance (create_account st x y) = total_balance st"
-apply (auto simp add:create_account_def Let_def
+by (auto simp add:create_account_def Let_def
   total_balance_update_world set_account_code_def)
-done
 
 lemma inv_stack_same :
   "balance_inv st \<Longrightarrow>
    total_balance a = total_balance b \<Longrightarrow>
    g_stack st = (a,x,y,z)#rest \<Longrightarrow>
    balance_inv (st\<lparr> g_stack := (b,x2,y2,z2) # rest \<rparr>)"
-apply (auto simp add:balance_inv_def states_def)
-done
+by (auto simp add:balance_inv_def states_def)
 
 lemma inv_stack_same2 :
   "balance_inv st \<Longrightarrow>
@@ -703,8 +652,7 @@ lemma inv_stack_same2 :
    g_current st2 = g_current st \<Longrightarrow>
    g_orig st2 = g_orig st \<Longrightarrow>
    balance_inv st2"
-apply (auto simp add:balance_inv_def states_def)
-done
+by (auto simp add:balance_inv_def states_def)
 
 lemma account_balance_nonce :
 "account_balance0 (update_nonce st1 v r) =
@@ -824,22 +772,8 @@ lemma tr_balance_finished :
     total_balance (f_state st2) \<le> total_balance (g_orig st1)"
 apply (simp add:next0_def Let_def)
 apply (cases "g_vmstate st1"; auto simp add:Let_def)
-apply (case_tac "x31"; auto)
-apply (case_tac "callarg_recipient x1 <s 256"; auto simp add:next0_def Let_def)
-apply (case_tac "account_balance0
-            (update_return (g_current st1)
-              (cctx_this (g_cctx st1)) x32
-              (cctx_this (g_cctx st1)))
-           < callarg_value x1 \<or>
-           1023 < length (g_stack st1)"; auto simp add: Let_def)
-apply (cases "1023 < length (g_stack st1)"; auto simp add:Let_def)
-apply (case_tac " account_balance0
-            (g_current st1
-              (cctx_this (g_cctx st1)))
-           < createarg_value x3 \<or>
-           1023 < length (g_stack st1)"; auto simp add:Let_def)
+apply (case_tac "x31"; auto  simp add:Let_def split:if_splits)
 apply (case_tac "g_stack st1"; auto simp add:Let_def)
-apply (auto simp add:Let_def)
 apply (case_tac "g_stack st1"; auto simp add:Let_def)
 subgoal for x32 x33 dst
 apply (simp add:total_balance_update_world
@@ -1032,50 +966,16 @@ apply (auto simp:total_balance_update_return)
 done
 (* contract creation *)
 subgoal for args
-apply (cases "account_balance0
-         (g_current st1 (cctx_this (g_cctx st1)))
-        < createarg_value args \<or>
-        1023 < length (g_stack st1)"; auto)
+apply (split if_splits)
 using inv_depend apply force
-using inv_depend apply force
-apply (simp add: Let_def)
+apply (simp add:Let_def)
 apply (rule sort_out_create [of st1 st2 _ _ _ _ _
 "(empty_account0
-         (ucast
-           (keccak
-             (RLP (Node [RLP_address (cctx_this (g_cctx st1)),
-                         RLP_w256
-                          (account_nonce
-                            (update_return
-                              (update_nonce (g_current st1) (cctx_this (g_cctx st1)))
-                              (cctx_this (g_cctx st1)) v (cctx_this (g_cctx st1))) -
-                           1)]))))
-        \<lparr>account_balance0 :=
-           account_balance0
-            (update_return (update_nonce (g_current st1) (cctx_this (g_cctx st1)))
-              (cctx_this (g_cctx st1)) v
-              (ucast
-                (keccak
-                  (RLP (Node [RLP_address (cctx_this (g_cctx st1)),
-                              RLP_w256
-                               (account_nonce
-                                 (update_return
-                                   (update_nonce (g_current st1)
-                                     (cctx_this (g_cctx st1)))
-                                   (cctx_this (g_cctx st1)) v (cctx_this (g_cctx st1))) -
-                                1)]))))),
+         _
+        \<lparr>account_balance0 := _,
            account_exists := True\<rparr>)"
-"(ucast
-       (keccak
-         (RLP (Node [RLP_address (cctx_this (g_cctx st1)),
-                     RLP_w256
-                      (account_nonce
-                        (update_return
-                          (update_nonce (g_current st1) (cctx_this (g_cctx st1)))
-                          (cctx_this (g_cctx st1)) v (cctx_this (g_cctx st1))) -
-                       1)]))))"
+"calc_address _ _"
   "createarg_value args"])
-apply auto
 apply (auto simp add:account_balance_return
 account_balance_nonce)
 done
