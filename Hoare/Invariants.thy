@@ -118,6 +118,18 @@ by (auto simp add:next0_def Let_def
    contract_action.split_asm stack_hint.split_asm
    instruction_result.splits)
 
+lemma exist_push2 :
+  "Continue st2 = next0 net (Continue st1) \<Longrightarrow>
+   g_stack st2 = (a,b,c,d) # g_stack st1 \<Longrightarrow>
+   account_exists (g_current st1 addr) \<Longrightarrow>
+   account_exists (a addr)"
+by (auto simp add:next0_def Let_def
+  exist_return exist_call exist_transfer
+  exist_update exist_nonce tl_wf
+  split:if_split_asm option.split_asm list.split_asm
+   contract_action.split_asm stack_hint.split_asm
+   instruction_result.splits)
+
 lemma exist_pop :
   "Continue st2 = next0 net (Continue st1) \<Longrightarrow>
    g_stack st2 = (a,b,c,d) # g_stack st1 \<Longrightarrow>
@@ -129,6 +141,97 @@ by (auto simp add:next0_def Let_def
   split:if_split_asm option.split_asm list.split_asm
    contract_action.split_asm stack_hint.split_asm
    instruction_result.splits)
+
+lemma weird_current :
+  "st2 = st1
+       \<lparr>g_stack := b,
+        g_current := a,
+        g_cctx := c,
+        g_vmstate := d\<rparr> \<Longrightarrow>
+  g_current st2 = a"
+by auto
+
+lemma weird_weird_aux :
+  "(st2 = st1
+       \<lparr>g_stack := b,
+        g_current := a,
+        g_cctx := c,
+        g_vmstate := d\<rparr>) =
+    (st2 = \<lparr>
+        g_orig = g_orig st1,
+        g_stack = b,
+        g_current = a,
+        g_cctx = c,
+        g_killed = g_killed st1,
+        g_vmstate = d,
+        g_create = g_create st1
+ \<rparr> )"
+by auto
+
+lemma weird_weird_aux2 :
+  "st1
+       \<lparr>g_stack := b,
+        g_current := a,
+        g_cctx := c,
+        g_vmstate := d\<rparr> =
+    \<lparr>
+        g_orig = g_orig (st1::global0),
+        g_stack = b,
+        g_current = a,
+        g_cctx = c,
+        g_killed = g_killed st1,
+        g_vmstate = d,
+        g_create = g_create st1
+ \<rparr>"
+by auto
+
+
+lemma weird_weird :
+  "(st2 = (st1::global0)
+       \<lparr>g_stack := b,
+        g_current := a,
+        g_cctx := c,
+        g_vmstate := d\<rparr>) =
+  (g_current st2 = a \<and>
+   g_stack st2 = b \<and>
+   g_cctx st2 = c \<and>
+   g_vmstate st2 = d \<and>
+   g_orig st2 = g_orig st1 \<and>
+   g_create st2 = g_create st1 \<and>
+   g_killed st2 = g_killed st1 )"
+by auto
+
+lemma weird_weird2 :
+  "(st2 = (st1::global0)
+       \<lparr>g_stack := b,
+        g_current := a,
+        g_cctx := c,
+        g_vmstate := d,
+        g_killed := e \<rparr>) =
+  (g_current st2 = a \<and>
+   g_stack st2 = b \<and>
+   g_cctx st2 = c \<and>
+   g_vmstate st2 = d \<and>
+   g_orig st2 = g_orig st1 \<and>
+   g_create st2 = g_create st1 \<and>
+   g_killed st2 = e )"
+by auto
+
+lemma exist_pop2 :
+  "Continue st2 = next0 net (Continue st1) \<Longrightarrow>
+   (a,b,c,d) # g_stack st2 = g_stack st1 \<Longrightarrow>
+   account_exists (g_current st1 addr) \<Longrightarrow>
+   account_exists (a addr) \<Longrightarrow>
+   account_exists (g_current st2 addr)"
+by (auto simp add:next0_def Let_def
+  exist_return exist_call exist_transfer
+  exist_update exist_nonce weird_weird weird_weird2
+  create_account_def
+  set_account_code_def
+  split:if_split_asm option.split_asm list.split_asm
+   contract_action.split_asm stack_hint.split_asm
+   instruction_result.splits)
+
 
 lemma can_exit :
   "Finished st2 = next0 net (Continue st1) \<Longrightarrow>
@@ -284,6 +387,257 @@ definition first_return :: "network \<Rightarrow> global0 \<Rightarrow> nat \<Ri
           tl (g_stack st) = g_stack st2 \<and>
     (\<forall>l<k. \<forall>st3. Continue st3 = iter_next net (Continue st) l \<longrightarrow>
                  tl (g_stack st) \<noteq> g_stack st3)))"
+
+lemma iter_next_head :
+  "iter_next net (next0 net g) l = next0 net (iter_next net g l)"
+by (induction l arbitrary:g; auto)
+
+lemma continue_next :
+ "Continue st2 = next0 net g \<Longrightarrow>
+  \<exists>st3. Continue st3 = g"
+by (auto simp add:next0_def Let_def
+  split:if_split_asm option.split_asm list.split_asm
+   contract_action.split_asm stack_hint.split_asm
+   instruction_result.splits global_state.splits)
+
+lemma continues :
+   "Continue st2 = iter_next net g k \<Longrightarrow>
+    \<exists> st3. Continue st3 = g"
+apply (induction k arbitrary:g; auto)
+using continue_next
+  by blast
+
+lemma iter_next_add :
+  "iter_next net g (k+l) =
+   iter_next net (iter_next net g l) k"
+by (induction l arbitrary:g; auto)
+
+lemma continues2 :
+   "Continue st2 = iter_next net g (k+l) \<Longrightarrow>
+    \<exists> st3. Continue st3 = iter_next net g l"
+using continues and iter_next_add
+  by simp
+
+lemma continues3 :
+   "Continue st2 = iter_next net g k \<Longrightarrow>
+    l < k \<Longrightarrow>
+    \<exists> st3. Continue st3 = iter_next net g l"
+  by (metis add.commute less_imp_add_positive continues2)
+
+definition state_mono :: "(world_state \<Rightarrow> bool) \<Rightarrow> global0 \<Rightarrow> bool" where
+"state_mono iv g = (\<forall>i < length (states g)-1.
+   iv (states g!(i+1)) \<longrightarrow> iv (states g!i))"
+
+lemma mono_same :
+  "g_stack st2 = g_stack st1 \<Longrightarrow>
+   (iv (g_current st1) \<longrightarrow> iv (g_current st2)) \<Longrightarrow>
+   state_mono iv st1 \<Longrightarrow>
+   state_mono iv st2"
+apply (auto simp add:state_mono_def states_def)
+apply (case_tac "i"; auto)
+apply (case_tac "i"; auto)
+done
+
+lemma mono_push :
+  "g_stack st2 = (a,b,c,d) # g_stack st1 \<Longrightarrow>
+   ( iv (g_current st1) \<longrightarrow> iv a ) \<Longrightarrow>
+   ( iv a \<longrightarrow> iv (g_current st2) ) \<Longrightarrow>
+   state_mono iv st1 \<Longrightarrow>
+   state_mono iv st2"
+apply (auto simp add:state_mono_def states_def)
+apply (case_tac "i"; auto)
+apply (case_tac "nat"; auto)
+apply (case_tac "i"; auto)
+apply (case_tac "nat"; auto)
+apply (case_tac "i"; auto)
+apply (case_tac "nat"; auto)
+done
+
+lemma mono_simple_pop :
+  "g_stack st1 = (a,b,c,d) # g_stack st2 \<Longrightarrow>
+   g_current st2 = a \<Longrightarrow>
+   state_mono iv st1 \<Longrightarrow>
+   state_mono iv st2"
+by (auto simp add:state_mono_def states_def)
+
+lemma mono_pop2 :
+  "(a,b,c,d) # g_stack st2 = g_stack st1 \<Longrightarrow>
+   ( iv a \<longrightarrow> iv (g_current st2) ) \<Longrightarrow>
+   state_mono iv st1 \<Longrightarrow>
+   state_mono iv st2"
+apply (rule mono_same [of st2 "st2\<lparr>g_current := a\<rparr>" iv])
+apply simp
+apply simp
+using mono_simple_pop
+  by (metis (no_types, lifting) global0.select_convs(2) global0.select_convs(3) global0.surjective global0.update_convs(3))
+
+lemma mono_empty :
+ "g_stack st2 = [] \<Longrightarrow> state_mono iv st2"
+by (auto simp add:state_mono_def states_def)
+
+lemma get_mono :
+  "state_mono iv st1 \<Longrightarrow>
+   g_stack st1 = (a, b, c, d) # rest \<Longrightarrow>
+   iv a \<Longrightarrow>
+   iv (g_current st1)"
+by (auto simp add:state_mono_def states_def)
+
+lemma exist_mono :
+  "Continue st2 = next0 net (Continue st1) \<Longrightarrow>
+   state_mono (\<lambda>st. account_exists (st addr)) st1 \<Longrightarrow> 
+   state_mono (\<lambda>st. account_exists (st addr)) st2"
+apply (cases "g_stack st2 = g_stack st1 \<or>
+   g_stack st2 = tl (g_stack st1) \<or>
+   tl (g_stack st2) = g_stack st1")
+defer
+using stack_changes apply force
+apply auto
+  using exist_same mono_same apply auto[1]
+apply (cases "g_stack st1"; auto simp:mono_empty)
+subgoal for a b c d
+apply (rule mono_pop2 [of a b c d st2 st1]; auto)
+using exist_pop2 [of st2 net st1 a b c d addr] get_mono
+apply force
+done
+apply (cases "g_stack st2"; auto simp:mono_empty)
+subgoal for a b c d
+apply (rule mono_push [of st2 a b c d st1]; auto)
+  using exist_push2 apply force
+  using exist_pop by auto
+done
+
+lemma imed_stack_length_aux :
+"   ( Continue st2 =
+           iter_next net (Continue st3) k \<Longrightarrow>
+           length (g_stack st3) \<le> l \<Longrightarrow>
+           l \<le> length (g_stack st2) \<Longrightarrow>
+           \<exists>st k2.
+              Continue st =
+              iter_next net (Continue st3) k2 \<and>
+              length (g_stack st) = l \<and>
+              k2 \<le> k ) \<Longrightarrow>
+       Continue st2 = iter_next net (Continue st1) (Suc k) \<Longrightarrow>
+       Continue st3 = next0 net (Continue st1) \<Longrightarrow>
+       length (g_stack st1) \<le> l \<Longrightarrow>
+       l \<le> length (g_stack st2) \<Longrightarrow>
+       \<exists>st k2.
+          Continue st =
+          iter_next net (Continue st1) k2 \<and>
+          length (g_stack st) = l \<and> k2 \<le> Suc k"
+apply (cases "g_stack st1 = g_stack st3")
+apply force
+apply (cases "g_stack st3 = tl (g_stack st1)")
+apply force
+apply (cases "g_stack st1 = tl (g_stack st3)")
+apply force
+
+using stack_changes
+apply fastforce
+done
+
+lemma imed_stack_length_aux2 :
+"  \<exists> st3. ( Continue st3 = next0 net (Continue st1) \<and>
+   ( Continue st2 =
+           iter_next net (Continue st3) k \<longrightarrow>
+           length (g_stack st3) \<le> l \<longrightarrow>
+           l \<le> length (g_stack st2) \<longrightarrow>
+           (\<exists>st k2.
+              Continue st =
+              iter_next net (Continue st3) k2 \<and>
+              length (g_stack st) = l \<and>
+              k2 \<le> k ))) \<Longrightarrow>
+       Continue st2 = iter_next net (Continue st1) (Suc k) \<Longrightarrow>
+       length (g_stack st1) \<le> l \<Longrightarrow>
+       l \<le> length (g_stack st2) \<Longrightarrow>
+       \<exists>st k2.
+          Continue st =
+          iter_next net (Continue st1) k2 \<and>
+          length (g_stack st) = l \<and> k2 \<le> Suc k"
+apply auto
+apply (rule imed_stack_length_aux; auto)
+apply (rule imed_stack_length_aux; auto)
+done
+
+lemma ex_and :
+"\<exists>st3. P st3 \<Longrightarrow>
+ \<forall>st. (P st \<longrightarrow> Q st) \<Longrightarrow> 
+ \<exists>st3. P st3 \<and> Q st3"
+by auto
+
+lemma imed_stack_length :
+  "Continue st2 = iter_next net (Continue st1) k \<Longrightarrow>
+   length (g_stack st1) \<le> l \<Longrightarrow>
+   l \<le> length (g_stack st2) \<Longrightarrow>
+   \<exists>st k2. Continue st = iter_next net (Continue st1) k2
+        \<and> length (g_stack st) = l \<and> k2 \<le> k"
+apply (induction k arbitrary:st1)
+apply simp
+apply (rule imed_stack_length_aux2 [of _ _ st2])
+apply auto
+using continues apply force
+done
+
+lemma next_unchanged :
+  "Continue st2 = next0 net (Continue st1) \<Longrightarrow>
+   l \<le> length (g_stack st2) \<Longrightarrow>
+   l \<le> length (g_stack st1) \<Longrightarrow>
+   take l (rev (g_stack st2)) = take l (rev (g_stack st1))"
+apply (cases "g_stack st1 = g_stack st2")
+apply force
+apply (cases "g_stack st2 = tl (g_stack st1)")
+apply auto
+  apply (smt One_nat_def add_diff_cancel_left diff_le_self drop_0 drop_Suc drop_drop drop_rev le_add_diff_inverse length_rev length_tl nat_add_left_cancel_le rev_swap take_rev)
+apply (cases "g_stack st1 = tl (g_stack st2)")
+apply auto
+  apply (smt One_nat_def add_diff_cancel_left add_le_cancel_left diff_le_self drop_0 drop_Suc drop_drop drop_rev le_add_diff_inverse length_rev length_tl rev_swap take_rev)
+using stack_changes
+apply fastforce
+done
+
+lemma stack_unchanged_split :
+  "Continue st2 = iter_next net (next0 net (Continue st1)) k \<Longrightarrow>
+   \<exists>st3. Continue st3 = next0 net (Continue st1) \<and>
+     (take l (rev (g_stack st2)) = take l (rev (g_stack st3)) \<and>
+     take l (rev (g_stack st3)) = take l (rev (g_stack st1))) \<Longrightarrow>
+   take l (rev (g_stack st2)) = take l (rev (g_stack st1))"
+by auto
+
+lemma helper :
+  "(\<And>st1. A1 (st1::global0) \<Longrightarrow> A2 st1 \<Longrightarrow> f x = f st1) \<Longrightarrow>
+    A1 st \<Longrightarrow> A2 st \<Longrightarrow> f x = f st"
+by auto
+
+lemma stack_unchanged :
+  "Continue st2 = iter_next net (Continue st1) k \<Longrightarrow>
+   (\<forall>sti. \<forall> k1 \<le> k.
+   Continue sti = iter_next net (Continue st1) k1 \<longrightarrow>
+   l \<le> length (g_stack sti) ) \<Longrightarrow>
+   take l (rev (g_stack st2)) = take l (rev (g_stack st1))"
+apply (induction k arbitrary:st1)
+apply simp
+apply auto
+subgoal for k st3
+apply (rule stack_unchanged_split)
+apply auto
+apply (rule ex_and)
+using continues apply force
+apply auto
+defer
+apply (rule next_unchanged)
+apply auto
+apply force
+apply force
+subgoal for st
+apply (rule helper [of "\<lambda>st1. iter_next net (next0 net (Continue st3)) k =
+        iter_next net (Continue st1) k"
+  "\<lambda>st1. \<forall>sti k1.
+           k1 \<le> k \<longrightarrow>
+           Continue sti =
+           iter_next net (Continue st1) k1 \<longrightarrow>
+           l \<le> length (g_stack sti)"])
+apply auto
+  by fastforce
+done done
 
 (* account existence continues until first return *)
 
