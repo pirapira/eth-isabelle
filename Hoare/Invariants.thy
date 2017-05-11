@@ -380,14 +380,6 @@ by (auto simp add:next0_def Let_def
    contract_action.split_asm stack_hint.split_asm
    instruction_result.splits)
 
-definition first_return :: "network \<Rightarrow> global0 \<Rightarrow> nat \<Rightarrow> bool" where
-"first_return net st k = (
-   iter_next net (Continue st) k = Unimplemented \<or>
-   (\<exists>st2. Continue st2 = iter_next net (Continue st) k \<and>
-          tl (g_stack st) = g_stack st2 \<and>
-    (\<forall>l<k. \<forall>st3. Continue st3 = iter_next net (Continue st) l \<longrightarrow>
-                 tl (g_stack st) \<noteq> g_stack st3)))"
-
 lemma iter_next_head :
   "iter_next net (next0 net g) l = next0 net (iter_next net g l)"
 by (induction l arbitrary:g; auto)
@@ -639,7 +631,36 @@ apply auto
   by fastforce
 done done
 
+definition takeLast :: "nat \<Rightarrow> 'a list \<Rightarrow> 'a list" where
+"takeLast n lst = rev (take n (rev lst))"
+
+lemma takeLast_drop :
+  "takeLast n lst = drop (length lst - n) lst"
+apply (induction lst arbitrary:n)
+apply (auto simp add:takeLast_def)
+  by (metis length_Cons length_rev rev.simps(2) rev_append rev_rev_ident take_append take_rev)
+
+lemma find_stack :
+  "Continue st2 = iter_next net (Continue st1) k \<Longrightarrow>
+   length (g_stack st2) \<le> length (g_stack st1) \<Longrightarrow>
+   \<exists>k3 st3. Continue st3 = iter_next net (Continue st1) k3 \<and>
+   g_stack st3 = takeLast (length (g_stack st2)) (g_stack st1) \<and>
+   k3 \<le> k"
+
+
 (* account existence continues until first return *)
+
+definition first_return :: "network \<Rightarrow> nat \<Rightarrow> global0 \<Rightarrow> global0 \<Rightarrow> bool" where
+"first_return net k st st2 = (
+   (Continue st2 = iter_next net (Continue st) k \<and>
+          tl (g_stack st) = g_stack st2 \<and>
+    (\<forall>l<k. \<forall>st3. Continue st3 = iter_next net (Continue st) l \<longrightarrow>
+                 tl (g_stack st) \<noteq> g_stack st3)))"
+
+lemma stack_length_return :
+  "first_return net k st st3 \<Longrightarrow>
+   Continue st2 = iter_next net (Continue st1) k2 \<Longrightarrow>
+   length (g_stack st2) > length (g_stack st3)"
 
 lemma exist_until_return :
   "account_exists (g_current st1 addr) \<Longrightarrow>
