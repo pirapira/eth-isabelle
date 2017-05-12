@@ -270,5 +270,75 @@ done
 
 (* monotonic invariants *)
 
+definition monoI :: "('a \<Rightarrow> 'b list) \<Rightarrow> ('a \<Rightarrow> 'b) \<Rightarrow> ('b \<Rightarrow> bool) \<Rightarrow> 'a \<Rightarrow> bool" where
+"monoI lst cur iv g = (\<forall>i < length (lst g).
+   iv (lst g!i) \<longrightarrow> iv ((cur g # lst g)!i))"
+
+definition mono_same :: "('a \<Rightarrow> 'b list) \<Rightarrow> ('a \<Rightarrow> 'b) \<Rightarrow> ('b \<Rightarrow> bool) \<Rightarrow> 'a rel \<Rightarrow> bool" where
+"mono_same lst cur iv r ==
+   (\<forall>g1 g2. r g1 g2 \<longrightarrow> lst g1 = lst g2 \<longrightarrow> iv (cur g1) \<longrightarrow> iv (cur g2))"
+
+definition mono_pop :: "('a \<Rightarrow> 'b list) \<Rightarrow> ('a \<Rightarrow> 'b) \<Rightarrow> ('b \<Rightarrow> bool) \<Rightarrow> 'a rel \<Rightarrow> bool" where
+"mono_pop lst cur iv r ==
+   (\<forall>g1 g2 a. r g1 g2 \<longrightarrow> a # lst g2 = lst g1 \<longrightarrow> iv (cur g1) \<longrightarrow>
+            iv a \<longrightarrow> iv (cur g2))"
+
+definition mono_push :: "('a \<Rightarrow> 'b list) \<Rightarrow> ('a \<Rightarrow> 'b) \<Rightarrow> ('b \<Rightarrow> bool) \<Rightarrow> 'a rel \<Rightarrow> bool" where
+"mono_push lst cur iv r ==
+   (\<forall>g1 g2 a. r g1 g2 \<longrightarrow> a # lst g1 = lst g2 \<longrightarrow> iv (cur g1) \<longrightarrow> iv a) \<and>
+   (\<forall>g1 g2 a. r g1 g2 \<longrightarrow> a # lst g1 = lst g2 \<longrightarrow> iv a \<longrightarrow> iv (cur g2))"
+
+definition mono_rules :: "('a \<Rightarrow> 'b list) \<Rightarrow> ('a \<Rightarrow> 'b) \<Rightarrow> ('b \<Rightarrow> bool) \<Rightarrow> 'a rel \<Rightarrow> bool" where
+"mono_rules lst cur iv r ==
+   mono_same lst cur iv r \<and>
+   mono_pop lst cur iv r \<and>
+   mono_push lst cur iv r"
+
+lemma mono_same :
+   "monoI lst cur iv g1 \<Longrightarrow>
+    r g1 g2 \<Longrightarrow>
+    mono_same lst cur iv r \<Longrightarrow>
+    lst g1 = lst g2 \<Longrightarrow>
+    monoI lst cur iv g2"
+unfolding monoI_def mono_same_def
+by (metis nth_non_equal_first_eq)
+
+lemma mono_push :
+   "monoI lst cur iv g1 \<Longrightarrow>
+    r g1 g2 \<Longrightarrow>
+    mono_push lst cur iv r \<Longrightarrow>
+    lst g2 = a # lst g1 \<Longrightarrow>
+    monoI lst cur iv g2"
+unfolding monoI_def mono_push_def
+by (auto, metis (no_types, lifting) diff_Suc_1 less_Suc_eq_0_disj nth_Cons')
+
+lemma mono_pop :
+   "monoI lst cur iv g1 \<Longrightarrow>
+    r g1 g2 \<Longrightarrow>
+    mono_pop lst cur iv r \<Longrightarrow>
+    lst g1 = a # lst g2 \<Longrightarrow>
+    monoI lst cur iv g2"
+unfolding monoI_def mono_pop_def
+by (auto, metis gr0_conv_Suc length_Cons linorder_neqE_nat not_less_eq nth_Cons_0 nth_Cons_Suc)
+
+lemma mono_works :
+   "monoI lst cur iv g1 \<Longrightarrow>
+    r g1 g2 \<Longrightarrow>
+    push_pop r lst \<Longrightarrow>
+    mono_rules lst cur iv r \<Longrightarrow>
+    monoI lst cur iv g2"
+unfolding mono_rules_def
+apply clarsimp
+apply (cases "lst g1 = lst g2")
+using mono_same apply metis
+apply (cases "lst g2 = tl (lst g1)")
+using mono_pop [of lst cur iv g1 r g2]
+  apply (metis hd_Cons_tl tl_Nil)
+apply (cases "lst g1 = tl (lst g2)")
+using mono_push [of lst cur iv g1 r g2]
+  apply (metis hd_Cons_tl tl_Nil)
+using push_pop_def apply metis
+done
+
 end
 
