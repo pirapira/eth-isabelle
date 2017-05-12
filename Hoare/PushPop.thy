@@ -340,5 +340,241 @@ using mono_push [of lst cur iv g1 r g2]
 using push_pop_def apply metis
 done
 
+(* first return stack length *)
+
+definition firstR :: "'a rel \<Rightarrow> nat \<Rightarrow> 'a rel \<Rightarrow> 'a rel" where
+"firstR r k P st1 st2 ==
+   iterR k r st1 st2 \<and> P st1 st2 \<and>
+   (\<forall>l1 l2 st3. l2 > 0 \<longrightarrow> l1+l2 = k \<longrightarrow>
+      iterR l1 r st1 st3 \<longrightarrow>
+      iterR l2 r st3 st2 \<longrightarrow>
+      \<not>P st1 st3)"
+
+definition first_return :: "('a \<Rightarrow> 'b list) \<Rightarrow> 'a rel \<Rightarrow> nat \<Rightarrow> 'a rel" where
+"first_return lst r k st1 st2 =
+    firstR r k (\<lambda>a b. lst b = tl (lst a)) st1 st2"
+
+definition first_smaller :: "('a \<Rightarrow> nat) \<Rightarrow> 'a rel \<Rightarrow> nat \<Rightarrow> 'a rel" where
+"first_smaller lst r k st1 st2 =
+    firstR r k (\<lambda>a b. lst b < lst a) st1 st2"
+
+
+definition u_firstR :: "'a rel \<Rightarrow> nat \<Rightarrow> 'a rel \<Rightarrow> 'a rel" where
+"u_firstR r k P st1 st2 ==
+   iterR k r st1 st2 \<and> P st1 st2 \<and>
+   (\<forall>k3 st3. k3 < k \<longrightarrow>
+      iterR k3 r st1 st3 \<longrightarrow>
+      \<not>P st1 st3)"
+
+definition u_first_return :: "('a \<Rightarrow> 'b list) \<Rightarrow> 'a rel \<Rightarrow> nat \<Rightarrow> 'a rel" where
+"u_first_return lst r k st1 st2 =
+    u_firstR r k (\<lambda>a b. lst b = tl (lst a)) st1 st2"
+
+definition u_first_smaller :: "('a \<Rightarrow> nat) \<Rightarrow> 'a rel \<Rightarrow> nat \<Rightarrow> 'a rel" where
+"u_first_smaller lst r k st1 st2 =
+    u_firstR r k (\<lambda>a b. lst b < lst a) st1 st2"
+
+definition u_first_one_smaller :: "('a \<Rightarrow> nat) \<Rightarrow> 'a rel \<Rightarrow> nat \<Rightarrow> 'a rel" where
+"u_first_one_smaller lst r k st1 st2 =
+    u_firstR r k (\<lambda>a b. Suc (lst b) = lst a) st1 st2"
+
+lemma first_simple :
+   "firstR r k P st1 st2 \<Longrightarrow> urel r \<Longrightarrow> u_firstR r k P st1 st2"
+unfolding firstR_def u_firstR_def
+by (metis iter_add1 less_imp_add_positive)
+
+lemma u_first_simple :
+   "u_firstR r k P st1 st2 \<Longrightarrow> firstR r k P st1 st2"
+unfolding firstR_def u_firstR_def
+using less_add_same_cancel1 by blast
+
+(* it is the same as first with that length *)
+
+lemma first_smaller_foo :
+   "inc_dec r f \<Longrightarrow>
+    u_first_one_smaller f r k st1 st2 \<Longrightarrow>
+    u_first_one_smaller f r k st1 st2 \<Longrightarrow>
+    u_first_smaller f r k st1 st2"
+apply (subst (asm) u_first_one_smaller_def)
+apply (auto simp add: u_first_smaller_def u_firstR_def)
+subgoal for k4 st4
+apply (drule spec[where x = k4], auto)
+apply (drule spec[where x = st4], auto)
+using all_values [of r f st1 st4 "f st1 - 1" k4]
+apply (auto simp: u_first_one_smaller_def u_firstR_def)
+  by (smt One_nat_def diff_Suc_1 diff_le_self le_less_trans max_def min.absorb2 not_less not_less_eq_eq)
+done
+
+lemma first_smaller :
+   "inc_dec r f \<Longrightarrow>
+    u_first_one_smaller f r k st1 st2 \<Longrightarrow>
+    u_first_smaller f r k st1 st2"
+using first_smaller_foo by fastforce
+
+lemma first_smaller2 :
+   "inc_dec r f \<Longrightarrow>
+    urel r \<Longrightarrow>
+    u_first_smaller f r k st1 st2 \<Longrightarrow>
+    u_first_one_smaller f r k st1 st2"
+apply (auto simp add: u_first_smaller_def u_first_one_smaller_def u_firstR_def)
+defer apply fastforce
+
+using all_values [of r f st1 st2 "f st1 - 1" k]
+apply auto
+proof -
+  assume a1: "urel r"
+  assume a2: "iterR k r st1 st2"
+  assume a3: "f st2 < f st1"
+  assume a4: "\<forall>k3<k. \<forall>st3. iterR k3 r st1 st3 \<longrightarrow> \<not> f st3 < f st1"
+  assume "\<lbrakk>min (f st1) (f st2) \<le> f st1 - Suc 0; f st1 - Suc 0 \<le> max (f st1) (f st2)\<rbrakk> \<Longrightarrow> \<exists>c k1. iterR k1 r st1 c \<and> k1 \<le> k \<and> f c = f st1 - Suc 0"
+  then obtain nn :: nat and aa :: 'a where
+    f5: "\<not> min (f st1) (f st2) \<le> f st1 - Suc 0 \<or> \<not> f st1 - Suc 0 \<le> max (f st1) (f st2) \<or> iterR nn r st1 aa \<and> nn \<le> k \<and> f st1 - Suc 0 = f aa"
+    by (metis (full_types))
+  obtain nna :: "nat \<Rightarrow> nat \<Rightarrow> nat" where
+    f6: "\<forall>n na. \<not> n < na \<or> Suc n = na \<or> n < nna n na \<and> Suc (nna n na) = na"
+    by (metis (no_types) lessE)
+  have f7: "1 = Suc 0"
+    by (metis Suc_diff_Suc diff_Suc_1 diff_self_eq_0 lessI)
+  then have f8: "iterR nn r st1 aa \<or> \<not> min (f st1) (f st2) \<le> f st1 - 1 \<or> \<not> f st1 - 1 \<le> max (f st1) (f st2)"
+    using f5 by (metis (no_types))
+  have f9: "\<forall>a p n aa ab. \<not> urel p \<or> \<not> iterR n p (ab::'a) aa \<or> a = aa \<or> \<not> iterR n p ab a"
+    by (metis (no_types) iter_urel urel_def)
+  have f10: "min (f st1) (f st2) = f st2"
+    using a3 by (meson min_def not_less)
+  have f11: "max (f st1) (f st2) = f st1"
+    using a3 by (meson max_def not_less)
+  have f12: "\<not> f st2 \<le> f st1 - 1 \<or> f st1 - 1 = f aa \<or> \<not> f st1 - 1 \<le> max (f st1) (f st2)"
+    using f10 f7 f5 by (metis (no_types))
+  have f13: "iterR nn r st1 aa \<or> \<not> f st2 \<le> f st1 - 1 \<or> \<not> f st1 - 1 \<le> f st1"
+    using f11 f10 f8 by metis
+  have f14: "k = nn \<or> \<not> k \<le> nn \<or> \<not> f st2 \<le> f st1 - 1 \<or> \<not> f st1 - 1 \<le> f st1"
+    using f11 f10 f7 f5 by (metis (no_types) le_less not_less)
+  have f15: "k = nn \<or> f st1 = f aa \<or> \<not> f aa \<le> f st1 \<or> \<not> f st2 \<le> f st1 - 1 \<or> \<not> f st1 - 1 \<le> f st1"
+    using f11 f10 f7 f5 a4 by (metis (no_types) le_less)
+  { assume "Suc (f st2) \<noteq> f st1"
+    { assume "st2 \<noteq> aa"
+      moreover
+      { assume "f st1 \<noteq> f aa \<and> st2 \<noteq> aa"
+        moreover
+        { assume "k \<le> nn \<and> st2 \<noteq> aa"
+          then have "\<not> iterR k r st1 aa \<and> k \<le> nn"
+            using f9 a2 a1 by metis
+          then have "f st1 - 1 = f aa \<longrightarrow> f st1 < f aa \<or> f aa < f st2"
+  using f14 f13 by (metis (no_types) not_less) }
+  ultimately have "f st1 - 1 = f aa \<longrightarrow> f st1 - 1 < f st2 \<or> f st1 < f aa"
+    using f15 by (metis (no_types) le_less not_less) }
+  ultimately have "Suc (f aa) = f st1 \<longrightarrow> f st1 < f st1 - 1 \<or> f st1 - 1 < f st2"
+    by (metis diff_Suc_1 lessI) }
+  moreover
+  { assume "Suc (f aa) \<noteq> f st1"
+    moreover
+    { assume "Suc (f aa) \<noteq> f st1 \<and> \<not> f st1 < f st1 - 1"
+      moreover
+        { assume "Suc (f aa) \<noteq> f st1 \<and> f st1 - 1 \<le> f st1 \<and> \<not> f st1 - 1 < f st2"
+          then have "f st1 - 1 \<noteq> nna (f st2) (f st1) \<or> Suc (nna (f st2) (f st1)) \<noteq> f st1"
+            using f12 f11 by (metis (no_types) not_less) }
+      ultimately have "Suc (nna (f st2) (f st1)) = f st1 \<and> f st1 - 1 = nna (f st2) (f st1) \<longrightarrow> f st1 - 1 < f st2"
+        by (meson not_less) }
+    ultimately have "Suc (nna (f st2) (f st1)) = f st1 \<and> f st1 - 1 = nna (f st2) (f st1) \<longrightarrow> f st1 < f st1 - 1 \<or> f st1 - 1 < f st2"
+      by meson }
+  ultimately have "Suc (f st2) = f st1"
+    using f6 a3 by (metis (no_types) diff_Suc_1 le_less lessI not_less) }
+  then show "Suc (f st2) = f st1"
+    by metis
+qed
+
+(*
+lemma all_values2_aux :
+  "(min (f z) (f b) \<le> x \<Longrightarrow>
+          x \<le> max (f z) (f b) \<Longrightarrow>
+          iterR k r z b \<Longrightarrow>
+          \<exists>c k1 k2.
+             iterR k1 r z c \<and> iterR k2 r c b \<and> f c = x) \<Longrightarrow>
+    inc_dec r f \<Longrightarrow>
+    min (f aa) (f b) \<le> x \<Longrightarrow>
+    x \<le> max (f aa) (f b) \<Longrightarrow>
+    r aa z \<Longrightarrow>
+    iterR k r z b \<Longrightarrow>
+    \<exists>c k1 k2. iterR k1 r aa c \<and> iterR k2 r c b \<and> f c = x"
+apply (cases "f aa = f z")
+apply auto
+  apply (metis iterR.simps(2))
+
+apply (cases "f aa = Suc (f z)")
+apply auto
+defer
+apply (cases "Suc (f aa) = f z")
+apply auto
+
+done
+
+lemma all_values :
+  "inc_dec r f \<Longrightarrow>
+   min (f a) (f b) \<le> x \<Longrightarrow>
+   x \<le> max (f a) (f b) \<Longrightarrow>
+   iterR k r a b \<Longrightarrow>
+   \<exists>c k1. iterR k1 r a c \<and> k1 \<le> k \<and> f c = x"
+apply (induction k arbitrary: a, simp)
+apply auto
+subgoal for k aa z
+using all_values_aux [of f z b x k r aa]
+by force
+done
+*)
+
+lemma first_return_smaller :
+   assumes a1:"first_return lst r k st1 st2"
+   and a2:"length (lst st1) > 0"
+   and a3:"push_pop r lst"
+   shows "first_smaller (\<lambda>a. length (lst a)) r k st1 st2"
+
+
+lemma first_return_smaller :
+   "first_return lst r k st1 st2 \<Longrightarrow>
+    length (lst st1) > 0 \<Longrightarrow>
+    push_pop r lst \<Longrightarrow>
+    first_smaller (\<lambda>a. length (lst a)) r k st1 st2"
+apply (auto simp add: first_return_def first_smaller_def firstR_def)
+subgoal for l1 l2 st3
+apply (drule spec2[where x = l1 and y = l2], auto)
+apply (drule spec[where x = st3], auto)
+using all_values[of r
+ "\<lambda>a. length (lst a)" st1 st3 "length (lst st1)-1" l1] apply auto
+apply (cases "inc_dec r (\<lambda>a. length (lst a))", auto)
+defer
+using push_pop_inc_dec apply force
+apply (cases "min (length (lst st1)) (length (lst st3))
+     \<le> length (lst st1) - Suc 0")
+defer
+  apply linarith
+apply auto
+apply (cases "length (lst st1) - Suc 0
+     \<le> max (length (lst st1)) (length (lst st3))")
+defer
+  apply linarith
+apply auto
+subgoal for st4 k4
+(* now we should use uniqueness *)
+(* but the assumption we needed was deleted --
+   use structured proof *)
+
+lemma first_return_stack :
+   "first_return lst r k st1 st2 \<Longrightarrow>
+    k3 < k \<Longrightarrow>
+    iterR k3 r st1 st3 \<Longrightarrow>
+    takeLast (lst st3) "
+apply (auto simp add: first_return_def firstR_def)
+
+(*
+lemma first_return_stack :
+   "first_return lst r k st1 st2 \<Longrightarrow>
+    l < k \<Longrightarrow>
+    "
+*)
+
+(* monotonic invariant holds until first return *)
+
+(* monotonic invariant with nat or int? *)
+
 end
 
