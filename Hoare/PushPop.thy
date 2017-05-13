@@ -483,6 +483,33 @@ proof -
     by metis
 qed
 
+definition path :: "'a rel \<Rightarrow> 'a list \<Rightarrow> bool" where
+"path r lst = (\<forall>i < length lst-1. r (lst!i) (lst!(i+1)))"
+
+fun pathR :: "'a rel \<Rightarrow> 'a list \<Rightarrow> bool" where
+"pathR r (a#b#rest) = (r a b \<and> pathR r (b#rest))"
+| "pathR r _ = True"
+
+lemma path_defs : "pathR r lst = path r lst"
+apply (simp add:path_def)
+apply (induction lst; simp)
+apply (case_tac lst; auto simp add:less_Suc_eq_0_disj)
+done
+
+fun tlR :: "'a list \<Rightarrow> 'a list \<Rightarrow> bool" where
+"tlR (a#lst) b = (b=lst)"
+| "tlR _ _ = False"
+
+definition push_pop_s :: "'a list rel \<Rightarrow> bool" where
+"push_pop_s r == (\<forall>a b. r a b \<longrightarrow> a = b \<or> tlR a b \<or> tlR b a)"
+
+(* should the relations be handled as sets? *)
+
+definition inc_dec_s :: "nat rel \<Rightarrow> bool" where
+"inc_dec_s r == (\<forall>a b. r a b \<longrightarrow> a = b \<or> a = Suc b \<or> Suc a = b)"
+
+(* is it better to apply these relations to sequences? *)
+
 (*
 lemma all_values2_aux :
   "(min (f z) (f b) \<le> x \<Longrightarrow>
