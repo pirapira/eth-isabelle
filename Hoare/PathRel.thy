@@ -232,5 +232,70 @@ proof -
     by (metis (no_types) nth_Cons_0)
 qed
 
+definition hd_last :: "'a list \<Rightarrow> 'a \<Rightarrow> 'a \<Rightarrow> bool" where
+"hd_last lst a b = (hd lst = a \<and> last lst = b \<and> length lst > 0)"
+
+lemma list_all_values :
+   "inc_decL lst \<Longrightarrow>
+    length lst > 0 \<Longrightarrow>
+    min (hd lst) (last lst) \<le> x \<Longrightarrow>
+    x \<le> max (hd lst) (last lst) \<Longrightarrow>
+    x \<in> set lst"
+apply (induction lst)
+apply (auto simp add:inc_decL_def inc_dec_def sucR_def)
+apply (case_tac lst; auto)
+  using le_less min_le_iff_disj sup.cobounded2 sup_nat_def apply fastforce
+  by fastforce
+
+definition takeLast :: "nat \<Rightarrow> 'a list \<Rightarrow> 'a list" where
+"takeLast n lst = rev (take n (rev lst))"
+
+lemma takeLast_drop :
+  "takeLast n lst = drop (length lst - n) lst"
+apply (induction lst arbitrary:n)
+apply (auto simp add:takeLast_def)
+  by (metis length_Cons length_rev rev.simps(2) rev_append rev_rev_ident take_append take_rev)
+
+(* unchanged *)
+lemma next_unchanged :
+  "(st1, st2) \<in> push_pop \<Longrightarrow>
+   l \<le> length st2 \<Longrightarrow>
+   l \<le> length st1 \<Longrightarrow>
+   takeLast l st2 = takeLast l st1"
+by (auto simp:push_pop_def tlR_def takeLast_def)
+
+lemma pathR2 : "pathR r [a, b] = ((a,b) \<in> r)"
+by auto
+
+lemma pathR3 :
+ "pathR r (a # b # list) = ((a,b) \<in> r \<and> pathR r (b#list))"
+by auto
+
+declare pathR.simps [simp del]
+
+lemma stack_unchanged :
+  "push_popL lst \<Longrightarrow>
+   length lst > 0 \<Longrightarrow>
+   (* hd_last lst a b \<Longrightarrow> *)
+   \<forall>sti \<in> set lst. l \<le> length sti \<Longrightarrow>
+   takeLast l (hd lst) = takeLast l (last lst)"
+apply (induction lst)
+apply (auto simp:push_popL_def hd_last_def)
+by (metis (no_types, lifting) hd_conv_nth list.set_cases list.set_sel(1) next_unchanged nth_Cons_0 pathR.simps(1))
+
+lemma take_all [simp] : "takeLast (length a) a = a"
+by (simp add:takeLast_def)
+
+lemma find_return :
+   "push_popL lst \<Longrightarrow>
+    length lst > 0 \<Longrightarrow>
+    length (last lst) \<le> length (hd lst) \<Longrightarrow>
+    takeLast (length (last lst)) (hd lst) \<in> set lst"
+apply (induction lst; auto simp:push_pop_def push_popL_def)
+apply (case_tac lst; auto)
+  apply (metis PathRel.take_all le_refl next_unchanged pathR.simps(1) push_pop_def)
+apply (auto simp:pathR.simps)
+  apply (smt Nitpick.size_list_simp(2) PathRel.take_all basic_trans_rules(31) inf_sup_aci(5) le_SucE list.sel(3) mem_Collect_eq next_unchanged prod.sel(1) prod.sel(2) push_pop_def sup.cobounded2 tlR_def zero_order(2))
+  by (smt Suc_leD Suc_leI inf_sup_aci(5) inf_sup_ord(3) le_imp_less_Suc length_Cons mem_Collect_eq next_unchanged prod.inject push_pop_def subset_eq tlR_def)
 
 end
