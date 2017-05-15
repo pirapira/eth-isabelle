@@ -304,4 +304,246 @@ apply auto
 apply (auto simp add:path_defs path_def)
   by (smt One_nat_def Suc_eq_plus1 Suc_lessI Suc_n_not_le_n diff_less hd_conv_nth less_diff_conv less_or_eq_imp_le neq0_conv)
 
+definition minList :: "nat list \<Rightarrow> nat" where
+"minList lst = foldr min lst (hd lst)"
+
+definition maxList :: "nat list \<Rightarrow> nat" where
+"maxList lst = foldr max lst (hd lst)"
+
+lemma min_exists_aux :
+   "n < length lst \<Longrightarrow>
+    0 < length lst \<Longrightarrow>
+    foldr min lst (x::nat) \<le> lst!n"
+apply (induction lst arbitrary:n x; auto)
+  using less_Suc_eq_0_disj min.coboundedI2 by fastforce
+
+lemma max_exists_aux :
+   "n < length lst \<Longrightarrow>
+    0 < length lst \<Longrightarrow>
+    foldr max lst (x::nat) \<ge> lst!n"
+apply (induction lst arbitrary:n x; auto)
+  using less_Suc_eq_0_disj max.coboundedI2 by fastforce
+
+lemma min_exists :
+   "length lst > 0 \<Longrightarrow> n < length lst \<Longrightarrow>
+    minList lst \<le> lst!n"
+unfolding minList_def
+using min_exists_aux by simp
+
+lemma max_exists :
+   "length lst > 0 \<Longrightarrow> n < length lst \<Longrightarrow>
+    maxList lst \<ge> lst!n"
+unfolding maxList_def
+using max_exists_aux by simp
+
+
+lemma min_max :
+  "length lst > 0 \<Longrightarrow>
+   set lst \<subseteq> {minList lst .. maxList lst}"
+by (metis atLeastAtMost_iff in_set_conv_nth max_exists min_exists subsetI)
+
+lemma minList_one : "minList [a] = a"
+by (simp add:minList_def)
+
+lemma min_aux : "foldr min lst (x::nat) \<le> x"
+by (induction lst arbitrary:x; auto simp add: min.coboundedI2)
+
+lemma max_aux : "foldr max lst (x::nat) \<ge> x"
+by (induction lst arbitrary:x; auto simp add: max.coboundedI2)
+
+lemma minlist1 : "a \<le> b \<Longrightarrow> minList (a # b # list) = minList (a#list)"
+by (simp add: minList_def)
+
+lemma maxlist1 : "a \<ge> b \<Longrightarrow> maxList (a # b # list) = maxList (a#list)"
+by (simp add: maxList_def)
+
+lemma min_smaller :
+   "x \<le> y \<Longrightarrow> foldr min lst (x::nat) \<le> foldr min lst y"
+by (induction lst arbitrary:x; auto simp add: min.coboundedI2)
+
+lemma min_min : "a \<ge> (b::nat) \<Longrightarrow> min a (min b c) = min b c"
+by simp
+
+lemma min_min2 : "a \<le> (b::nat) \<Longrightarrow> min a (min b c) = min a c"
+by simp
+
+lemma min_simp : "a < (b::nat) \<Longrightarrow> min b a = a"
+by simp
+
+lemma min_of_min :
+   "b \<le> (a::nat) \<Longrightarrow> min b (foldr min lst a) = min b (foldr min lst b)"
+by (induction lst; auto)
+
+lemma max_of_max :
+   "b \<ge> (a::nat) \<Longrightarrow> max b (foldr max lst a) = max b (foldr max lst b)"
+by (induction lst; auto)
+
+lemma minlist_swap :
+   "minList (a # b # list) = minList (b # a # list)"
+apply (simp add: minList_def)
+apply (cases "a \<ge> b")
+apply (auto simp add:min_min min_min2)
+apply (rule min_of_min; auto)
+using min_of_min [of a b list]
+  by auto
+
+lemma maxlist_swap :
+   "maxList (a # b # list) = maxList (b # a # list)"
+by (simp add: maxList_def;cases "a \<le> b"; metis linear max.left_commute max_of_max)
+
+lemma minlist2 : "a \<ge> b \<Longrightarrow> minList (a # b # list) = minList (b#list)"
+  using minlist1 minlist_swap by fastforce
+
+lemma maxlist2 : "a \<le> b \<Longrightarrow> maxList (a # b # list) = maxList (b#list)"
+  using maxlist1 maxlist_swap by fastforce
+
+lemma find_min :
+  "length lst > 0 \<Longrightarrow> \<exists>k. minList lst = lst!k"
+apply (induction lst; auto)
+apply (case_tac lst; auto simp add:minList_one)
+  apply (metis nth_Cons_0)
+apply (case_tac "aa \<le> a")
+apply (simp add:minlist2)
+  apply (metis nth_Cons_Suc)
+apply (case_tac "a \<le> aa")
+apply (case_tac k)
+apply auto
+apply (simp add:minList_def min_min2)
+apply (rule exI[where x = 0])
+apply auto
+  apply (metis min_absorb2 min_aux min_def min_of_min)
+apply (case_tac "a \<le> minList (aa#list)")
+apply auto
+apply (rule exI[where x = 0])
+apply auto
+apply (simp add:minList_def min_min2)
+  apply (metis min.absorb2 min_aux min_def min_of_min)
+subgoal for a b list nat
+apply (rule exI[where x = "nat+2"])
+apply auto
+apply (simp add:minList_def min_min2)
+  by (metis min_def min_of_min)
+done
+
+lemma find_max :
+  "length lst > 0 \<Longrightarrow> \<exists>k. maxList lst = lst!k"
+apply (induction lst; auto)
+apply (case_tac lst; auto)
+apply (simp add:maxList_def)
+  apply (metis nth_Cons_0)
+apply (case_tac "aa \<ge> a")
+apply (simp add:maxlist2)
+  apply (metis nth_Cons_Suc)
+apply (case_tac "a \<ge> aa")
+apply (case_tac k)
+apply auto
+apply (rule exI[where x = 0])
+  apply (metis foldr.simps(2) list.sel(1) max.orderE maxList_def max_of_max nth_Cons_0 o_apply)
+apply (case_tac "a \<ge> maxList (aa#list)")
+apply auto
+apply (rule exI[where x = 0])
+apply auto
+  apply (metis foldr.simps(2) list.sel(1) max.orderE maxList_def max_of_max o_apply)
+subgoal for a b list nat
+apply (rule exI[where x = "nat+2"])
+apply auto
+apply (simp add:maxList_def)
+  by (smt inf_sup_aci(5) max_def max_of_max sup_nat_def)
+done
+
+lemma find_max2 :
+  "length lst > 0 \<Longrightarrow> \<exists>k < length lst. maxList lst = lst!k"
+apply (induction lst; auto)
+apply (case_tac lst; auto)
+apply (simp add:maxList_def)
+apply (case_tac "aa \<ge> a")
+apply (simp add:maxlist2)
+  apply auto[1]
+apply (case_tac "a \<ge> aa")
+apply (case_tac k)
+apply auto
+apply (rule exI[where x = 0])
+subgoal for a b list
+apply auto
+  apply (metis foldr.simps(2) list.sel(1) max.orderE maxList_def max_of_max nth_Cons_0 o_apply)
+done
+apply (case_tac "a \<ge> maxList (aa#list)")
+apply auto
+apply (rule exI[where x = 0])
+apply auto
+  apply (metis foldr.simps(2) list.sel(1) max.orderE maxList_def max_of_max o_apply)
+subgoal for a b list nat
+apply (rule exI[where x = "nat+2"])
+apply auto
+apply (simp add:maxList_def)
+  by (smt inf_sup_aci(5) max_def max_of_max sup_nat_def)
+done
+
+lemma find_min2 :
+  "length lst > 0 \<Longrightarrow> \<exists>k < length lst. minList lst = lst!k"
+apply (induction lst; auto)
+apply (case_tac lst; auto)
+apply (simp add:minList_def)
+apply (case_tac "aa \<le> a")
+apply (simp add:minlist2)
+  apply auto[1]
+apply (case_tac "a \<le> aa")
+apply (case_tac k)
+apply auto
+apply (rule exI[where x = 0])
+subgoal for a b list
+apply auto
+  apply (metis foldr.simps(2) list.sel(1) min.orderE minList_def min_of_min o_apply)
+done
+apply (case_tac "a \<le> minList (aa#list)")
+apply auto
+apply (rule exI[where x = 0])
+apply auto
+  apply (metis foldr.simps(2) list.sel(1) min.orderE minList_def min_of_min o_apply)
+subgoal for a b list nat
+apply (rule exI[where x = "nat+2"])
+apply auto
+apply (simp add:minList_def)
+  by (smt inf_sup_aci(5) min_def min_of_min sup_nat_def)
+done
+
+lemma clip_set : "set (clip imin imax lst) \<subseteq> set lst"
+  by (metis clip_def dual_order.trans set_drop_subset set_take_subset)
+
+lemma min_max_all_values :
+   "inc_decL lst \<Longrightarrow>
+    length lst > 0 \<Longrightarrow>
+    {minList lst .. maxList lst} \<subseteq> set lst"
+using find_min2 [of lst] find_max2 [of lst]
+apply clarsimp
+subgoal for x imin imax
+apply (case_tac "imax = imin")
+apply simp
+
+apply (case_tac "imax < imin")
+using list_all_values [of "clip imin imax lst"]
+apply (simp add:hd_clip last_clip inc_decL_def
+  pathR_clip)
+apply (cases "clip imin imax lst = []"; auto)
+apply (simp add:clip_def)
+using clip_set [of imin imax lst]
+  using atLeastAtMost_iff apply blast
+
+apply (case_tac "imin < imax"; auto)
+using list_all_values2 [of "clip imax imin lst"]
+apply (simp add:hd_clip last_clip inc_decL_def
+  pathR_clip)
+apply (cases "clip imax imin lst = []"; auto)
+apply (simp add:clip_def)
+using clip_set [of imax imin lst]
+  by fastforce
+done
+
+lemma min_max_all_values2 :
+   "inc_decL lst \<Longrightarrow>
+    length lst > 0 \<Longrightarrow>
+    {minList lst .. maxList lst} = set lst"
+  by (simp add: antisym min_max min_max_all_values)
+
+
 end
