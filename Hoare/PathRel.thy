@@ -216,10 +216,6 @@ definition first :: "('a \<Rightarrow> bool) \<Rightarrow> nat \<Rightarrow> 'a 
 "first P k lst ==
    k < length lst \<and> P (lst!k) \<and> (\<forall>k2 < k. \<not>P (lst!k2))"
 
-definition first_return :: "nat \<Rightarrow> 'a list list \<Rightarrow> bool" where
-"first_return k lst =
-    first (\<lambda>b. b = tl (hd lst)) k lst"
-
 definition first_smaller :: "nat \<Rightarrow> nat list \<Rightarrow> bool" where
 "first_smaller k lst = first (\<lambda>b. b < hd lst) k lst"
 
@@ -465,7 +461,7 @@ apply auto
 apply (rule exI[where x = 0])
 subgoal for a b list
 apply auto
-  apply (metis foldr.simps(2) list.sel(1) max.orderE maxList_def max_of_max nth_Cons_0 o_apply)
+  apply (metis foldr.simps(2) list.sel(1) max.orderE maxList_def max_of_max o_apply)
 done
 apply (case_tac "a \<ge> maxList (aa#list)")
 apply auto
@@ -545,5 +541,34 @@ lemma min_max_all_values2 :
     {minList lst .. maxList lst} = set lst"
   by (simp add: antisym min_max min_max_all_values)
 
+lemma push_popL_inc_decL :
+   "push_popL lst \<Longrightarrow> inc_decL (map length lst)"
+by (auto simp add:push_popL_def inc_decL_def path_defs path_def
+                     push_pop_inc_dec)
+
+definition first_return :: "nat \<Rightarrow> 'a list list \<Rightarrow> bool" where
+"first_return k lst =
+    first (\<lambda>b. (hd lst,b) \<in> tlR) k lst"
+
+lemma takeLast_cons :
+  "takeLast (length lst) (a # lst) = lst"
+by (simp add:takeLast_def)
+
+(* *)
+lemma first_return_smaller :
+   "push_popL lst \<Longrightarrow>
+    first_return k lst \<Longrightarrow>
+    first_one_smaller k (map length lst)"
+apply (cases "length lst > 0")
+apply (auto simp:first_one_smaller_def first_def
+   first_return_def tlR_def hd_map)
+subgoal for a k1
+using find_return [of "take (Suc k1) lst"]
+apply (simp add:hd_take last_take)
+apply (cases "push_popL (take (Suc k1) lst)")
+apply (auto simp add:takeLast_cons push_popL_def pathR_take)
+apply (smt in_set_conv_nth length_take less_SucE less_imp_le_nat less_trans_Suc min.absorb2 nth_take order.strict_trans)
+done
+done
 
 end
