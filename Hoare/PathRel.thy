@@ -571,4 +571,287 @@ apply (smt in_set_conv_nth length_take less_SucE less_imp_le_nat less_trans_Suc 
 done
 done
 
+lemma first_smaller_return :
+   "push_popL lst \<Longrightarrow>
+    first_smaller k (map length lst) \<Longrightarrow>
+    first_one_smaller k (map length lst) \<Longrightarrow>
+    first_return k lst"
+apply (cases "length lst > 0")
+apply (auto simp:first_one_smaller_def
+   first_smaller_def first_def
+   first_return_def tlR_def hd_map)
+apply (cases "hd lst"; auto)
+subgoal for a list
+using stack_unchanged [of "take (Suc k) lst" "length list"]
+apply (simp add:push_popL_def pathR_take hd_take last_take
+  takeLast_def)
+  by (smt Suc_leD in_set_conv_nth length_take less_SucE less_or_eq_imp_le min.absorb2 not_le nth_take)
+done
+
+(* call includes enter and exit *)
+definition call :: "'a list list \<Rightarrow> bool" where
+"call lst = (
+   length lst > 2 \<and>
+   (lst!1, lst!0) \<in> tlR \<and>
+   push_popL lst \<and>
+   first_return (length lst-2) (tl lst))"
+
+definition ncall :: "nat list \<Rightarrow> bool" where
+"ncall lst = (
+   length lst > 2 \<and>
+   (lst!1, lst!0) \<in> sucR \<and>
+   inc_decL lst \<and>
+   first_one_smaller (length lst-2) (tl lst))"
+
+(* a call is a kind of a cycle...
+   perhaps cycles have useful features *)
+lemma call_stack_length :
+  "call lst \<Longrightarrow> hd lst = last lst"
+apply (auto simp add:call_def first_return_def first_def tlR_def)
+  by (metis One_nat_def Suc_diff_Suc Suc_lessD hd_conv_nth last_conv_nth length_tl less_numeral_extra(2) list.inject list.size(3) nth_tl numeral_2_eq_2 zero_less_diff)
+
+lemma ncall_stack_length :
+  "ncall lst \<Longrightarrow> hd lst = last lst"
+apply (auto simp add:ncall_def first_one_smaller_def first_def sucR_def)
+  by (metis (no_types, hide_lams) One_nat_def Suc_1 Suc_diff_Suc diff_Suc_1 gr_implies_not_zero hd_conv_nth in_set_conv_nth last_index length_pos_if_in_set length_tl less_trans_Suc list.size(3) nth_tl zero_less_numeral)
+
+lemma pathR_tl : "pathR r lst \<Longrightarrow> pathR r (tl lst)"
+apply (auto simp add:path_defs path_def)
+  by (simp add: nth_tl)
+
+
+lemma call_ncall : "call lst \<Longrightarrow> ncall (map length lst)"
+apply (auto simp add:call_def ncall_def tlR_def sucR_def)
+  apply (metis Suc_lessD nth_map numeral_2_eq_2)
+  using push_popL_inc_decL apply auto[1]
+using first_return_smaller [of "tl lst" "length lst - 2"]
+by (simp add:push_popL_def pathR_tl map_tl)
+
+lemma ncall_call :
+   "ncall (map length lst) \<Longrightarrow>
+    push_popL lst \<Longrightarrow>
+    call lst"
+apply (auto simp add:call_def ncall_def tlR_def sucR_def)
+apply (cases "lst!1"; auto)
+apply (subst (asm) nth_map)
+apply auto
+apply (simp add:push_popL_def path_defs path_def push_pop_def
+  tlR_def)
+subgoal for a list proof -
+  fix a :: 'a and list :: "'a list"
+  assume a1: "\<forall>i<length lst - Suc 0. lst ! i = lst ! Suc i \<or> (\<exists>a. lst ! i = a # lst ! Suc i) \<or> (\<exists>a. lst ! Suc i = a # lst ! i)"
+  assume a2: "2 < length lst"
+  assume a3: "length list = length (lst ! 0)"
+  assume a4: "lst ! Suc 0 = a # list"
+  have "[] \<noteq> tl lst"
+    using a2 by (metis (no_types) One_nat_def Suc_pred length_tl less_Suc_eq less_trans_Suc list.size(3) nat_neq_iff zero_less_numeral)
+  then show "list = lst ! 0"
+  using a4 a3 a1 by (metis (no_types) One_nat_def length_Cons length_greater_0_conv length_tl less_Suc_eq list.sel(3) nat_neq_iff)
+qed
+apply (rule first_smaller_return)
+apply (simp add:push_popL_def pathR_tl)
+apply (rule first_smaller1)
+apply (auto simp add:inc_decL_def pathR_tl map_tl)
+done
+
+(* extended call might have some stuff around it *)
+definition ecall :: "'a list list \<Rightarrow> 'a list \<Rightarrow> bool" where
+"ecall lst s = (\<exists>k1 k2.
+   k1 < k2 \<and> k2 < length lst \<and> call (clip k2 k1 lst) \<and>
+   set (take (Suc k1) lst) = {s} \<and>
+   set (drop k2 lst) = {s})"
+
+definition scall :: "'a list list \<Rightarrow> 'a list \<Rightarrow> bool" where
+"scall lst s = (call lst \<and> hd lst = s)"
+
+definition sncall :: "nat list \<Rightarrow> nat \<Rightarrow> bool" where
+"sncall lst s = (ncall lst \<and> hd lst = s)"
+
+definition const_seq :: "'a list \<Rightarrow> 'a \<Rightarrow> bool" where
+"const_seq lst s = (set lst = {s})"
+
+lemma const_single : "const_seq [x] x"
+by (simp add:const_seq_def)
+
+(* perhaps naturals can be divided into sequences easier? *)
+
+definition call_end :: "nat list \<Rightarrow> nat \<Rightarrow> bool" where
+"call_end lst s = (
+   length lst > 1 \<and>
+   Suc s = hd lst \<and>
+   inc_decL lst \<and>
+   first_one_smaller (length lst-1) lst)"
+
+(*
+
+find index
+
+fun split_at :: "nat \<Rightarrow> nat list \<Rightarrow> nat list * nat list" where
+"split_at a [] = [[]]"
+""
+*)
+
+fun decompose :: "nat list \<Rightarrow> nat \<Rightarrow> nat list list" where
+"decompose lst n = (
+   let l1 = takeWhile (%k. k > n) lst in
+   let rest = dropWhile (%k. k > n) lst in
+   if length rest = 0 then [l1] else
+   if length rest = 1 \<or> length (tl rest) \<ge> length lst
+      then [l1@[hd rest]] else
+   (l1@[hd rest]) # decompose (tl rest) n
+)"
+
+lemma concat_decompose_base :
+   "dropWhile pred lst = [] \<Longrightarrow> takeWhile pred lst = lst"
+by (induction lst; auto; metis list.distinct(1))
+
+lemma concat_decompose_base2 :
+   "dropWhile pred lst = [a] \<Longrightarrow> takeWhile pred lst @ [a] = lst"
+by (induction lst; auto; metis list.distinct(1))
+
+lemma concat_decompose_step :
+   "dropWhile pred lst = a#rest \<Longrightarrow>
+    takeWhile pred lst @ [a] @ rest = lst"
+  by (metis append_Cons append_Nil takeWhile_dropWhile_id)
+
+fun findIndices :: "'a list \<Rightarrow> 'a \<Rightarrow> nat list" where
+"findIndices (b#rest) a =
+   (if a = b then [0] else []) @ map Suc (findIndices rest a)"
+| "findIndices [] a = []"
+
+lemma get_index :
+   "i \<in> set (findIndices lst a) \<Longrightarrow> lst!i = a"
+by (induction lst arbitrary:i; auto)
+
+lemma do_find :
+   "length (findIndices lst a) > 0 \<Longrightarrow>
+    take (hd (findIndices lst a)) lst @ [a] @
+    drop (hd (findIndices lst a)+1) lst = lst"
+by (induction lst; auto simp add: hd_map)
+
+lemma tl_map_suc :
+   "tl lst = map f lst2 \<Longrightarrow>
+    tl (map g lst) = map (%x. g (f x)) lst2"
+by (induction lst arbitrary:lst2; auto)
+
+lemma split_findIndices :
+   "length (findIndices lst a) > 0 \<Longrightarrow>
+    tl (findIndices lst a) =
+    map (%i. i + (hd (findIndices lst a)) + 1)
+    (findIndices (drop (hd (findIndices lst a)+1) lst) a)"
+by (induction lst; auto simp add: hd_map tl_map_suc)
+
+lemma sorted_indices_aux :
+  "findIndices lst a = i1 # i2 # ilst \<Longrightarrow>
+   i1 < i2"
+using split_findIndices [of lst a]
+by auto
+
+lemma tl_suc_rule :
+   "length lst > 1 \<Longrightarrow>
+    tl lst! i < tl lst ! Suc i \<Longrightarrow>
+    lst! Suc i < lst ! Suc (Suc i)"
+by (cases lst; auto)
+
+lemma sorted_again :
+   "i + 1 < length (findIndices lst a) \<Longrightarrow>
+    findIndices lst a ! i < findIndices lst a ! (i+1)"
+apply (induction i arbitrary:lst)
+apply auto
+apply (case_tac "findIndices lst a"; auto)
+apply (case_tac "list"; auto)
+using sorted_indices_aux apply force
+apply (rule tl_suc_rule)
+apply auto
+subgoal for i lst
+using split_findIndices [of lst a]
+apply simp
+apply (cases "findIndices lst a = []"; auto)
+
+
+lemma nth_split_findIndices :
+   "length (findIndices lst a) > n \<Longrightarrow>
+    drop (Suc n) (findIndices lst a) =
+    map (%i. i + (findIndices lst a!n) + 1)
+    (findIndices (drop ((findIndices lst a!n)+1) lst) a)"
+apply (induction n arbitrary:lst)
+apply auto
+subgoal for lst
+using split_findIndices [of lst a]
+apply auto
+by (simp add: drop_Suc hd_conv_nth)
+apply (case_tac lst)
+apply auto
+
+
+lemma sorted_indices_gen :
+   "sorted (take n (findIndices lst a))"
+apply (induction n arbitrary:lst)
+apply auto
+apply (case_tac "findIndices lst a")
+apply auto
+apply (case_tac "list")
+apply auto
+apply (case_tac n; auto)
+using sorted_indices_aux apply fastforce
+apply (case_tac nat; auto)
+
+lemma sorted_indices_gen :
+   "sorted (map (%x. x + j) (findIndices lst a))"
+apply (induction "map (%x. x + j) (findIndices lst a)"
+   arbitrary:lst j)
+apply auto
+subgoal for lst j i ilst
+using do_find [of lst a]
+apply auto
+apply (cases "findIndices lst a = []")
+apply auto
+apply (cases "findIndices lst a = i # ilst"; auto)
+apply (cases ilst)
+using sorted_indices_aux apply force
+using split_findIndices [of lst a]
+apply auto
+
+
+lemma sorted_indices : "sorted (findIndices lst a)"
+apply (induction "findIndices lst a" arbitrary:lst)
+apply auto
+subgoal for i ilst lst
+using do_find [of lst a]
+apply auto
+apply (cases "findIndices lst a = []")
+apply auto
+apply (cases "findIndices lst a = i # ilst"; auto)
+apply (cases ilst; auto)
+using sorted_indices_aux apply force
+using split_findIndices [of lst a]
+apply auto
+
+
+lemma decompose_ncall :
+  "ncall lst \<Longrightarrow>
+   \<exists>pieces. concat pieces = clip (length lst-3) 1 lst \<and>
+   (\<forall>x \<in> set pieces. call_end x (hd lst) \<or> const_seq x (hd lst))"
+
+
+(* decompose call to sub calls ...
+   cycle could also be split into subcycles *)
+lemma decompose_call :
+  "call lst \<Longrightarrow>
+   \<exists>pieces. concat pieces = clip (length lst-3) 1 lst \<and>
+   (\<forall>x \<in> set pieces. scall x (hd lst) \<or> const_seq x (hd lst))"
+
+
+
+lemma call_invariant :
+  "push_popL (map snd lst) \<Longrightarrow>
+   first_return k (map snd lst) \<Longrightarrow>
+   monoI iv (hd lst) \<Longrightarrow>
+   pathR (mono_rules iv) lst \<Longrightarrow>
+   iv (fst (hd lst)) \<Longrightarrow>
+   length lst > 1 \<Longrightarrow>
+   (snd (hd lst), snd (lst!1)) \<in> tlR
+  "
+
+
 end
