@@ -753,6 +753,12 @@ lemma tl_suc_rule :
     lst! Suc i < lst ! Suc (Suc i)"
 by (cases lst; auto)
 
+lemma map_suc_rule :
+"n < length lst \<Longrightarrow> m < length lst \<Longrightarrow>
+ lst!n < lst!m \<Longrightarrow>
+ map (\<lambda>i. Suc (i + x)) lst ! n < map (\<lambda>i. Suc (i + x)) lst ! m"
+  by simp
+
 lemma sorted_again :
    "i + 1 < length (findIndices lst a) \<Longrightarrow>
     findIndices lst a ! i < findIndices lst a ! (i+1)"
@@ -767,8 +773,13 @@ subgoal for i lst
 using split_findIndices [of lst a]
 apply simp
 apply (cases "findIndices lst a = []"; auto)
+apply (rule map_suc_rule)
+  apply (metis Suc_lessD Suc_lessE diff_Suc_1 length_map length_tl)
+  apply (metis Suc_lessE diff_Suc_1 length_map length_tl)
+  by (metis Nitpick.size_list_simp(2) Suc_less_eq length_map)
+done
 
-
+(*
 lemma nth_split_findIndices :
    "length (findIndices lst a) > n \<Longrightarrow>
     drop (Suc n) (findIndices lst a) =
@@ -783,50 +794,65 @@ by (simp add: drop_Suc hd_conv_nth)
 apply (case_tac lst)
 apply auto
 
+*)
 
-lemma sorted_indices_gen :
-   "sorted (take n (findIndices lst a))"
-apply (induction n arbitrary:lst)
-apply auto
-apply (case_tac "findIndices lst a")
-apply auto
-apply (case_tac "list")
-apply auto
-apply (case_tac n; auto)
-using sorted_indices_aux apply fastforce
-apply (case_tac nat; auto)
+lemma weird_mono_aux :
+   "(\<forall>n. Suc n < limit \<longrightarrow> f n < f (Suc n)) \<Longrightarrow> k+m < limit \<Longrightarrow> (f k::nat) \<le> f (k+m)"
+by (induction m; auto)
 
-lemma sorted_indices_gen :
-   "sorted (map (%x. x + j) (findIndices lst a))"
-apply (induction "map (%x. x + j) (findIndices lst a)"
-   arbitrary:lst j)
-apply auto
-subgoal for lst j i ilst
-using do_find [of lst a]
-apply auto
-apply (cases "findIndices lst a = []")
-apply auto
-apply (cases "findIndices lst a = i # ilst"; auto)
-apply (cases ilst)
-using sorted_indices_aux apply force
-using split_findIndices [of lst a]
-apply auto
+lemma weird_mono :
+   "(\<forall>n. Suc n < limit \<longrightarrow> f n < f (Suc n)) \<Longrightarrow>
+   k < limit \<Longrightarrow> m < limit \<Longrightarrow> m \<le> k \<Longrightarrow> (f m::nat) \<le> f k"
+using weird_mono_aux [of limit f]
+  by (metis le_add_diff_inverse)
 
 
 lemma sorted_indices : "sorted (findIndices lst a)"
-apply (induction "findIndices lst a" arbitrary:lst)
+apply (rule sorted_nth_monoI)
+apply (rule weird_mono [of "length (findIndices lst a)"
+  "%i. findIndices lst a ! i"])
 apply auto
-subgoal for i ilst lst
-using do_find [of lst a]
-apply auto
-apply (cases "findIndices lst a = []")
-apply auto
-apply (cases "findIndices lst a = i # ilst"; auto)
-apply (cases ilst; auto)
-using sorted_indices_aux apply force
-using split_findIndices [of lst a]
-apply auto
+using sorted_again by force
 
+(* do splitting based on indexes *)
+fun indexSplit :: "nat list \<Rightarrow> 'a list \<Rightarrow> 'a list list" where
+"indexSplit (i1#ilst) lst =
+   take (Suc i1) lst # indexSplit (map (%x. x-i1-1) ilst) (drop (Suc i1) lst)"
+| "indexSplit [] lst = [lst]"
+
+value "findIndices [a,a] a"
+
+value "((\<lambda>x. x - Suc 0) \<circ> Suc) 0"
+
+lemma funext : "(\<forall>x. f x = g x) \<Longrightarrow> f = g"
+by auto
+
+lemma inc_dec : "((\<lambda>x. x - Suc 0) \<circ> Suc) = id"
+by (rule funext; auto)
+
+lemma duh : "map ((\<lambda>x. x - Suc 0) \<circ> Suc) lst = lst"
+by (simp add:inc_dec)
+
+lemma empty_split :
+   "set (indexSplit ilst []) = {[]}"
+by (induction ilst "[]" rule:indexSplit.induct; auto)
+
+lemma empty_length : "set lst = {[]} \<Longrightarrow> concat lst = []"
+  by (simp add: empty_split)
+
+lemma empty_split2 : "concat (indexSplit ilst []) = []"
+  by (simp add: empty_split)
+
+lemma split_combine_step :
+   "concat (indexSplit (map Suc ilst) (aa # lst)) =
+    aa # concat (indexSplit ilst lst)"
+apply (induction ilst lst rule:indexSplit.induct)
+apply auto
+  by (metis comp_apply diff_Suc_Suc)
+
+lemma split_and_combine :
+   "concat (indexSplit (findIndices lst a) lst) = lst"
+by (induction lst; auto simp add:duh split_combine_step)
 
 lemma decompose_ncall :
   "ncall lst \<Longrightarrow>
