@@ -668,7 +668,7 @@ definition sncall :: "nat list \<Rightarrow> nat \<Rightarrow> bool" where
 "sncall lst s = (ncall lst \<and> hd lst = s)"
 
 definition const_seq :: "'a list \<Rightarrow> 'a \<Rightarrow> bool" where
-"const_seq lst s = (set lst = {s})"
+"const_seq lst s = (set lst \<subseteq> {s})"
 
 lemma const_single : "const_seq [x] x"
 by (simp add:const_seq_def)
@@ -1053,26 +1053,288 @@ apply auto
 using aux1 apply fastforce
 done done
 
+lemma split_combine : "concat (split lst el) = lst"
+unfolding split_def
+using split_and_combine [of lst el]
+by simp
+
+lemma split_final_aux : 
+  "split lst el = a # rest \<Longrightarrow>
+   length a = length lst \<Longrightarrow>
+   concat rest = []"
+using split_combine [of lst el]
+  by auto
+
+lemma split_final : 
+  "split lst el = a # rest \<Longrightarrow>
+   length a = length lst \<Longrightarrow>
+   set rest \<subseteq> {[]}"
+using split_final_aux [of lst el a rest]
+  by auto
+
+
+lemma split_length : 
+  "split lst el = a # rest \<Longrightarrow>
+   length a \<le> length lst"
+using split_combine [of lst el]
+  by auto
+
+lemma split_last_aux1 :
+"split lst (last lst) = a # rest \<Longrightarrow>
+ length a > 0 \<Longrightarrow>
+ length lst > 0"
+  using split_length by fastforce
+
+lemma find_first_elem :
+  "0 < length lst \<Longrightarrow>
+   \<exists>k. first_elem (last lst) k lst"
+apply (simp add:first_elem_def)
+using find_first [of "\<lambda>b. b = last lst" lst "length lst - 1"]
+  by (metis One_nat_def diff_Suc_less last_conv_nth length_greater_0_conv)
+
+
+lemma split_last :
+"split lst (last lst) = a # rest \<Longrightarrow>
+ length a > 0 \<Longrightarrow>
+ last a = last lst"
+using split_last_aux1 [of lst a rest]
+apply simp
+using find_first_elem [of lst]
+apply (auto simp:split_def)
+apply (cases "findIndices lst (last lst)")
+apply simp
+subgoal for k aa list
+using find_elem  [of "last lst" k lst]
+apply auto
+  by (metis List.take_all Suc_lessD get_index last_take list.set_intros(1) not_le)
+done
+
+lemma split_last_nth :
+"split lst (last lst) = a # rest \<Longrightarrow>
+ length a > 0 \<Longrightarrow>
+ lst!(length a - 1) = last lst"
+using split_last [of lst a rest]
+  split_combine [of lst "last lst"]
+  by (metis One_nat_def concat.simps(2) diff_Suc_less last_index nth_append)
+
+
+lemma correct_pieces_aux :
+  "inc_decL lst \<Longrightarrow>
+   hd lst = last lst \<or> hd lst = Suc (last lst) \<Longrightarrow>
+   length lst > 0 \<Longrightarrow>
+   n < length (split lst (last lst)) \<Longrightarrow>
+   x = split lst (last lst) ! n \<Longrightarrow>
+   \<forall>t \<in> set lst. t \<ge> last lst \<Longrightarrow>
+   call_end x (last lst) \<or> const_seq x (last lst)"
+apply (induction n arbitrary: x lst)
+  apply (simp add: hd_conv_nth hd_good)
+apply (case_tac "split lst (last lst)")
+apply simp
+subgoal for n x lst a rest
+using split_split [of lst a rest]
+apply simp
+apply (cases "length a = length lst")
+using split_final [of lst "last lst" a rest]
+apply (cases "rest!n = []")
+  apply (simp add: const_seq_def)
+  apply (meson in_set_conv_nth singleton_iff subsetCE)
+apply (cases "length a < length lst")
+defer
+using split_length apply fastforce
+apply simp
+proof -
+assume a : "(\<And>x lst.
+        inc_decL lst \<Longrightarrow>
+        hd lst = last lst \<or> hd lst = Suc (last lst) \<Longrightarrow>
+        lst \<noteq> [] \<Longrightarrow>
+        n < length (split lst (last lst)) \<Longrightarrow>
+        x = split lst (last lst) ! n \<Longrightarrow>
+        \<forall>x\<in>set lst. last lst \<le> x \<Longrightarrow>
+        call_end (split lst (last lst) ! n) (last lst) \<or>
+        const_seq (split lst (last lst) ! n)
+         (last lst))"
+assume b : "inc_decL lst"
+show "(\<And>x lst.
+        inc_decL lst \<Longrightarrow>
+        hd lst = last lst \<or> hd lst = Suc (last lst) \<Longrightarrow>
+        lst \<noteq> [] \<Longrightarrow>
+        n < length (split lst (last lst)) \<Longrightarrow>
+        x = split lst (last lst) ! n \<Longrightarrow>
+        \<forall>x\<in>set lst. last lst \<le> x \<Longrightarrow>
+        call_end (split lst (last lst) ! n) (last lst) \<or>
+        const_seq (split lst (last lst) ! n)
+         (last lst)) \<Longrightarrow>
+    inc_decL lst \<Longrightarrow>
+    hd lst = last lst \<or> hd lst = Suc (last lst) \<Longrightarrow>
+    lst \<noteq> [] \<Longrightarrow>
+    n < length (split (drop (length a) lst) (last lst)) \<Longrightarrow>
+    x = split (drop (length a) lst) (last lst) ! n \<Longrightarrow>
+    \<forall>x\<in>set lst. last lst \<le> x \<Longrightarrow>
+    split lst (last lst) =
+    a # split (drop (length a) lst) (last lst) \<Longrightarrow>
+    rest = split (drop (length a) lst) (last lst) \<Longrightarrow>
+    length a < length lst \<Longrightarrow>
+    call_end (split (drop (length a) lst) (last lst) ! n)
+     (last lst) \<or>
+    const_seq (split (drop (length a) lst) (last lst) ! n)
+     (last lst)"
+using a [of "drop (length a) lst" x]
+apply simp
+apply (cases "inc_decL (drop (length a) lst)")
+defer
+apply (simp add:inc_decL_def pathR_drop)
+apply simp
+apply (cases "\<forall>x\<in>set (drop (length a) lst). last lst \<le> x")
+defer
+  apply (meson in_set_dropD)
+apply simp
+apply (cases "length a")
+  apply (metis drop_0)
+using split_last_nth [of lst a rest]
+proof -
+  fix nat :: nat
+  assume a1: "inc_decL lst"
+  assume a2: "lst \<noteq> []"
+  assume a3: "x = split (drop (length a) lst) (last lst) ! n"
+  assume a4: "split lst (last lst) = a # split (drop (length a) lst) (last lst)"
+  assume a5: "rest = split (drop (length a) lst) (last lst)"
+  assume a6: "length a < length lst"
+  assume a7: "hd (drop (length a) lst) = last lst \<or> hd (drop (length a) lst) = Suc (last lst) \<Longrightarrow> call_end (split (drop (length a) lst) (last lst) ! n) (last lst) \<or> const_seq (split (drop (length a) lst) (last lst) ! n) (last lst)"
+  assume a8: "\<forall>x\<in>set (drop (length a) lst). last lst \<le> x"
+  assume a9: "length a = Suc nat"
+  have "\<forall>n. \<not> Suc n \<le> n"
+  by (metis le_imp_less_Suc nat_less_le)
+  moreover
+  { assume "last lst = lst ! Suc nat"
+    then have "const_seq x (last lst) \<or> call_end x (last lst)"
+      using a9 a7 a6 a3 by (metis (full_types) hd_drop_conv_nth) }
+    ultimately show ?thesis
+      using a9 a8 a7 a6 a5 a4 a2 a1 by (metis (no_types) Suc_eq_plus1 Suc_less_SucD Suc_pred' \<open>\<lbrakk>split lst (last lst) = a # rest; 0 < length a\<rbrakk> \<Longrightarrow> lst ! (length a - 1) = last lst\<close> drop_eq_Nil hd_drop_conv_nth length_pos_if_in_set list.set_sel(1) nat_less_le not_le test zero_less_Suc)
+qed
+qed
+done
+
 lemma correct_pieces :
   "inc_decL lst \<Longrightarrow>
    hd lst = last lst \<Longrightarrow>
    length lst > 0 \<Longrightarrow>
-   x \<in> set (indexSplit (findIndices lst (hd lst)) lst) \<Longrightarrow>
-   call_end x (hd lst) \<or> const_seq x (hd lst)"
+   \<forall>t \<in> set lst. t \<ge> last lst \<Longrightarrow>
+   x \<in> set (split lst (last lst)) \<Longrightarrow>
+   call_end x (last lst) \<or> const_seq x (last lst)"
+using correct_pieces_aux [of lst]
+  by (metis in_set_conv_nth)
 
-definition seqSplit :: "(nat*nat) list \<Rightarrow> 'a list \<Rightarrow> 'a list list" where
-"seqSplit ilst lst =
-   map (%ival. take (snd ival) (drop (fst ival) lst)) ilst"
+lemma first_one_smaller_prev :
+"inc_decL lst \<Longrightarrow>
+ length lst > 0 \<Longrightarrow>
+ k > 0 \<Longrightarrow>
+ first_one_smaller k lst \<Longrightarrow>
+ lst!(k-1) = lst!0"
+using first_smaller1 [of lst k]
+apply simp
+apply (auto simp add: first_one_smaller_def
+  first_smaller_def first_def inc_decL_def
+  path_defs inc_dec_def path_def sucR_def)
+apply (simp add:hd_conv_nth)
+  by (smt Suc_less_SucD Suc_pred lessI order.strict_trans)
+
+
+lemma ncall_last :
+  "ncall lst \<Longrightarrow>
+   (last (clip (length lst - 2) 1 lst)) = lst!1"
+using ncall_stack_length [of lst]
+apply (auto simp add:ncall_def clip_def last_conv_nth
+  sucR_def)
+apply (cases
+"min (length lst - Suc 0) (Suc (length lst - 3)) = length lst -2")
+apply auto
+using first_one_smaller_prev [of "tl lst" "length lst-2"]
+apply auto
+apply (cases "inc_decL (tl lst)")
+defer
+apply (simp add:inc_decL_def path_defs path_def)
+  apply (metis (no_types, lifting) One_nat_def Suc_diff_Suc Suc_lessD Suc_mono length_tl nth_tl numeral_2_eq_2)
+apply auto
+  by (metis (no_types, lifting) One_nat_def Suc_diff_Suc diff_Suc_eq_diff_pred diff_less_Suc length_tl less_diff_conv less_numeral_extra(2) neq0_conv nth_tl numeral_2_eq_2 numeral_3_eq_3 one_add_one)
+
+
+(*
+using first_smaller1 [of  "tl lst" "length lst - 2"]
+apply (auto simp add:first_smaller_def first_def)
+apply (cases "inc_decL (tl lst)")
+defer
+apply (simp add:inc_decL_def path_defs path_def)
+  apply (metis (no_types, lifting) One_nat_def Suc_diff_Suc Suc_lessD Suc_mono length_tl nth_tl numeral_2_eq_2)
+apply auto
+*)
+
+lemma ncall_inc_dec :
+   "ncall lst \<Longrightarrow> inc_decL (clip a b lst)"
+by (simp add: ncall_def inc_decL_def pathR_clip)
+
+lemma ncall_sub_length :
+"ncall lst \<Longrightarrow> length (clip (length lst - 2) 1 lst) > 0"
+by (simp add: ncall_def clip_def)
+
+lemma ncall_second :
+"ncall lst \<Longrightarrow> hd (clip (length lst - 2) 1 lst) = lst ! 1"
+by (auto simp add: ncall_def clip_def sucR_def
+ hd_drop_conv_nth hd_take)
+
+lemma inc_dec_tl : "inc_decL lst \<Longrightarrow> inc_decL (tl lst)"
+by (auto simp add: inc_decL_def pathR_tl)
+
+lemma first_smaller_before :
+ "first_smaller k lst \<Longrightarrow>
+  x \<in> set (take k lst) \<Longrightarrow>
+  x \<ge> lst!0"
+apply (auto simp add:first_smaller_def first_def)
+  by (metis gr_implies_not_zero hd_conv_nth in_set_conv_nth length_take less_imp_le_nat list.size(3) min.absorb2 not_le nth_take)
+
+lemma ncall_inside_big :
+"ncall lst \<Longrightarrow>
+ x\<in>set (clip (length lst - 2) 1 lst) \<Longrightarrow>
+ lst ! 1 \<le> x"
+apply (auto simp add:ncall_def sucR_def)
+using first_smaller1 [of "tl lst" "length lst - 2"]
+apply (auto simp add:inc_dec_tl)
+using first_smaller_before [of "length lst -2" "tl lst"
+  x]
+apply auto
+apply (simp add:clip_def)
+apply (cases "take (Suc (length lst - 3))
+               (drop (Suc 0) lst) = take (length lst - 2) (tl lst)")
+defer
+  apply (simp add: Suc_diff_Suc drop_Suc numeral_2_eq_2 numeral_3_eq_3)
+apply simp
+  by (simp add: nth_tl)
 
 lemma decompose_ncall :
   "ncall lst \<Longrightarrow>
    \<exists>pieces. concat pieces = clip (length lst-2) 1 lst \<and>
    (\<forall>x \<in> set pieces. call_end x (lst!1) \<or> const_seq x (lst!1))"
 apply (rule exI[where x =
-   "indexSplit (findIndices (clip (length lst-2) 1 lst) (lst!1))
-               (clip (length lst-2) 1 lst)"])
+   "split (clip (length lst-2) 1 lst) (lst!1)"])
 apply auto
-using split_and_combine apply force
+using split_combine apply fastforce
+subgoal for x
+using ncall_last [of lst]
+apply simp
+using correct_pieces [of "clip (length lst-2) 1 lst" x]
+apply (simp add:ncall_inc_dec)
+apply (cases "clip (length lst - 2) (Suc 0) lst = []")
+using ncall_sub_length apply fastforce
+apply simp
+using ncall_second [of lst]
+apply simp
+using ncall_inside_big apply force
+done
+done
+
+definition seqSplit :: "(nat*nat) list \<Rightarrow> 'a list \<Rightarrow> 'a list list" where
+"seqSplit ilst lst =
+   map (%ival. take (snd ival) (drop (fst ival) lst)) ilst"
+
 
 
 (* decompose call to sub calls ...
