@@ -854,10 +854,225 @@ lemma split_and_combine :
    "concat (indexSplit (findIndices lst a) lst) = lst"
 by (induction lst; auto simp add:duh split_combine_step)
 
+lemma call_end_ends :
+   "call_end lst s \<Longrightarrow> s = last lst"
+apply (auto simp add:call_end_def first_one_smaller_def first_def)
+  by (metis One_nat_def Suc_inject last_conv_nth less_numeral_extra(2) list.size(3))
+
+definition split :: "'a list \<Rightarrow> 'a \<Rightarrow> 'a list list" where
+"split lst a = indexSplit (findIndices lst a) lst"
+
+(* split into a constant sequence *)
+lemma split_one : "hd (split (a#lst) a) = [a]"
+by (auto simp add:split_def)
+
+definition first_elem :: "'a \<Rightarrow> nat \<Rightarrow> 'a list \<Rightarrow> bool" where
+"first_elem el k lst = first (%x. x = el) k lst"
+
+lemma feq_aux : "x > 0 \<Longrightarrow> (\<lambda>b. Suc b = x) = (\<lambda>b. b = x - Suc 0)"
+by (rule funext; auto)
+
+lemma one_smaller_elem :
+  "length lst > 0 \<Longrightarrow>
+   hd lst > 0 \<Longrightarrow>
+   first_one_smaller k lst = first_elem (hd lst - 1) k lst"
+by (simp add:first_one_smaller_def first_elem_def feq_aux)
+
+lemma find_index :
+   "i < length lst \<Longrightarrow> i \<in> set (findIndices lst (lst!i))"
+apply (induction lst "lst!i" arbitrary:i rule:findIndices.induct)
+by (auto simp add: less_Suc_eq_0_disj)
+
+lemma more_mono_aux :
+   "(\<forall>n. Suc n < limit \<longrightarrow> f n < f (Suc n)) \<Longrightarrow>
+     k+m+1 < limit \<Longrightarrow> (f k::nat) < f (k+m+1)"
+by (induction m; auto)
+
+lemma more_mono :
+   "(\<forall>n. Suc n < limit \<longrightarrow> f n < f (Suc n)) \<Longrightarrow>
+   k < limit \<Longrightarrow> m < limit \<Longrightarrow> m < k \<Longrightarrow> (f m::nat) < f k"
+using more_mono_aux [of limit f]
+  by (metis Suc_eq_plus1 less_imp_Suc_add)
+
+lemma use_sorting_aux :
+   "length (findIndices lst el) > m \<Longrightarrow>
+    m > n \<Longrightarrow>
+    findIndices lst el!n < findIndices lst el!m"
+apply (rule more_mono [of "length (findIndices lst el)"
+   "%i. findIndices lst el!i"]; auto)
+using sorted_again apply force
+done
+
+lemma use_sorting :
+   "findIndices lst el = a # list \<Longrightarrow>
+    x \<in> set list \<Longrightarrow>
+    a < x"
+using use_sorting_aux [of _ lst el]
+  by (smt in_set_conv_nth length_Cons lessI less_trans_Suc list.sel(3) nth_Cons_0 nth_tl zero_less_Suc)
+
+lemma find_elem :
+ "first_elem el k lst \<Longrightarrow>
+  hd (findIndices lst el) = k"
+apply (auto simp:first_elem_def first_def)
+apply (cases "findIndices lst (lst ! k)")
+  using find_index apply fastforce
+apply auto
+apply (case_tac "\<forall>x \<in> set list. x > a")
+defer
+using use_sorting apply force
+  by (metis find_index get_index list.set_intros(1) set_ConsD)
+
+lemma split_first :
+   "hd (indexSplit (i#ilst) lst) = take (Suc i) lst"
+by auto
+
+lemma get_to_end :
+  "hd lst = Suc (last lst) \<Longrightarrow>
+   length lst > 0 \<Longrightarrow>
+   first_one_smaller k lst \<Longrightarrow>
+   hd (indexSplit (findIndices lst (last lst)) lst) =
+   take (Suc k) lst"
+apply (cases "\<not>first_elem (last lst) k lst")
+using one_smaller_elem apply fastforce
+apply auto
+using find_elem [of "last lst" k lst]
+  by (metis (full_types) find_index first_def first_elem_def hd_Cons_tl length_pos_if_in_set less_numeral_extra(3) list.size(3) split_first)
+
+lemma make_call_end :
+  "hd lst = Suc (last lst) \<Longrightarrow>
+   length lst > 0 \<Longrightarrow>
+   first_one_smaller k lst \<Longrightarrow>
+   inc_decL lst \<Longrightarrow>
+   call_end (take (Suc k) lst) (last lst)"
+apply (auto simp add:call_end_def hd_take inc_decL_def
+ pathR_take first_one_smaller_def first_def min.absorb2)
+by (metis gr_zeroI hd_conv_nth n_not_Suc_n)
+
+lemma find_first :
+   "P (lst!i) \<Longrightarrow> i < length lst \<Longrightarrow> \<exists>k \<le> i. first P k lst"
+apply (induction lst arbitrary:i)
+apply (auto simp add:first_def)
+apply (case_tac i;auto)
+apply (case_tac "P a")
+subgoal for a lst nat
+apply (rule exI[where x = 0])
+by auto
+apply (case_tac "\<forall>j < Suc nat. \<not> P ((a # lst) ! j)")
+subgoal for a lst nat by (rule exI[where x = "Suc nat"]; auto)
+apply auto
+apply (case_tac j; auto)
+apply (case_tac "\<exists>k\<le>nata.
+                k < length lst \<and>
+                P (lst ! k) \<and> (\<forall>k2<k. \<not> P (lst ! k2))")
+apply (thin_tac "(\<And>i. P (lst ! i) \<Longrightarrow>
+             i < length lst \<Longrightarrow>
+             \<exists>k\<le>i.
+                k < length lst \<and>
+                P (lst ! k) \<and> (\<forall>k2<k. \<not> P (lst ! k2)))")
+apply auto
+subgoal for a lst nat nata k
+apply (rule exI [where x = "Suc k"])
+apply auto
+  using less_Suc_eq_0_disj by auto
+done
+
+lemma find_first_one_smaller :
+  "1 < length lst \<Longrightarrow>
+   hd lst = Suc (last lst) \<Longrightarrow>
+   \<exists>k. first_one_smaller k lst"
+apply (simp add:first_one_smaller_def)
+using find_first [of "\<lambda>b. b = last lst" lst "length lst - 1"]
+by (metis One_nat_def Suc_lessD diff_Suc_less last_conv_nth less_numeral_extra(2) list.size(3))
+
+lemma hd_good :
+  "inc_decL lst \<Longrightarrow>
+   hd lst = last lst \<or> hd lst = Suc (last lst) \<Longrightarrow>
+   length lst > 0 \<Longrightarrow>
+   x = hd (split lst (last lst)) \<Longrightarrow>
+   call_end x (last lst) \<or> const_seq x (last lst)"
+apply (auto simp:split_def)
+  apply (metis PathRel.split_def const_single list.collapse split_one)
+using find_first_one_smaller [of lst]
+apply auto
+apply (cases "length lst = 1")
+  apply (simp add: hd_conv_nth last_conv_nth)
+apply (cases "Suc 0 < length lst")
+apply auto
+defer
+  apply (simp add: hd_conv_nth last_conv_nth)
+subgoal for k
+using get_to_end [of lst k]
+  make_call_end [of lst k]
+  by simp
+done
+
+(* splitting split *)
+lemma split_index_split :
+   "tl (indexSplit (i#ilst) lst) =
+    indexSplit (map (%j. j - Suc i) ilst)
+                   (drop (Suc i) lst)"
+by auto
+
+lemma split_index_split2 :
+   "indexSplit (i#ilst) lst = a#rest \<Longrightarrow>
+    length a < length lst \<Longrightarrow>
+    length a = Suc i"
+by auto
+
+lemma split_index_split3 :
+   "indexSplit (i#ilst) lst = a#rest \<Longrightarrow>
+    length a < length lst \<Longrightarrow>
+    rest = indexSplit (map (%j. j - length a) ilst)
+                   (drop (length a) lst)"
+using split_index_split split_index_split2 by fastforce
+
+lemma duh2 :
+ "((\<lambda>x. x - Suc aa) \<circ> (\<lambda>i. Suc (i + aa))) = id"
+by (rule funext; auto)
+
+lemma aux1 :
+  "findIndices lst el = aa # list \<Longrightarrow>
+   map (\<lambda>x. x - Suc aa) list =
+   findIndices (drop (Suc aa) lst) el"
+using split_findIndices [of lst el]
+by (simp add:duh2)
+
+lemma split_split :
+   "split lst (last lst) = a # rest \<Longrightarrow>
+    length a < length lst \<Longrightarrow>
+    rest = split (drop (length a) lst) (last lst)"
+apply (simp add:split_def)
+apply (case_tac "findIndices lst (last lst)")
+apply auto
+subgoal for aa list
+apply (cases "aa < length lst")
+defer
+  apply linarith
+apply (cases "min (length lst) (Suc aa) = Suc aa")
+apply auto
+using aux1 apply fastforce
+done done
+
+lemma correct_pieces :
+  "inc_decL lst \<Longrightarrow>
+   hd lst = last lst \<Longrightarrow>
+   length lst > 0 \<Longrightarrow>
+   x \<in> set (indexSplit (findIndices lst (hd lst)) lst) \<Longrightarrow>
+   call_end x (hd lst) \<or> const_seq x (hd lst)"
+
+definition seqSplit :: "(nat*nat) list \<Rightarrow> 'a list \<Rightarrow> 'a list list" where
+"seqSplit ilst lst =
+   map (%ival. take (snd ival) (drop (fst ival) lst)) ilst"
+
 lemma decompose_ncall :
   "ncall lst \<Longrightarrow>
-   \<exists>pieces. concat pieces = clip (length lst-3) 1 lst \<and>
-   (\<forall>x \<in> set pieces. call_end x (hd lst) \<or> const_seq x (hd lst))"
+   \<exists>pieces. concat pieces = clip (length lst-2) 1 lst \<and>
+   (\<forall>x \<in> set pieces. call_end x (lst!1) \<or> const_seq x (lst!1))"
+apply (rule exI[where x =
+   "indexSplit (findIndices (clip (length lst-2) 1 lst) (lst!1))
+               (clip (length lst-2) 1 lst)"])
+apply auto
+using split_and_combine apply force
 
 
 (* decompose call to sub calls ...
