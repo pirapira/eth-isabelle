@@ -4,15 +4,14 @@ begin
 
 datatype tree = Leaf | Tree tree "tree list"
 
-
-
 fun expand :: "tree \<Rightarrow> nat list" where
 "expand Leaf = [0]"
 | "expand (Tree t lst) =
-   [0] @ map Suc (concat (map expand (t#lst))) @ [0]"
+   [0] @ map Suc (expand t @ concat (map (tl \<circ> expand) lst)) @ [0]"
 
-value "expand (Tree Leaf [Leaf, Tree Leaf []])"
-value "expand (Tree Leaf [Leaf])"
+value "expand (Tree Leaf [Leaf, Tree Leaf [],
+  Tree Leaf [], Leaf])"
+value "expand (Tree (Tree Leaf []) [Leaf])"
 
 lemma expand_size : "length (expand t) > 0"
 by (cases t; auto)
@@ -32,6 +31,7 @@ by (cases t; auto simp add:nth_append)
 lemma tree_inc_dec : "inc_decL (expand t)"
 apply (induction t)
 apply (simp add:inc_decL_def pathR.simps inc_dec_def)
+apply auto
 
 oops
 
