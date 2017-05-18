@@ -28,6 +28,16 @@ lemma expand_inside_large :
     expand t ! i > 0"
 by (cases t; auto simp add:nth_append)
 
+lemma path_app :
+   "pathR r a \<Longrightarrow> pathR r b \<Longrightarrow>
+    length a > 0 \<Longrightarrow> length b > 0 \<Longrightarrow>
+    (last a, hd b) \<in> r \<Longrightarrow>
+    pathR r (a@b)"
+apply (auto simp add:path_defs path_def nth_append)
+  apply (metis Suc_lessI diff_Suc_1 hd_conv_nth last_conv_nth)
+apply (subgoal_tac "(Suc i - length a) = Suc (i - length a)"; auto)
+done
+
 lemma tree_inc_dec : "inc_decL (expand t)"
 apply (induction t)
 apply (simp add:inc_decL_def pathR.simps inc_dec_def)
