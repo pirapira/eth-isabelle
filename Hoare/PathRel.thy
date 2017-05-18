@@ -1478,10 +1478,11 @@ lemma foo_aux :
        set
         (take (length lst - 2) (drop (Suc 0) lst))"
 using foo_aux2 [of j lst sti]
+  by blast
 
 lemma call_inside_big_idx :
 "call lst \<Longrightarrow>
- j > 1 \<Longrightarrow> j < length lst - 1 \<Longrightarrow>
+ j \<ge> 1 \<Longrightarrow> j < length lst - 1 \<Longrightarrow>
  takeLast (length (lst!1)) (lst!j) = lst ! 1"
 using stack_unchanged [of "clip j 1 lst"
    "length (lst!1)"]
@@ -1496,6 +1497,8 @@ apply (subgoal_tac "\<forall>sti\<in>set (clip j (Suc 0) lst).
         length (lst ! Suc 0) \<le> length sti")
 apply simp
 apply auto
+  apply (metis (mono_tags, lifting) Nitpick.size_list_simp(2) One_nat_def PathRel.take_all hd_clip last_clip le_less length_tl less_SucI nat_diff_split zero_less_one)
+
 subgoal for sti
 using ncall_inside_big [of "map length lst" "length sti"]
 apply (simp add:call_ncall)
@@ -1508,13 +1511,42 @@ apply (cases "Suc (length lst - 3) = length lst - 2")
 defer
 apply (simp)
 apply simp
+using foo_aux apply fastforce
+done
+done
 
+lemma ex_idx : "x \<in> set lst \<Longrightarrow> \<exists>i<length lst. x = lst!i"
+  by (metis in_set_conv_nth)
 
 lemma call_inside_big :
 "call lst \<Longrightarrow>
  x\<in>set (clip (length lst - 2) 1 lst) \<Longrightarrow>
  takeLast (length (lst!1)) x = lst ! 1"
+using ex_idx [of x "clip (length lst - 2) 1 lst"]
+apply auto
+subgoal for j
+using call_inside_big_idx [of lst "Suc j"]
+apply (simp add:clip_def)
+apply (subgoal_tac "Suc j < length lst - Suc 0")
+apply simp
+  by (metis One_nat_def Suc_diff_Suc Suc_lessI call_def diff_Suc_1 diff_diff_left nat_neq_iff numeral_2_eq_2 numeral_3_eq_3 one_add_one)
+done
 
+lemma const_seq_empty : "const_seq [] x"
+by (simp add:const_seq_def)
+
+lemma const_seq_eq : "const_seq (a # list) b \<Longrightarrow> b = a"
+by (simp add:const_seq_def)
+
+lemma in_index_split :
+"x \<in> set (indexSplit ilst lst) \<Longrightarrow>
+ y \<in> set x \<Longrightarrow>
+ y \<in> set lst"
+  by (metis in_set_dropD in_set_takeD index_split_get)
+
+lemma call_end_last : "call_end lst x \<Longrightarrow> last lst = x"
+apply (auto simp add:call_end_def)
+  by (metis (mono_tags, lifting) One_nat_def Suc_lessD diff_Suc_1 first_def first_one_smaller_def last_index)
 
 (* decompose call to sub calls ...
    cycle could also be split into subcycles *)
@@ -1547,14 +1579,35 @@ using pathR_split [of "push_pop"
 apply simp
 
 apply auto
+subgoal (* constant *)
 using const_seq_convert [of x "map length lst ! Suc 0"]
-apply (simp add:push_popL_def)
+apply (auto simp add:push_popL_def)
+apply (cases x)
+using const_seq_empty apply force
+subgoal for xa a list
+apply (simp add:map_nth)
+using const_seq_eq [of a list xa]
+apply simp
+apply (subgoal_tac "a \<in> set (clip (length lst - 2) (Suc 0) lst)")
+defer
+using in_index_split apply fastforce
+apply (subgoal_tac "lst ! Suc 0 = a")
+apply auto
+using call_inside_big [of lst a]
+  by (metis One_nat_def PathRel.take_all Suc_lessD call_def const_seq_eq nth_map numeral_2_eq_2)
+done
+apply (rule call_end2)
+  apply (simp add: call_def)
+  using push_popL_def apply blast
+using call_end_last [of "map length x" "length (lst ! Suc 0)"]
+using call_inside_big [of lst "last x"]
+apply simp
+  by (smt One_nat_def PathRel.take_all Suc_lessD call_def call_end_def diff_less in_index_split last_index length_map nth_map nth_mem numeral_2_eq_2 zero_less_one)
+done done
+
+
 
 (*
-indexSplit ilst (clip (length lst-2) 1 lst
-*)
-
-
 lemma call_invariant :
   "push_popL (map snd lst) \<Longrightarrow>
    first_return k (map snd lst) \<Longrightarrow>
@@ -1562,8 +1615,7 @@ lemma call_invariant :
    pathR (mono_rules iv) lst \<Longrightarrow>
    iv (fst (hd lst)) \<Longrightarrow>
    length lst > 1 \<Longrightarrow>
-   (snd (hd lst), snd (lst!1)) \<in> tlR
-  "
-
+   (snd (hd lst), snd (lst!1)) \<in> tlR"
+*)
 
 end
