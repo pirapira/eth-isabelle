@@ -1309,6 +1309,11 @@ defer
 apply simp
   by (simp add: nth_tl)
 
+definition seqSplit :: "(nat*nat) list \<Rightarrow> 'a list \<Rightarrow> 'a list list" where
+"seqSplit ilst lst =
+   map (%ival. take (snd ival) (drop (fst ival) lst)) ilst"
+
+
 lemma decompose_ncall :
   "ncall lst \<Longrightarrow>
    \<exists>pieces. concat pieces = clip (length lst-2) 1 lst \<and>
@@ -1331,19 +1336,144 @@ using ncall_inside_big apply force
 done
 done
 
-definition seqSplit :: "(nat*nat) list \<Rightarrow> 'a list \<Rightarrow> 'a list list" where
-"seqSplit ilst lst =
-   map (%ival. take (snd ival) (drop (fst ival) lst)) ilst"
+definition call_e :: "'a list list \<Rightarrow> 'a list \<Rightarrow> bool" where
+"call_e lst s = (
+   length lst > 1 \<and>
+   (hd lst,s) \<in> tlR  \<and>
+   push_popL lst \<and>
+   first_return (length lst-1) lst)"
+
+lemma call_end1 :
+   "call_e lst s \<Longrightarrow> call_end (map length lst) (length s)"
+apply (auto simp add:call_e_def call_end_def tlR_def sucR_def
+   hd_map)
+  apply (metis Suc_lessE length_Suc_conv list.sel(1) list.simps(9))
+
+  using push_popL_inc_decL apply auto[1]
+using first_return_smaller [of "lst" "length lst - 1"]
+by (simp add:push_popL_def pathR_tl map_tl)
+
+lemma first_smaller_return2 :
+  "push_popL lst \<Longrightarrow>
+   first_one_smaller k (map length lst) \<Longrightarrow>
+   first_return k lst"
+  by (simp add: first_smaller1 first_smaller_return push_popL_inc_decL)
+
+lemma first_return_nil :
+  "length lst > 0 \<Longrightarrow>
+   first_return k lst \<Longrightarrow>
+   length (hd lst) > 0"
+by (auto simp add: first_return_def first_def tlR_def)
+
+lemma first_return_get :
+  "hd lst = a # list \<Longrightarrow>
+   length lst > 0 \<Longrightarrow>
+   first_return (length lst - 1) lst \<Longrightarrow>
+   list = last lst"
+apply (auto simp add: first_return_def first_def tlR_def)
+  by (simp add: last_conv_nth)
 
 
+lemma call_end2 :
+   "call_end (map length lst) (length s) \<Longrightarrow>
+    push_popL lst \<Longrightarrow>
+    last lst = s \<Longrightarrow>
+    call_e lst s"
+apply (auto simp add:call_end_def call_e_def tlR_def sucR_def)
+apply (cases "hd lst"; auto)
+  apply (metis Suc_lessD length_greater_0_conv list.map_sel(1) list.size(3) nat.distinct(1))
+using first_smaller_return2 [of lst "length lst - 1"]
+apply simp
+using first_return_get apply force
+using first_smaller_return2 [of lst "length lst - 1"]
+apply force
+done
+
+lemma split_and_combine2 :
+   "concat (indexSplit ilst lst) = lst"
+by (induction ilst lst rule:indexSplit.induct; auto)
+
+lemma decompose_ncall_index :
+  "ncall lst \<Longrightarrow>
+   \<exists>ilst. (\<forall>x \<in> set (indexSplit ilst (clip (length lst-2) 1 lst)).
+    call_end x (lst!1) \<or> const_seq x (lst!1))"
+apply (rule exI[where x =
+   "findIndices (clip (length lst-2) 1 lst) (lst!1)"])
+apply auto
+subgoal for x
+using ncall_last [of lst]
+apply simp
+using correct_pieces [of "clip (length lst-2) 1 lst" x]
+apply (simp add:ncall_inc_dec)
+apply (cases "clip (length lst - 2) (Suc 0) lst = []")
+using ncall_sub_length apply fastforce
+apply simp
+using ncall_second [of lst]
+apply (simp add:split_def)
+using ncall_inside_big apply force
+done
+done
+
+lemma index_split_map :
+"x \<in> set (indexSplit ilst lst) \<Longrightarrow>
+ map f x \<in> set (indexSplit ilst (map f lst))"
+by (induction ilst lst arbitrary:x rule:indexSplit.induct;
+    auto simp add: take_map drop_map)
+
+lemma const_seq_convert :
+  "push_popL lst \<Longrightarrow>
+   const_seq (map length lst) n \<Longrightarrow>
+   \<exists>t. const_seq lst t"
+apply (cases lst)
+apply (auto simp add:const_seq_def)
+subgoal for a list x
+apply (induction list arbitrary: x a lst n)
+apply (auto simp add:push_popL_def pathR.simps
+  push_pop_def)
+  apply (metis PathRel.take_all Un_upper2 converseD converse_converse le_refl next_unchanged push_pop_def subset_iff)
+  apply (metis PathRel.take_all Un_upper2 converseD converse_converse le_refl next_unchanged push_pop_def subset_iff)
+  apply (metis (mono_tags, lifting) PathRel.take_all converse.intros le_refl next_unchanged push_pop_def set_mp sup.cobounded2)
+  apply (metis (mono_tags, lifting) PathRel.take_all converse.intros le_refl next_unchanged push_pop_def set_mp sup.cobounded2)
+done done
+
+lemma index_split_get :
+"x \<in> set (indexSplit ilst lst) \<Longrightarrow>
+ \<exists>a b. x = take a (drop b lst)"
+apply (induction ilst lst arbitrary:x rule:indexSplit.induct)
+apply auto
+  apply (metis drop_0)
+  apply metis
+  by (metis List.take_all drop_0 le_add2)
 
 (* decompose call to sub calls ...
    cycle could also be split into subcycles *)
 lemma decompose_call :
   "call lst \<Longrightarrow>
-   \<exists>pieces. concat pieces = clip (length lst-3) 1 lst \<and>
-   (\<forall>x \<in> set pieces. scall x (hd lst) \<or> const_seq x (hd lst))"
+   \<exists>ilst. (\<forall>x \<in> set (indexSplit ilst (clip (length lst-2) 1 lst)).
+    call_e x (lst!1) \<or> const_seq x (lst!1))"
+using decompose_ncall_index [of "map length lst"]
+      call_ncall [of lst]
+apply auto
+subgoal for ilst
+apply (rule exI[where x=ilst])
+apply clarsimp
+(* because internally the stack is high,
+   it should not change *)
+apply (case_tac "const_seq (map length x) (map length lst ! Suc 0) \<or>
+    call_end (map length x) (map length lst ! Suc 0)")
+defer
+subgoal for x
+using index_split_map [of x ilst "clip (length lst - 2) (Suc 0)
+                 lst" length]
+apply (simp add:clip_def take_map drop_map)
+apply force
+done
+apply auto
+using const_seq_convert
 
+(*
+indexSplit ilst (clip (length lst-2) 1 lst
+*)
 
 
 lemma call_invariant :
