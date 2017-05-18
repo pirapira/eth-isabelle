@@ -1445,6 +1445,77 @@ apply auto
   apply metis
   by (metis List.take_all drop_0 le_add2)
 
+lemma pathR_split :
+   "pathR r lst \<Longrightarrow>
+    x \<in> set (indexSplit ilst lst) \<Longrightarrow>
+    pathR r x"
+using index_split_get pathR_take pathR_drop
+  by blast
+
+lemma call_pathR : "call lst \<Longrightarrow> pathR push_pop lst"
+by (auto simp: call_def push_popL_def)
+
+lemma call_inside_pushpopL : 
+  "call lst \<Longrightarrow> push_popL (clip (length lst - 2) 1 lst)"
+by (simp add:call_def push_popL_def pathR_clip)
+
+lemma foo_aux2 :
+"j < length lst - 1 \<Longrightarrow>
+ sti \<in> set (take j (drop (Suc 0) lst)) \<Longrightarrow>
+ sti \<in> set (take (length lst - 2) (drop (Suc 0) lst))"
+using List.set_take_subset_set_take [of j "length lst-2"
+  "drop (Suc 0) lst"]
+apply auto
+apply (cases "length lst")
+apply auto
+  by fastforce
+
+lemma foo_aux :
+"j < length lst - 1 \<Longrightarrow>
+ sti \<in> set (take j (drop (Suc 0) lst)) \<Longrightarrow>
+ length sti
+    \<in> length `
+       set
+        (take (length lst - 2) (drop (Suc 0) lst))"
+using foo_aux2 [of j lst sti]
+
+lemma call_inside_big_idx :
+"call lst \<Longrightarrow>
+ j > 1 \<Longrightarrow> j < length lst - 1 \<Longrightarrow>
+ takeLast (length (lst!1)) (lst!j) = lst ! 1"
+using stack_unchanged [of "clip j 1 lst"
+   "length (lst!1)"]
+apply simp
+apply (cases "push_popL (clip j (Suc 0) lst)")
+defer
+apply (simp add:call_def push_popL_def pathR_clip)
+apply (cases "clip j (Suc 0) lst = []")
+apply (simp add:clip_def call_def)
+apply (simp add:last_clip hd_clip)
+apply (subgoal_tac "\<forall>sti\<in>set (clip j (Suc 0) lst).
+        length (lst ! Suc 0) \<le> length sti")
+apply simp
+apply auto
+subgoal for sti
+using ncall_inside_big [of "map length lst" "length sti"]
+apply (simp add:call_ncall)
+apply (cases "length sti
+     \<in> set (clip (length (map length lst) - 2) (Suc 0)
+              (map length lst))")
+apply auto
+  apply (simp add: clip_def drop_map take_map)
+apply (cases "Suc (length lst - 3) = length lst - 2")
+defer
+apply (simp)
+apply simp
+
+
+lemma call_inside_big :
+"call lst \<Longrightarrow>
+ x\<in>set (clip (length lst - 2) 1 lst) \<Longrightarrow>
+ takeLast (length (lst!1)) x = lst ! 1"
+
+
 (* decompose call to sub calls ...
    cycle could also be split into subcycles *)
 lemma decompose_call :
@@ -1468,8 +1539,16 @@ using index_split_map [of x ilst "clip (length lst - 2) (Suc 0)
 apply (simp add:clip_def take_map drop_map)
 apply force
 done
+subgoal for x
+using pathR_split [of "push_pop"
+   "clip (length lst - 2) (Suc 0) lst" x ilst]
+  pathR_clip [of "push_pop" lst "length lst-2" "Suc 0"]
+  call_pathR [of lst]
+apply simp
+
 apply auto
-using const_seq_convert
+using const_seq_convert [of x "map length lst ! Suc 0"]
+apply (simp add:push_popL_def)
 
 (*
 indexSplit ilst (clip (length lst-2) 1 lst
