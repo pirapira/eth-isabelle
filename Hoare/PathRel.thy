@@ -1607,15 +1607,6 @@ done done
 
 
 
-(*
-lemma call_invariant :
-  "push_popL (map snd lst) \<Longrightarrow>
-   first_return k (map snd lst) \<Longrightarrow>
-   monoI iv (hd lst) \<Longrightarrow>
-   pathR (mono_rules iv) lst \<Longrightarrow>
-   iv (fst (hd lst)) \<Longrightarrow>
-   length lst > 1 \<Longrightarrow>
-   (snd (hd lst), snd (lst!1)) \<in> tlR"
-*)
+
 
 end
