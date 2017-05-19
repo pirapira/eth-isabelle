@@ -48,12 +48,33 @@ definition call_out_rule :: "('a \<Rightarrow> bool) \<Rightarrow> ('a * 'a list
   iv (fst (last lst))
 )"
 
+(* first the invariant is pushed into stack (second element). *)
+lemma call_invariant_push :
+  "call (map snd lst) \<Longrightarrow>
+   monoI iv (hd lst) \<Longrightarrow>
+   pathR (mono_rules iv) lst \<Longrightarrow>
+   iv (fst (hd lst)) \<Longrightarrow>
+   iv (hd (snd (lst!1)))"
+oops
+
+(* pushed element cannot change *)
+lemma call_invariant_before_after :
+  "call lst \<Longrightarrow>
+   lst!1 = lst!(length lst-2)"
+apply (subgoal_tac "length (lst!1) = length (lst!(length lst-2))")
+using call_inside_big_idx [of lst "length lst-2"]
+  apply (metis One_nat_def PathRel.take_all Suc_1 Suc_leI Suc_lessD call_def diff_less_mono2 lessI zero_less_diff)
+using call_ncall [of lst]
+  by (smt One_nat_def Suc_leI Suc_lessD call_def diff_less last_clip le_less length_map ncall_last nth_map numeral_2_eq_2 zero_less_diff zero_less_numeral)
+
+(* because the pushed element didn't change, current must have the
+   invariant, and we can use the mono push rule *)
 lemma call_invariant :
   "call (map snd lst) \<Longrightarrow>
    monoI iv (hd lst) \<Longrightarrow>
    pathR (mono_rules iv) lst \<Longrightarrow>
    iv (fst (hd lst)) \<Longrightarrow>
    iv (fst (last lst))"
+oops
 
-
-
+end
