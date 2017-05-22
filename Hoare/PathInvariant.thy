@@ -431,14 +431,6 @@ apply (simp add:call_end_def)
 by (metis Suc_lessD last_map length_greater_0_conv)
 
 
-definition call_inv :: "('a * 'a list \<Rightarrow> bool) \<Rightarrow> ('a * 'a list) list \<Rightarrow> bool" where
-"call_inv iv l =
-   (call_e (map snd l) (snd (last l)) \<longrightarrow> iv (hd l) \<longrightarrow> iv (last l))"
-
-definition stay_rel :: "('a * 'a list \<Rightarrow> bool) \<Rightarrow> ('a * 'a list) rel" where
-"stay_rel iv = {(a,b) | a b. length (snd a) = length (snd b) \<and> (iv a \<longrightarrow> iv b) }
-             \<union> {(a,b) | a b. length (snd a) \<noteq> length (snd b)}"
-
 definition psublists :: "'a list \<Rightarrow> 'a list set" where
 "psublists lst = {take l (drop i lst) | l i. l < length lst}"
 
@@ -447,14 +439,153 @@ definition callout_rel :: "('a * 'a list \<Rightarrow> bool) \<Rightarrow> nat \
     {(a,b) | a b. length (snd a) = level \<and> length (snd b) = level + 1 \<and> (iv a \<longrightarrow> iv b) }
   \<union> {(a,b) | a b. length (snd a) \<noteq> level \<or> length (snd b) \<noteq> level + 1}"
 
+definition split_no_empty :: "nat list \<Rightarrow> 'a list \<Rightarrow> 'a list list" where
+"split_no_empty ilst lst = filter (%lst. lst \<noteq> []) (indexSplit ilst lst)"
+
+lemma concat_filter : "concat (filter (%lst. lst \<noteq> []) lst) = concat lst"
+by (induction lst; auto)
+
+definition pieces :: "'a list list \<Rightarrow> 'a list list list" where
+"pieces lst =
+  split_no_empty
+     (findIndices (take (length lst - 1) (map length lst))
+             (map length lst ! 0)) (take (length lst-1) lst)"
+
+lemma call_e_from_pieces :
+  "call_e lst x \<Longrightarrow>
+   concat (pieces lst) = take (length lst-1) lst"
+apply (simp add:call_e_def pieces_def split_no_empty_def
+  concat_filter)
+using split_and_combine2 [of "findIndices
+         (take (length lst - Suc 0)
+           (map length lst))
+         (map length lst ! 0)" "take (length lst-1) lst"]
+  by simp
+
+lemma call_e_has_pieces :
+  "call_e lst x \<Longrightarrow> length (pieces lst) > 0"
+apply (cases "length (concat (pieces lst)) = 0")
+using call_e_from_pieces [of lst x]
+apply (auto simp add:call_e_def)
+  by (metis diff_is_0_eq not_less take_eq_Nil)
+
+lemma decompose_call_e_no_empty :
+  "call_e lst (last lst) \<Longrightarrow>
+   x \<in> set (pieces lst) \<Longrightarrow>
+   call_e x (lst!0) \<or> const_seq x (lst!0)"
+using decompose_call_e [of lst
+   "(findIndices (take (length lst - 1) (map length lst)) (map length lst ! 0))" x]
+by (auto simp:split_no_empty_def pieces_def)
+
+lemma call_e_final : "call_e lst x \<Longrightarrow> last lst = x"
+apply (auto simp add : call_e_def first_return_def first_def tlR_def)
+  by (metis One_nat_def Suc_lessD last_conv_nth length_greater_0_conv)
+
+lemma no_empty_pieces : "[] \<notin> set (pieces lst)"
+by (simp add: pieces_def split_no_empty_def)
+
+lemma piece_last :
+   "call_e lst (last lst) \<Longrightarrow>
+    b \<in> set (pieces lst) \<Longrightarrow>
+    last b = lst!0"
+using decompose_call_e_no_empty [of lst b]
+apply auto
+using call_e_final apply force
+apply (cases "b = []")
+using no_empty_pieces apply fastforce
+apply (simp add:const_seq_def)
+  using last_in_set by blast
+
+lemma drop_concat_aux :
+ "b \<noteq> [] \<Longrightarrow>
+  lst = concat (a#b#rest) @ [x] \<Longrightarrow>
+  last b # concat rest @ [x] =
+    drop (length a + length b - 1) lst"
+apply (subgoal_tac "drop (length a + length b - Suc 0) a = []")
+apply (auto)
+  apply (smt Suc_leI append_butlast_last_id append_eq_append_conv append_take_drop_id diff_diff_cancel length_Cons length_drop length_greater_0_conv list.size(3))
+  by (metis Suc_leI length_greater_0_conv ordered_cancel_comm_monoid_diff_class.le_add_diff semiring_normalization_rules(24))
+
+lemma drop_concat_aux2 :
+  "a # b # rest = pieces lst \<Longrightarrow>
+   call_e lst (last lst) \<Longrightarrow>
+   last b # concat rest @ [last lst] = drop (length a + length b - 1) lst"
+apply (rule drop_concat_aux)
+  apply (metis list.set_intros(1) list.set_intros(2) no_empty_pieces)
+using call_e_from_pieces [of lst "last lst"]
+  by (metis (no_types, lifting) Nil_is_append_conv append_butlast_last_id butlast_conv_take concat.simps(2) list.set_intros(1) no_empty_pieces take_eq_Nil)
+
+lemma first_return_drop :
+  "first_return (length lst - 1) lst \<Longrightarrow>
+   length lst > 0 \<Longrightarrow>
+   length (drop x lst) > 0 \<Longrightarrow>
+   hd lst = hd (drop x lst) \<Longrightarrow>
+   first_return (length (drop x lst) - 1) (drop x lst)"
+by (simp add:first_return_def first_def)
+
+(* take away a piece, have new call_e *)
+lemma take_piece :
+  "call_e lst (last lst) \<Longrightarrow>
+   a # b # rest = pieces lst \<Longrightarrow>
+   call_e ([last b]@concat rest@[last lst]) (last lst)"
+apply (auto simp add: call_e_def)
+using piece_last [of lst b]
+  apply (metis One_nat_def Suc_lessD call_e_def hd_conv_nth length_greater_0_conv list.set_intros(1) list.set_intros(2))
+apply (subgoal_tac
+   "last b # concat rest @ [last lst] = drop (length a + length b - 1) lst")
+apply (simp add:push_popL_def pathR_drop)
+using drop_concat_aux2 [of a b rest lst]
+  apply (simp add: call_e_def)
+
+apply (subgoal_tac
+   "last b # concat rest @ [last lst] = drop (length a + length b - 1) lst")
+using first_return_drop [of lst "length a + length b - 1"]
+apply simp
+apply (subgoal_tac "lst \<noteq> []")
+apply (subgoal_tac "length a + length b - 1 < length lst")
+apply (subgoal_tac "hd (drop (length a + length b - Suc 0)
+          lst) = last b")
+apply (subgoal_tac "Suc (length (concat rest)) = length lst -
+       Suc (length a + length b - Suc 0)")
+apply simp
+apply (subgoal_tac "call_e lst (last lst)")
+using piece_last [of lst b]
+  apply (metis hd_conv_nth list.set_intros(1) list.set_intros(2))
+  apply (simp add: call_e_def)
+  apply (metis One_nat_def Suc_diff_Suc length_Cons length_append_singleton length_drop nat.inject)
+  apply (metis list.sel(1))
+  apply (metis One_nat_def length_drop length_greater_0_conv list.distinct(1) zero_less_diff)
+  apply (metis One_nat_def less_numeral_extra(2) list.size(3))
+using drop_concat_aux2 [of a b rest lst]
+  apply (simp add: call_e_def)
+done
+
+definition call_inv2 :: "('a * 'a list \<Rightarrow> bool) \<Rightarrow> ('a * 'a list) list \<Rightarrow> bool" where
+"call_inv2 iv l =
+   (call_e (map snd l) (snd (last l)) \<longrightarrow> iv (hd l) \<longrightarrow> iv (last l))"
+
+definition call_inv :: "('a * 'a list \<Rightarrow> bool) \<Rightarrow> ('a * 'a list) list \<Rightarrow> bool" where
+"call_inv iv l = (call (map snd l) \<longrightarrow> iv (hd l) \<longrightarrow> iv (last l))"
+
+definition stay_rel :: "('a * 'a list \<Rightarrow> bool) \<Rightarrow> ('a * 'a list) rel" where
+"stay_rel iv = {(a,b) | a b. length (snd a) = length (snd b) \<and> (iv a \<longrightarrow> iv b) }
+             \<union> {(a,b) | a b. length (snd a) \<noteq> length (snd b)}"
+
 lemma call_invariant :
-  "\<forall>l \<in> psublists lst. call_inv iv l \<Longrightarrow> 
+  "\<forall>l \<in> psublists lst. call_inv2 iv l \<Longrightarrow> 
    pathR (stay_rel iv) lst \<Longrightarrow>
    (* exit must be good *)
    (iv (lst!(length lst-2)) \<Longrightarrow> iv (last lst)) \<Longrightarrow>
    (* call outs should be good *)
    pathR (callout_rel iv (length (snd (hd lst)))) lst \<Longrightarrow>
-   call_inv iv lst"
+   call_inv2 iv lst"
 
+(* can be solved using a case analysis using call pieces *)
+
+apply (induction "length (pieces (map snd lst))")
+apply (auto simp:call_inv2_def)
+using call_e_has_pieces apply force
+
+oops
 
 end
