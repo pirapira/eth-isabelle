@@ -560,6 +560,311 @@ using drop_concat_aux2 [of a b rest lst]
   apply (simp add: call_e_def)
 done
 
+lemma combine_call_pieces :
+   "concat (call_pieces lst) = clip (length lst-2) 1 lst"
+apply (simp add:call_pieces_def)
+  by (simp add: split_and_combine2)
+
+lemma tlr_anti : "(a,b) \<in> tlR \<Longrightarrow> (b,a) \<in> tlR \<Longrightarrow> False"
+unfolding tlR_def by auto
+
+lemma tlr_anti_ref : "(a,a) \<in> tlR \<Longrightarrow> False"
+unfolding tlR_def by auto
+
+lemma first_call_piece :
+  "call lst \<Longrightarrow>
+   x \<in> set (call_pieces lst) \<Longrightarrow>
+   call_e x (lst!1) \<Longrightarrow>
+   x = take i (drop j lst) \<Longrightarrow>
+   j > 1"
+apply (subgoal_tac "length x > 0")
+apply (subgoal_tac "i \<ge> length x")
+apply (subgoal_tac "(x!0, lst!1) \<in> tlR")
+using combine_call_pieces [of lst]
+apply (simp add:clip_def)
+apply (cases "j = 0")
+apply (subgoal_tac "x!0 = lst!0")
+apply (clarsimp simp:call_def)
+using tlr_anti apply fastforce
+  apply simp
+apply (cases "j = 1")
+apply (subgoal_tac "x!0 = lst!1")
+apply (clarsimp simp:call_def)
+using tlr_anti_ref apply fastforce
+  apply simp
+  apply linarith
+apply (clarsimp simp:call_e_def)
+  apply (metis append_take_drop_id gr_implies_not0 hd_append2 hd_drop_conv_nth take_eq_Nil)
+  apply (simp )
+apply (clarsimp simp:call_e_def)
+  by linarith
+
+lemma call_e_call :
+   "call_e (tl lst) (last lst) \<Longrightarrow>
+    hd lst = last lst \<Longrightarrow> call lst"
+apply (auto simp add:call_e_def call_def)
+  apply (metis One_nat_def Suc_lessD hd_conv_nth length_greater_0_conv length_tl nth_tl zero_less_diff)
+apply (simp add:push_popL_def)
+apply (case_tac lst)
+  apply simp
+apply simp
+apply (case_tac list)
+apply simp
+apply simp
+  apply (simp add: pathR.simps(1) push_pop_def)
+  by (simp add: numeral_2_eq_2)
+
+lemma take_tl :
+"j > 0 \<Longrightarrow>
+ take i (drop j lst) = tl (take (i+1) (drop (j-1) lst))"
+by (metis One_nat_def Suc_pred diff_add_inverse2 drop_Suc tl_drop tl_take)
+
+lemma hd_drop :
+"length (drop (j-1) lst) > 0 \<Longrightarrow>
+ j > 0 \<Longrightarrow>
+ hd (drop (j-1) lst) = lst ! (j-1)"
+  by (simp add: hd_drop_conv_nth)
+
+fun concat_index :: "'a list list \<Rightarrow> nat \<Rightarrow> nat" where
+  "concat_index [] x = 1"
+| "concat_index (a#rest) x =
+    (if x < length a then 0
+     else 1 + concat_index rest (x-length a))"
+
+lemma concat_index_good :
+   "x < length (concat lst) \<Longrightarrow>
+    concat_index lst x < length lst"
+by (induction lst x rule:concat_index.induct; auto)
+
+lemma find_piece1 :
+   "x < length (concat ps) \<Longrightarrow>
+    length (concat (take (concat_index ps x) ps)) \<le> x"
+apply (induction ps x rule:concat_index.induct; auto)
+  by linarith
+
+lemma find_piece2 :
+   "x < length (concat ps) \<Longrightarrow>
+    length (concat (take (concat_index ps x + 1) ps)) > x"
+apply (induction ps x rule:concat_index.induct; auto)
+  by linarith
+
+(*
+lemma piece_from_set :
+   "take i (drop j (concat ps)) \<in> set ps \<Longrightarrow>
+    length (take i (drop j (concat ps))) > 0 \<Longrightarrow>
+    ps ! concat_index ps j = (take i (drop j (concat ps)))"
+*)
+
+fun is_piece_at :: "'a list \<Rightarrow> 'a list list \<Rightarrow> nat \<Rightarrow> bool" where
+  "is_piece_at x [] idx = False"
+| "is_piece_at x (a#rest) idx =
+    ((idx = 0 \<and> x = a) \<or>
+     (is_piece_at x rest (idx-length a)) \<and> length a \<le> idx)"
+
+(*
+fun is_piece_at :: "'a list \<Rightarrow> 'a list list \<Rightarrow> nat \<Rightarrow> bool" where
+  "is_piece_at x [] idx = False"
+| "is_piece_at x (a#rest) idx =
+    ((idx = 0 \<and> x = a) \<or>
+     (is_piece_at x rest (idx-length a)) \<and> length a < idx)"
+*)
+
+lemma piece_first :
+   "length x > 0 \<Longrightarrow>
+    is_piece_at x ps j \<Longrightarrow>
+    x!0 = concat ps ! j"
+by (induction x ps j rule:is_piece_at.induct;
+        auto simp add: nth_append)
+
+lemma first_piece2 :
+  "call lst \<Longrightarrow>
+   is_piece_at x (call_pieces lst) j \<Longrightarrow>
+   call_e x (lst!1) \<Longrightarrow>
+   j > 0"
+apply (subgoal_tac "length x > 0")
+apply (subgoal_tac "(x!0, lst!1) \<in> tlR")
+using combine_call_pieces [of lst]
+apply (simp add:clip_def)
+apply (cases "j = 0")
+apply (subgoal_tac "x!0 = lst!1")
+apply (clarsimp simp:call_def)
+using tlr_anti_ref apply fastforce
+using piece_first [of x "call_pieces lst" j]
+  apply (metis Nitpick.size_list_simp(2) One_nat_def Suc_leI add.right_neutral call_invariant_before_after drop_Nil length_drop list.size(3) nth_drop nth_take zero_less_Suc)
+  apply blast
+by (auto simp:call_e_def hd_conv_nth)
+
+fun is_piece_last :: "'a list \<Rightarrow> 'a list list \<Rightarrow> nat \<Rightarrow> bool" where
+  "is_piece_last x [] idx = False"
+| "is_piece_last x (a#rest) idx =
+    ((idx = length a - 1 \<and> x = a) \<or>
+     (is_piece_last x rest (idx-length a)) \<and> length a < idx)"
+
+fun is_piece_adj :: "'a list \<Rightarrow> 'a list \<Rightarrow> 'a list list \<Rightarrow> nat \<Rightarrow> bool" where
+  "is_piece_adj y x [] idx = False"
+| "is_piece_adj y x [a] idx = False"
+| "is_piece_adj y x (a#b#rest) idx =
+    ((Suc idx = length a \<and> y = a \<and> x = b \<and>
+      length b > 0) \<or>
+     (is_piece_adj y x rest (idx-length a)) \<and> length a < idx)"
+
+lemma piece_at_concat_index :
+   "length x > 0 \<Longrightarrow>
+    is_piece_at x lst i \<Longrightarrow>
+    x = lst ! concat_index lst i"
+by (induction x lst i rule:is_piece_at.induct; auto)
+
+lemma piece_last_concat_index :
+   "length x > 0 \<Longrightarrow>
+    is_piece_last x lst i \<Longrightarrow>
+    x = lst ! concat_index lst i"
+by (induction lst i arbitrary:x rule:concat_index.induct; auto)
+
+lemma piece_at_concat_index_smaller :
+   "length x > 0 \<Longrightarrow>
+    i > 0 \<Longrightarrow>
+    is_piece_at x lst i \<Longrightarrow>
+    concat_index lst (i-1) < concat_index lst i"
+by (induction x lst i rule:is_piece_at.induct; auto)
+
+lemma piece_at_concat_index_gt0 :
+   "length x > 0 \<Longrightarrow>
+    i > 0 \<Longrightarrow>
+    is_piece_at x lst i \<Longrightarrow>
+    0 < concat_index lst i"
+by (induction x lst i rule:is_piece_at.induct; auto)
+
+lemma exists_piece_at :
+   "x \<in> set lst \<Longrightarrow>
+    length x > 0 \<Longrightarrow>
+    \<exists>j. is_piece_at x lst j"
+apply (induction lst ; auto)
+apply (case_tac "x = a")
+  apply auto
+subgoal for a lst xa
+apply (rule exI[where x = "xa + length a"])
+apply simp
+done
+done
+
+lemma piece_at_concat_length :
+   "length x > 0 \<Longrightarrow>
+    i > 0 \<Longrightarrow>
+    is_piece_at x lst i \<Longrightarrow>
+    length (concat (take (concat_index lst i) lst)) = i"
+apply (induction lst arbitrary:i; auto)
+apply (case_tac "length a = i"; auto)
+  using find_piece1 in_set_takeD by force
+
+
+lemma concat_find_last :
+  "length (concat lst) > 0 \<Longrightarrow>
+   \<exists>l \<in> set lst - {[]}. last l = last (concat lst)"
+apply (induction lst; auto)
+  using Nil_eq_concat_conv apply fastforce
+  by (metis (no_types, lifting) DiffD1 DiffD2 DiffI Nil_eq_concat_conv insert_iff last_appendR)
+
+lemma call_piece_last :
+  "call lst \<Longrightarrow>
+   l \<in> set (call_pieces lst) \<Longrightarrow>
+   l \<noteq> [] \<Longrightarrow>
+   last l = lst!1"
+using decompose_call_pieces [of lst l]
+apply simp
+apply (cases "call_e l (lst ! Suc 0)")
+apply auto
+  apply (simp add: call_e_final)
+apply (simp add:const_seq_def)
+  using last_in_set by blast
+
+lemma take_aux :
+"length lst > 2 \<Longrightarrow>
+ j > 0 \<Longrightarrow>
+ j < length lst - 1 \<Longrightarrow>
+ lst ! j =
+ take (Suc (length lst - 3)) (drop (Suc 0) lst) !
+    (j - Suc 0)"
+  by (smt One_nat_def Suc_1 Suc_diff_1 Suc_diff_Suc Suc_lessD Suc_less_eq drop_0 drop_Suc length_tl nth_take nth_tl numeral_3_eq_3)
+
+(*
+  by (metis (no_types, lifting) Suc_diff_Suc Suc_leI Suc_lessD Suc_pred le_add_diff_inverse less_SucI nth_drop nth_take numeral_2_eq_2 numeral_3_eq_3)
+*)
+
+lemma concat_helper :
+"j < length (concat (take n lst)) \<Longrightarrow> 
+ concat (take n lst) ! j =  concat lst ! j"
+apply (induction lst arbitrary:j n; auto)
+apply (case_tac n; auto)
+apply (case_tac "j < length a")
+  apply (simp add: nth_append)
+  apply (simp add: nth_append)
+done
+
+lemma length_concat_take :
+  "length (concat (take n lst)) \<le> length (concat lst)"
+apply (induction lst arbitrary:n; auto)
+by (case_tac n; auto)
+
+lemma extend_call_pieces :
+  "call lst \<Longrightarrow>
+   is_piece_at x (call_pieces lst) j \<Longrightarrow>
+   call_e x (lst!1) \<Longrightarrow>
+   call (lst!j # x)"
+apply (subgoal_tac "j > 0")
+defer
+using first_piece2 apply fastforce
+apply (rule call_e_call)
+apply (cases "x = []")
+apply (simp add:call_e_def)
+apply clarsimp
+  apply (simp add: call_e_final)
+apply clarsimp
+using piece_at_concat_length [of x j "call_pieces lst"]
+apply simp
+apply (subgoal_tac
+  "lst!j = concat
+       (take (concat_index (call_pieces lst) j)
+         (call_pieces lst)) ! (j-1)")
+apply (subgoal_tac "last x = lst!1")
+apply simp
+using concat_find_last
+ [of "(take (concat_index (call_pieces lst) j)
+         (call_pieces lst))"]
+apply clarsimp
+apply (subgoal_tac "l \<in> set (call_pieces lst)")
+subgoal for l
+using call_piece_last [of l lst]
+  by (metis One_nat_def call_piece_last last_index)
+  apply (meson in_set_takeD)
+  apply (simp add: call_e_final)
+apply (subgoal_tac "concat
+     (take (concat_index (call_pieces lst) j)
+       (call_pieces lst)) !
+    (j - 1) = concat (call_pieces lst) ! (j-1)")
+apply simp
+using combine_call_pieces [of lst]
+apply (simp add:clip_def)
+apply (rule take_aux)
+apply (simp add:call_def)
+apply simp
+defer
+apply (rule concat_helper)
+apply simp
+apply (subgoal_tac "length
+     (concat
+       (take (concat_index (call_pieces lst) j)
+         (call_pieces lst))) < length lst - 1")
+apply simp
+apply (subgoal_tac "length
+     (concat (call_pieces lst)) < length lst - 1")
+using length_concat_take [of
+   "(concat_index (call_pieces lst) j)"
+   "(call_pieces lst)"]
+  apply linarith
+apply (clarsimp simp add:call_def)
+  by linarith
+
+
 definition call_inv2 :: "('a * 'a list \<Rightarrow> bool) \<Rightarrow> ('a * 'a list) list \<Rightarrow> bool" where
 "call_inv2 iv l =
    (call_e (map snd l) (snd (last l)) \<longrightarrow> iv (hd l) \<longrightarrow> iv (last l))"
