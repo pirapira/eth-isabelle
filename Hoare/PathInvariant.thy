@@ -957,7 +957,7 @@ using has_pieces apply force
 
 lemma concat_pcs_length :
   "length lst > 2 \<Longrightarrow>
-   length (concat (pcs lst)) < length lst - 1"
+   length (concat (pcs lst)) = length lst - 2"
 by (simp add:combine_pcs clip_def)
 
 lemma get_last :
@@ -969,17 +969,65 @@ apply (simp add:pcs_not_empty combine_pcs)
 using clip_nth [of lst "length (concat (take (Suc j) (pcs lst)))"]
 apply (simp add:has_piece)
 using concat_pcs_length [of lst]
-  by (metis (no_types, lifting) One_nat_def le_trans length_concat_take not_le)
+apply simp
+  by (metis One_nat_def Suc_pred diff_Suc_eq_diff_pred gr_zeroI le_imp_less_Suc length_concat_take less_diff_conv less_numeral_extra(2) numeral_2_eq_2 one_add_one)
 
 lemma get_first_gen :
 "j < length ps \<Longrightarrow>
+ [] \<notin> set ps \<Longrightarrow>
  concat ps ! length (concat (take j ps)) = hd (ps ! j)"
-oops
+by (induction ps arbitrary:j; case_tac j; auto simp add: hd_conv_nth nth_append)
 
+lemma calc_len :
+"length lst > 2 \<Longrightarrow>
+ length (take (Suc (length lst - 3)) (drop (Suc 0) lst)) = length lst - 2"
+  by (simp add: Suc_diff_Suc numeral_2_eq_2 numeral_3_eq_3)
+
+lemma len_con_take :
+ "length (concat (take j lst)) =
+  length (concat lst) - length (concat (drop j lst))"
+apply (induction lst arbitrary:j; auto)
+apply (case_tac j)
+apply auto
+  by (metis (no_types, lifting) add.left_neutral append_take_drop_id concat_append diff_is_0_eq' eq_iff length_append linear ordered_cancel_comm_monoid_diff_class.add_diff_assoc)
+
+lemma concat_mem_length :
+"l \<in> set lst \<Longrightarrow> length l \<le> length (concat lst)"
+by (induction lst; auto)
 
 lemma get_first :
-"lst ! (length (concat (take j (pcs lst))) + 1) = hd (pcs lst ! j)"
-oops
+"length lst > 2 \<Longrightarrow>
+ j < length (pcs lst) \<Longrightarrow>
+ lst ! (length (concat (take j (pcs lst))) + 1) = hd (pcs lst ! j)"
+using get_first_gen [of j "pcs lst"]
+apply (simp add:pcs_not_empty combine_pcs)
+using concat_pcs_length [of lst]
+apply (simp add:clip_def)
+apply (subgoal_tac "take (Suc (length lst - 3))
+     (drop (Suc 0) lst) !
+    length (concat (take j (pcs lst))) = lst !
+    Suc
+     (length
+       (concat (take j (pcs lst))))")
+apply simp
+apply (subgoal_tac "length (concat (take j (pcs lst))) <
+  length (take (Suc (length lst - 3))
+     (drop (Suc 0) lst))")
+  apply (smt Suc_diff_Suc Suc_eq_plus1 Suc_mono clip_def combine_pcs diff_Suc_1 less_trans_Suc numeral_1_eq_Suc_0 numeral_2_eq_2 numeral_3_eq_3 numeral_One take_aux zero_less_Suc)
+apply (auto simp add:calc_len)
+  apply (metis Suc_diff_Suc Suc_lessD le_imp_less_Suc length_concat_take numeral_2_eq_2)
+apply (simp add:len_con_take)
+apply (subgoal_tac "length (concat (drop j (pcs lst))) > 0")
+  apply linarith
+apply (subgoal_tac "length
+         (concat (drop j (pcs lst))) \<ge> length (pcs lst!j)")
+apply (subgoal_tac "length (pcs lst!j) > 0")
+  apply linarith
+apply auto
+  using nth_mem pcs_not_empty apply force
+using concat_mem_length [of "(pcs lst ! j)" "pcs lst"]
+  by (metis Cons_nth_drop_Suc concat_mem_length list.set_intros(1))
+
 
 lemma call_invariant_aux :
  "\<forall>m<length lst.
