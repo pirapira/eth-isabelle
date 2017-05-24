@@ -1028,6 +1028,60 @@ apply auto
 using concat_mem_length [of "(pcs lst ! j)" "pcs lst"]
   by (metis Cons_nth_drop_Suc concat_mem_length list.set_intros(1))
 
+lemma decompose_pcs :
+  "call (map snd lst) \<Longrightarrow>
+   x \<in> set (pcs lst) \<Longrightarrow>
+   call_e (map snd x) (snd (lst!1)) \<or>
+   const_seq (map snd x) (snd (lst!1))"
+using decompose_call_pieces [of "map snd lst" "map snd x"]
+pcs_call_pieces [of x lst]
+apply (subgoal_tac "length lst > 1")
+  apply (auto simp add:call_def)
+done
+
+lemma call_pcs_hd :
+ "call (map snd lst) \<Longrightarrow>
+  hd (pcs lst) \<in> set (pcs lst)"
+apply (subgoal_tac "length lst > 0")
+using has_pieces [of lst]
+  apply (metis Suc_lessI add_diff_cancel_left' call_invariant_before_after call_last_length diff_Suc_1 diff_add_zero last_conv_nth length_map less_numeral_extra(3) list.set_sel(1) list.size(3) numeral_2_eq_2 one_add_one zero_neq_one)
+by (auto simp add:call_def)
+
+lemma call_length_simp :
+  "call (map snd lst) \<Longrightarrow>
+   length lst > 2"
+by (simp add:call_def)
+
+lemma call_pcs_helper :
+ "call (map snd lst) \<Longrightarrow>
+  pcs lst \<noteq> []"
+apply (subgoal_tac "length lst > 2")
+using has_pieces [of lst]
+by (auto simp add:call_def)
+
+(* first piece is a constant seq *)
+lemma first_pcs_const :
+  "call (map snd lst) \<Longrightarrow>
+   const_seq (map snd (hd (pcs lst))) (snd (lst!1))"
+using decompose_pcs [of lst "hd (pcs lst)"]
+apply (simp add:call_pcs_hd)
+apply (cases "call_e (map snd (hd (pcs lst)))
+     (snd (lst ! Suc 0))"; auto)
+using get_first [of lst 0 ]
+apply (simp add:call_length_simp call_pcs_helper)
+apply (subgoal_tac "length (pcs lst) > 0")
+apply (auto simp add:call_e_def hd_conv_nth)
+  apply (metis Suc_lessD hd_map length_greater_0_conv tlr_anti)
+  using call_pcs_helper by blast
+
+lemma handle_const_seq :
+   "pathR (iv_cond iv (length (snd (lst ! 0)))) lst \<Longrightarrow>
+    iv (lst ! 0) \<Longrightarrow>
+    length lst > 0 \<Longrightarrow>
+    const_seq (map snd lst) (snd (lst ! 0)) \<Longrightarrow>
+    iv (last lst)"
+apply (induction lst; auto)
+by (case_tac lst; auto; simp add:iv_cond_def pathR.simps const_seq_def)
 
 lemma call_invariant_aux :
  "\<forall>m<length lst.
@@ -1045,7 +1099,13 @@ apply auto
 apply (cases "pcs lst")
 apply simp
 apply (subst get_last)
-apply simp
+apply (auto simp add:call_length_simp call_pcs_helper)
+apply (subgoal_tac "const_seq (map snd a) (snd (lst!1))")
+defer
+using first_pcs_const [of lst]
+apply force
+defer
+
 
 lemma call_invariant :
   "call (map snd lst) \<Longrightarrow>
