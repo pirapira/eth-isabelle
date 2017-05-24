@@ -1083,6 +1083,14 @@ lemma handle_const_seq :
 apply (induction lst; auto)
 by (case_tac lst; auto; simp add:iv_cond_def pathR.simps const_seq_def)
 
+lemma pathR_pcs :
+   "a \<in> set (pcs lst) \<Longrightarrow>
+    pathR r lst \<Longrightarrow>
+    pathR r a"
+apply (simp add:pcs_def)
+  using pathR_clip pathR_split by blast
+
+
 lemma call_invariant_aux :
  "\<forall>m<length lst.
        \<forall>x. m = length x \<longrightarrow>
@@ -1102,9 +1110,16 @@ apply (subst get_last)
 apply (auto simp add:call_length_simp call_pcs_helper)
 apply (subgoal_tac "const_seq (map snd a) (snd (lst!1))")
 defer
-using first_pcs_const [of lst]
-apply force
+using first_pcs_const [of lst] apply force
 defer
+apply (subgoal_tac "lst!1 = a!0")
+subgoal for a list
+apply (rule handle_const_seq [of iv a])
+apply auto
+using pathR_pcs [of a lst ] apply force
+  by (metis list.set_intros(1) pcs_not_empty)
+using get_first [of lst 0]
+  apply (metis (no_types, lifting) One_nat_def call_length_simp clip_nth combine_pcs concat_eq_Nil_conv diff_Suc_1 get_first_gen hd_conv_nth length_pos_if_in_set less_diff_conv less_numeral_extra(3) list.set_intros(1) list.size(3) nth_Cons_0 one_add_one pcs_not_empty take_eq_Nil zero_less_one)
 
 
 lemma call_invariant :
