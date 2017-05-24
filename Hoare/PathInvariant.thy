@@ -865,6 +865,7 @@ apply (clarsimp simp add:call_def)
   by linarith
 
 
+(*
 definition call_inv2 :: "('a * 'a list \<Rightarrow> bool) \<Rightarrow> ('a * 'a list) list \<Rightarrow> bool" where
 "call_inv2 iv l =
    (call_e (map snd l) (snd (last l)) \<longrightarrow> iv (hd l) \<longrightarrow> iv (last l))"
@@ -873,8 +874,143 @@ definition call_inv :: "('a * 'a list \<Rightarrow> bool) \<Rightarrow> ('a * 'a
 "call_inv iv l = (call (map snd l) \<longrightarrow> iv (hd l) \<longrightarrow> iv (last l))"
 
 definition stay_rel :: "('a * 'a list \<Rightarrow> bool) \<Rightarrow> ('a * 'a list) rel" where
-"stay_rel iv = {(a,b) | a b. length (snd a) = length (snd b) \<and> (iv a \<longrightarrow> iv b) }
-             \<union> {(a,b) | a b. length (snd a) \<noteq> length (snd b)}"
+"stay_rel iv =
+  {(a,b) | a b. length (snd a) = length (snd b) \<and> (iv a \<longrightarrow> iv b) }
+\<union> {(a,b) | a b. length (snd a) \<noteq> length (snd b)}"
+*)
+
+definition iv_cond :: "('a * 'a list \<Rightarrow> bool) \<Rightarrow> nat \<Rightarrow> ('a * 'a list) rel" where
+"iv_cond iv level =
+  {(a,b) | a b. length (snd a) = level \<and> length (snd b) = level \<and> (iv a \<longrightarrow> iv b) }
+\<union> {(a,b) | a b. length (snd a) = level \<and> length (snd b) + 1 = level \<and> (iv a \<longrightarrow> iv b) }
+\<union> {(a,b) | a b. length (snd a) + 1 = level \<and> length (snd b) = level \<and> (iv a \<longrightarrow> iv b) }
+\<union> {(a,b) | a b. length (snd a) \<noteq> level \<and> length (snd b) \<noteq> level \<or>
+                length (snd a) \<noteq> level \<and> length (snd b) \<noteq> level + 1 \<or>
+                length (snd a) \<noteq> level + 1 \<and> length (snd b) \<noteq> level}"
+
+(*
+definition pcs :: "'a list list \<Rightarrow> 'a list list list" where
+"pcs lst = filter (%x. x \<noteq> []) (call_pieces lst)"
+*)
+
+definition pcs :: "('a * 'a list) list \<Rightarrow> ('a * 'a list) list list" where
+"pcs lst = filter (%x. x \<noteq> [])
+   (let ilst = findIndices
+       (clip (length lst-2) 1 (map (length \<circ> snd) lst))
+       (length (snd (lst!1))) in
+   indexSplit ilst (clip (length lst-2) 1 lst))"
+
+lemma pcs_call_pieces :
+   "a \<in> set (pcs lst) \<Longrightarrow>
+    length lst > 1 \<Longrightarrow>
+    map snd a \<in> set (call_pieces (map snd lst))"
+by (simp add:pcs_def call_pieces_def clip_def
+    drop_map index_split_map take_map)
+
+(* perhaps there could be some kind of driver
+   that generates a good induction principle
+   *)
+
+lemma get_last_gen :
+"j < length ps \<Longrightarrow>
+ [] \<notin> set ps \<Longrightarrow>
+ concat ps ! (length (concat (take (Suc j) ps)) - 1) =
+ last (ps ! j)"
+apply (induction ps arbitrary:j; auto)
+apply (case_tac j; auto)
+  apply (simp add: last_conv_nth nth_append)
+apply (case_tac ps; auto)
+  by (metis Nat.add_diff_assoc Suc_leI add_gr_0 length_greater_0_conv nth_append_length_plus)
+
+lemma pcs_not_empty :
+"[] \<notin> set (pcs lst)"
+by (auto simp add:pcs_def)
+
+lemma combine_pcs :
+   "concat (pcs lst) = clip (length lst-2) 1 lst"
+by (simp add: pcs_def concat_filter split_and_combine2)
+
+lemma clip_nth :
+"length lst > 2 \<Longrightarrow>
+ j > 0 \<Longrightarrow>
+ j < length lst-1 \<Longrightarrow>
+ clip (length lst - 2) 1 lst ! (j-1) = lst ! j"
+by (simp add:clip_def)
+
+lemma has_pieces :
+"length lst > 2 \<Longrightarrow>
+ length (pcs lst) > 0"
+apply (case_tac lst)
+apply (auto simp: pcs_def call_pieces_def clip_def)
+apply (case_tac list)
+apply (auto simp: pcs_def call_pieces_def clip_def)
+apply (case_tac lista)
+apply (auto simp: pcs_def call_pieces_def clip_def)
+done
+
+lemma has_piece :
+"length lst > 2 \<Longrightarrow>
+ \<exists>xs\<in>set (take (Suc j) (pcs lst)). xs \<noteq> []"
+apply (cases "pcs lst")
+using has_pieces apply force
+  by (metis list.set_intros(1) pcs_not_empty take_Suc_Cons)
+
+lemma concat_pcs_length :
+  "length lst > 2 \<Longrightarrow>
+   length (concat (pcs lst)) < length lst - 1"
+by (simp add:combine_pcs clip_def)
+
+lemma get_last :
+"length lst > 2 \<Longrightarrow>
+ j < length (pcs lst) \<Longrightarrow>
+ lst ! length (concat (take (Suc j) (pcs lst))) = last (pcs lst ! j)"
+using get_last_gen [of j "pcs lst"]
+apply (simp add:pcs_not_empty combine_pcs)
+using clip_nth [of lst "length (concat (take (Suc j) (pcs lst)))"]
+apply (simp add:has_piece)
+using concat_pcs_length [of lst]
+  by (metis (no_types, lifting) One_nat_def le_trans length_concat_take not_le)
+
+lemma get_first_gen :
+"j < length ps \<Longrightarrow>
+ concat ps ! length (concat (take j ps)) = hd (ps ! j)"
+oops
+
+
+lemma get_first :
+"lst ! (length (concat (take j (pcs lst))) + 1) = hd (pcs lst ! j)"
+oops
+
+lemma call_invariant_aux :
+ "\<forall>m<length lst.
+       \<forall>x. m = length x \<longrightarrow>
+           call (map snd x) \<longrightarrow>
+           pathR (iv_cond iv (length (snd (x ! 1)))) x \<longrightarrow>
+           iv (x ! 1) \<longrightarrow> iv (last x) \<Longrightarrow>
+    call (map snd lst) \<Longrightarrow>
+    pathR (iv_cond iv (length (snd (lst ! 1)))) lst \<Longrightarrow>
+    j < length (pcs lst) \<Longrightarrow>
+    iv (lst!1) \<Longrightarrow>
+    iv (lst ! length (concat (take (Suc j) (pcs lst))))"
+apply (induction j)
+apply auto
+apply (cases "pcs lst")
+apply simp
+apply (subst get_last)
+apply simp
+
+lemma call_invariant :
+  "call (map snd lst) \<Longrightarrow>
+   pathR (iv_cond iv (length (snd (lst!1)))) lst \<Longrightarrow>
+   iv (lst!1) \<Longrightarrow>
+   iv (last lst)"
+apply (induction "length lst" arbitrary:lst rule:nat_less_induct)
+
+subgoal for lst
+
+apply (induction "call_pieces (map snd lst)" arbitrary:lst)
+
+
 
 lemma call_invariant :
   "\<forall>l \<in> psublists lst. call_inv2 iv l \<Longrightarrow> 
