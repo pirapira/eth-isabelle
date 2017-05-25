@@ -879,16 +879,6 @@ definition stay_rel :: "('a * 'a list \<Rightarrow> bool) \<Rightarrow> ('a * 'a
 \<union> {(a,b) | a b. length (snd a) \<noteq> length (snd b)}"
 *)
 
-definition iv_cond :: "('a * 'a list \<Rightarrow> bool) \<Rightarrow> nat \<Rightarrow> ('a * 'a list) rel" where
-"iv_cond iv level =
-  {(a,b) | a b. length (snd a) = level \<and> length (snd b) = level \<and> (iv a \<longrightarrow> iv b) }
-\<union> {(a,b) | a b. length (snd a) = level \<and> length (snd b) + 1 = level \<and> (iv a \<longrightarrow> iv b) }
-\<union> {(a,b) | a b. length (snd a) + 1 = level \<and> length (snd b) = level \<and> (iv a \<longrightarrow> iv b) }
-\<union> {(a,b) | a b. length (snd a) \<noteq> level \<and> length (snd b) \<noteq> level \<and>
-                length (snd b) \<noteq> level + 1 \<and>
-                length (snd a) \<noteq> level + 1 \<or>
-                length (snd a) = level + 1 \<and> length (snd b) = level + 1 }"
-
 (*
 definition pcs :: "'a list list \<Rightarrow> 'a list list list" where
 "pcs lst = filter (%x. x \<noteq> []) (call_pieces lst)"
@@ -1075,14 +1065,6 @@ apply (auto simp add:call_e_def hd_conv_nth)
   apply (metis Suc_lessD hd_map length_greater_0_conv tlr_anti)
   using call_pcs_helper by blast
 
-lemma handle_const_seq :
-   "pathR (iv_cond iv (length (snd (lst ! 0)))) lst \<Longrightarrow>
-    iv (lst ! 0) \<Longrightarrow>
-    length lst > 0 \<Longrightarrow>
-    const_seq (map snd lst) (snd (lst ! 0)) \<Longrightarrow>
-    iv (last lst)"
-apply (induction lst; auto)
-by (case_tac lst; auto; simp add:iv_cond_def pathR.simps const_seq_def)
 
 lemma pathR_pcs :
    "a \<in> set (pcs lst) \<Longrightarrow>
@@ -1185,6 +1167,23 @@ using concat_pcs_length [of lst]
   apply (smt Suc_diff_Suc Suc_lessD Suc_n_not_le_n call_length_simp concat_mem_length diff_Suc_1 diff_less diff_zero le_neq_implies_less length_greater_0_conv less_trans_Suc list.size(3) nth_mem numeral_2_eq_2)
 apply (simp add:min_def)
   by (metis Suc_diff_1 Suc_lessD call_length_simp concat_eq_Nil_conv diff_less has_piece length_greater_0_conv numerals(2))
+
+definition iv_cond :: "('a * 'a list \<Rightarrow> bool) \<Rightarrow> nat \<Rightarrow> ('a * 'a list) rel" where
+"iv_cond iv level =
+  {(a,b) | a b. length (snd a) = level \<and> length (snd b) = level \<and> (iv a \<longrightarrow> iv b) }
+\<union> {(a,b) | a b. length (snd a) = level \<and> length (snd b) + 1 = level \<and> (iv a \<longrightarrow> iv b) }
+\<union> {(a,b) | a b. length (snd a) + 1 = level \<and> length (snd b) = level \<and> (iv a \<longrightarrow> iv b) }
+\<union> {(a,b) | a b. length (snd a) \<noteq> level \<and> length (snd b) \<noteq> level}"
+
+lemma handle_const_seq :
+   "pathR (iv_cond iv (length (snd (lst ! 0)))) lst \<Longrightarrow>
+    iv (lst ! 0) \<Longrightarrow>
+    length lst > 0 \<Longrightarrow>
+    const_seq (map snd lst) (snd (lst ! 0)) \<Longrightarrow>
+    iv (last lst)"
+apply (induction lst; auto)
+by (case_tac lst; auto; simp add:iv_cond_def pathR.simps const_seq_def)
+
 
 lemma iv_cond_push :
  "(x, y) \<in> iv_cond iv len \<Longrightarrow> iv x \<Longrightarrow>
