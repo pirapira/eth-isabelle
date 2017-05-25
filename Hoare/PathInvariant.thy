@@ -1391,11 +1391,9 @@ lemma tr_invariant :
   iv (lst!1) \<Longrightarrow>
   iv (last lst)"
 apply (induction "length lst" arbitrary:lst rule:nat_less_induct)
+apply (rule call_invariant; simp)
+  by (simp add: pathR_drop pathR_take)
 
-subgoal for lst
-
-apply (induction "call_pieces (map snd lst)" arbitrary:lst)
-oops
 
 
 end
