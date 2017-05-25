@@ -1605,17 +1605,113 @@ apply simp
   by (smt One_nat_def PathRel.take_all Suc_lessD call_def call_end_def diff_less in_index_split last_index length_map nth_map nth_mem numeral_2_eq_2 zero_less_one)
 done done
 
+definition ncall_pieces :: "nat list \<Rightarrow> nat list list" where
+"ncall_pieces lst =
+  (let ilst =  findIndices (clip (length lst-2) 1 lst) (lst!1) in
+   indexSplit ilst (clip (length lst-2) 1 lst))"
 
+lemma decompose_ncall_pieces :
+  "ncall lst \<Longrightarrow>
+   x \<in> set (ncall_pieces lst) \<Longrightarrow>
+   call_end x (lst!1) \<or> const_seq x (lst!1)"
+apply (simp add:ncall_pieces_def)
+apply auto
+using ncall_last [of lst]
+apply simp
+using correct_pieces [of "clip (length lst-2) 1 lst" x]
+apply (simp add:ncall_inc_dec)
+apply (cases "clip (length lst - 2) (Suc 0) lst = []")
+using ncall_sub_length apply fastforce
+apply simp
+using ncall_second [of lst]
+apply (simp add:split_def)
+using ncall_inside_big apply force
+done
+
+definition call_pieces :: "'a list list \<Rightarrow> 'a list list list" where
+"call_pieces lst =
+  (let ilst = findIndices (clip (length lst-2) 1 (map length lst)) (length (lst!1)) in
+   indexSplit ilst (clip (length lst-2) 1 lst))"
+
+
+lemma lengths_aux :
+"length lst > 1 \<Longrightarrow>
+ x \<in> set (call_pieces lst) \<Longrightarrow>
+ map length x \<in> set (ncall_pieces (map length lst))"
+apply (subgoal_tac "map length lst ! 1 = length (lst!1)")
+apply (auto simp add: clip_def drop_map index_split_map take_map
+  call_pieces_def ncall_pieces_def)
+done
 
 (*
-lemma call_invariant :
-  "push_popL (map snd lst) \<Longrightarrow>
-   first_return k (map snd lst) \<Longrightarrow>
-   monoI iv (hd lst) \<Longrightarrow>
-   pathR (mono_rules iv) lst \<Longrightarrow>
-   iv (fst (hd lst)) \<Longrightarrow>
-   length lst > 1 \<Longrightarrow>
-   (snd (hd lst), snd (lst!1)) \<in> tlR"
+lemma lengths_aux :
+"length lst > 1 \<Longrightarrow>
+ x \<in> set (indexSplit
+               (findIndices
+                 (clip (length lst - 2)
+                   (Suc 0) (map length lst))
+                 (length (lst ! Suc 0)))
+               (clip (length lst - 2) (Suc 0)
+                 lst)) \<Longrightarrow>
+    map length x
+     \<in> set (indexSplit
+              (findIndices
+                (clip (length lst - 2)
+                  (Suc 0) (map length lst))
+                (map length lst ! Suc 0))
+              (clip (length lst - 2) (Suc 0)
+                (map length lst)))"
+apply (subgoal_tac "map length lst ! 1 = length (lst!1)")
+apply (auto simp add: clip_def drop_map index_split_map take_map)
+done
 *)
+
+lemma decompose_call_pieces :
+  "call lst \<Longrightarrow>
+   x \<in> set (call_pieces lst) \<Longrightarrow>
+   call_e x (lst!1) \<or> const_seq x (lst!1)"
+using decompose_ncall_pieces [of "map length lst" "map length x"]
+      call_ncall [of lst]
+apply (case_tac "const_seq (map length x) (map length lst ! Suc 0) \<or>
+    call_end (map length x) (map length lst ! Suc 0)")
+apply (simp add:call_pieces_def)
+using pathR_split [of "push_pop"
+   "clip (length lst - 2) (Suc 0) lst" x "findIndices
+                 (clip (length lst - 2)
+                   (Suc 0) (map length lst))
+                 (length (lst ! Suc 0))"]
+  pathR_clip [of "push_pop" lst "length lst-2" "Suc 0"]
+  call_pathR [of lst]
+apply simp
+
+apply auto
+subgoal (* constant *)
+using const_seq_convert [of x "map length lst ! Suc 0"]
+apply (auto simp add:push_popL_def)
+apply (cases x)
+using const_seq_empty apply force
+subgoal for xa a list
+apply (simp add:map_nth)
+using const_seq_eq [of a list xa]
+apply simp
+apply (subgoal_tac "a \<in> set (clip (length lst - 2) (Suc 0) lst)")
+defer
+using in_index_split apply fastforce
+apply (subgoal_tac "lst ! Suc 0 = a")
+apply auto
+using call_inside_big [of lst a]
+  by (metis One_nat_def PathRel.take_all Suc_lessD call_def const_seq_eq nth_map numeral_2_eq_2)
+done
+apply (rule call_end2)
+  apply (simp add: call_def)
+  using push_popL_def apply blast
+using call_end_last [of "map length x" "length (lst ! Suc 0)"]
+using call_inside_big [of lst "last x"]
+apply simp
+  apply (metis PathRel.take_all Suc_lessD call_def call_end_def in_index_split last_in_set last_map length_map less_numeral_extra(2) list.size(3) nth_map numeral_2_eq_2)
+using lengths_aux [of lst x]
+apply simp
+  by (simp add: call_def less_imp_le_nat)
+
 
 end
