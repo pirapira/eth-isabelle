@@ -884,7 +884,7 @@ definition pcs :: "'a list list \<Rightarrow> 'a list list list" where
 "pcs lst = filter (%x. x \<noteq> []) (call_pieces lst)"
 *)
 
-definition pcs :: "('a * 'a list) list \<Rightarrow> ('a * 'a list) list list" where
+definition pcs :: "('b * 'a list) list \<Rightarrow> ('b * 'a list) list list" where
 "pcs lst = filter (%x. x \<noteq> [])
    (let ilst = findIndices
        (clip (length lst-2) 1 (map (length \<circ> snd) lst))
@@ -1168,7 +1168,7 @@ using concat_pcs_length [of lst]
 apply (simp add:min_def)
   by (metis Suc_diff_1 Suc_lessD call_length_simp concat_eq_Nil_conv diff_less has_piece length_greater_0_conv numerals(2))
 
-definition iv_cond :: "('a * 'a list \<Rightarrow> bool) \<Rightarrow> nat \<Rightarrow> ('a * 'a list) rel" where
+definition iv_cond :: "('b * 'a list \<Rightarrow> bool) \<Rightarrow> nat \<Rightarrow> ('b * 'a list) rel" where
 "iv_cond iv level =
   {(a,b) | a b. length (snd a) = level \<and> length (snd b) = level \<and> (iv a \<longrightarrow> iv b) }
 \<union> {(a,b) | a b. length (snd a) = level \<and> length (snd b) + 1 = level \<and> (iv a \<longrightarrow> iv b) }
