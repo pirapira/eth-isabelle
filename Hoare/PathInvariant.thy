@@ -1156,6 +1156,14 @@ lemma extend_piece :
     take (i+1) (drop j lst) = y # x"
   by (metis Cons_nth_drop_Suc Suc_eq_plus1 take_Suc_Cons)
 
+lemma length_concat_pcs_helper :
+"call (map snd lst) \<Longrightarrow>
+ length (concat (take j (pcs lst))) < length lst - 1"
+using length_concat_take [of j "pcs lst"]
+ concat_pcs_length [of lst]
+  by (metis One_nat_def Suc_diff_Suc Suc_lessD call_length_simp le_imp_less_Suc numeral_2_eq_2)
+
+
 lemma call_invariant_aux :
  "\<forall>i j. length (take i (drop j lst)) < length lst \<longrightarrow>
       call (map snd (take i (drop j lst))) \<longrightarrow>
@@ -1204,7 +1212,9 @@ apply (subgoal_tac
 "length (concat (take (Suc j) (pcs lst)))
      < length lst")
 defer
-
+using length_concat_pcs_helper [of lst "Suc j"] apply force
+defer
+simp
 
 using handle_const_seq
 
