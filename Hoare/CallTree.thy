@@ -48,6 +48,8 @@ oops
 
 lemma tree_call :
    "ncall lst \<Longrightarrow> \<exists>t x. map (%y. y+x) (expand t) = lst"
+using ncall_def decompose_call
+
 oops
 
 end

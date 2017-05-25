@@ -884,9 +884,10 @@ definition iv_cond :: "('a * 'a list \<Rightarrow> bool) \<Rightarrow> nat \<Rig
   {(a,b) | a b. length (snd a) = level \<and> length (snd b) = level \<and> (iv a \<longrightarrow> iv b) }
 \<union> {(a,b) | a b. length (snd a) = level \<and> length (snd b) + 1 = level \<and> (iv a \<longrightarrow> iv b) }
 \<union> {(a,b) | a b. length (snd a) + 1 = level \<and> length (snd b) = level \<and> (iv a \<longrightarrow> iv b) }
-\<union> {(a,b) | a b. length (snd a) \<noteq> level \<and> length (snd b) \<noteq> level \<or>
-                length (snd a) \<noteq> level \<and> length (snd b) \<noteq> level + 1 \<or>
-                length (snd a) \<noteq> level + 1 \<and> length (snd b) \<noteq> level}"
+\<union> {(a,b) | a b. length (snd a) \<noteq> level \<and> length (snd b) \<noteq> level \<and>
+                length (snd b) \<noteq> level + 1 \<and>
+                length (snd a) \<noteq> level + 1 \<or>
+                length (snd a) = level + 1 \<and> length (snd b) = level + 1 }"
 
 (*
 definition pcs :: "'a list list \<Rightarrow> 'a list list list" where
@@ -1163,6 +1164,43 @@ using length_concat_take [of j "pcs lst"]
  concat_pcs_length [of lst]
   by (metis One_nat_def Suc_diff_Suc Suc_lessD call_length_simp le_imp_less_Suc numeral_2_eq_2)
 
+lemma pcs_not_empty_idx : "j < length (pcs lst) \<Longrightarrow> pcs lst!j \<noteq> []"
+  using nth_mem pcs_not_empty by fastforce
+
+lemma extend_const_seq :
+ "const_seq lst x \<Longrightarrow> const_seq (x # lst) x"
+by (simp add:const_seq_def)
+
+lemma helper_2 :
+"call (map snd lst) \<Longrightarrow>
+ j > 0 \<Longrightarrow>
+ j < length (pcs lst) \<Longrightarrow>
+ min (length lst - length (concat (take j (pcs lst))))
+     (Suc (length (pcs lst ! j)))
+    < length lst"
+apply (cases "(length lst - length (concat (take j (pcs lst)))) \<ge>
+     (Suc (length (pcs lst ! j)))")
+apply (simp add:min_def)
+using concat_pcs_length [of lst]
+  apply (smt Suc_diff_Suc Suc_lessD Suc_n_not_le_n call_length_simp concat_mem_length diff_Suc_1 diff_less diff_zero le_neq_implies_less length_greater_0_conv less_trans_Suc list.size(3) nth_mem numeral_2_eq_2)
+apply (simp add:min_def)
+  by (metis Suc_diff_1 Suc_lessD call_length_simp concat_eq_Nil_conv diff_less has_piece length_greater_0_conv numerals(2))
+
+lemma iv_cond_push :
+ "(x, y) \<in> iv_cond iv len \<Longrightarrow> iv x \<Longrightarrow>
+  length (snd x) = len \<Longrightarrow>
+  (snd y, snd x) \<in> tlR \<Longrightarrow>
+  iv y"
+apply (simp add:iv_cond_def tlR_def)
+  by (smt n_not_Suc_n snd_conv)
+
+lemma iv_cond_pop :
+ "(x, y) \<in> iv_cond iv len \<Longrightarrow> iv x \<Longrightarrow>
+  length (snd x) = len \<Longrightarrow>
+  (snd x, snd y) \<in> tlR \<Longrightarrow>
+  iv y"
+apply (simp add:iv_cond_def tlR_def)
+  by (smt n_not_Suc_n snd_conv)
 
 lemma call_invariant_aux :
  "\<forall>i j. length (take i (drop j lst)) < length lst \<longrightarrow>
@@ -1214,21 +1252,136 @@ apply (subgoal_tac
 defer
 using length_concat_pcs_helper [of lst "Suc j"] apply force
 defer
-simp
+apply simp
+using handle_const_seq [of iv "take (Suc (length (pcs lst ! Suc j)))
+     (drop (length (concat (take (Suc j) (pcs lst)))) lst)"]
+apply simp
+apply (subgoal_tac "pathR (iv_cond iv (length (snd (last (pcs lst ! j)))))
+      (last (pcs lst ! j) # pcs lst ! Suc j)")
+apply (subgoal_tac "const_seq
+      (snd (last (pcs lst ! j)) # map snd (pcs lst ! Suc j))
+      (snd (last (pcs lst ! j)))")
+apply (simp)
+apply (subgoal_tac "pcs lst ! Suc j \<noteq> []")
+apply simp
+using pcs_not_empty_idx [of "Suc j" lst]
+apply simp
+apply (subgoal_tac "snd (lst ! Suc 0) = snd (last (pcs lst ! j))")
+apply simp
+apply (rule extend_const_seq)
+apply simp
+  apply (metis One_nat_def Suc_lessD call_last_pcs nth_mem)
+apply (subgoal_tac "snd (lst ! Suc 0) = snd (last (pcs lst ! j))")
+apply simp
 
-using handle_const_seq
+apply (subgoal_tac " pathR (iv_cond iv (length (snd (last (pcs lst ! j)))))
+  (take (Suc (length (pcs lst ! Suc j)))
+     (drop (length (concat (take (Suc j) (pcs lst)))) lst))")
+apply force
+using pathR_take [of "iv_cond iv (length (snd (last (pcs lst ! j))))"]
+ pathR_drop [of "iv_cond iv (length (snd (last (pcs lst ! j))))"]
+  apply blast
+  apply (metis One_nat_def Suc_lessD call_last_pcs nth_mem)
+apply simp
+(* lets extend this piece too *)
+using cut_concat_pcs [of "Suc j" lst]
+apply (simp add:call_length_simp call_pcs_helper)
+using extend_piece [of "length (pcs lst ! Suc j)"
+   "length (concat (take (Suc j) (pcs lst)))" lst
+    "pcs lst!Suc j" "last (pcs lst ! j)"]
+apply simp
+apply (subgoal_tac 
+"length (concat (take (Suc j) (pcs lst)))
+     < length lst")
+defer
+using length_concat_pcs_helper [of lst "Suc j"] apply force
+apply simp
+apply (subgoal_tac "call (map snd (take (Suc (length (pcs lst ! Suc j)))
+     (drop (length (concat (take (Suc j) (pcs lst)))) lst)))")
+apply (drule spec2[where x = "Suc (length (pcs lst ! Suc j))" and
+   y = "length (concat (take (Suc j) (pcs lst)))"])
+apply clarsimp
+apply (subgoal_tac "min (length lst - length (concat (take (Suc j) (pcs lst))))
+     (Suc (length (pcs lst ! Suc j)))
+    < length lst")
+apply clarsimp
+apply (subgoal_tac "iv (pcs lst ! Suc j ! 0)")
+apply clarsimp
+apply (subgoal_tac "pcs lst ! Suc j \<noteq> []")
+apply clarsimp
+using pcs_not_empty_idx [of "Suc j" lst]
+apply simp
+defer
+using helper_2 apply force
+apply (rule call_e_call)
+apply simp
+apply (subgoal_tac "pcs lst ! Suc j \<noteq> []")
+apply simp
+apply (subgoal_tac "snd (lst ! Suc 0) = snd (last (pcs lst ! j))")
+apply simp
+  apply (metis call_e_final)
+  apply (metis One_nat_def Suc_lessD call_last_pcs nth_mem)
+  using \<open>Suc j < length (pcs lst) \<Longrightarrow> pcs lst ! Suc j \<noteq> []\<close> apply blast
+apply simp
+  apply (metis (no_types, lifting) One_nat_def Suc_lessD call_e_final call_last_pcs nth_mem)
+apply (subgoal_tac
+  "(last (pcs lst ! j), hd (pcs lst ! Suc j)) \<in> iv_cond iv (length (snd (lst ! 1)))")
+subgoal
+using iv_cond_push [of "last (pcs lst ! j)" "hd (pcs lst ! Suc j)" iv
+  "length (snd (lst ! Suc 0))"]
+apply simp
+apply (subgoal_tac "snd (lst ! Suc 0) = snd (last (pcs lst ! j))")
+apply simp
+apply (subgoal_tac
+"(snd (hd (pcs lst ! Suc j)), snd (last (pcs lst ! j))) \<in> tlR")
+apply simp
+  apply (metis \<open>Suc j < length (pcs lst) \<Longrightarrow> pcs lst ! Suc j \<noteq> []\<close> hd_conv_nth)
+  apply (metis \<open>Suc j < length (pcs lst) \<Longrightarrow> pcs lst ! Suc j \<noteq> []\<close> call_e_def list.map_sel(1))
+  by (metis One_nat_def Suc_lessD call_last_pcs nth_mem)
+apply (simp add:path_defs path_def)
+  by (metis One_nat_def \<open>call (map snd lst) \<Longrightarrow> length (concat (take (Suc j) (pcs lst))) < length lst - 1\<close>)
+done
 
 lemma call_invariant :
-  "call (map snd lst) \<Longrightarrow>
+  "\<forall>i j. length (take i (drop j lst)) < length lst \<longrightarrow>
+      call (map snd (take i (drop j lst))) \<longrightarrow>
+      iv (take i (drop j lst) ! 1) \<longrightarrow>
+      iv (last (take i (drop j lst))) \<Longrightarrow>
+   call (map snd lst) \<Longrightarrow>
    pathR (iv_cond iv (length (snd (lst!1)))) lst \<Longrightarrow>
    iv (lst!1) \<Longrightarrow>
    iv (last lst)"
-apply (induction "length lst" arbitrary:lst rule:nat_less_induct)
-
-subgoal for lst
-
-apply (induction "call_pieces (map snd lst)" arbitrary:lst)
-oops
+using call_invariant_aux [of lst iv "length (pcs lst) - 1"]
+apply simp
+apply (subgoal_tac "length (pcs lst) > 0")
+apply simp
+defer
+  using call_pcs_helper apply blast
+using concat_pcs_length [of lst]
+apply (subgoal_tac "2 < length lst")
+apply simp
+apply (subgoal_tac "(lst ! (length lst - 2), last lst) \<in> iv_cond iv (length (snd (lst ! Suc 0)))")
+using iv_cond_pop [of "lst ! (length lst - 2)" "last lst" iv "length (snd (lst ! Suc 0))"]
+apply simp
+apply (subgoal_tac "length (snd (lst ! (length lst - 2))) = length (snd (lst ! Suc 0))")
+apply (subgoal_tac "(snd (lst ! (length lst - 2)), snd (last lst)) \<in> tlR")
+apply simp
+defer
+apply (subgoal_tac "snd (lst ! (length lst - 2)) = snd (lst!1)")
+apply simp
+  using call_invariant_before_after apply fastforce
+apply (simp add:path_defs path_def)
+  apply (metis (no_types, lifting) One_nat_def Suc_diff_Suc gr_implies_not0 last_conv_nth length_0_conv lessI less_trans_Suc numeral_2_eq_2 zero_less_numeral)
+  using call_length_simp apply blast
+apply (subgoal_tac "snd (lst ! (length lst - 2)) = snd (lst!1)")
+apply simp
+apply (subgoal_tac "snd (last lst) = snd (lst!0)")
+apply simp
+  apply (metis One_nat_def Suc_1 Suc_lessD call_def nth_map)
+defer
+  apply (smt Suc_1 Suc_lessD call_invariant_before_after diff_less length_greater_0_conv length_map less_numeral_extra(2) list.size(3) nth_map zero_less_numeral)
+using call_stack_length [of "map snd lst"]
+  by (metis gr_implies_not0 hd_conv_nth last_map length_0_conv length_greater_0_conv map_is_Nil_conv nth_map)
 
 lemma tr_invariant :
   "\<forall>lst. pathR tr lst \<longrightarrow>
@@ -1238,24 +1391,12 @@ lemma tr_invariant :
   call (map snd lst) \<Longrightarrow>
   iv (lst!1) \<Longrightarrow>
   iv (last lst)"
+apply (induction "length lst" arbitrary:lst rule:nat_less_induct)
+
+subgoal for lst
+
+apply (induction "call_pieces (map snd lst)" arbitrary:lst)
 oops
 
-
-lemma call_invariant :
-  "\<forall>l \<in> psublists lst. call_inv2 iv l \<Longrightarrow> 
-   pathR (stay_rel iv) lst \<Longrightarrow>
-   (* exit must be good *)
-   (iv (lst!(length lst-2)) \<Longrightarrow> iv (last lst)) \<Longrightarrow>
-   (* call outs should be good *)
-   pathR (callout_rel iv (length (snd (hd lst)))) lst \<Longrightarrow>
-   call_inv2 iv lst"
-
-(* can be solved using a case analysis using call pieces *)
-
-apply (induction "length (pieces (map snd lst))")
-apply (auto simp:call_inv2_def)
-using call_e_has_pieces apply force
-
-oops
 
 end
