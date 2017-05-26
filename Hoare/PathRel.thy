@@ -1714,4 +1714,33 @@ apply simp
   by (simp add: call_def less_imp_le_nat)
 
 
+lemma sucR_add : "(a,b) \<in> sucR \<Longrightarrow> (a+m,b+m) \<in> sucR"
+by (simp add:sucR_def)
+
+lemma inc_dec_add : "(a,b) \<in> inc_dec \<Longrightarrow> (a+m,b+m) \<in> inc_dec"
+by (simp add:inc_dec_def sucR_def)
+
+lemma pathR_map :
+  "(\<forall>a b. (a,b) \<in> r \<longrightarrow> (f a, f b) \<in> r) \<Longrightarrow>
+    pathR r lst \<Longrightarrow> pathR r (map f lst)"
+by (simp add:path_defs path_def)
+
+lemma tl_map : "tl (map f lst) = map f (tl lst)"
+  by (simp add: map_tl)
+
+lemma ncall_plus : "ncall lst \<Longrightarrow> ncall (map (%a. a +m) lst)"
+apply (auto simp: ncall_def)
+apply (simp add:sucR_def)
+  using less_iff_Suc_add apply auto[1]
+apply (simp add:inc_decL_def)
+apply (rule pathR_map)
+apply (auto simp add:inc_dec_add)
+apply (auto simp add:first_one_smaller_def first_def)
+apply (simp add:tl_map hd_map)
+  apply (metis add_Suc length_tl less_diff_conv less_numeral_extra(2) list.map_sel(1) list.size(3) one_add_one)
+apply (simp add:tl_map hd_map)
+apply (subgoal_tac "hd (map (\<lambda>a. a + m) (tl lst)) = hd (tl lst) + m")
+apply simp
+  by (metis length_tl less_diff_conv less_numeral_extra(2) list.map_sel(1) list.size(3) one_add_one)
+
 end
