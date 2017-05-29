@@ -111,7 +111,6 @@ by (auto simp add:next0_def Let_def tr_def tlR_def
    contract_action.split_asm stack_hint.split_asm
    instruction_result.splits)
 
-
 lemma exist_push2 :
   "(st1, st2) \<in> tr net \<Longrightarrow>
    g_stack st2 = (a,b,c,d) # g_stack st1 \<Longrightarrow>
@@ -139,6 +138,13 @@ by (auto simp add:next0_def Let_def
 
 fun stack_hint :: "world_state * variable_ctx * constant_ctx * stack_hint \<Rightarrow> stack_hint" where
 "stack_hint (a,b,c,d) = d"
+
+fun stack_cctx :: "world_state * variable_ctx * constant_ctx * stack_hint \<Rightarrow> constant_ctx" where
+"stack_cctx (a,b,c,d) = c"
+
+fun stack_vctx :: "world_state * variable_ctx * constant_ctx * stack_hint \<Rightarrow> variable_ctx" where
+"stack_vctx (a,b,c,d) = b"
+
 
 fun stack_state :: "world_state * variable_ctx * constant_ctx * stack_hint \<Rightarrow> world_state" where
 "stack_state (a,b,c,d) = a"
@@ -288,6 +294,31 @@ by (auto simp add:next0_def Let_def tr_def tlR_def
    contract_action.split_asm stack_hint.split_asm
    instruction_result.splits)
 
+lemma code_push2 :
+  "(st1, st2) \<in> tr net \<Longrightarrow>
+   g_stack st2 = (a,b,c,d) # g_stack st1 \<Longrightarrow>
+   account_code0 (g_current st1 addr) = account_code0 (a addr)"
+by (auto simp add:next0_def Let_def tr_def tlR_def
+  code_return code_call code_transfer code_update
+  code_nonce
+  split:if_split_asm option.split_asm list.split_asm
+   contract_action.split_asm stack_hint.split_asm
+   instruction_result.splits)
+
+lemma code_push3 :
+   "(st1, st2) \<in> tr net \<Longrightarrow>
+    g_stack st2 =
+    (a, aa, ab, b) # g_stack st1 \<Longrightarrow>
+    account_exists (g_current st1 addr) \<Longrightarrow>
+    account_code0 (a addr) = account_code0 (g_current st2 addr)"
+by (auto simp add:next0_def Let_def tr_def tlR_def
+  code_return code_call code_transfer code_update
+  code_nonce
+  split:if_split_asm option.split_asm list.split_asm
+   contract_action.split_asm stack_hint.split_asm
+   instruction_result.splits)
+
+
 lemma push_create_hint :
   "(st1, st2) \<in> tr net \<Longrightarrow>
    g_stack st2 = abcd # g_stack st1 \<Longrightarrow>
@@ -335,6 +366,144 @@ by (auto simp add:next0_def Let_def tr_def
    contract_action.split_asm stack_hint.split_asm
    instruction_result.splits)
 
+lemma create_exist_inv :
+  "(st1, st2) \<in> tr net \<Longrightarrow>
+   create_exist_inv addr st1 \<Longrightarrow>
+   create_exist_inv addr st2"
+by (auto simp add:next0_def Let_def tr_def
+  code_return code_call create_exist_inv_def
+  code_transfer code_update 
+  code_nonce get_hint_def exist_nonce
+  split:if_split_asm option.split_asm list.split_asm
+   contract_action.split_asm stack_hint.split_asm
+   instruction_result.splits)
+
+lemma pop_alt :
+  "(st1, st2) \<in> tr net \<Longrightarrow>
+   (g_stack st1, g_stack st2) \<in> tlR \<Longrightarrow>
+   g_vmstate st1 \<in>
+    {InstructionToEnvironment (ContractReturn a) v h|
+     a v h. True} \<union>
+    {InstructionToEnvironment (ContractFail a) v h|
+     a v h. True} \<union>
+    {InstructionToEnvironment (ContractSuicide a) v h|
+     a v h. True}"
+by (auto simp add:next0_def Let_def tr_def tlR_def
+  split:if_split_asm option.split_asm list.split_asm
+   contract_action.split_asm stack_hint.split_asm
+   instruction_result.splits)
+
+lemma check_hint :
+ "create_exist_inv addr st1 \<Longrightarrow>
+  (g_stack st1, g_stack st2) \<in> tlR \<Longrightarrow>
+  account_exists
+     (stack_state (hd (g_stack st1)) addr) \<Longrightarrow>
+  stack_hint (hd (g_stack st1)) \<noteq> CreateAddress addr"
+by (cases "g_stack st1"; auto simp add:tlR_def create_exist_inv_def)
+
+lemma code_pop :
+  "(st1, st2) \<in> tr net \<Longrightarrow>
+   (g_stack st1, g_stack st2) \<in> tlR \<Longrightarrow>
+   account_code0 (g_current st1 addr) = cd \<Longrightarrow>
+   account_code0 (stack_state (hd (g_stack st1)) addr) = cd \<Longrightarrow>
+   account_exists (g_current st1 addr) \<Longrightarrow>
+   create_exist_inv addr st1 \<Longrightarrow>
+   account_exists (stack_state (hd (g_stack st1)) addr) \<Longrightarrow>
+   account_code0 (g_current st2 addr) = cd"
+using pop_alt [of st1 st2 net]
+apply auto
+subgoal for a v h
+using code_ret [of st1 st2 net a v h addr]
+   check_hint [of addr st1 st2]
+apply force
+done
+using code_fail [of st1 st2 net]
+  apply (metis stack_state.elims)
+subgoal for a v h
+using code_suicide [of st1 st2 net a v h addr]
+   check_hint [of addr st1 st2]
+apply force
+done
+done
+
+definition code_inv :: "address \<Rightarrow> program \<Rightarrow> world_state \<Rightarrow> bool" where
+"code_inv addr cd st = (
+  account_exists (st addr) \<and> account_code0 (st addr) = cd)"
+
+lemma monoI_head :
+   "monoI iv st \<Longrightarrow>
+    snd st = a#rest \<Longrightarrow>
+    iv a \<Longrightarrow>
+    iv (fst st)" 
+by (auto simp add:monoI_def)
+
+lemma exist_push4 :
+   "(st1, st2) \<in> tr net \<Longrightarrow>
+       g_stack st2 =
+       (a, aa, ab, b) # g_stack st1 \<Longrightarrow>
+       account_exists (a addr) \<Longrightarrow>
+       account_exists (g_current st1 addr)"
+by (auto simp add:next0_def Let_def
+  exist_return exist_call exist_transfer
+  exist_update exist_nonce tr_def
+  split:if_split_asm option.split_asm list.split_asm
+   contract_action.split_asm stack_hint.split_asm
+   instruction_result.splits)
+
+
+lemma code_mono :
+  "(st1, st2) \<in> tr net \<Longrightarrow>
+   create_exist_inv addr st1 \<Longrightarrow>
+   (states_t st1, states_t st2) \<in> mono_rules (code_inv addr cd)"
+apply (cases "g_stack st1 = g_stack st2")
+apply (subgoal_tac "(states_t st1, states_t st2)
+    \<in> mono_same (code_inv addr cd)")
+apply (simp add:mono_rules_def)
+apply (clarsimp simp add:mono_same_def states_t_def)
+  apply (simp add: exist_same code_inv_def mono_pop_def
+      code_stay)
+
+apply (cases "(g_stack st1,g_stack st2) \<in> tlR")
+apply (subgoal_tac "(states_t st1, states_t st2)
+    \<in> mono_pop (code_inv addr cd)")
+apply (simp add:mono_rules_def)
+apply (clarsimp simp add:mono_pop_def states_t_def tlR_def)
+  apply (auto simp add: exist_pop code_inv_def)
+using code_pop [of st1 st2 net addr cd]
+apply (simp add:tlR_def)
+
+apply (cases "(g_stack st2,g_stack st1) \<in> tlR")
+apply (subgoal_tac "(states_t st1, states_t st2)
+    \<in> mono_push (code_inv addr cd)")
+apply (simp add:mono_rules_def)
+apply (auto simp add:mono_push_def states_t_def tlR_def
+      code_inv_def)
+  using exist_push2 apply blast
+  apply (simp add: code_push2)
+
+  
+  using exist_push3 apply blast
+subgoal for a b c d
+using code_push3 [of st1 st2 net a b c d addr]
+  exist_push4 [of st1 st2 net a b c d addr]
+apply force
+done
+
+using stack_changes [of st1 st2 net]
+apply (simp add:push_pop_def tlR_def)
+done
+
+definition cctx :: "global0 \<Rightarrow> constant_ctx list" where
+"cctx g = g_cctx g # map stack_cctx (g_stack g)"
+
+lemma cctx_changes :
+  "(st1, st2) \<in> tr net \<Longrightarrow>
+   (cctx st1, cctx st2) \<in> push_pop"
+by (auto simp add:next0_def tr_def tlR_def cctx_def
+    push_pop_def Let_def
+  split:if_split_asm option.split_asm list.split_asm
+   contract_action.split_asm stack_hint.split_asm
+   instruction_result.splits)
 
 (* storage changes *)
 (* storage changes are first the same as code changes, but also from
