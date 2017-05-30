@@ -70,10 +70,7 @@ lemma sstore_gas_triple :
 apply(auto simp add: triple_def)
 apply(rule_tac x = 1 in exI)
 apply(case_tac presult; auto simp add: instruction_result_as_set_def sstore_def)
-(* I think I have to fix something here. *)
-(* somehow. *)
-(* maybe establish that the result cannot be that thing *)
-(* see what I'm doing with annotation failure *)
+ apply(simp add: vctx_update_storage_def) (* this appearing here is not good *)
 apply(rule leibniz)
  apply blast
 apply(rule Set.equalityI; clarify)
