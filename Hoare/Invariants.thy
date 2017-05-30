@@ -559,7 +559,6 @@ by (auto simp add:next0_def Let_def tr_def
 lemma storage_push2 :
   "(st1, st2) \<in> tr net \<Longrightarrow>
    (g_stack st2, g_stack st1) \<in> tlR \<Longrightarrow>
-   cctx_this (g_cctx st1) \<noteq> addr \<Longrightarrow>
    account_storage0 (stack_state (hd (g_stack st2)) addr) = 
    account_storage0 (g_current st1 addr)"
 by (auto simp add:next0_def Let_def tr_def
@@ -593,7 +592,130 @@ by (auto simp add:next0_def Let_def tr_def
 
 (* balance changes *)
 
+lemma state_continue :
+  "(st1, st2) \<in> tr net \<Longrightarrow>
+   g_vmstate st1 \<in> range InstructionContinue \<Longrightarrow>
+   g_current st1 = g_current st2"
+by (auto simp add:next0_def Let_def tr_def
+  split:if_split_asm option.split_asm list.split_asm
+   contract_action.split_asm stack_hint.split_asm
+   instruction_result.splits)
 
+lemma balance_failed_call :
+  "(st1, st2) \<in> tr net \<Longrightarrow>
+   g_stack st2 = g_stack st1 \<Longrightarrow>
+   account_balance0 (g_current st2 addr) = 
+   account_balance0 (g_current st1 addr)"
+by (auto simp add:next0_def Let_def tr_def
+  update_return_def update_world_def
+  transfer_balance_def update_nonce_def
+  add_balance_def
+  sub_balance_def
+  update_call_def
+  create_account_def set_account_code_def tlR_def
+  split:if_split_asm option.split_asm list.split_asm
+   contract_action.split_asm stack_hint.split_asm
+   instruction_result.splits)
+
+lemma balance_push2 :
+  "(st1, st2) \<in> tr net \<Longrightarrow>
+   (g_stack st2, g_stack st1) \<in> tlR \<Longrightarrow>
+   account_balance0 (stack_state (hd (g_stack st2)) addr) = 
+   account_balance0 (g_current st1 addr)"
+by (auto simp add:next0_def Let_def tr_def
+  update_return_def update_world_def
+  transfer_balance_def update_nonce_def
+  add_balance_def
+  sub_balance_def
+  update_call_def
+  create_account_def set_account_code_def tlR_def
+  split:if_split_asm option.split_asm list.split_asm
+   contract_action.split_asm stack_hint.split_asm
+   instruction_result.splits)
+
+definition return_state :: "instruction_result set" where
+"return_state = {InstructionToEnvironment (ContractReturn a) v h|
+     a v h. True}"
+
+lemma balance_ret :
+  "(st1, st2) \<in> tr net \<Longrightarrow>
+   g_vmstate st1 \<in> return_state \<Longrightarrow>
+   account_exists (g_current st1 addr) \<Longrightarrow>
+   account_balance0 (g_current st2 addr) = 
+   account_balance0 (g_current st1 addr) \<or>
+   account_balance0 (g_current st2 addr) = 
+   account_balance0 (stack_state (hd (g_stack st1)) addr)"
+by (auto simp add:next0_def Let_def tr_def
+  update_return_def update_world_def
+  transfer_balance_def update_nonce_def
+  add_balance_def
+  sub_balance_def
+  update_call_def return_state_def
+  create_account_def set_account_code_def tlR_def
+  split:if_split_asm option.split_asm list.split_asm
+   contract_action.split_asm stack_hint.split_asm
+   instruction_result.splits)
+
+definition fail_state :: "instruction_result set" where
+"fail_state = {InstructionToEnvironment (ContractFail a) v h|
+     a v h. True}"
+
+lemma balance_fail :
+  "(st1, st2) \<in> tr net \<Longrightarrow>
+   g_vmstate st1 \<in> fail_state \<Longrightarrow>
+   account_exists (g_current st1 addr) \<Longrightarrow>
+   account_balance0 (g_current st2 addr) = 
+   account_balance0 (stack_state (hd (g_stack st1)) addr)"
+by (auto simp add:next0_def Let_def tr_def
+  update_return_def update_world_def
+  transfer_balance_def update_nonce_def
+  add_balance_def
+  sub_balance_def
+  update_call_def fail_state_def
+  create_account_def set_account_code_def tlR_def
+  split:if_split_asm option.split_asm list.split_asm
+   contract_action.split_asm stack_hint.split_asm
+   instruction_result.splits)
+
+definition suicide_state :: "instruction_result set" where
+"suicide_state = {InstructionToEnvironment (ContractSuicide a) v h|
+     a v h. True}"
+
+lemma balance_add1 :
+ "total_balance bal < 2^256 \<Longrightarrow>
+  a \<noteq> b \<Longrightarrow>
+  account_balance0 (bal a) \<le>
+  account_balance0 (bal a) + account_balance0 (bal b)"
+  by (metis order_refl overflow)
+
+lemma balance_add :
+ "balance_inv st \<Longrightarrow>
+  total_balance (g_orig st) < 2^256 \<Longrightarrow>
+  a \<noteq> b \<Longrightarrow>
+  account_balance0 (g_current st a) \<le>
+  account_balance0 (g_current st a) + account_balance0 (g_current st b)"
+  using balance_add1 orig_balance by blast
+
+
+lemma balance_suicide :
+  "(st1, st2) \<in> tr net \<Longrightarrow>
+   balance_inv st1 \<Longrightarrow>
+   total_balance (g_orig st1) < 2^256 \<Longrightarrow>
+   g_vmstate st1 \<in> suicide_state \<Longrightarrow>
+   cctx_this (g_cctx st1) \<noteq> addr \<Longrightarrow>
+   account_exists (g_current st1 addr) \<Longrightarrow>
+   account_balance0 (g_current st2 addr) \<ge>
+   account_balance0 (g_current st1 addr)"
+by (auto simp add:next0_def Let_def tr_def
+  update_return_def update_world_def
+  transfer_balance_def update_nonce_def
+  add_balance_def
+  sub_balance_def balance_add
+  update_call_def suicide_state_def
+  create_account_def set_account_code_def tlR_def
+  split:if_split_asm option.split_asm list.split_asm
+   contract_action.split_asm stack_hint.split_asm
+   instruction_result.splits)
 
 end
 
