@@ -518,7 +518,82 @@ by (auto simp add:next0_def Let_def tr_def
    contract_action.split_asm stack_hint.split_asm
    instruction_result.splits)
 
+lemma storage_pop :
+  "(st1, st2) \<in> tr net \<Longrightarrow>
+   cctx_this (g_cctx st1) \<noteq> addr \<Longrightarrow>
+   account_exists (g_current st1 addr) \<Longrightarrow>
+   account_storage0 (g_current st2 addr) = 
+   account_storage0 (g_current st1 addr) \<or>
+   account_storage0 (g_current st2 addr) = 
+   account_storage0 (stack_state (hd (g_stack st1)) addr)"
+by (auto simp add:next0_def Let_def tr_def
+  update_return_def update_world_def
+  transfer_balance_def update_nonce_def
+  add_balance_def
+  sub_balance_def
+  update_call_def
+  create_account_def set_account_code_def
+  split:if_split_asm option.split_asm list.split_asm
+   contract_action.split_asm stack_hint.split_asm
+   instruction_result.splits)
+
+
+lemma storage_push :
+  "(st1, st2) \<in> tr net \<Longrightarrow>
+   (g_stack st2, g_stack st1) \<in> tlR \<Longrightarrow>
+   cctx_this (g_cctx st1) \<noteq> addr \<Longrightarrow>
+   account_exists (g_current st1 addr) \<Longrightarrow>
+   account_storage0 (g_current st2 addr) = 
+   account_storage0 (g_current st1 addr)"
+by (auto simp add:next0_def Let_def tr_def
+  update_return_def update_world_def
+  transfer_balance_def update_nonce_def
+  add_balance_def
+  sub_balance_def
+  update_call_def
+  create_account_def set_account_code_def tlR_def
+  split:if_split_asm option.split_asm list.split_asm
+   contract_action.split_asm stack_hint.split_asm
+   instruction_result.splits)
+
+lemma storage_push2 :
+  "(st1, st2) \<in> tr net \<Longrightarrow>
+   (g_stack st2, g_stack st1) \<in> tlR \<Longrightarrow>
+   cctx_this (g_cctx st1) \<noteq> addr \<Longrightarrow>
+   account_storage0 (stack_state (hd (g_stack st2)) addr) = 
+   account_storage0 (g_current st1 addr)"
+by (auto simp add:next0_def Let_def tr_def
+  update_return_def update_world_def
+  transfer_balance_def update_nonce_def
+  add_balance_def
+  sub_balance_def
+  update_call_def
+  create_account_def set_account_code_def tlR_def
+  split:if_split_asm option.split_asm list.split_asm
+   contract_action.split_asm stack_hint.split_asm
+   instruction_result.splits)
+
+lemma storage_failed_call :
+  "(st1, st2) \<in> tr net \<Longrightarrow>
+   g_stack st2 = g_stack st1 \<Longrightarrow>
+   cctx_this (g_cctx st1) \<noteq> addr \<Longrightarrow>
+   account_storage0 (g_current st2 addr) = 
+   account_storage0 (g_current st1 addr)"
+by (auto simp add:next0_def Let_def tr_def
+  update_return_def update_world_def
+  transfer_balance_def update_nonce_def
+  add_balance_def
+  sub_balance_def
+  update_call_def
+  create_account_def set_account_code_def tlR_def
+  split:if_split_asm option.split_asm list.split_asm
+   contract_action.split_asm stack_hint.split_asm
+   instruction_result.splits)
+
+
 (* balance changes *)
+
+
 
 end
 
