@@ -896,6 +896,57 @@ using balance_suicide [of st1 st2 net addr]
 apply simp
 done
 
+lemma push_alt :
+  "(st1, st2) \<in> tr net \<Longrightarrow>
+   (g_stack st2, g_stack st1) \<in> tlR \<Longrightarrow>
+   g_vmstate st1 \<in> call_state \<union> create_state"
+by (auto simp add:next0_def Let_def tr_def tlR_def
+  create_state_def call_state_def
+  split:if_split_asm option.split_asm list.split_asm
+   contract_action.split_asm stack_hint.split_asm
+   instruction_result.splits)
+
+lemma iv_same :
+  "(st1, st2) \<in> tr net \<Longrightarrow>
+   g_stack st1 = g_stack st2 \<Longrightarrow>
+   good_inv iv \<Longrightarrow>
+   account_exists (g_current st1 addr) \<Longrightarrow>
+   cctx_this (g_cctx st1) \<noteq> addr \<Longrightarrow>
+   iv (g_current st1 addr) \<Longrightarrow>
+   iv (g_current st2 addr)"
+unfolding good_inv_def
+by (metis balance_failed_call good_inv_def good_iv_helper storage_failed_call)
+
+
+lemma iv_push2 :
+  "(st1, st2) \<in> tr net \<Longrightarrow>
+   (g_stack st2, g_stack st1) \<in> tlR \<Longrightarrow>
+   good_inv iv \<Longrightarrow>
+   account_exists (g_current st1 addr) \<Longrightarrow>
+   cctx_this (g_cctx st1) \<noteq> addr \<Longrightarrow>
+   iv (g_current st1 addr) \<Longrightarrow>
+   iv (stack_state (hd (g_stack st2)) addr)"
+  by (simp add: good_inv_def balance_push2 storage_push2)
+
+lemma iv_push :
+  "(st1, st2) \<in> tr net \<Longrightarrow>
+   (g_stack st2, g_stack st1) \<in> tlR \<Longrightarrow>
+   balance_inv st1 \<Longrightarrow>
+   total_balance (g_orig st1) < 2 ^ 256 \<Longrightarrow>
+   good_inv iv \<Longrightarrow>
+   account_exists (g_current st1 addr) \<Longrightarrow>
+   cctx_this (g_cctx st1) \<noteq> addr \<Longrightarrow>
+   iv (g_current st1 addr) \<Longrightarrow>
+   iv (g_current st2 addr)"
+using push_alt [of st1 st2 net]
+apply auto
+using storage_push [of st1 st2 net addr]
+using balance_call [of st1 st2 net addr]
+apply (simp add:good_inv_def)
+using storage_push [of st1 st2 net addr]
+using balance_create [of st1 st2 net addr]
+  using good_iv_helper by blast
+
 end
 
 
