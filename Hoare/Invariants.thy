@@ -947,6 +947,31 @@ using storage_push [of st1 st2 net addr]
 using balance_create [of st1 st2 net addr]
   using good_iv_helper by blast
 
+lemma iv_mono :
+  "(st1, st2) \<in> tr net \<Longrightarrow>
+   balance_inv st1 \<Longrightarrow>
+   total_balance (g_orig st1) < 2 ^ 256 \<Longrightarrow>
+   good_inv iv \<Longrightarrow>
+   account_exists (g_current st1 addr) \<Longrightarrow>
+   cctx_this (g_cctx st1) \<noteq> addr \<Longrightarrow>
+   \<forall>s1 \<in> set (states st1). iv (s1 addr) \<Longrightarrow>
+   s2 \<in> set (states st2) \<Longrightarrow>
+   iv (s2 addr)"
+using stack_changes [of st1 st2 net]
+apply (auto simp add:push_pop_def states_def tlR_def)
+  using iv_same apply blast
+subgoal
+using iv_pop [of st1 st2 net iv addr]
+apply (auto simp add:tlR_def)
+done
+subgoal
+using iv_push [of st1 st2 net iv addr]
+apply (auto simp add:tlR_def)
+done
+using iv_push2 [of st1 st2 net iv addr]
+apply (auto simp add:tlR_def)
+done
+
 end
 
 
