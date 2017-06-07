@@ -5,5 +5,6 @@ let rec traverse (base : string) (f : string -> unit) : unit =
       let path = Filename.concat base filename in
       if BatSys.is_directory path then
         traverse path f
-      else f path)
+      else if BatString.right path 5 = ".json" then
+        f path)
     lst
