@@ -1064,7 +1064,6 @@ type constant_ctx = <|
 
 type instruction_result =
 | InstructionContinue of variable_ctx (* the execution should continue. *)
-| InstructionAnnotationFailure (* the annotation turned out to be false. *)
 | InstructionToEnvironment of
   (* the execution has stopped; either for the moment just calling out another account, or *)
   (* finally finishing the current invocation *)
@@ -1815,7 +1814,6 @@ let subtract_gas consumption memory_usage orig =
   match orig with
   | InstructionContinue v ->
     InstructionContinue (<| v with vctx_gas = v.vctx_gas - consumption; vctx_memory_usage = memory_usage |>)
-  | InstructionAnnotationFailure -> InstructionAnnotationFailure
   | InstructionToEnvironment act v opt ->
     InstructionToEnvironment act (<|v with vctx_gas = v.vctx_gas - consumption; vctx_memory_usage = memory_usage |>) opt
   end
@@ -1978,9 +1976,7 @@ let next_state stopper c net pr =
   match pr with
   | InstructionToEnvironment _ _ _ ->
     let () = stopper pr in pr
-  | InstructionAnnotationFailure -> let () = stopper pr in pr
   | InstructionContinue v ->
-     if not (check_annotations v c) then InstructionAnnotationFailure else
      match vctx_next_instruction v c with
       | Nothing -> InstructionToEnvironment (ContractFail [ShouldNotHappen]) v Nothing
       | Just i ->

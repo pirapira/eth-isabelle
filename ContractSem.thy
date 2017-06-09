@@ -362,9 +362,6 @@ lemma program_sem_to_environment [simp]: "program_sem k con n net (InstructionTo
 apply(induct_tac n; auto)
 done
 
-lemma program_sem_annotation_failure [simp] : "program_sem k con n net InstructionAnnotationFailure = InstructionAnnotationFailure"
-by (induct_tac n; auto)
-
 lemma not_at_least_one :
   "\<not> 1 \<le> (aa :: 256 word) \<Longrightarrow> aa = 0"
 apply(simp add:linorder_class.not_le)

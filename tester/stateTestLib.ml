@@ -79,7 +79,6 @@ let debug_vm c1 pr =
         prerr_endline ("Inst " ^ String.concat "," (List.map (fun x -> Z.format "%x" (Word8.word8ToNatural x)) (inst_code i)));
         prerr_endline ("Stack " ^ String.concat "," (List.map (fun x -> Z.format "%d" (Word256.word256ToNatural x)) v.vctx_stack)) )
   | InstructionToEnvironment( _, v, _) -> prerr_endline ("Gas left " ^ Z.to_string v.vctx_gas)
-  | InstructionAnnotationFailure -> ()
 
 let debug_state = function
  | Continue res -> debug_vm res.g_cctx res.g_vmstate

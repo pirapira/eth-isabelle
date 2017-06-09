@@ -155,9 +155,6 @@ let test_one_case j : testResult =
   | InstructionToEnvironment (ContractReturn retval, v, Some _) ->
      let () = Printf.printf "unexpected return format\n" in
      TestFailure
-  | InstructionAnnotationFailure ->
-     let () = Printf.printf "ProgramAnnotationFailure\n" in
-     TestFailure
 
 let test_one_file ((num_success : int ref), (num_failure : int ref), (num_skipped : int ref)) (case_name : string option) (path : string) : unit =
   let vm_arithmetic_test : json = Yojson.Basic.from_file path in

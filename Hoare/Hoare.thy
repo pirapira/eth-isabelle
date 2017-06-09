@@ -441,13 +441,7 @@ definition instruction_result_as_set :: "constant_ctx \<Rightarrow> instruction_
         ( case rslt of
           InstructionContinue v \<Rightarrow> {ContinuingElm True} \<union> contexts_as_set v c
         | InstructionToEnvironment act v _ \<Rightarrow> {ContinuingElm False, ContractActionElm act} \<union> contexts_as_set v c
-        | InstructionAnnotationFailure \<Rightarrow> {ContinuingElm False} (* need to assume no annotation failure somewhere *)
         )"
-
-lemma annotation_failure_as_set [simp] :
-  "instruction_result_as_set c InstructionAnnotationFailure = {ContinuingElm False}"
-apply(simp add: instruction_result_as_set_def)
-done
 
 definition code :: "(int * inst) set \<Rightarrow> state_element set \<Rightarrow> bool"
   where
