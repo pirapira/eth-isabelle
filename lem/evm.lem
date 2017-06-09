@@ -197,36 +197,6 @@ let before_homestead n =
   | Metropolis -> false
   end
 
-type aenv = <|
-  aenv_stack : list (w256);
-  aenv_memory : memory;
-  aenv_storage : storage;
-  aenv_balance : address -> w256;
-  aenv_caller : address;
-  aenv_value_sent : w256;
-  aenv_data_sent : list byte;
-  aenv_storage_at_call : storage;
-  aenv_balance_at_call : address -> w256;
-  aenv_this : address;
-  aenv_origin : address;
-|>
-
-(* @{term aenv_balance} field keeps track of the balance of all accounts because the contract *)
-(* under verification can send some Eth to other accounts.  To capture the effect of this, I chose to *)
-(* keep track of the balances of the other contracts.  *)
-
-(* @{term aenv_storage_at_call} and @{term aenv_balance_at_call} fields remember the states at the *)
-(* time of the contract invocation.  These are used for rolling back the state after a failure. *)
-(* Failures happen for example when the contract under verification jumps to a wrong destination, *)
-(* or it runs out of gas. *)
-
-(* @{term aenv_origin} might be the same as but might be different from @{term aenv_caller}. *)
-(* An Ethereum transaction is started by an external account (that is, an account which does not *)
-(* have codes but owned by somebody with a secret key).  @{term aenv_origin} denotes this external *)
-(* account.  During a transaction, the origin first sends a message to an account, the receiver can *)
-(* in turn call other accounts as well.  When the calls nest, @{term aenv_caller} points to the *)
-(* immediate caller of the current invocation. *)
-
 
 (* This section lists the EVM instructions and their byte representations. *)
 (* I also introduce an assertion instruction, whose byte representation is empty. *)
@@ -653,10 +623,6 @@ type inst =
   | Log of log_inst
   | Misc of misc_inst
 
-(* subsection {* Annotation  *} *)
-
-type annotation = aenv -> bool
-
 (* subsection {* The Whole Instruction Set *} *)
 
 (* The small inductive sets above are here combined into a single type. *)
@@ -935,7 +901,6 @@ type contract_action =
 type program = <|
   program_content : integer -> maybe inst; (* a way to look up instructions from positions *)
   program_length  : integer; (* the length of the program in bytes *)
-  program_annotation : integer -> list annotation; (* a mapping from positions to annotations *)
 |>
 
 (* The empty program is easy to define. *)
@@ -943,32 +908,11 @@ type program = <|
 val empty_program : program
 let empty_program = <|
   program_content = (fun _ -> Nothing);
-  program_length = 0;
-  program_annotation = (fun _ -> [])
+  program_length = 0
 |>
 
 
 (* subsection "Translating an Instruction List into a Program" *)
-
-(* subsubsection {* Storing annotations in a program in a mapping *} *)
-
-(* Annotations are stored in a mapping that maps positions into lists of annotations. *)
-(* The rationale for this data structure is that a single position might contain multiple annotations. *)
-(* Here is a function that inserts an annotation *)
-(* at a specified position. *)
-
-val prepend_annotation : integer -> annotation -> (integer -> list annotation) -> (integer -> list annotation)
-let prepend_annotation pos annot orig p = if pos = p then annot :: orig p else orig p
-
-(* Currently annotations are inserted into a mapping with Isabelle/HOL's mapping updates. *)
-(* When this causes performance problems, I need to switch to AVL trees again. *)
-
-val program_annotation_of_lst : int -> list inst -> integer -> list annotation
-let rec program_annotation_of_lst pos lst = match lst with
-| [] -> (fun _ -> [])
-| i :: rest -> program_annotation_of_lst (pos + inst_size i) rest
-end
-declare termination_argument program_annotation_of_lst = automatic
 
 (* subsubsection {* Translating a list of instructions into a program *} *)
 
@@ -981,7 +925,6 @@ val program_of_lst : list inst -> (list inst -> (integer -> maybe inst)) -> prog
 let program_of_lst lst program_content_formatter = <|
   program_content = program_content_formatter lst;
   program_length = integerFromNat (length lst);
-  program_annotation = program_annotation_of_lst 0 lst;
 |>
 
 (* subsection {* Program as a Byte Sequence *} *)
@@ -1221,25 +1164,6 @@ let sstore v c = match v.vctx_stack with
                      vctx_refund = v.vctx_refund + check_refund (v.vctx_storage addr) vl |>))
  | _ -> instruction_failure_result v [TooShortStack]
 end
-
-(* For interpreting the annotations, I first need to construct the annotation environment *)
-(* out of the current execution environments.  When I try to remove this step, I face some *)
-(* circular definitions of data types. *)
-
-val build_aenv : variable_ctx -> constant_ctx -> aenv
-let build_aenv v c = <|
-  aenv_stack = v.vctx_stack;
-  aenv_memory = v.vctx_memory;
-  aenv_storage = v.vctx_storage;
-  aenv_balance = v.vctx_balance;
-  aenv_caller = v.vctx_caller;
-  aenv_value_sent = v.vctx_value_sent;
-  aenv_data_sent = v.vctx_data_sent;
-  aenv_storage_at_call = v.vctx_storage_at_call;
-  aenv_balance_at_call = v.vctx_balance_at_call;
-  aenv_this = c.cctx_this;
-  aenv_origin = v.vctx_origin;
-|>
 
 (* The JUMP instruction has the following meaning.  When it cannot find the JUMPDEST instruction *)
 (* at the destination, the execution fails. *)
@@ -1962,14 +1886,6 @@ let instruction_sem v c inst net =
 (* lazy to model gas at that moment, so I introduced an artificial step counter.  When I prove theorems *)
 (* about smart contracts, the theorems are of the form ``for any value of the initial step counter, *)
 (* this and that never happen.'' *)
-
-(* Since our program struct contains a list of annotations for each program position, *)
-(* I have a function that checks all annotations at a particular program position: *)
-val check_annotations : variable_ctx -> constant_ctx -> bool
-let check_annotations v c =
-  let annots : list annotation = c.cctx_program.program_annotation v.vctx_pc in
-  List.all (fun annot -> annot (build_aenv v c)) annots
-
 
 val next_state: (instruction_result -> unit) -> constant_ctx -> network -> instruction_result -> instruction_result
 let next_state stopper c net pr =

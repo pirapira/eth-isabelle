@@ -197,7 +197,6 @@ apply(case_tac presult)
    defer
    apply(simp add: instruction_result_as_set_def)
   apply(simp add: instruction_result_as_set_def)
- apply(simp add: instruction_result_as_set_def)
 apply(simp add: swap_def list_swap_usage swap_inst_numbers_def)
 apply(rule impI)
 apply(rule leibniz)
@@ -495,7 +494,8 @@ lemma invalid_jumpi_gas_triple :
                        not_continuing **
                        action (ContractFail [InvalidJumpDestination])
                       )"
-apply(auto simp add: triple_def)
+apply(simp add: triple_def)
+apply(clarsimp)
 apply(rule_tac x = 1 in exI)
 apply(case_tac presult; auto simp add: instruction_result_as_set_def)
  apply(rule leibniz)
@@ -529,7 +529,8 @@ lemma invalid_jump_gas_triple :
                        not_continuing **
                        action (ContractFail [InvalidJumpDestination])
                       )"
-apply(auto simp add: triple_def)
+apply(simp add: triple_def)
+apply clarsimp
 apply(rule_tac x = 1 in exI)
 apply(case_tac presult; auto simp add: instruction_result_as_set_def)
  apply(rule leibniz)

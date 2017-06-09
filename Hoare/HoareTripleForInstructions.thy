@@ -1804,7 +1804,7 @@ definition triple_alt ::
  "network \<Rightarrow> failure_reason set \<Rightarrow> (state_element set \<Rightarrow> bool) \<Rightarrow> (int * inst) set \<Rightarrow> (state_element set \<Rightarrow> bool) \<Rightarrow> bool"
 where
   "triple_alt net allowed_failures pre insts post ==
-    \<forall> co_ctx presult rest stopper. no_assertion co_ctx \<longrightarrow>
+    \<forall> co_ctx presult rest stopper.
        (code insts ** pre ** rest) (instruction_result_as_set co_ctx presult) \<longrightarrow>
        (\<exists> k.
          ((post ** code insts ** rest) (instruction_result_as_set co_ctx (program_sem stopper co_ctx k net presult)))
@@ -3218,4 +3218,3 @@ lemmas sep_crunch = caller_sep
                     sep_conj_assoc
 
 end
-

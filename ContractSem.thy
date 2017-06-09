@@ -101,8 +101,6 @@ apply(auto)
 done
 
 declare empty_program_def [simp]
-declare prepend_annotation_def [simp]
-declare program_annotation_of_lst.simps [simp]
 declare program_of_lst_def [simp]
    
 subsection {* The Result of an Instruction *}
@@ -121,7 +119,6 @@ declare stack_1_1_op_def [simp]
 declare stack_2_1_op_def [simp]
 declare stack_3_1_op_def [simp]
 declare sstore_def [simp]
-declare build_aenv_def [simp]
 declare jump_def [simp]
 
 text {* When the second argument is already @{term True}, the simplification can continue.
@@ -198,7 +195,6 @@ done
 
 declare instruction_sem_def [simp]
 
-declare check_annotations_def [simp]
 declare next_state_def [simp]
 declare program_sem.simps [simp]
 

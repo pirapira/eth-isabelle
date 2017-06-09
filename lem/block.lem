@@ -342,7 +342,6 @@ let codemap lst =
   (fun x -> if x < 0 then Nothing else get_opt m (natFromInteger x))
 
 let make_program bytes = <|
-       program_annotation = (fun _ -> []);
        program_length = integerFromNat (List.length bytes);
        program_content = codemap bytes |>
 
