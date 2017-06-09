@@ -87,5 +87,6 @@ session "light" = "HOL" +
     "~~/src/HOL/Word/Word"
     "~~/src/HOL/Data_Structures/AVL_Map"
     "Hoare/HoareTripleForInstructions"
+    "example/AlwaysFail"
     "example/FailOnReentrance"
     "Parse"

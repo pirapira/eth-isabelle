@@ -42,8 +42,8 @@ done
 (* declare instruction_sem_def [simp del]*)
 
 lemma check_resources_split [split] :
-"P (if check_resources v con s i then X else InstructionToEnvironment a b c) =
- (\<not> (check_resources v con s i \<and> \<not> P X \<or> \<not> check_resources v con s i \<and> \<not> P (InstructionToEnvironment a b c)))"
+"P (if check_resources v con s i net then X else InstructionToEnvironment a b c) =
+ (\<not> (check_resources v con s i net \<and> \<not> P X \<or> \<not> check_resources v con s i net \<and> \<not> P (InstructionToEnvironment a b c)))"
 apply(simp only: if_splits(2))
 done
 
@@ -56,7 +56,7 @@ declare environment_turn.simps [simp]
 declare contract_turn.simps [simp]
 
 lemma no_assertion_failure:
-"no_assertion_failure (\<lambda> a. \<exists> initial_balance. a = (always_fail_account_state initial_balance))"
+"no_assertion_failure net (\<lambda> a. \<exists> initial_balance. a = (always_fail_account_state initial_balance))"
 apply(simp add: no_assertion_failure_def)
 apply(auto)
 apply(drule star_case; auto simp add: no_assertion_failure_post_def)
@@ -72,7 +72,7 @@ declare postcondition_pack_def [simp]
 
 lemma balance_no_decrease:
 "
-pre_post_conditions (\<lambda> a. \<exists> initial_balance. a = (always_fail_account_state initial_balance))
+pre_post_conditions net (\<lambda> a. \<exists> initial_balance. a = (always_fail_account_state initial_balance))
 (\<lambda> initial_state init_call. True)
 (\<lambda> initial_state _ (post_state, _). account_balance initial_state \<le> account_balance post_state)
 "
