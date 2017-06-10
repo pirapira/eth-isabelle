@@ -14,6 +14,11 @@ lemma account_existence_not_stack_top [simp] :
 apply(induction ss; auto simp add: stack_topmost_elms.simps)
 done
 
+lemma logged_sep [simp]:
+  "(logged n l ** a) s =
+   (LogElm (n, l) \<in> s \<and> a (s - {LogElm (n, l)}))"
+  by (solve_sep_iff simp: logged_def)
+
 lemma log0_gas_triple :
   "triple net {OutOfGas}
           (\<langle> h \<le> 1022 \<and> length data = unat logged_size \<rangle> **
@@ -39,12 +44,12 @@ lemma log0_gas_triple :
 apply (simp add: triple_def)
 apply clarify
 apply (rule_tac x = 1 in exI)
-apply(case_tac presult; simp add: log_inst_numbers.simps sep_memory_range sep_memory_range_sep log_def
+apply(case_tac presult; simp add: log_inst_numbers.simps sep_memory_range
+      sep_memory_range_sep log_def memory_range_sep
         instruction_result_as_set_def
 vctx_stack_default_def)
 apply clarify
 apply auto
-
 apply (rule leibniz)
 apply blast
 apply(rule Set.equalityI)
@@ -56,6 +61,7 @@ apply clarify
 apply simp
 apply(rename_tac elm; case_tac elm; simp)
 apply(case_tac "length (vctx_logs x1) \<le> fst x5"; auto)
+
 done
 
 
@@ -85,7 +91,7 @@ apply (simp add: triple_def)
 apply clarify
 apply (rule_tac x = 1 in exI)
 apply(case_tac presult; simp add: log_inst_numbers.simps sep_memory_range sep_memory_range_sep log_def
-        instruction_result_as_set_def
+        instruction_result_as_set_def  memory_range_sep
 vctx_stack_default_def)
 apply clarify
 apply auto
@@ -131,7 +137,8 @@ apply (simp add: triple_def)
 apply clarify
 apply (rule_tac x = 1 in exI)
 apply(case_tac presult; simp add: log_inst_numbers.simps sep_memory_range sep_memory_range_sep log_def
-        instruction_result_as_set_def vctx_stack_default_def)
+        instruction_result_as_set_def vctx_stack_default_def
+memory_range_sep)
 apply clarify
 apply auto
 apply (simp add: create_log_entry_def vctx_returned_bytes_def)
@@ -176,7 +183,8 @@ apply (simp add: triple_def)
 apply clarify
 apply (rule_tac x = 1 in exI)
 apply(case_tac presult; simp add: log_inst_numbers.simps sep_memory_range sep_memory_range_sep log_def
-        instruction_result_as_set_def vctx_stack_default_def)
+        instruction_result_as_set_def vctx_stack_default_def
+memory_range_sep)
 apply clarify
 apply auto
 (* apply(rule_tac x = " vctx_gas x1 - meter_gas (Log LOG3) x1 co_ctx" in exI) *)
@@ -222,7 +230,8 @@ apply (simp add: triple_def)
 apply clarify
 apply (rule_tac x = 1 in exI)
 apply(case_tac presult; simp add: log_inst_numbers.simps sep_memory_range sep_memory_range_sep log_def
-        instruction_result_as_set_def vctx_stack_default_def)
+        instruction_result_as_set_def vctx_stack_default_def
+memory_range_sep)
 apply clarify
 apply auto
 (* apply(rule_tac x = " vctx_gas x1 - meter_gas (Log LOG4) x1 co_ctx" in exI) *)

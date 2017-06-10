@@ -648,7 +648,7 @@ apply(rename_tac elm; case_tac elm; simp)
 apply(case_tac " fst x2 < Suc (length list)"; auto)
 done
 
-
+(*
 lemma eq0 [simp]: "
        vctx_stack x1 = v # w # ta \<Longrightarrow>
 program_content (cctx_program co_ctx) (vctx_pc x1) = Some (Arith inst_EQ) \<Longrightarrow>
@@ -675,6 +675,7 @@ apply(auto)
  apply(rename_tac elm; case_tac elm; auto)
 apply(rename_tac elm; case_tac elm; auto)
 done
+*)
 
 lemma eq_gas_triple :
   "triple net {OutOfGas}  ( \<langle> h \<le> 1023 \<rangle> **
@@ -724,7 +725,7 @@ apply(rename_tac elm; case_tac elm; simp)
 apply(case_tac "fst x2 < Suc (Suc (length ta))"; simp)
 apply auto
 done
-
+(*
 lemma tmp1 [simp]:
   "program_content (cctx_program co_ctx) (vctx_pc x1) = Some (Arith ADD) \<Longrightarrow>
    vctx_stack x1 = v # w # ta \<Longrightarrow>
@@ -750,7 +751,7 @@ apply(auto)
  apply(rename_tac elm; case_tac elm; auto)
 apply(rename_tac elm; case_tac elm; auto)
 done
-
+*)
 lemma add_triple :
    "triple net {}
            (\<langle> h \<le> 1023 \<and> g \<ge> Gverylow \<rangle> **

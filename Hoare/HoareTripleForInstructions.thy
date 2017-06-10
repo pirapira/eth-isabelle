@@ -2693,19 +2693,15 @@ lemma memory_range_not_stack_topmost [simp]:
   "x \<in> memory_range_elms in_begin input \<Longrightarrow> x \<notin> stack_topmost_elms h lst"
   
   apply(case_tac x; simp)
-    (* ? ? ? ?*)
-oops
-
+  apply(induction lst arbitrary:h; simp add:stack_topmost_elms.simps)
+done
 
 lemma memory_range_elms_in_minus_statck_topmost [simp] :
   "memory_range_elms in_begin input
        \<subseteq> X -
           stack_topmost_elms h lst =
    (memory_range_elms in_begin input \<subseteq> X)"
-apply(auto)
-    (* ? ? ? ?*)
-oops
-
+by(auto)
 
 lemma memory_range_elms_in_c [simp] :
   "memory_range_elms in_begin input
@@ -3206,6 +3202,7 @@ bundle sep_crunch = caller_sep [simp]
                     sep_action [simp]
                     sep_action_sep [simp]
                     sep_stack_topmost [simp]
+                    sep_conj_assoc [simp]
 
 end
 

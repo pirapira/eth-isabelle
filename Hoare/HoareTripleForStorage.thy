@@ -54,7 +54,7 @@ context
  includes sep_crunch
  notes Gsset_def [simp]
 begin
-
+(*
 lemma foo :
       "vctx_stack x1 = idx # new # ta \<Longrightarrow>
        x \<in> contexts_as_set x1 co_ctx \<longrightarrow>
@@ -88,8 +88,40 @@ apply (auto simp add:contexts_as_set_def variable_ctx_as_set_def constant_ctx_as
       balance_as_set_def storage_as_set_def log_as_set_def program_as_set_def data_sent_as_set_def
       ext_program_as_set_def account_existence_def vctx_advance_pc_def)
   by presburger
+*)
 
+lemma sstore_gas_triple :
+  "triple net {OutOfGas}
+          (\<langle> h \<le> 1024\<rangle>
+           ** stack_height (h + 2)
+           ** stack (h + 1) idx
+           ** stack h new
+           ** program_counter k ** storage idx old
+           ** gas_pred g ** continuing)
+          {(k, Storage SSTORE)}
+          (stack_height h
+           ** program_counter (k + 1) ** storage idx new **
+           gas_pred (g - Csstore old new) ** continuing)"
+apply(auto simp add: triple_def)
+apply(rule_tac x = 1 in exI)
+apply(case_tac presult; auto simp add:
+   instruction_result_as_set_def sstore_def
+   vctx_update_storage_def)
+apply(rule leibniz)
+ apply blast
+apply(rule Set.equalityI; clarify)
+ apply(rename_tac elm)
+(* apply(simp add: vctx_update_storage_def) *)
+ apply(case_tac elm; simp)
+ using some_list_gotcha apply blast
+ apply(split if_splits; simp)
+apply(rename_tac elm)
+apply(case_tac elm; simp)
+ apply auto[1]
+ apply(split if_splits; simp)
+done
 
+(*
 lemma sstore_gas_triple :
   "triple net {OutOfGas}
           (\<langle> h \<le> 1024\<rangle>
@@ -151,7 +183,7 @@ apply (simp add:vctx_advance_pc_def)
 
 using foo apply force
 done
-
+*)
 
 lemma sload_gas_triple :
   "triple net {OutOfGas}
