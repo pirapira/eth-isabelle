@@ -55,6 +55,41 @@ context
  notes Gsset_def [simp]
 begin
 
+lemma foo :
+      "vctx_stack x1 = idx # new # ta \<Longrightarrow>
+       x \<in> contexts_as_set x1 co_ctx \<longrightarrow>
+       x = CodeElm (vctx_pc x1, Storage SSTORE) \<or>
+       x = PcElm (vctx_pc x1) \<or>
+       x = StackElm (length ta, new) \<or>
+       x = StackElm (Suc (length ta), idx) \<or>
+       x = StackHeightElm (Suc (Suc (length ta))) \<or>
+       x = StorageElm (idx, vctx_storage x1 idx) \<Longrightarrow>
+       x \<noteq> StorageElm (idx, new) \<Longrightarrow>
+       x \<noteq> GasElm (vctx_gas x1 - Csstore (vctx_storage x1 idx) new) \<Longrightarrow>
+       x \<noteq> PcElm (vctx_pc x1 + 1) \<Longrightarrow>
+       x \<noteq> ContinuingElm True \<Longrightarrow>
+       x \<noteq> StackHeightElm (length ta) \<Longrightarrow>
+       (x = PcElm (vctx_pc x1 + inst_size (Storage SSTORE)) \<or>
+        x \<in> contexts_as_set
+              (x1\<lparr>vctx_storage :=
+                    \<lambda>x. if x = idx then new else vctx_storage x1 x,
+                    vctx_stack := ta,
+                    vctx_touched_storage_index :=
+                      idx # vctx_touched_storage_index x1,
+                    vctx_refund :=
+                      vctx_refund x1 + check_refund (vctx_storage x1 idx) new\<rparr>)
+              co_ctx \<and>
+        x \<noteq> PcElm (vctx_pc x1)) \<and>
+       x \<noteq> GasElm (vctx_gas x1) \<Longrightarrow>
+       x = CodeElm (vctx_pc x1, Storage SSTORE)"
+apply (auto simp add:inst_size_def inst_code.simps)
+apply (auto simp add:contexts_as_set_def variable_ctx_as_set_def constant_ctx_as_set_def
+      stack_as_set_def memory_as_set_def
+      balance_as_set_def storage_as_set_def log_as_set_def program_as_set_def data_sent_as_set_def
+      ext_program_as_set_def account_existence_def vctx_advance_pc_def)
+  by presburger
+
+
 lemma sstore_gas_triple :
   "triple net {OutOfGas}
           (\<langle> h \<le> 1024\<rangle>
@@ -68,9 +103,35 @@ lemma sstore_gas_triple :
            ** program_counter (k + 1) ** storage idx new **
            gas_pred (g - Csstore old new) ** continuing)"
 apply(auto simp add: triple_def)
+apply (subgoal_tac "((gas_pred g \<and>*
+         program_counter k \<and>*
+         stack h new \<and>*
+         storage idx old \<and>*
+         stack (Suc h) idx \<and>* stack_height (Suc (Suc h)) \<and>* \<langle> h \<le> 1024 \<rangle> \<and>* continuing) \<and>*
+        rest) = (gas_pred g \<and>*
+         program_counter k \<and>*
+         stack h new \<and>*
+         storage idx old \<and>*
+         stack (Suc h) idx \<and>* stack_height (Suc (Suc h)) \<and>* \<langle> h \<le> 1024 \<rangle> \<and>* continuing \<and>*
+        rest)")
 apply(rule_tac x = 1 in exI)
-apply(case_tac presult; auto simp add: instruction_result_as_set_def sstore_def)
- apply(simp add: vctx_update_storage_def) (* this appearing here is not good *)
+apply(case_tac presult; auto simp add:
+   instruction_result_as_set_def sstore_def)
+apply (subgoal_tac "((stack_height (length ta) \<and>*
+         storage idx new \<and>*
+         program_counter (vctx_pc x1 + 1) \<and>*
+         gas_pred
+          (vctx_gas x1 - Csstore (vctx_storage x1 idx) new) \<and>*
+         continuing) \<and>*
+        rest) = (stack_height (length ta) \<and>*
+         storage idx new \<and>*
+         program_counter (vctx_pc x1 + 1) \<and>*
+         gas_pred
+          (vctx_gas x1 - Csstore (vctx_storage x1 idx) new) \<and>*
+         continuing \<and>*
+        rest)")
+apply (auto simp add:
+   instruction_result_as_set_def sstore_def vctx_update_storage_def)
 apply(rule leibniz)
  apply blast
 apply(rule Set.equalityI; clarify)
@@ -80,10 +141,15 @@ apply(rule Set.equalityI; clarify)
  using some_list_gotcha apply blast
  apply(split if_splits; simp)
 apply(rename_tac elm)
-apply(simp add: vctx_update_storage_def)
 apply(case_tac elm; simp)
  apply auto[1]
-apply(split if_splits; simp)
+defer
+  apply (metis (no_types, hide_lams) sep.mult.left_commute sep.mult_commute)
+  apply (metis (no_types, hide_lams) sep.mult.left_commute sep.mult_commute)
+
+apply (simp add:vctx_advance_pc_def)
+
+using foo apply force
 done
 
 
