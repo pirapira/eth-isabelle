@@ -8,9 +8,7 @@ begin
 (**
  ** Hoare Triple for each instruction
  **)
- 
 declare insert_functional [intro]
-
 declare balance_as_set_def [simp del]
 
 lemma continuing_not_context [simp]:
@@ -191,7 +189,7 @@ apply(case_tac "vctx_next_instruction x1 co_ctx"; auto)
 done
 
 lemma stack_elm_not_program [simp]:
- "StackElm x2 \<notin> program_as_set (cctx_program co_ctx)"
+  "StackElm x2 \<notin> program_as_set (cctx_program co_ctx)"
 apply(simp add: program_as_set_def)
 done
 
@@ -355,14 +353,12 @@ lemma advance_pc_change [simp] :
 lemma caller_sep:
   "(caller c ** rest) s =
    (CallerElm c \<in> s \<and> rest (s - {CallerElm c}))"
-apply(auto simp add: caller_def sep_def)
-done
+ by (solve_sep_iff simp: caller_def)
 
 lemma sep_caller:
   "(rest ** caller c) s =
    (CallerElm c \<in> s \<and> rest (s - {CallerElm c}))"
-apply(auto simp add: caller_def sep_def)
-done
+ by (solve_sep_iff simp: caller_def)
 
 lemma sep_caller_sep [simp]:
   "(a ** caller c ** rest) s =
@@ -380,14 +376,12 @@ qed
 lemma balance_sep :
   "(balance a b ** rest) s =
    (BalanceElm (a, b) \<in> s \<and> rest (s - {BalanceElm (a, b)}))"
-apply(auto simp add: balance_def sep_def)
-done
+ by (solve_sep_iff simp: balance_def)
 
 lemma sep_balance :
   "(rest ** balance a b) s =
    (BalanceElm (a, b) \<in> s \<and> rest (s - {BalanceElm (a, b)}))"
-apply(auto simp add: balance_def sep_def)
-done
+ by (solve_sep_iff simp: balance_def)
 
 lemma sep_balance_sep :
   "(q ** balance a b ** rest) s =
@@ -841,15 +835,17 @@ done
 lemma block_number_pred_sep [simp] :
   "(block_number_pred bn ** rest) s =
    ((BlockNumberElm bn \<in> s) \<and> rest (s - {BlockNumberElm bn}))"
-apply(auto simp add: sep_def block_number_pred_def)
-done
-
+ by (solve_sep_iff simp: block_number_pred_def)
 
 lemma sep_block_number_pred_sep [simp] :
   "(rest ** block_number_pred bn ** a) s =
    ((BlockNumberElm bn \<in> s) \<and> (rest ** a) (s - {BlockNumberElm bn}))"
-apply(auto simp add: sep_def block_number_pred_def)
-done
+ apply (rule iffI)
+ apply (sep_select_asm 2)
+ apply (subst (asm) block_number_pred_sep, simp)
+ apply (sep_select 2)
+ apply (subst  block_number_pred_sep, simp)
+ done
 
 lemma block_number_elm_not_constant [simp] :
   "BlockNumberElm bn \<notin> constant_ctx_as_set co_ctx"
@@ -950,7 +946,6 @@ lemma log_num_advance [simp] :
    (LogNumElm x6 \<in> contexts_as_set x1 co_ctx)"
 apply(simp add: contexts_as_set_def)
 done
-
 lemma account_existence_not_in_constant [simp] :
   "AccountExistenceElm p \<notin> constant_ctx_as_set co_ctx"
 apply(simp add: constant_ctx_as_set_def program_as_set_def)
@@ -1026,7 +1021,7 @@ apply(rename_tac elm; case_tac elm; auto simp add: instruction_result_as_set_def
 done
 
 lemma ext_program_size_elm_not_stack [simp] :
-"ExtProgramSizeElm ab \<notin> stack_as_set (1 # ta)"
+  "ExtProgramSizeElm ab \<notin> stack_as_set (1 # ta)"
 apply(simp add: stack_as_set_def)
 done
 
@@ -1206,8 +1201,12 @@ done
 lemma not_continuing_sep :
   "(not_continuing ** rest) s =
    (ContinuingElm False \<in> s \<and> rest (s - {ContinuingElm False}))"
-apply(auto simp add: sep_def not_continuing_def)
-done
+ by (solve_sep_iff simp: not_continuing_def)
+
+lemma sep_not_continuing :
+  "(rest ** not_continuing ) s =
+   (ContinuingElm False \<in> s \<and> rest (s - {ContinuingElm False}))"
+ by (solve_sep_iff simp: not_continuing_def)
 
 lemma sep_not_continuing_sep :
   "(a ** not_continuing ** rest) s =
@@ -1217,14 +1216,12 @@ lemma sep_not_continuing_sep :
 lemma this_account_sep :
   "(this_account t ** rest) s =
    (ThisAccountElm t \<in> s \<and> rest (s - {ThisAccountElm t}))"
-apply(auto simp add: this_account_def sep_def)
-done
+ by (solve_sep_iff simp: this_account_def)
 
 lemma sep_this_account :
   "(rest ** this_account t) s =
    (ThisAccountElm t \<in> s \<and> rest (s - {ThisAccountElm t}))"
-apply(auto simp add: this_account_def sep_def)
-done
+ by (solve_sep_iff simp: this_account_def)
 
 lemma sep_this_account_sep :
   "(a ** this_account t ** rest) s =
@@ -1244,20 +1241,21 @@ qed
 lemma action_sep :
   "(action a ** rest) s =
    (ContractActionElm a \<in> s \<and> rest (s - {ContractActionElm a}))"
-apply(auto simp add: action_def sep_def)
-done
+ by (solve_sep_iff simp: action_def)
 
 lemma sep_action :
   "(rest ** action a) s =
    (ContractActionElm a \<in> s \<and> rest (s - {ContractActionElm a}))"
-apply(auto simp add: action_def sep_def)
-done
+ by (solve_sep_iff simp: action_def)
 
 
 lemma sep_action_sep :
   "(b ** action a ** rest) s =
    (ContractActionElm a \<in> s \<and> (b ** rest) (s - {ContractActionElm a}))"
-	by (metis action_sep set_pred.left_commute)
+  apply (rule iffI)
+   apply (sep_subst_asm simp: action_sep, fastforce)
+  apply (sep_subst simp: action_sep, fastforce)
+ done
 
 lemma iota0_non_empty_aux:
   "\<forall> b x len lst a.
@@ -1424,8 +1422,9 @@ qed
 lemma sep_memory8 :
   "(rest ** memory8 b a) s ==
    MemoryElm (b, a) \<in> s \<and> rest (s - {MemoryElm (b,a)})"
-apply(simp add: memory8_def sep_def)
-by (smt DiffE Diff_insert_absorb insertI1 insert_Diff)
+apply (rule eq_reflection)
+apply (solve_sep_iff simp: memory8_def)
+done
 
 lemma memory8_short
  :"      (memory8 b a ** rest)
@@ -1451,7 +1450,7 @@ qed
 
 lemma memory_range_cons :
 "(memory_range b (a # lst) ** rest) s = (memory8 b a ** memory_range (b + 1) lst ** rest) s"
-apply(auto)
+ apply (simp only: memory_range.simps sep_conj_ac)
 done
 
 declare Hoare.memory8_sep [simp del]
@@ -1466,13 +1465,15 @@ apply(induction lst)
  apply(simp add: unat_eq_0)
 apply(auto simp add: memory_range_cons memory8_short)
  apply(rule memory8_short2)
- apply blast
+ apply (sep_cancel)
 apply(drule_tac x = "memory8 b a ** rest" in spec)
 apply(drule_tac x = "b + 1" in spec)
 apply(drule_tac x = "n - 1" in spec)
 apply(auto)
 apply(drule unat_suc)
-by blast
+apply blast
+apply (simp add: sep_conj_ac)
+done
 
 
 declare Hoare.memory8_sep [simp]
@@ -1520,7 +1521,7 @@ Gsreset_def [simp]
 
 lemma emp_sep [simp] :
   "(emp ** rest) s = rest s"
-apply(simp add: emp_def sep_def)
+apply(simp add: emp_def sep_basic_simps)
 done
 
 lemma memory_range_elms_index_aux :
@@ -1637,14 +1638,13 @@ lemma insert_is :
 apply(auto)
 done
 
-
 lemma memory_range_alt :
        "\<forall> len_word begin_word va.
         unat (len_word :: w256) = length input \<longrightarrow>
         memory_range begin_word input va =
         (va = memory_range_elms begin_word input)"
 apply(induction input)
- apply(simp add: emp_def)
+ apply(simp add: emp_def sep_set_conv)
 apply(clarify)
 apply(drule_tac x = "len_word - 1" in spec)
 apply(drule_tac x = "begin_word + 1" in spec)
@@ -1657,64 +1657,67 @@ done
 
 
 lemma memory_range_sep :
-"  \<forall> begin_word len_word rest s.
-       unat (len_word :: w256) = length input \<longrightarrow>
+"   unat (len_word :: w256) = length input \<longrightarrow>
        (memory_range begin_word input ** rest) s =
        ((memory_range_elms begin_word input \<subseteq> s) \<and> rest (s - memory_range_elms begin_word input)) 
 "
-apply(auto simp add: sep_def memory_range_alt)
-apply(rule leibniz)
- apply blast
-apply(auto)
-done
-
+  apply(induction input arbitrary: begin_word s len_word rest)
+   apply clarsimp
+  apply (clarsimp simp: sep_conj_ac)
+  apply (drule_tac x="begin_word + 1" in meta_spec)
+  apply (drule_tac x="s - {MemoryElm (begin_word, a)}" in meta_spec)
+  apply (drule_tac x="len_word -1" in meta_spec)
+  apply (drule_tac x=rest in meta_spec)
+  apply (erule impE)
+   apply (fastforce simp: unat_arith_simps)
+  apply clarsimp
+  apply (rule iffI)
+    apply (rule conjI)
+     apply (auto simp add: sep_basic_simps )[1]
+   apply clarsimp
+    apply (rule conjI)
+    apply (auto simp add: sep_basic_simps )[1]
+   apply (simp add: set_diff_eq)
+  apply clarsimp
+  apply (rule conjI)
+   apply fastforce
+  apply (simp add: set_diff_eq)
+ done
+    
 lemma sep_memory_range :
 "  \<forall> begin_word len_word rest s.
        unat (len_word :: w256) = length input \<longrightarrow>
        (rest ** memory_range begin_word input) s =
        ((memory_range_elms begin_word input \<subseteq> s) \<and> rest (s - memory_range_elms begin_word input)) 
 "
-apply(auto simp add: sep_def memory_range_alt)
-apply(rule leibniz)
- apply blast
-apply(auto)
-done
+ by (metis sep_conj_commute memory_range_sep)
 
-
-lemma sep_memory_range_sep :
-"unat (len_word :: w256) = length input \<Longrightarrow>
- (a ** memory_range begin_word input ** rest) s =
- ((memory_range_elms begin_word input \<subseteq> s) \<and> (a ** rest) (s - memory_range_elms begin_word input)) 
-"
-(is "?X \<Longrightarrow> ?L = ?R")
-proof -
-  assume ?X
-  then have "(memory_range begin_word input ** a ** rest) s = ?R"
-    by (simp only: memory_range_sep)
-  moreover have "?L = (memory_range begin_word input ** a ** rest) s"
-    by simp
-  ultimately show ?thesis
-    by auto
-qed
+lemma account_existence_sep :
+"(account_existence a b ** R) s =
+ ( AccountExistenceElm (a, b) \<in> s \<and> R (s - {AccountExistenceElm (a, b)}))"
+by (solve_sep_iff simp: account_existence_def)
 
 lemma sep_account_existence_sep :
 "(p ** account_existence a b ** q) s =
  ( AccountExistenceElm (a, b) \<in> s \<and> (p ** q) (s - {AccountExistenceElm (a, b)}))"
-apply(auto simp add: sep_def account_existence_def)
-done
+  apply (subst sep_conj_commute)
+  apply (subst sep_conj_assoc)
+  apply (subst account_existence_sep)
+  apply (simp only: sep_conj_commute)
+  done
 
 lemma sep_sep_account_existence_sep :
 "(n ** p ** account_existence a b ** q) s =
  ( AccountExistenceElm (a, b) \<in> s \<and> (n ** p ** q) (s - {AccountExistenceElm (a, b)}))"
 proof -
   have "(n ** p ** account_existence a b ** q) s = ((n ** p) ** account_existence a b ** q) s"
-    by auto
+    by (auto simp: sep_conj_ac)
   moreover have "((n ** p) ** account_existence a b ** q) s =
     ( AccountExistenceElm (a, b) \<in> s \<and> ((n ** p) ** q) (s - {AccountExistenceElm (a, b)}))"
     by (rule "sep_account_existence_sep")
   moreover have "( AccountExistenceElm (a, b) \<in> s \<and> ((n ** p) ** q) (s - {AccountExistenceElm (a, b)})) =
      ( AccountExistenceElm (a, b) \<in> s \<and> (n ** p ** q) (s - {AccountExistenceElm (a, b)}))"
-    by auto
+    by (auto simp: sep_conj_ac)
   ultimately show ?thesis
     by auto
 qed
@@ -1722,17 +1725,23 @@ qed
 
 
 
-lemma account_existence_sep :
-"(account_existence a b ** q) s =
- ( AccountExistenceElm (a, b) \<in> s \<and> q (s - {AccountExistenceElm (a, b)}))"
-apply(auto simp add: sep_def account_existence_def)
-done
-
 lemma sep_account_existence :
 "(p ** account_existence a b ) s =
  ( AccountExistenceElm (a, b) \<in> s \<and> p (s - {AccountExistenceElm (a, b)}))"
-apply(auto simp add: sep_def account_existence_def)
-done
+  apply (subst sep_conj_commute)
+  apply (simp only: account_existence_sep)
+ done
+
+lemma sep_memory_range_sep :
+"unat (len_word :: w256) = length input \<Longrightarrow>
+ (a ** memory_range begin_word input ** rest) s =
+ ((memory_range_elms begin_word input \<subseteq> s) \<and> (a ** rest) (s - memory_range_elms begin_word input)) 
+"
+  apply (subst sep_conj_commute)
+  apply (subst sep_conj_assoc)
+  apply (subst memory_range_sep[rule_format], assumption)
+  apply (simp add: sep_conj_commute)
+ done
 
 lemma continuging_not_memory_range [simp] :
   "\<forall> in_begin. ContinuingElm False \<notin> memory_range_elms in_begin input"
@@ -1843,25 +1852,34 @@ where
 lemma stack_topmost_sep [simp] :
   "(stack_topmost h lst ** rest) s =
    (stack_topmost_elms h lst \<subseteq> s \<and> rest (s - stack_topmost_elms h lst))"
-apply(auto simp add: stack_topmost_def sep_def)
-apply(rule leibniz)
- apply blast
-apply(auto)
-done
+  apply (rule iffI)
+  apply (clarsimp simp add: sep_basic_simps stack_topmost_def set_diff_eq)
+    apply (erule back_subst[where P=rest])
+   apply blast
+  apply clarsimp
+  apply (clarsimp simp add: sep_basic_simps stack_topmost_def set_diff_eq)
+  apply (exI_pick_last_conj)
+  done
 
 lemma sep_stack_topmost :
   "(rest ** stack_topmost h lst) s =
    (stack_topmost_elms h lst \<subseteq> s \<and> rest (s - stack_topmost_elms h lst))"
-apply(auto simp add: stack_topmost_def sep_def)
-apply(rule leibniz)
- apply blast
-apply(auto)
-done
+  apply (rule iffI)
+   apply (sep_subst_asm simp: stack_topmost_sep)
+   apply clarsimp
+  apply (sep_subst simp: stack_topmost_sep)
+  apply clarsimp
+  done
 
 lemma fourth_stack_topmost [simp] :
   "(a ** b ** c ** stack_topmost h lst ** rest) s =
    (stack_topmost_elms h lst \<subseteq> s \<and> (a ** b ** c ** rest) (s - stack_topmost_elms h lst))"
-  by (smt sep_assoc sep_three stack_topmost_sep)
+  apply (rule iffI)
+   apply (sep_subst_asm simp: stack_topmost_sep)
+   apply clarsimp
+  apply (sep_subst simp: stack_topmost_sep)
+  apply clarsimp
+  done
 
 lemma this_account_not_stack_topmost [simp] :
   "\<forall> h. ThisAccountElm this
@@ -1886,18 +1904,6 @@ lemma memory_range_elms_not_pc [simp] :
 apply(auto)
 done
 
-lemma account_ex_is_not_memory_range [simp] :
-  "\<forall> in_begin. AccountExistenceElm p \<notin> memory_range_elms in_begin input"
-apply(induction input)
- apply(simp add: memory_range_elms.simps)
-apply(simp add: memory_range_elms.simps)
-done
-
-lemma memory_range_elms_not_account_existence [simp] :
-  "(memory_range_elms in_begin input \<subseteq> s - {AccountExistenceElm p}) =
-   (memory_range_elms in_begin input \<subseteq> s)"
-apply auto
-done
 
 lemma memory_range_elms_not_code [simp] :
   "(memory_range_elms in_begin input
@@ -1930,19 +1936,6 @@ lemma stack_topmost_not_pc [simp] :
      (stack_topmost_elms h lst \<subseteq> s)"
 apply(auto)
 done
-
-lemma ae_not_stack_topmost [simp] :
-  "\<forall> h. AccountExistenceElm p \<notin> stack_topmost_elms h lst"
-apply(induction lst; auto simp add: stack_topmost_elms.simps)
-done
-
-lemma stack_topmost_not_account_existence [simp] :
-  "\<forall> h. stack_topmost_elms h lst
-       \<subseteq> s - {AccountExistenceElm p} =
-     (stack_topmost_elms h lst \<subseteq> s)"
-apply(auto)
-done
-
 
 lemma stack_topmost_not_code [simp] :
   "\<forall> h. stack_topmost_elms h lst
@@ -2031,6 +2024,11 @@ lemma balance_not_topmost [simp] :
 apply(induction lst; auto simp add: stack_topmost_elms.simps)
 done
 
+lemma this_not_topmost [simp] :
+  "\<forall> h. ThisAccountElm pair \<notin> stack_topmost_elms h lst"
+apply(induction lst; auto simp add: stack_topmost_elms.simps)
+done
+
 lemma continue_not_topmost [simp] :
   "\<forall> len. ContinuingElm b
        \<notin> stack_topmost_elms len lst"
@@ -2051,6 +2049,11 @@ done
 lemma memory_usage_not_topmost [simp] :
   "\<forall> len. MemoryUsageElm u
        \<notin> stack_topmost_elms len lst"
+apply(induction lst; auto simp add: stack_topmost_elms.simps)
+done
+
+lemma gas_not_topmost [simp] :
+  "\<forall> h. GasElm pair \<notin> stack_topmost_elms h lst"
 apply(induction lst; auto simp add: stack_topmost_elms.simps)
 done
 
@@ -2152,7 +2155,7 @@ lemma stack_elm_in_topmost [simp] :
        \<in> stack_topmost_elms len lst =
    (fst x2 \<ge> len \<and> fst x2 < len + length lst \<and> lst ! (fst x2 - len) = snd x2)"
 apply(induction lst)
- apply(simp)
+ apply(simp add: stack_topmost_elms.simps)
 apply(rule allI)
 apply(drule_tac x = "Suc len" in spec)
 apply(case_tac x2)
@@ -2275,13 +2278,6 @@ done
 
 lemma lognum_not_memory [simp] :
   "\<forall> x6 in_begin. LogNumElm x6 \<notin> memory_range_elms in_begin input"
-apply(induction input)
- apply(simp add: memory_range_elms.simps)
-apply(simp add: memory_range_elms.simps)
-done
-
-lemma account_existence_not_memory [simp] :
-  "\<forall> in_begin. AccountExistenceElm x29 \<notin> memory_range_elms in_begin input"
 apply(induction input)
  apply(simp add: memory_range_elms.simps)
 apply(simp add: memory_range_elms.simps)
@@ -2580,7 +2576,7 @@ done
 lemma stack_topmost_in_minus_this [simp] :
   "stack_topmost_elms h lst \<subseteq> X - {ThisAccountElm b} =
    (stack_topmost_elms h lst \<subseteq> X)"
-by auto
+by (auto)
 
 
 lemma stack_topmost_in_minus_pc [simp] :
@@ -2695,8 +2691,10 @@ done
 
 lemma memory_range_not_stack_topmost [simp]:
   "x \<in> memory_range_elms in_begin input \<Longrightarrow> x \<notin> stack_topmost_elms h lst"
-apply(case_tac x; simp)
-done
+  
+  apply(case_tac x; simp)
+    (* ? ? ? ?*)
+oops
 
 
 lemma memory_range_elms_in_minus_statck_topmost [simp] :
@@ -2705,7 +2703,8 @@ lemma memory_range_elms_in_minus_statck_topmost [simp] :
           stack_topmost_elms h lst =
    (memory_range_elms in_begin input \<subseteq> X)"
 apply(auto)
-done
+    (* ? ? ? ?*)
+oops
 
 
 lemma memory_range_elms_in_c [simp] :
@@ -3111,23 +3110,6 @@ apply(simp add: variable_ctx_as_set_def)
 apply auto
 done
 
-lemma account_existence_means_v [simp] :
-  "AccountExistenceElm x29 \<in> variable_ctx_as_set v =
-   (vctx_account_existence v (fst x29) = snd x29)"
-apply(auto simp add: variable_ctx_as_set_def)
- apply(rule_tac x = "fst x29" in exI)
- apply(case_tac x29)
- apply simp
-apply(rule_tac x = "fst x29" in exI)
-apply(case_tac x29)
-apply simp
-done
-
-lemma account_existence_not_stack [simp] :
-  "AccountExistenceElm p \<notin> stack_as_set ta"
-apply(simp add: stack_as_set_def)
-done
-
 lemma vctx_gas_changed [simp] :
    "variable_ctx_as_set
              (v \<lparr> vctx_gas := g \<rparr>) =
@@ -3171,7 +3153,7 @@ apply(simp add: vctx_advance_pc_def inst_size_def inst_code.simps)
 done
 
 lemma memory_range_elms_in_x_minus_lognum [simp] :
-   "memory_range_elms in_begin data \<subseteq> X - {LogNumElm n} =
+  "memory_range_elms in_begin data \<subseteq> X - {LogNumElm n} =
    (memory_range_elms in_begin data \<subseteq> X)"
 apply auto
 done
@@ -3224,10 +3206,6 @@ bundle sep_crunch = caller_sep [simp]
                     sep_action [simp]
                     sep_action_sep [simp]
                     sep_stack_topmost [simp]
-                    sep_account_existence_sep [simp]
-                    sep_account_existence [simp]
-                    account_existence_sep [simp]
-                    sep_sep_account_existence_sep [simp]
 
 end
 
