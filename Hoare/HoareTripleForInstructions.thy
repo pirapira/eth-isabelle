@@ -1904,6 +1904,18 @@ lemma memory_range_elms_not_pc [simp] :
 apply(auto)
 done
 
+lemma account_ex_is_not_memory_range [simp] :
+  "\<forall> in_begin. AccountExistenceElm p \<notin> memory_range_elms in_begin input"
+apply(induction input)
+ apply(simp add: memory_range_elms.simps)
+apply(simp add: memory_range_elms.simps)
+done
+
+lemma memory_range_elms_not_account_existence [simp] :
+  "(memory_range_elms in_begin input \<subseteq> s - {AccountExistenceElm p}) =
+   (memory_range_elms in_begin input \<subseteq> s)"
+apply auto
+done
 
 lemma memory_range_elms_not_code [simp] :
   "(memory_range_elms in_begin input
@@ -1934,8 +1946,19 @@ lemma stack_topmost_not_pc [simp] :
   "\<forall> h. stack_topmost_elms h lst
        \<subseteq> s - {PcElm (vctx_pc x1)} =
      (stack_topmost_elms h lst \<subseteq> s)"
-apply(auto)
-done
+ by auto
+    
+lemma ae_not_stack_topmost [simp] :
+ "\<forall> h. AccountExistenceElm p \<notin> stack_topmost_elms h lst"
+ by(induction lst; auto simp add: stack_topmost_elms.simps)
+
+lemma stack_topmost_not_account_existence [simp] :
+  "\<forall> h. stack_topmost_elms h lst
+       \<subseteq> s - {AccountExistenceElm p} =
+     (stack_topmost_elms h lst \<subseteq> s)"
+ by (auto)
+
+
 
 lemma stack_topmost_not_code [simp] :
   "\<forall> h. stack_topmost_elms h lst
@@ -2278,6 +2301,13 @@ done
 
 lemma lognum_not_memory [simp] :
   "\<forall> x6 in_begin. LogNumElm x6 \<notin> memory_range_elms in_begin input"
+apply(induction input)
+ apply(simp add: memory_range_elms.simps)
+apply(simp add: memory_range_elms.simps)
+done
+
+lemma account_existence_not_memory [simp] :
+  "\<forall> in_begin. AccountExistenceElm x29 \<notin> memory_range_elms in_begin input"
 apply(induction input)
  apply(simp add: memory_range_elms.simps)
 apply(simp add: memory_range_elms.simps)
@@ -2691,10 +2721,7 @@ done
 
 lemma memory_range_not_stack_topmost [simp]:
   "x \<in> memory_range_elms in_begin input \<Longrightarrow> x \<notin> stack_topmost_elms h lst"
-  
-  apply(case_tac x; simp)
-  apply(induction lst arbitrary:h; simp add:stack_topmost_elms.simps)
-done
+  by (case_tac x; simp)
 
 lemma memory_range_elms_in_minus_statck_topmost [simp] :
   "memory_range_elms in_begin input
@@ -3106,6 +3133,23 @@ apply(simp add: variable_ctx_as_set_def)
 apply auto
 done
 
+lemma account_existence_means_v [simp] :
+  "AccountExistenceElm x29 \<in> variable_ctx_as_set v =
+   (vctx_account_existence v (fst x29) = snd x29)"
+apply(auto simp add: variable_ctx_as_set_def)
+ apply(rule_tac x = "fst x29" in exI)
+ apply(case_tac x29)
+ apply simp
+apply(rule_tac x = "fst x29" in exI)
+apply(case_tac x29)
+apply simp
+done
+
+lemma account_existence_not_stack [simp] :
+  "AccountExistenceElm p \<notin> stack_as_set ta"
+apply(simp add: stack_as_set_def)
+done
+
 lemma vctx_gas_changed [simp] :
    "variable_ctx_as_set
              (v \<lparr> vctx_gas := g \<rparr>) =
@@ -3202,6 +3246,10 @@ bundle sep_crunch = caller_sep [simp]
                     sep_action [simp]
                     sep_action_sep [simp]
                     sep_stack_topmost [simp]
+                    sep_account_existence_sep [simp]
+                    sep_account_existence [simp]
+                    account_existence_sep [simp]
+                    sep_sep_account_existence_sep [simp]
                     sep_conj_assoc [simp]
 
 end

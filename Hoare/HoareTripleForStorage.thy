@@ -111,7 +111,7 @@ apply(rule leibniz)
  apply blast
 apply(rule Set.equalityI; clarify)
  apply(rename_tac elm)
-(* apply(simp add: vctx_update_storage_def) *)
+ apply(simp add: vctx_update_storage_def) 
  apply(case_tac elm; simp)
  using some_list_gotcha apply blast
  apply(split if_splits; simp)
