@@ -153,15 +153,29 @@ text \<open>The old sep_commute and sep_assoc are now in sep_conj_ac and
   
 lemmas sep_basic_simps =  sep_conj_def sep_set_conv
 
+lemma sep_eq_alts [sep_select]:
+  "(\<And>s. T s = (P \<and>* R) s) \<Longrightarrow> T s \<and> A \<Longrightarrow> (P \<and>* R) s \<and> A" by clarsimp
+
+lemma sep_conj_first:
+  "(A \<and> (P \<and>* R) s) = ((P \<and>* R) s \<and> A)"
+  by (simp add: conj_commute)
+
 text \<open>Use the method sep_sep_iff to solve simple sep-logic
   lemmas of the following form:
-  "(some_sep_prop n \<and>* R) s =
-   (SomeSepPropConst n \<in> s \<and> R (s - {SomeSepPropConst n}))"\<close>
+  @{term "(some_sep_prop n \<and>* R) s = (SomeSepPropConst n \<in> s \<and> R (s - {SomeSepPropConst n}))"}\<close>
 
-method exI_pick_last_conj =
-  (rule exI, (((rule conjI[rotated])+, assumption);  blast))
-  | (rule exI, rule exI, ((rule conjI[rotated])+, assumption, assumption) ; blast)
+lemma ex_conj_commute:
+  "(\<exists>v. P v \<and> Q v) = (\<exists>v. Q v \<and> P v) "
+  by (simp only: conj_commute)
     
+method exI_pick_last_conj =
+  --\<open>Group all conjs on the left and then commute to get the
+     last conjunction element in first position.\<close>
+  (simp (no_asm) only: conj_assoc[symmetric],
+   subst ex_conj_commute)?,
+  ((rule exI, erule conjI, ((rule conjI[rotated])+; blast))|
+   (rule exI, rule exI, erule (1) conjI, ((rule conjI[rotated])+; blast)))
+
 method solve_sep_iff uses simp =
   solves \<open>(rule iffI;  clarsimp simp add: sep_basic_simps simp),
   exI_pick_last_conj\<close>
@@ -171,7 +185,7 @@ text \<open>The sep_subst method takes rule of the form "(some_sep_prop \<and>* 
 the goal
 
 This method should probably be rewritten in ML with a loop for
-performance and to remove the current limitation of maximum 10
+performance and to remove the current limitation of maximum 11
 nested conjunctions.\<close>
 
 method sep_subst uses simp =
@@ -186,10 +200,24 @@ method sep_subst uses simp =
   (sep_select 9, subst simp) |
   (sep_select 10, subst simp))
 
-text \<open>Same as sep_subst but for assumption. sep_subst_asm can take several
-rules to substitute, it rule attempt to apply all of them, multiple times.\<close>
+method sep_simp_aux =
+  simp only: sep_conj_first sep_conj_assoc conj_assoc
 
-method sep_subst_asm uses simp =
+text \<open>sep_simp_no_asm simplifies a sep logic formula in the conclusion of a goal.
+The conclusion can contain normal conjunctions (e.g. @{term "P \<and> (a \<and>* b) s \<and> Q"}),
+if so, sep_simp_no_asm will move the element with a sep-conjunction in first
+position and apply all the simp rules pass as argument to it.
+The simp rules passed as argument must be of the form @{term "(some_sep_prop n \<and>* R) s = (SomeSepPropConst n \<in> s \<and> R (s - {SomeSepPropConst n}))"}
+\<close>
+method sep_simp_no_asm uses simp =
+  ((sep_simp_aux,  (sep_subst simp: simp)?)+)[1] |
+  sep_subst simp: simp
+
+text \<open>Same as sep_simp_no_asm but for assumptions. sep_simp_asm can take several
+rules to simplify, it rule attempt to apply all of them, multiple times.\<close>
+
+method sep_simp_asm uses simp =
+ (simp (*asm_lr*) only: sep_conj_assoc)?,
  ((sep_select_asm 1, subst (asm) simp, (erule conjE)+) |
   (sep_select_asm 2, subst (asm) simp, (erule conjE)+) |
   (sep_select_asm 3, subst (asm) simp, (erule conjE)+) |
@@ -200,6 +228,10 @@ method sep_subst_asm uses simp =
   (sep_select_asm 8, subst (asm) simp, (erule conjE)+) |
   (sep_select_asm 9, subst (asm) simp, (erule conjE)+) |
   (sep_select_asm 10, subst (asm) simp, (erule conjE)+))+
+
+method sep_simp uses simp =
+  ((sep_simp_asm simp: simp, (sep_simp_no_asm simp: simp)?) |
+  (sep_simp_no_asm simp: simp, (sep_simp_asm simp: simp)?))[1]
 
 lemma sep_lc [simp]: "(a ** b ** c) = (b ** a ** c)"
  by (simp add: sep_conj_ac)
@@ -278,34 +310,6 @@ lemma sep_gas_any_sep [simp] :
   "(a ** gas_any ** rest) s =
    (\<exists> g. GasElm g \<in> s \<and> (a ** rest) (s - {GasElm g}))"
 	by simp
-	  
-lemma sep_log_numberD:
-  "(log_number n \<and>* R) s \<Longrightarrow> LogNumElm n \<in> s"
-  by (clarsimp simp: sep_basic_simps log_number_def)
-
-lemma sep_log_numberI:
-  "LogNumElm n \<in> s \<Longrightarrow> R (s - {LogNumElm n}) \<Longrightarrow> (log_number n \<and>* R) s"
-  apply (clarsimp simp: sep_basic_simps log_number_def)
-  apply (exI_pick_last_conj)
- done
-
-lemma sep_log_number_h_cancelD:
-  "(log_number n \<and>* R) s \<Longrightarrow> R (s - {LogNumElm n})"
-  by (clarsimp simp: sep_basic_simps log_number_def)
-
-lemma sep_log_number_sep_weak :
-  "(log_number n \<and>* a \<and>* b) s =
-   (LogNumElm n \<in> s \<and> (a \<and>* b) (s - {LogNumElm n}))
-  "
-  --\<open>Example of how to use sep_* tactics to solve such a goal.
-     Note: This lemma is weaker than sep_log_number_sep below and shouldn't be necessary. \<close>
-  apply (rule iffI)
-   apply (rule conjI)
-    apply (sep_drule  (direct) sep_log_numberD, assumption)
-   apply (sep_erule (direct) sep_log_number_h_cancelD)
-  apply clarsimp
-  apply (sep_rule (direct) sep_log_numberI, assumption+)
- done
 
 lemma sep_log_number_sep [simp] :
   "(log_number n \<and>* R) s =

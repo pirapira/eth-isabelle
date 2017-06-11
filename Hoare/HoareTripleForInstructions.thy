@@ -1253,8 +1253,8 @@ lemma sep_action_sep :
   "(b ** action a ** rest) s =
    (ContractActionElm a \<in> s \<and> (b ** rest) (s - {ContractActionElm a}))"
   apply (rule iffI)
-   apply (sep_subst_asm simp: action_sep, fastforce)
-  apply (sep_subst simp: action_sep, fastforce)
+   apply (sep_simp_asm simp: action_sep, fastforce)
+  apply (sep_simp_no_asm simp: action_sep)
  done
 
 lemma iota0_non_empty_aux:
@@ -1864,22 +1864,12 @@ lemma stack_topmost_sep [simp] :
 lemma sep_stack_topmost :
   "(rest ** stack_topmost h lst) s =
    (stack_topmost_elms h lst \<subseteq> s \<and> rest (s - stack_topmost_elms h lst))"
-  apply (rule iffI)
-   apply (sep_subst_asm simp: stack_topmost_sep)
-   apply clarsimp
-  apply (sep_subst simp: stack_topmost_sep)
-  apply clarsimp
-  done
+ by (rule iffI ; sep_simp simp: stack_topmost_sep)
 
 lemma fourth_stack_topmost [simp] :
   "(a ** b ** c ** stack_topmost h lst ** rest) s =
    (stack_topmost_elms h lst \<subseteq> s \<and> (a ** b ** c ** rest) (s - stack_topmost_elms h lst))"
-  apply (rule iffI)
-   apply (sep_subst_asm simp: stack_topmost_sep)
-   apply clarsimp
-  apply (sep_subst simp: stack_topmost_sep)
-  apply clarsimp
-  done
+  by (rule iffI ; sep_simp simp: stack_topmost_sep)
 
 lemma this_account_not_stack_topmost [simp] :
   "\<forall> h. ThisAccountElm this
