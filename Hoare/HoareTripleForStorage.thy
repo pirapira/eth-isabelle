@@ -1,37 +1,30 @@
 theory "HoareTripleForStorage" 
 
 imports "HoareTripleForInstructions"
-
-begin
-
-context
- includes simp_for_triples
+ "../attic/Apply_Trace_Cmd"
 begin
 
 lemma storage_inst_advance [simp] :
 "program_content (cctx_program co_ctx) (vctx_pc x1) = Some (Storage m) \<Longrightarrow>
  k = vctx_pc x1 \<Longrightarrow>
  vctx_pc (vctx_advance_pc co_ctx x1) = vctx_pc x1 + 1"
-apply(simp add: vctx_advance_pc_def inst_size_def inst_code.simps)
-done
+by (simp add: vctx_next_instruction_def 
+ vctx_advance_pc_def inst_size_def inst_code.simps)
 
 
 lemma update_storage_preserves_pc [simp] :
 "vctx_pc
   (vctx_update_storage idx new x1) =
  vctx_pc x1"
-apply(simp add: vctx_update_storage_def)
-done
+by (simp add: vctx_update_storage_def)
 
 lemma update_storage_updates [simp] :
 "vctx_storage (vctx_update_storage idx new x1) idx = new"
-apply(simp add: vctx_update_storage_def)
-done
+by (simp add: vctx_update_storage_def)
 
 lemma update_storage_preserves_gas [simp] :
   "vctx_gas (vctx_update_storage idx new x1) = vctx_gas x1"
-apply(simp add: vctx_update_storage_def)
-done
+by (simp add: vctx_update_storage_def)
 
 lemma some_list_gotcha :
   "       rev ta ! fst x2 = snd x2 \<longrightarrow> \<not> fst x2 < length ta \<Longrightarrow>
@@ -50,46 +43,6 @@ apply(rename_tac smaller)
 apply(case_tac smaller; simp)
 done
 
-context
- includes sep_crunch
- notes Gsset_def [simp]
-begin
-(*
-lemma foo :
-      "vctx_stack x1 = idx # new # ta \<Longrightarrow>
-       x \<in> contexts_as_set x1 co_ctx \<longrightarrow>
-       x = CodeElm (vctx_pc x1, Storage SSTORE) \<or>
-       x = PcElm (vctx_pc x1) \<or>
-       x = StackElm (length ta, new) \<or>
-       x = StackElm (Suc (length ta), idx) \<or>
-       x = StackHeightElm (Suc (Suc (length ta))) \<or>
-       x = StorageElm (idx, vctx_storage x1 idx) \<Longrightarrow>
-       x \<noteq> StorageElm (idx, new) \<Longrightarrow>
-       x \<noteq> GasElm (vctx_gas x1 - Csstore (vctx_storage x1 idx) new) \<Longrightarrow>
-       x \<noteq> PcElm (vctx_pc x1 + 1) \<Longrightarrow>
-       x \<noteq> ContinuingElm True \<Longrightarrow>
-       x \<noteq> StackHeightElm (length ta) \<Longrightarrow>
-       (x = PcElm (vctx_pc x1 + inst_size (Storage SSTORE)) \<or>
-        x \<in> contexts_as_set
-              (x1\<lparr>vctx_storage :=
-                    \<lambda>x. if x = idx then new else vctx_storage x1 x,
-                    vctx_stack := ta,
-                    vctx_touched_storage_index :=
-                      idx # vctx_touched_storage_index x1,
-                    vctx_refund :=
-                      vctx_refund x1 + check_refund (vctx_storage x1 idx) new\<rparr>)
-              co_ctx \<and>
-        x \<noteq> PcElm (vctx_pc x1)) \<and>
-       x \<noteq> GasElm (vctx_gas x1) \<Longrightarrow>
-       x = CodeElm (vctx_pc x1, Storage SSTORE)"
-apply (auto simp add:inst_size_def inst_code.simps)
-apply (auto simp add:contexts_as_set_def variable_ctx_as_set_def constant_ctx_as_set_def
-      stack_as_set_def memory_as_set_def
-      balance_as_set_def storage_as_set_def log_as_set_def program_as_set_def data_sent_as_set_def
-      ext_program_as_set_def account_existence_def vctx_advance_pc_def)
-  by presburger
-*)
-
 lemma sstore_gas_triple :
   "triple net {OutOfGas}
           (\<langle> h \<le> 1024\<rangle>
@@ -102,19 +55,19 @@ lemma sstore_gas_triple :
           (stack_height h
            ** program_counter (k + 1) ** storage idx new **
            gas_pred (g - Csstore old new) ** continuing)"
-apply(auto simp add: triple_def)
+  apply (clarsimp simp: triple_def simp_for_triples sep_crunch)
 apply(rule_tac x = 1 in exI)
-apply(case_tac presult; auto simp add:
-   instruction_result_as_set_def sstore_def
-   vctx_update_storage_def)
-apply(rule leibniz)
- apply blast
+apply(case_tac presult ; (solves \<open>clarsimp\<close>)?)
+apply (clarsimp simp add: simp_for_triples sep_crunch
+       instruction_result_as_set_def  sstore_def
+       vctx_update_storage_def)
+apply (erule_tac P=rest in back_subst)
 apply(rule Set.equalityI; clarify)
- apply(rename_tac elm)
- apply(simp add: vctx_update_storage_def) 
- apply(case_tac elm; simp)
- using some_list_gotcha apply blast
- apply(split if_splits; simp)
+apply(rename_tac elm)
+apply(simp add: vctx_update_storage_def) 
+apply(case_tac elm; simp)
+using some_list_gotcha apply blast
+apply(split if_splits; simp)
 apply(rename_tac elm)
 apply(case_tac elm; simp)
  apply auto[1]
@@ -186,6 +139,8 @@ done
 *)
 
 lemma sload_gas_triple :
+  notes simp_for_triples[simp] sep_crunch[simp]
+ shows
   "triple net {OutOfGas}
           (\<langle> h \<le> 1023 \<and> unat bn \<ge> 2463000 \<and> at_least_eip150 net\<rangle>
            ** block_number_pred bn ** stack_height (h + 1)
@@ -194,26 +149,22 @@ lemma sload_gas_triple :
           {(k, Storage SLOAD)}
           (block_number_pred bn ** stack_height (h + 1) ** stack h w
            ** program_counter (k + 1) ** storage idx w ** gas_pred (g - Gsload net) ** continuing )"
-apply(auto simp add: triple_def)
+apply(clarsimp simp add: triple_def )
 apply(rule_tac x = 1 in exI)
-apply(case_tac presult; auto simp add: instruction_result_as_set_def)
-apply(rule leibniz)
- apply blast
+apply(case_tac presult ; (solves \<open>clarsimp\<close>)?)
+apply(clarsimp simp add: instruction_result_as_set_def)
+apply(erule_tac P=rest in back_subst)
 apply(rule  Set.equalityI; clarify)
  apply(simp)
  apply(rename_tac elm)
  apply(case_tac elm; simp)
  apply(rename_tac pair)
- apply(case_tac pair; auto)
+ apply(case_tac pair; fastforce)
 apply(simp)
 apply(rename_tac elm)
 apply(case_tac elm; simp)
 apply(rename_tac pair)
-apply(case_tac pair; auto)
+apply(case_tac pair; fastforce)
 done
-
-end
-
-end
 
 end

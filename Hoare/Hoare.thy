@@ -244,8 +244,8 @@ definition emp :: "'a set_pred"
   where
     "emp s == (s = 0)"
 
-lemma sep_emp [simp] :
-  "(r ** emp) = r"
+lemma emp_sep [simp] :
+  "(emp \<and>* r) = r"
   apply(simp add: emp_def  sep_conj_def)
  done
 

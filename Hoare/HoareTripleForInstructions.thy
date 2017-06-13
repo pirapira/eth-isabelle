@@ -360,7 +360,7 @@ lemma sep_caller:
    (CallerElm c \<in> s \<and> rest (s - {CallerElm c}))"
  by (solve_sep_iff simp: caller_def)
 
-lemma sep_caller_sep [simp]:
+lemma sep_caller_sep:
   "(a ** caller c ** rest) s =
    (CallerElm c \<in> s \<and> (a ** rest) (s - {CallerElm c}))"
   (is "?L = ?R")
@@ -1483,41 +1483,41 @@ declare sep_memory8_sep [simp]
 
 (****** specifying each instruction *******)
 
-bundle simp_for_triples =
-        meter_gas_def [simp]
-        C_def [simp] Cmem_def [simp]
-        Gmemory_def [simp]
-        new_memory_consumption.simps [simp]
-        thirdComponentOfC_def [simp]
-        subtract_gas.simps [simp]
-        vctx_next_instruction_default_def [simp]
-        stack_2_1_op_def [simp]
-        stack_1_1_op_def [simp]
-        stack_0_0_op_def [simp]
-        inst_stack_numbers.simps [simp]
-        arith_inst_numbers.simps [simp]
-        program_sem.simps [simp]
-        vctx_next_instruction_def [simp]
-        instruction_sem_def [simp]
-        check_resources_def [simp]
-        info_inst_numbers.simps [simp]
-        Gbalance_def [simp]
-        stack_inst_numbers.simps [simp]
-        pc_inst_numbers.simps [simp]
-        pop_def [simp]
-        jump_def [simp]
-        jumpi_def [simp]
-        instruction_failure_result_def [simp]
-        strict_if_def [simp]
-        blocked_jump_def [simp]
-blockedInstructionContinue_def [simp]
-vctx_pop_stack_def [simp]
-stack_0_1_op_def [simp]
-general_dup_def [simp]
-dup_inst_numbers_def [simp]
-storage_inst_numbers.simps [simp]
-Gbase_def [simp]
-Gsreset_def [simp]
+lemmas simp_for_triples =
+        meter_gas_def
+        C_def Cmem_def
+        Gmemory_def
+        new_memory_consumption.simps
+        thirdComponentOfC_def
+        subtract_gas.simps
+        vctx_next_instruction_default_def
+        stack_2_1_op_def
+        stack_1_1_op_def
+        stack_0_0_op_def
+        inst_stack_numbers.simps
+        arith_inst_numbers.simps
+        program_sem.simps
+        vctx_next_instruction_def
+        instruction_sem_def
+        check_resources_def
+        info_inst_numbers.simps
+        Gbalance_def
+        stack_inst_numbers.simps
+        pc_inst_numbers.simps
+        pop_def
+        jump_def
+        jumpi_def
+        instruction_failure_result_def
+        strict_if_def
+        blocked_jump_def
+        blockedInstructionContinue_def
+        vctx_pop_stack_def
+        stack_0_1_op_def
+        general_dup_def
+        dup_inst_numbers_def
+        storage_inst_numbers.simps
+        Gbase_def
+        Gsreset_def
 
 lemma emp_sep [simp] :
   "(emp ** rest) s = rest s"
@@ -1966,11 +1966,6 @@ apply (auto simp:memory_range_elms.simps)
 done
 
 
-context
-  includes simp_for_triples
-begin
-
-
 lemma stack_height_after_call [simp] :
        "vctx_balance x1 (cctx_this co_ctx) \<ge> vctx_stack x1 ! 2 \<Longrightarrow>
         (StackHeightElm (h + 7) \<in>
@@ -1986,7 +1981,8 @@ apply(case_tac listb; simp)
 apply(case_tac listc; simp)
 apply(case_tac listd; simp)
 apply(case_tac liste; simp)
-apply(auto simp add: instruction_result_as_set_def)
+  apply(auto simp add: instruction_result_as_set_def
+simp_for_triples)
 done
 
 lemma drop_suc :
@@ -2070,7 +2066,6 @@ lemma gas_not_topmost [simp] :
 apply(induction lst; auto simp add: stack_topmost_elms.simps)
 done
 
-end
 
 lemma call_new_balance [simp] :
       "v \<le> fund \<Longrightarrow>
@@ -2090,15 +2085,12 @@ apply(simp add: strict_if_def subtract_gas.simps update_balance_def)
 done
 
 
-context
- includes simp_for_triples
- begin
-
 lemma advance_pc_call [simp] :
       "program_content (cctx_program co_ctx) (vctx_pc x1) = Some (Misc CALL) \<Longrightarrow>
        k = vctx_pc x1 \<Longrightarrow>
        vctx_pc (vctx_advance_pc co_ctx x1) = vctx_pc x1 + 1"
-apply(simp add: vctx_advance_pc_def inst_size_def inst_code.simps)
+  apply(simp add: vctx_advance_pc_def inst_size_def inst_code.simps
+                 simp_for_triples)
 done
 
 
@@ -2382,11 +2374,9 @@ lemma memory_range_continue [simp] :
 apply(auto simp add: instruction_result_as_set_def contexts_as_set_def constant_ctx_as_set_def program_as_set_def)
 done
 
-context
- includes simp_for_triples
-begin
-
 lemma call_memory_no_change [simp] :
+notes simp_for_triples[simp]
+shows
   "x \<in> memory_range_elms in_begin input \<Longrightarrow>
    x \<in> instruction_result_as_set co_ctx
          (subtract_gas (meter_gas (Misc CALL) x1 co_ctx net) memu (call net x1 co_ctx)) =
@@ -2403,6 +2393,8 @@ done
 
 
 lemma memory_call [simp] :
+notes simp_for_triples[simp]
+shows
   "x \<in> memory_range_elms in_begin input \<Longrightarrow>
     x \<in> instruction_result_as_set co_ctx (call net x1 co_ctx) =
     (x \<in> instruction_result_as_set co_ctx (InstructionContinue x1))"
@@ -2415,8 +2407,6 @@ apply(case_tac listc; simp)
 apply(case_tac listd; simp)
 apply(case_tac liste; simp)
 done
-
-end
 
 lemma gas_limit_not_topmost [simp] :
   "\<forall> len. GaslimitElm g
@@ -2885,15 +2875,10 @@ lemma sucsuc_minus_two [simp] :
 apply auto
 done
 
-
-context
- includes simp_for_triples
-begin
-
 lemma swap_advance [simp] :
  "program_content (cctx_program co_ctx) (vctx_pc x1) = Some (Swap n) \<Longrightarrow>
   vctx_pc (vctx_advance_pc co_ctx x1) = vctx_pc x1 + 1"
-apply(simp add: vctx_advance_pc_def inst_size_def inst_code.simps)
+apply(simp add: simp_for_triples vctx_advance_pc_def inst_size_def inst_code.simps)
 done
 
 lemma minus_one_bigger [simp] :
@@ -2902,15 +2887,12 @@ lemma minus_one_bigger [simp] :
 apply auto
 done
 
-end
-
-
 lemma storage_elm_kept_by_gas_update [simp]:
  "StorageElm x3
   \<in> instruction_result_as_set co_ctx (InstructionContinue
      (x1\<lparr>vctx_gas := g - Gverylow\<rparr>)) =
   (StorageElm x3 \<in> instruction_result_as_set co_ctx (InstructionContinue x1))"
-apply(simp add: instruction_result_as_set_def)
+apply(simp add: simp_for_triples instruction_result_as_set_def)
 done
 
 lemma storage_elm_kept_by_stack_updaate [simp] :
@@ -3167,11 +3149,6 @@ lemma stack_topmost_minus_lognum [simp] :
    (stack_topmost_elms h lst \<subseteq> X)"
 apply auto
 done
-end 
-
-context
- includes simp_for_triples
-begin
 
 lemma vctx_pc_log_advance [simp] :
   "program_content (cctx_program co_ctx) k = Some (Log LOGx) \<Longrightarrow>
@@ -3179,7 +3156,7 @@ lemma vctx_pc_log_advance [simp] :
    vctx_pc
      (vctx_advance_pc co_ctx v) =
    vctx_pc v + 1"
-apply(simp add: vctx_advance_pc_def inst_size_def inst_code.simps)
+apply(simp add: simp_for_triples vctx_advance_pc_def inst_size_def inst_code.simps)
 done
 
 lemma memory_range_elms_in_x_minus_lognum [simp] :
@@ -3187,8 +3164,6 @@ lemma memory_range_elms_in_x_minus_lognum [simp] :
    (memory_range_elms in_begin data \<subseteq> X)"
 apply auto
 done
-
-end
 
 lemma memory_range_elms_logs_update [simp] :
   "memory_range_elms in_begin data
@@ -3221,26 +3196,26 @@ apply(simp add: vctx_stack_default_def)
 done
 
 
-bundle sep_crunch = caller_sep [simp]
-                    sep_caller [simp]
-                    sep_caller_sep [simp]
-                    balance_sep [simp]
-                    sep_balance [simp]
-                    sep_balance_sep [simp]
-                    not_continuing_sep [simp]
-                    sep_not_continuing_sep [simp]
-                    this_account_sep [simp]
-                    sep_this_account [simp]
-                    sep_this_account_sep [simp]
-                    action_sep [simp]
-                    sep_action [simp]
-                    sep_action_sep [simp]
-                    sep_stack_topmost [simp]
-                    sep_account_existence_sep [simp]
-                    sep_account_existence [simp]
-                    account_existence_sep [simp]
-                    sep_sep_account_existence_sep [simp]
-                    sep_conj_assoc [simp]
+lemmas sep_crunch = caller_sep
+                    sep_caller
+                    sep_caller_sep
+                    balance_sep
+                    sep_balance
+                    sep_balance_sep
+                    not_continuing_sep
+                    sep_not_continuing_sep
+                    this_account_sep
+                    sep_this_account
+                    sep_this_account_sep
+                    action_sep
+                    sep_action
+                    sep_action_sep
+                    sep_stack_topmost
+                    sep_account_existence_sep
+                    sep_account_existence
+                    account_existence_sep
+                    sep_sep_account_existence_sep
+                    sep_conj_assoc
 
 end
 
