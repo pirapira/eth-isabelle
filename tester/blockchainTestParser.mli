@@ -67,6 +67,6 @@ type testCase =
   ; bcCasePreState : (string * VmTestParser.account_state) list
   }
 
-val parse_test_case : json -> testCase
+val parse_test_file : json -> (string * testCase) list
 
 val format_test_case : testCase -> Easy_format.t

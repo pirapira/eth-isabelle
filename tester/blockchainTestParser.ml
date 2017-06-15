@@ -199,6 +199,11 @@ let parse_test_case (j : json) : testCase =
         (VmTestParser.parse_states (to_assoc (member "pre" j)))
   }
 
+let parse_test_file (js : json) =
+  List.map
+    (fun (name, case) -> (name, parse_test_case case))
+    (Util.to_assoc js)
+
 let format_blocks (bs : block list) =
   Easy_format.(List (("[", ",", "]", list), List.map format_block bs))
 
