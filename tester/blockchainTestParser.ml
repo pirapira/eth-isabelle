@@ -126,6 +126,8 @@ let print_and_forward_exception str x =
     raise e
 
 let parse_block (j : json) : block =
+  if Yojson.Basic.(Util.member "blockHeader" j =  `Null) then
+    raise UnsupportedEncoding;
   let open Util in
   { blockHeader =
       print_and_forward_exception
