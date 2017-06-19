@@ -172,7 +172,10 @@ type testCase =
 let parse_blocks (js : json list) : block list =
   List.map parse_block js
 
-let parse_test_case (j : json) : testCase =
+let parse_test_case (name : string) (j : json) : testCase =
+  let () = Printf.printf "...... parsing test case %s\n" name in
+  let () = if Yojson.Basic.(Util.member "genesisRLP" j = `Null) then
+             raise UnsupportedEncoding in
   let open Util in
   { bcCaseBlocks =
       (let block_list = to_list (member "blocks" j) in
@@ -203,7 +206,7 @@ let parse_test_case (j : json) : testCase =
 
 let parse_test_file (js : json) =
   List.map
-    (fun (name, case) -> (name, parse_test_case case))
+    (fun (name, case) -> (name, parse_test_case name case))
     (Util.to_assoc js)
 
 let format_blocks (bs : block list) =
