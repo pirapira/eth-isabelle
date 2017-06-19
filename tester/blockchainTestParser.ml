@@ -138,7 +138,7 @@ let parse_block (j : json) : block =
   ; blockTransactions =
       print_and_forward_exception
         "error in parsing transactions\n%!"
-        (List.map parse_transaction (to_list (member "transactions" j)))
+        (List.map parse_transaction (TestUtil.to_list_allow_null (member "transactions" j)))
   ; blockUncleHeaders =
       print_and_forward_exception
         "error in parsing uncle headers\n%!"
