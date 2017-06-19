@@ -38,12 +38,16 @@ let parse_address_from_field field j =
                             (fun c -> c <> '"')
                          (to_list str))) in
   let str = if String.length str > 1 && str.[0] = '0' && str.[1] = 'x' then str else "0x" ^ str in
-    try
+  try
+    if str = "0x" then
+      Big_int.zero_big_int
+    else
       Big_int.big_int_of_string str
-    with e ->
-      begin
-        raise e
-      end
+  with e ->
+    begin
+      let () = Printf.eprintf "Tried to parse %s as an address but failed.\n%!" str in
+      raise e
+    end
 
 let parse_env (j : json) : env =
   Util.(
