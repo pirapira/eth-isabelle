@@ -142,7 +142,7 @@ let parse_block (j : json) : block =
   ; blockUncleHeaders =
       print_and_forward_exception
         "error in parsing uncle headers\n%!"
-        (List.map parse_block_header (to_list (member "uncleHeaders" j)))
+        (List.map parse_block_header (TestUtil.to_list_allow_null (member "uncleHeaders" j)))
   }
 
 let format_block (b : block) : Easy_format.t =
