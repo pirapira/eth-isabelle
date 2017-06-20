@@ -736,6 +736,10 @@ lemma gasprice_not_constant :
   "GaspriceElm x26 \<notin> constant_ctx_as_set co_ctx"
 by (auto simp add: as_set_simps vctx_advance_pc_def)
 
+lemma advance_keeps_gasprice [simp] :
+  "vctx_gasprice (vctx_advance_pc co_ctx x1) = vctx_gasprice x1"
+by(simp add: vctx_advance_pc_def)
+
 lemma gasprice_elm_means :
   "GaspriceElm x26 \<in> variable_ctx_as_set x1
   = (x26 = vctx_gasprice x1)"

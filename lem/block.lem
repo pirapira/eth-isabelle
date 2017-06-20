@@ -533,7 +533,7 @@ let start_transaction tr state block =
     let s_acc = <| s_acc with block_account_balance = s_acc.block_account_balance - gas_value |> in
     let n_state = update_world state tr.tr_from s_acc in
     if tr.tr_data = [] then
-      Finished <| f_state=update_nonce n_state tr.tr_from; f_killed=[]; f_gas=integerFromNatural (word256ToNatural tr.tr_gas_limit) - igas; f_refund=0; f_logs=[] |> else
+      Finished <| f_state=update_nonce n_state tr.tr_from; f_killed=[]; f_gas= (word256ToInteger tr.tr_gas_limit) - igas; f_refund=0; f_logs=[] |> else
     let v = create_env s_acc n_state 0 []
         (word256ToInteger (tr.tr_gas_limit - word256FromInteger igas)) tr.tr_from tr.tr_from tr.tr_gas_price block in
     let c = build_cctx s_acc in
