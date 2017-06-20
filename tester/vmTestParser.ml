@@ -203,7 +203,6 @@ let construct_block_info (t : test_case) : block_info =
   ; block_number    = block_number
   ; block_difficulty = Conv.word256_of_big_int t.env.currentDifficulty
   ; block_gaslimit = Conv.word256_of_big_int t.env.currentGasLimit
-  ; block_gasprice = Conv.word256_of_big_int t.exec.gasPrice
   }
 
 let construct_account_existence (pre_state : (string * account_state) list) (addr : address) : bool =

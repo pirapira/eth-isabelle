@@ -96,7 +96,7 @@ type block = <|
 |>
 *)
 
-let start_env a state args caller origin block =
+let start_env a state args caller origin gasprice block =
 <| vctx_stack = []; (* The stack is initialized for every invocation *)
     vctx_memory = empty_memory; (* The memory is also initialized for every invocation *)
      vctx_memory_usage = 0; (* The memory usage is initialized. *)
@@ -109,6 +109,7 @@ let start_env a state args caller origin block =
      vctx_storage_at_call = a.account_storage; (* the snapshot of the storage is remembered in case of failure *)
      vctx_balance_at_call = (fun (addr:address) -> (state addr).account_balance); (* the snapshot of the balance is remembered in case of failure *)
      vctx_origin = origin; (* the origin of the transaction is arbitrarily chosen *)
+     vctx_gasprice = gasprice; (* the gasprice of the transaction is arbitrarily chosen *)
      vctx_ext_program = (fun (addr:address) -> (state addr).account_code); (* the codes of the external programs are arbitrary. *)
      vctx_block = block; (* the block information is chosen arbitrarily. *)
      vctx_gas = word256ToInteger args.callarg_gas; (* the amount of gas is chosen arbitrarily. *)
@@ -118,7 +119,7 @@ let start_env a state args caller origin block =
      vctx_refund = 0
    |>
 
-let create_env a state value data gas caller origin block =
+let create_env a state value data gas caller origin gasprice block =
 <| vctx_stack = []; (* The stack is initialized for every invocation *)
     vctx_memory = empty_memory; (* The memory is also initialized for every invocation *)
      vctx_memory_usage = 0; (* The memory usage is initialized. *)
@@ -131,6 +132,7 @@ let create_env a state value data gas caller origin block =
      vctx_storage_at_call = a.account_storage; (* the snapshot of the storage is remembered in case of failure *)
      vctx_balance_at_call = (fun (addr:address) -> (state addr).account_balance); (* the snapshot of the balance is remembered in case of failure *)
      vctx_origin = origin; (* the origin of the transaction is arbitrarily chosen *)
+     vctx_gasprice = gasprice; (* the gasprice of the transaction is arbitrarily chosen *) 
      vctx_ext_program = (fun (addr:address) -> (state addr).account_code); (* the codes of the external programs are arbitrary. *)
      vctx_block = block; (* the block information is chosen arbitrarily. *)
      vctx_gas = word256ToInteger gas; (* the amount of gas is chosen arbitrarily. *)
@@ -159,6 +161,7 @@ let vctx_update_from_world v a state called_v = <|
      vctx_storage_at_call = v.vctx_storage_at_call; (* the snapshot of the storage is remembered in case of failure *)
      vctx_balance_at_call = v.vctx_balance_at_call; (* the snapshot of the balance is remembered in case of failure *)
      vctx_origin = v.vctx_origin; (* the origin of the transaction is arbitrarily chosen *)
+     vctx_gasprice = v.vctx_gasprice;
      vctx_block = v.vctx_block; (* the block information is chosen arbitrarily. *)
      vctx_touched_storage_index = v.vctx_touched_storage_index;
 |>
@@ -405,7 +408,7 @@ let next net = function
             cctx_program = (n_state args.callarg_code).account_code;
             cctx_hash_filter = c.cctx_hash_filter |> in
          (* let v = <| v with vctx_gas = v.vctx_gas - word256ToInteger args.callarg_gas |> in *)
-         let nv = start_env acc n_state args c.cctx_this v.vctx_origin v.vctx_block in
+         let nv = start_env acc n_state args c.cctx_this v.vctx_origin v.vctx_gasprice v.vctx_block in
          Continue (<| global with g_stack=((state,v,c,get_hint stuff)::global.g_stack);
                                  g_current=n_state; g_cctx=cctx; g_vmstate=InstructionContinue nv |>)
       | ContractDelegateCall args ->
@@ -418,7 +421,7 @@ let next net = function
             cctx_this = c.cctx_this;
             cctx_program = (n_state args.callarg_code).account_code;
             cctx_hash_filter = c.cctx_hash_filter |> in
-         let nv = start_env acc n_state args v.vctx_caller v.vctx_origin v.vctx_block in
+         let nv = start_env acc n_state args v.vctx_caller v.vctx_origin v.vctx_gasprice v.vctx_block in
          Continue (<| global with g_stack=((state,v,c,get_hint stuff)::global.g_stack);
                                  g_current=n_state; g_cctx=cctx; g_vmstate=InstructionContinue nv |>)
       | ContractCreate args ->
@@ -444,7 +447,7 @@ let next net = function
          let n_state = update_world n_state addr acc in
          let passed_gas : integer = if word256ToInteger v.vctx_block.block_number >= eip150_block then L v.vctx_gas else v.vctx_gas in
          let remaining_gas = v.vctx_gas - passed_gas in
-         let nv = create_env acc n_state args.createarg_value [] (word256FromInteger passed_gas) c.cctx_this v.vctx_origin v.vctx_block in
+         let nv = create_env acc n_state args.createarg_value [] (word256FromInteger passed_gas) c.cctx_this v.vctx_origin v.vctx_gasprice v.vctx_block in
          let v = <| v with vctx_gas = remaining_gas |> in
          Continue (<| global with g_stack=((state,v,c,CreateAddress addr)::global.g_stack);
                                  g_current=n_state; g_cctx=cctx; g_vmstate=InstructionContinue nv |>)
@@ -550,7 +553,7 @@ let start_transaction tr state block =
     let s_acc = <| s_acc with account_balance = s_acc.account_balance - gas_value |> in
     let n_state = update_world state tr.tr_from s_acc in
     if tr.tr_data = [] then Finished <| f_state=update_nonce n_state tr.tr_from; f_killed=[]; f_gas=word256ToInteger tr.tr_gas_limit - igas; f_refund=0 |> else
-    let v = create_env s_acc n_state 0 [] (tr.tr_gas_limit - word256FromInteger igas) tr.tr_from tr.tr_from block in
+    let v = create_env s_acc n_state 0 [] (tr.tr_gas_limit - word256FromInteger igas) tr.tr_from tr.tr_from tr.tr_gas_price block in
     let c = build_cctx s_acc in
     let args = <| createarg_value = tr.tr_value; createarg_code = tr.tr_data |> in
     let act = ContractCreate args in
@@ -564,7 +567,7 @@ let start_transaction tr state block =
     let acc = n_state addr in
     let acc = <| acc with account_balance = acc.account_balance + tr.tr_value |> in
     let n_state = update_world n_state addr acc in
-    let v = create_env acc n_state tr.tr_value tr.tr_data (tr.tr_gas_limit - word256FromInteger igas) tr.tr_from tr.tr_from block in
+    let v = create_env acc n_state tr.tr_value tr.tr_data (tr.tr_gas_limit - word256FromInteger igas) tr.tr_from tr.tr_from tr.tr_gas_price block in
     let c = build_cctx acc in
     Continue (<| g_create = false; g_orig = state2; g_stack = []; g_current = n_state; g_cctx = c; g_vmstate = InstructionContinue v; g_killed = [] |>)
 end

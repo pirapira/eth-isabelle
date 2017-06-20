@@ -27,7 +27,6 @@ let construct_block_info (t : test_case) : block_info =
   ; block_number    = block_number
   ; block_difficulty = Conv.word256_of_big_int t.env.currentDifficulty
   ; block_gaslimit = Conv.word256_of_big_int t.env.currentGasLimit
-  ; block_gasprice = Conv.word256_of_big_int t.tr.gasPrice
   }
 
 let string_to_w256 str = Conv.word256_of_big_int (Big_int.big_int_of_string str)
