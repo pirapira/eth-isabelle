@@ -223,3 +223,17 @@ let format_test_case (t : testCase) : Easy_format.t =
     ; Label ((Atom ("pre", atom), label), Atom ("(printing not implemented)", atom))
     ] in
   List (("{", ",", "}", list), lst)
+
+
+(* TODO: very similar to StateTestLib.construct_block_info.  refactor *)
+let block_info_of (b : block) : Evm.block_info =
+  let bh = b.blockHeader in
+  Evm.(
+    { block_blockhash = (fun _ -> failwith "blockhash not implemented")
+    ; block_coinbase = Conv.word160_of_big_int bh.bhCoinbase
+    ; block_timestamp = Conv.word256_of_big_int bh.bhTimestamp
+    ; block_number = Conv.word256_of_big_int bh.bhNumber
+    ; block_difficulty = Conv.word256_of_big_int bh.bhDifficulty
+    ; block_gaslimit = Conv.word256_of_big_int bh.bhGasLimit
+    }
+  )

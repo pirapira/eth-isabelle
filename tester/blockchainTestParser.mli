@@ -70,3 +70,5 @@ type testCase =
 val parse_test_file : json -> (string * testCase) list
 
 val format_test_case : testCase -> Easy_format.t
+
+val block_info_of : block -> Evm.block_info
