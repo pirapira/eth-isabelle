@@ -1,9 +1,20 @@
 open Yojson.Basic
 
 let test_one_case (path : string) (case_name, test) =
+  let skip () =
+    Printf.printf "...... skipping %s\n" case_name in
   let () =
-    (if List.length test.BlockchainTestParser.bcCaseBlocks <> 1 then
-       Printf.printf "...... skipping %s\n" case_name) in
+    (if List.length test.BlockchainTestParser.bcCaseBlocks <> 1 then skip ()) in
+  let block = List.nth test.BlockchainTestParser.bcCaseBlocks 0 in
+  let () =
+    (if List.length block.BlockchainTestParser.blockTransactions <> 1 then skip ()) in
+  let tr = List.nth block.BlockchainTestParser.blockTransactions 0 in
+  (* check if the transaction is one *)
+  (* tr *)
+  (* get pre state *)
+  (* get post state *)
+  (* create a dummy state *)
+  (* decide net *)
   ()
 
 let test_one_file path =
