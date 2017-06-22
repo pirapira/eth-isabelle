@@ -1,6 +1,6 @@
-.PHONY: all all-isabelle light-isabelle deed clean clean-pdf clean-thy clean-ocaml clean-hol lem-thy lem-pdf lem-hol lem-ocaml doc
+.PHONY: all all-isabelle light-isabelle clean clean-pdf clean-thy clean-ocaml clean-hol lem-thy lem-pdf lem-hol lem-ocaml doc
 
-all: all-isabelle deed lem-thy lem-pdf lem-ocaml lem-hol lem-coq doc
+all: all-isabelle lem-thy lem-pdf lem-ocaml lem-hol lem-coq doc
 
 clean: clean-pdf clean-thy clean-ocaml clean-hol
 
@@ -16,22 +16,16 @@ clean-hol:
 clean-ocaml:
 	git clean -fx lem/*.ml
 
-all-isabelle: Parse.thy ContractSem.thy RelationalSem.thy example/Optimization.thy example/AlwaysFail.thy example/FailOnReentrance.thy example/Deed.thy lem/Block.thy lem/Evm.thy lem/Keccak.thy lem/Rlp.thy lem/Word160.thy lem/Word256.thy lem/Word8.thy lem/Word4.thy Hoare/HoareTripleForInstructions.thy Hoare/HoareTripleForInstructions2.thy
+all-isabelle: Parse.thy ContractSem.thy RelationalSem.thy example/Optimization.thy example/AlwaysFail.thy example/FailOnReentrance.thy lem/Block.thy lem/Evm.thy lem/Keccak.thy lem/Rlp.thy lem/Word160.thy lem/Word256.thy lem/Word8.thy lem/Word4.thy Hoare/HoareTripleForInstructions.thy Hoare/HoareTripleForInstructions2.thy
 	isabelle build -j 2 -d . all
 
 light-isabelle: Parse.thy ContractSem.thy RelationalSem.thy example/Optimization.thy example/AlwaysFail.thy example/FailOnReentrance.thy lem/Block.thy lem/Evm.thy lem/Keccak.thy lem/Rlp.thy lem/Word160.thy lem/Word256.thy lem/Word8.thy lem/Word4.thy Hoare/HoareTripleForInstructions.thy Hoare/HoareTripleForInstructions2.thy
 	isabelle build -b -j 2 -v -d . light
 
-doc: deed lem-pdf
-
-deed: document/output.pdf
-document/output.pdf: ContractSem.thy RelationalSem.thy example/Deed.thy document/root.tex lem/Evm.thy lem/Word256.thy lem/Word160.thy lem/Word8.thy lem/Keccak.thy
-	sh document_generation.sh
-
 lem-thy: lem/Block.thy lem/Evm.thy lem/Keccak.thy lem/Rlp.thy lem/Word160.thy lem/Word256.thy lem/Word8.thy lem/Keccak.thy lem/Word4.thy lem/Word64.thy lem/Word32.thy
 
 simplewallet: document/simplewallet.pdf
-document/simplewallet.pdf: ContractSem.thy RelationalSem.thy example/Deed.thy simple_wallet_document/root.tex lem/Evm.thy lem/Word256.thy lem/Word160.thy lem/Word8.thy lem/Keccak.thy
+document/simplewallet.pdf: ContractSem.thy RelationalSem.thy simple_wallet_document/root.tex lem/Evm.thy lem/Word256.thy lem/Word160.thy lem/Word8.thy lem/Keccak.thy
 	sh wallet_generation.sh
 
 lem-hol: lem/blockScript.sml lem/evmScript.sml lem/keccakScript.sml lem/rlpScript.sml lem/word160Script.sml lem/word256Script.sml lem/word8Script.sml lem/keccakScript.sml lem/word4Script.sml lem/word64Script.sml
