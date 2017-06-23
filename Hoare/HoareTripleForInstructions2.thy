@@ -5,10 +5,6 @@ imports Main "./HoareTripleForInstructions"
 
 begin
 
-context
-  includes sep_crunch simp_for_triples
-begin
-
 lemma memory_range_elms_in_minus_action [simp] :
   "memory_range_elms data_start data
        \<subseteq> X - {ContractActionElm a} =
@@ -109,37 +105,38 @@ lemma iszero_gas_triple :
                        gas_pred (g - Gverylow) **
                        continuing
                       )"
-apply(auto simp add: triple_def)
+apply(clarsimp simp add: triple_def simp_for_triples sep_crunch)
+apply (rule conjI ; clarsimp)
  apply(rule_tac x = 1 in exI)
- apply(case_tac presult; auto simp add: instruction_result_as_set_def)
- apply(rule leibniz)
-  apply blast
- apply(rule  Set.equalityI; clarify)
+  apply(case_tac presult; (solves \<open>clarsimp\<close>)?)
+  apply (clarsimp simp add: instruction_result_as_set_def simp_for_triples sep_crunch)
+  apply (erule_tac P=rest in back_subst)
+   apply(rule  Set.equalityI; clarify)
   apply(simp)
   apply(rename_tac elm)
   apply(case_tac elm; simp)
   apply(rename_tac pair)
-  apply(case_tac pair; auto)
+  apply(case_tac pair; fastforce)
  apply(simp)
  apply(rename_tac elm)
- apply(case_tac elm; simp)
+ apply(case_tac elm; simp add: simp_for_triples)
  apply(rename_tac pair)
- apply(case_tac pair; auto)
+ apply(case_tac pair; fastforce)
 apply(rule_tac x = 1 in exI)
-apply(case_tac presult; auto simp add: instruction_result_as_set_def)
-apply(rule leibniz)
- apply blast
+apply(case_tac presult; (solves \<open>clarsimp\<close>)?)
+apply (clarsimp simp add: instruction_result_as_set_def simp_for_triples sep_crunch)
+apply (erule_tac P=rest in back_subst)
 apply(rule  Set.equalityI; clarify)
  apply(simp)
  apply(rename_tac elm)
  apply(case_tac elm; simp)
  apply(rename_tac pair)
- apply(case_tac pair; auto)
+ apply(case_tac pair; fastforce)
 apply(simp)
 apply(rename_tac elm)
-apply(case_tac elm; simp)
+apply(case_tac elm; simp add: simp_for_triples)
 apply(rename_tac pair)
-apply(case_tac pair; auto)
+apply(case_tac pair; fastforce)
 done
 
 
@@ -174,6 +171,8 @@ apply(simp add: tmp000 tmp001 tmp002 List.rev_nth)
 done
 
 lemma swap_gas_triple :
+notes simp_for_triples[simp] sep_crunch[simp]
+shows
    "triple net {OutOfGas} (\<langle> h \<le> 1024 \<and> Suc (unat n) < h \<rangle> **
                        stack_height h **
                        stack (h - 1) w **
@@ -253,8 +252,12 @@ lemma dup_advance [simp] :
        k = vctx_pc x1 \<Longrightarrow>
        vctx_pc (vctx_advance_pc co_ctx x1) = vctx_pc x1 + 1
 "
-apply(simp add: vctx_advance_pc_def inst_size_def inst_code.simps)
+apply(simp add: simp_for_triples vctx_advance_pc_def inst_size_def inst_code.simps)
 done
+
+context
+notes simp_for_triples[simp] sep_crunch[simp]
+begin
 
 lemma dup_gas_triple :
    "triple net {OutOfGas} (\<langle> h \<le> 1023 \<and> unat n < h \<rangle> **
@@ -272,9 +275,9 @@ lemma dup_gas_triple :
                        gas_pred (g - Gverylow) **
                        continuing
                       )"
-apply(auto simp add: triple_def)
+apply(auto simp add: triple_def )
 apply(rule_tac x = 1 in exI)
-apply(case_tac presult; auto simp add: instruction_result_as_set_def)
+apply(case_tac presult; auto simp add:instruction_result_as_set_def)
 apply(rule leibniz)
  apply blast
 apply(rule Set.equalityI)
@@ -648,7 +651,7 @@ apply(rename_tac elm; case_tac elm; simp)
 apply(case_tac " fst x2 < Suc (length list)"; auto)
 done
 
-
+(*
 lemma eq0 [simp]: "
        vctx_stack x1 = v # w # ta \<Longrightarrow>
 program_content (cctx_program co_ctx) (vctx_pc x1) = Some (Arith inst_EQ) \<Longrightarrow>
@@ -675,6 +678,7 @@ apply(auto)
  apply(rename_tac elm; case_tac elm; auto)
 apply(rename_tac elm; case_tac elm; auto)
 done
+*)
 
 lemma eq_gas_triple :
   "triple net {OutOfGas}  ( \<langle> h \<le> 1023 \<rangle> **
@@ -724,7 +728,7 @@ apply(rename_tac elm; case_tac elm; simp)
 apply(case_tac "fst x2 < Suc (Suc (length ta))"; simp)
 apply auto
 done
-
+(*
 lemma tmp1 [simp]:
   "program_content (cctx_program co_ctx) (vctx_pc x1) = Some (Arith ADD) \<Longrightarrow>
    vctx_stack x1 = v # w # ta \<Longrightarrow>
@@ -750,7 +754,7 @@ apply(auto)
  apply(rename_tac elm; case_tac elm; auto)
 apply(rename_tac elm; case_tac elm; auto)
 done
-
+*)
 lemma add_triple :
    "triple net {}
            (\<langle> h \<le> 1023 \<and> g \<ge> Gverylow \<rangle> **
@@ -1022,8 +1026,6 @@ apply(auto)
   apply(rename_tac elm; case_tac elm; auto simp add: stack_as_set_def)
  apply(rename_tac elm; case_tac elm; auto simp add: stack_as_set_def)
 done
-
-
 
 end
 
