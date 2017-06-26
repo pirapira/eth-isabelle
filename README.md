@@ -90,3 +90,4 @@ done
 
 * For a bigger picture, see [overview of Yoichi's formal verification efforts on smart contracts](https://github.com/pirapira/ethereum-formal-verification-overview/blob/master/README.md#formal-verification-of-ethereum-contracts-yoichis-attempts)
 * For updates, visit [a gitter channel](https://gitter.im/ethereum/formal-methods)
+* A related project [EVM formalization in K framework](https://github.com/kframework/evm-semantics)
