@@ -242,6 +242,12 @@ method sep_simp uses simp =
   ((sep_simp_asm simp: simp, (sep_simp_no_asm simp: simp)?) |
   (sep_simp_no_asm simp: simp, (sep_simp_asm simp: simp)?))[1]
 
+lemma sep_lc: "(a ** b ** c) = (b ** a ** c)"
+ by (simp add: sep_conj_ac)
+
+lemma sep_three : "(c ** a ** b) = (a ** b ** c)"
+ by (simp add: sep_conj_ac)
+
 definition emp :: "'a set_pred"
   where
     "emp s == (s = 0)"
@@ -361,6 +367,17 @@ where
 lemma memory8_sep :
  "(memory8 idx v ** rest) s = (MemoryElm (idx, v) \<in> s \<and> rest (s - {MemoryElm (idx, v)}))"
  by (solve_sep_iff simp: memory8_def)
+
+lemma sep_memory8_sep :
+"(a ** memory8 idx v ** rest) s = (MemoryElm (idx, v) \<in> s \<and> (a ** rest) (s - {MemoryElm (idx, v)}))"
+proof -
+  have "(a ** memory8 idx v ** rest) s = (memory8 idx v ** a ** rest) s"
+    by (metis sep_conj_assoc sep_conj_commute)
+  moreover have "(memory8 idx v ** a ** rest) s = (MemoryElm (idx, v) \<in> s \<and> (a ** rest) (s - {MemoryElm (idx, v)}))"
+    by (rule memory8_sep)
+  ultimately show ?thesis
+    by auto
+qed
     
 fun memory_range :: "w256 \<Rightarrow> byte list \<Rightarrow> state_element set \<Rightarrow> bool"
 where
@@ -497,7 +514,6 @@ lemma sep_stack_height : "(rest ** stack_height h) s =
 lemma sep_stack_height_sep: "(a ** stack_height h ** rest) s =
   (StackHeightElm h \<in> s \<and> (a ** rest) (s - {StackHeightElm h})) "
   by (sep_simp simp: stack_height_sep)
-
 
 lemma stack_sep : "(stack p w ** rest) s =
   (StackElm (p, w) \<in> s \<and> rest (s - {StackElm (p, w)}))"
@@ -732,7 +748,11 @@ lemma composition:
   apply(drule_tac x = "presult" in spec)
   apply(drule_tac x = "code (cR - cL) ** rest" in spec)
   apply (erule impE)
+<<<<<<< HEAD
      apply(simp add: code_diff_union)
+=======
+     apply(simp add: code_diff_union sep_conj_assoc)
+>>>>>>> More reproving of lemmas with grouped lemmas.
   apply(drule_tac x = stopper in spec)
   apply clarsimp
   apply (clarsimp simp add: triple_def)
@@ -745,7 +765,11 @@ lemma composition:
   apply (erule impE)
    apply (simp only: sep_conj_assoc[symmetric] HOL.trans[OF code_diff_union[symmetric] code_diff_union'])
    apply(drule_tac x = stopper in spec)
+<<<<<<< HEAD
    apply (fastforce simp add: code_diff_union' execution_continue)
+=======
+   apply (fastforce simp add: code_diff_union' sep_conj_assoc execution_continue)
+>>>>>>> More reproving of lemmas with grouped lemmas.
   done
 (** Frame **)
 
@@ -844,9 +868,13 @@ lemma move_pureL [simp]: "triple net reaons (\<langle> b \<rangle> ** p) c q = (
 lemma tmp01:
     "(rest ** code c ** p x) (case presult of InstructionContinue v \<Rightarrow> contexts_as_set v co_ctx | _ \<Rightarrow> {}) \<Longrightarrow>
     (rest ** code c ** (\<lambda>s. \<exists>x. p x s)) (case presult of InstructionContinue v \<Rightarrow> contexts_as_set v co_ctx | _ \<Rightarrow> {})"
+<<<<<<< HEAD
   apply (sep_cancel)+
   apply blast
   done
+=======
+  by (smt imp_sepL sep_three)
+>>>>>>> More reproving of lemmas with grouped lemmas.
 
 lemma tmp0:
        "\<forall>co_ctx. no_assertion co_ctx \<longrightarrow>
@@ -929,7 +957,11 @@ apply(auto simp add: triple_def)
   apply(rule_tac x=x in preE00)
   apply(simp)
   apply (sep_simp simp: code_sep )
+<<<<<<< HEAD
   apply (simp add: sep_conj_commute)
+=======
+  apply (simp add: sep_conj_ac)
+>>>>>>> More reproving of lemmas with grouped lemmas.
 done
 
 

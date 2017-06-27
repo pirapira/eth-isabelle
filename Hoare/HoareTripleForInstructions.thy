@@ -408,7 +408,6 @@ lemma advance_pc_as_set:
    (contexts_as_set (vctx_advance_pc co_ctx v) co_ctx) =
    (contexts_as_set v co_ctx) \<union> {PcElm (vctx_pc v + 1)} - {PcElm (vctx_pc v)}"
   by (auto simp add: memory_usage_element_means as_set_simps vctx_next_instruction_def
-       pop_advance advance_pc_preserves_memory_usage vctx_advance_pc_def inst_size_pop )
 
 lemma gas_change_as_set:
   "(contexts_as_set (x1\<lparr>vctx_gas := new_gas\<rparr>) co_ctx) 
@@ -887,6 +886,7 @@ lemma log_num_advance [simp] :
    (LogNumElm x6 \<in> contexts_as_set x1 co_ctx)"
 apply(simp add: as_set_simps vctx_advance_pc_def)
 done
+
 lemma account_existence_not_in_constant [simp] :
   "AccountExistenceElm p \<notin> constant_ctx_as_set co_ctx"
 apply(simp add: constant_ctx_as_set_def program_as_set_def)
@@ -1151,7 +1151,7 @@ lemmas not_constant_simps =
   sent_data_not_constant
 
 
-lemma short_rev_append:
+lemma short_rev_append [simp]:
  "a < length t \<Longrightarrow> (rev t @ lst) ! a = rev t ! a"
 	by (simp add: nth_append)
 
