@@ -5,6 +5,7 @@ imports Main
  "../sep_algebra/EvmSep"
  "../sep_algebra/Sep_Tactics"
  "~~/src/HOL/Eisbach/Eisbach"
+ "../attic/Apply_Trace_Cmd"
 begin
 
 lemma not_at_least_one :
@@ -233,7 +234,7 @@ method sep_simp uses simp =
   ((sep_simp_asm simp: simp, (sep_simp_no_asm simp: simp)?) |
   (sep_simp_no_asm simp: simp, (sep_simp_asm simp: simp)?))[1]
 
-lemma sep_lc [simp]: "(a ** b ** c) = (b ** a ** c)"
+lemma sep_lc: "(a ** b ** c) = (b ** a ** c)"
  by (simp add: sep_conj_ac)
 
 lemma sep_three : "(c ** a ** b) = (a ** b ** c)"
@@ -283,7 +284,7 @@ definition account_existence :: "address \<Rightarrow> bool \<Rightarrow> state_
 where
 "account_existence a b s == s = {AccountExistenceElm (a, b)}"
 
-lemma sep_logged [simp]:
+lemma sep_logged:
   "(a ** logged n l) s =
    (LogElm (n, l) \<in> s \<and> a (s - {LogElm (n, l)}))"
   by (solve_sep_iff simp: logged_def)
@@ -296,7 +297,7 @@ definition gas_any :: "state_element set \<Rightarrow> bool"
   where
     "gas_any s == (\<exists> g. s = {GasElm g})"
 
-lemma gas_any_sep [simp] :
+lemma gas_any_sep :
   "(gas_any ** rest) s =
    (\<exists> g. GasElm g \<in> s \<and> rest (s - {GasElm g}))"
   apply (rule iffI)
@@ -306,12 +307,12 @@ lemma gas_any_sep [simp] :
   apply (exI_pick_last_conj)
  done    
 
-lemma sep_gas_any_sep [simp] :
+lemma sep_gas_any_sep:
   "(a ** gas_any ** rest) s =
    (\<exists> g. GasElm g \<in> s \<and> (a ** rest) (s - {GasElm g}))"
-	by simp
+ by (metis gas_any_sep sep_conj_assoc sep_conj_commute)
 
-lemma sep_log_number_sep [simp] :
+lemma sep_log_number_sep:
   "(log_number n \<and>* R) s =
    (LogNumElm n \<in> s \<and> R (s - {LogNumElm n}))
   "
@@ -356,7 +357,7 @@ definition memory8 :: "w256 \<Rightarrow> byte \<Rightarrow> state_element set \
 where
 "memory8 idx v s == s = {MemoryElm (idx ,v)}"
 
-lemma memory8_sep [simp] :
+lemma memory8_sep :
  "(memory8 idx v ** rest) s = (MemoryElm (idx, v) \<in> s \<and> rest (s - {MemoryElm (idx, v)}))"
  by (solve_sep_iff simp: memory8_def)
 
@@ -364,34 +365,12 @@ lemma sep_memory8_sep [simp] :
 "(a ** memory8 idx v ** rest) s = (MemoryElm (idx, v) \<in> s \<and> (a ** rest) (s - {MemoryElm (idx, v)}))"
 proof -
   have "(a ** memory8 idx v ** rest) s = (memory8 idx v ** a ** rest) s"
-    by auto
+    by (metis sep_conj_assoc sep_conj_commute)
   moreover have "(memory8 idx v ** a ** rest) s = (MemoryElm (idx, v) \<in> s \<and> (a ** rest) (s - {MemoryElm (idx, v)}))"
     by (rule memory8_sep)
   ultimately show ?thesis
     by auto
 qed
-
-text \<open> Following memory8_* lemmas are only there for backward compatibility, should be probably be removed \<close>
-lemma memory8_sepD:
-  "(memory8 idx v ** R) s \<Longrightarrow> MemoryElm (idx, v) \<in> s"
-  by (clarsimp simp: sep_basic_simps memory8_def)
-
-lemma memory8_sep_h_cancelD:
-  "(memory8 idx v ** R) s \<Longrightarrow> R (s - {MemoryElm (idx, v)})"
-  by (clarsimp simp: sep_basic_simps memory8_def)
-
-lemma memory8_sepI:
-  "MemoryElm (idx, v) \<in> s \<Longrightarrow> R (s - {MemoryElm (idx, v)}) \<Longrightarrow> (memory8 idx v ** R) s"
-  apply (clarsimp simp: sep_basic_simps memory8_def)
-  apply (exI_pick_last_conj)
-  done
-
-lemma 
-"(a ** memory8 idx v ** rest) s = (MemoryElm (idx, v) \<in> s \<and> (a ** rest) (s - {MemoryElm (idx, v)}))"
-  apply (subst sep_conj_commute)
-  apply (subst sep_conj_assoc)
-  apply (simp only: memory8_sep sep_conj_commute)
-  done
     
 fun memory_range :: "w256 \<Rightarrow> byte list \<Rightarrow> state_element set \<Rightarrow> bool"
 where
@@ -444,7 +423,7 @@ definition instruction_result_as_set :: "constant_ctx \<Rightarrow> instruction_
         | InstructionAnnotationFailure \<Rightarrow> {ContinuingElm False} (* need to assume no annotation failure somewhere *)
         )"
 
-lemma annotation_failure_as_set [simp] :
+lemma annotation_failure_as_set :
   "instruction_result_as_set c InstructionAnnotationFailure = {ContinuingElm False}"
 apply(simp add: instruction_result_as_set_def)
 done
@@ -489,59 +468,56 @@ where
          ((post ** code insts ** rest) (instruction_result_as_set co_ctx (program_sem stopper co_ctx k net presult)))
          \<or> failed_for_reasons allowed_failures (program_sem stopper co_ctx k net presult))"
 
-lemma no_assertion_pass [simp] : "no_assertion co_ctx \<Longrightarrow> check_annotations v co_ctx"
+lemma no_assertion_pass : "no_assertion co_ctx \<Longrightarrow> check_annotations v co_ctx"
 apply(simp add: no_assertion_def check_annotations_def)
 done
 
-lemma pure_sep [simp] : "(((\<langle> b \<rangle>) ** rest) s) = (b \<and> rest s)"
+lemma pure_sep : "(((\<langle> b \<rangle>) ** rest) s) = (b \<and> rest s)"
   by ( simp add: sep_conj_def pure_def emp_def )
 
-lemma continuing_sep [simp] :
+lemma continuing_sep:
   "(continuing ** rest) s = ((ContinuingElm True) \<in> s \<and> rest (s - {ContinuingElm True}))"
    by (solve_sep_iff simp: continuing_def)
 
 
-lemma sep_continuing_sep [simp] :
+lemma sep_continuing_sep:
   "(a ** continuing ** b) s = ((ContinuingElm True) \<in> s \<and> (a ** b) (s - {ContinuingElm True}))"
- by simp
+ by (rule iffI) (sep_simp simp: continuing_sep)+
 
 
-lemma storage_sep [simp] :
+lemma storage_sep:
   "(storage idx w ** rest) s =
    (StorageElm (idx, w) \<in> s \<and> rest (s - {StorageElm (idx, w)}))"
    by (solve_sep_iff simp: storage_def)
 
-lemma sep_storage [simp] :
+lemma sep_storage:
   "(rest ** storage idx w) s =
    (StorageElm (idx, w) \<in> s \<and> rest (s - {StorageElm (idx, w)}))"
   by (solve_sep_iff simp: storage_def)
 
 
-lemma stack_height_sep [simp] : "(stack_height h ** rest) s =
+lemma stack_height_sep : "(stack_height h ** rest) s =
   (StackHeightElm h \<in> s \<and> rest (s - {StackHeightElm h})) "
   by (solve_sep_iff simp: stack_height_def)
 
-lemma sep_stack_height [simp] : "(rest ** stack_height h) s =
+lemma sep_stack_height : "(rest ** stack_height h) s =
   (StackHeightElm h \<in> s \<and> rest (s - {StackHeightElm h})) "
   by (solve_sep_iff simp: stack_height_def)
 
-text \<open>Just to show how such theorem can be proved if needed,
-     but best practice is probably to avoid these unstructured
-     separation logic predicates.\<close>
-lemma sep_stack_height_sep [simp] : "(a ** stack_height h ** rest) s =
+lemma sep_stack_height_sep: "(a ** stack_height h ** rest) s =
   (StackHeightElm h \<in> s \<and> (a ** rest) (s - {StackHeightElm h})) "
-  by (metis stack_height_sep sep_conj_ac)
+  by (metis stack_height_sep sep_conj_commute sep_conj_assoc)
 
 
-lemma stack_sep [simp] : "(stack p w ** rest) s =
+lemma stack_sep : "(stack p w ** rest) s =
   (StackElm (p, w) \<in> s \<and> rest (s - {StackElm (p, w)}))"
   by (solve_sep_iff simp: stack_def)
 
-lemma sep_stack [simp] : "(rest ** stack p w) s =
+lemma sep_stack : "(rest ** stack p w) s =
   (StackElm (p, w) \<in> s \<and> rest (s - {StackElm (p, w)}))"
   by (solve_sep_iff simp: stack_def)
 
-lemma sep_stack_sep [simp] : "(a ** stack p w ** rest) s =
+lemma sep_stack_sep  : "(a ** stack p w ** rest) s =
   (StackElm (p, w) \<in> s \<and> (a ** rest) (s - {StackElm (p, w)}))"
   apply (subst sep_conj_commute)
   apply (subst sep_conj_assoc)
@@ -549,28 +525,23 @@ lemma sep_stack_sep [simp] : "(a ** stack p w ** rest) s =
 done
 
 
-lemma program_counter_sep [simp] : "(program_counter w ** rest) s =
+lemma program_counter_sep : "(program_counter w ** rest) s =
   (PcElm w \<in> s \<and> rest (s - {PcElm w}))"
   by (solve_sep_iff simp: program_counter_def)
 
-lemma sep_program_counter [simp] : "(rest ** program_counter w) s =
+lemma sep_program_counter : "(rest ** program_counter w) s =
   (PcElm w \<in> s \<and> rest (s - {PcElm w}))"
   by (solve_sep_iff simp: program_counter_def)
 
 
-lemma sep_program_counter_sep [simp] : "(a ** program_counter w ** rest) s =
+lemma sep_program_counter_sep : "(a ** program_counter w ** rest) s =
   (PcElm w \<in> s \<and> (a ** rest) (s - {PcElm w}))"
   apply (subst sep_conj_commute)
   apply (subst sep_conj_assoc)
   apply (simp only: program_counter_sep sep_conj_commute)
 done
 
-lemma leibniz :
-  "r (s :: state_element set) \<Longrightarrow> s = t \<Longrightarrow> r t"
-apply(auto)
-done
-
-lemma code_sep [simp] : "(code pairs ** rest) s =
+lemma code_sep: "(code pairs ** rest) s =
   ({ CodeElm(pos, i) | pos i. (pos, i) \<in> pairs } \<subseteq> s \<and> (rest (s - { CodeElm(pos, i) | pos i. (pos, i) \<in> pairs })))"
   apply (rule iffI)
     apply (rule conjI)
@@ -582,57 +553,57 @@ lemma code_sep [simp] : "(code pairs ** rest) s =
   apply exI_pick_last_conj
  done
 
-lemma sep_code [simp] : "(rest ** code pairs) s =
+lemma sep_code : "(rest ** code pairs) s =
   ({ CodeElm(pos, i) | pos i. (pos, i) \<in> pairs } \<subseteq> s \<and> (rest (s - { CodeElm(pos, i) | pos i. (pos, i) \<in> pairs })))"
   apply (subst code_sep[symmetric])
   apply (metis sep_conj_commute)
  done
 
-lemma sep_code_sep [simp] : "(a ** code pairs ** rest) s =
+lemma sep_code_sep: "(a ** code pairs ** rest) s =
   ({ CodeElm(pos, i) | pos i. (pos, i) \<in> pairs } \<subseteq> s \<and> ((a ** rest) (s - { CodeElm(pos, i) | pos i. (pos, i) \<in> pairs })))"
   apply (subst code_sep[symmetric])
   apply (metis sep_conj_commute sep_conj_assoc)
  done
 
-lemma sep_sep_code [simp] : "(a ** b ** code pairs) s =
+lemma sep_sep_code : "(a ** b ** code pairs) s =
   ({ CodeElm(pos, i) | pos i. (pos, i) \<in> pairs } \<subseteq> s \<and> ((a ** b) (s - { CodeElm(pos, i) | pos i. (pos, i) \<in> pairs })))"
   apply (subst code_sep[symmetric])
   apply (metis sep_conj_commute sep_conj_assoc)
  done
 
 
-lemma gas_pred_sep [simp] : "(gas_pred g ** rest) s =
+lemma gas_pred_sep : "(gas_pred g ** rest) s =
   ( GasElm g \<in> s \<and> rest (s - { GasElm g }) )"
   by (solve_sep_iff simp: gas_pred_def)
 
 
-lemma sep_gas_pred [simp] : "(rest ** gas_pred g) s =
+lemma sep_gas_pred : "(rest ** gas_pred g) s =
   ( GasElm g \<in> s \<and> rest (s - { GasElm g }) )"
   by (solve_sep_iff simp: gas_pred_def)
 
-lemma sep_gas_pred_sep [simp] :
+lemma sep_gas_pred_sep:
   "(a ** gas_pred g ** b) s =
    ( GasElm g \<in> s \<and> (a ** b) (s - { GasElm g } ) )"
  by (metis gas_pred_sep[symmetric] sep_conj_commute sep_conj_assoc)
 
 
-lemma memory_usage_sep [simp] : 
+lemma memory_usage_sep: 
   "(memory_usage u ** rest) s =
    (MemoryUsageElm u \<in> s \<and> rest (s - {MemoryUsageElm u}))"
   by (solve_sep_iff simp: memory_usage_def)
 
-lemma sep_memory_usage [simp] : 
+lemma sep_memory_usage: 
   "(rest ** memory_usage u) s =
    (MemoryUsageElm u \<in> s \<and> rest (s - {MemoryUsageElm u}))"
  by (solve_sep_iff simp: memory_usage_def)
 
-lemma sep_memory_usage_sep [simp] :
+lemma sep_memory_usage_sep:
   "(a ** memory_usage u ** rest) s =
    (MemoryUsageElm u \<in> s \<and> (a ** rest) (s - {MemoryUsageElm u}))"
 	by (metis memory_usage_sep sep_conj_commute sep_conj_assoc)
 
 
-lemma stackHeightElmEquiv [simp] : "StackHeightElm h \<in> contexts_as_set v c =
+lemma stackHeightElmEquiv: "StackHeightElm h \<in> contexts_as_set v c =
   (length (vctx_stack v) = h)
   "
 apply(auto simp add: contexts_as_set_def constant_ctx_as_set_def variable_ctx_as_set_def
@@ -640,35 +611,37 @@ apply(auto simp add: contexts_as_set_def constant_ctx_as_set_def variable_ctx_as
       balance_as_set_def log_as_set_def data_sent_as_set_def ext_program_as_set_def)
   done
 
-lemma stackElmEquiv [simp] : "StackElm (pos, w) \<in> contexts_as_set v c =
+lemma stackElmEquiv: "StackElm (pos, w) \<in> contexts_as_set v c =
   (pos < length (vctx_stack v) \<and> rev (vctx_stack v) ! pos = w)"
 apply(auto simp add: contexts_as_set_def constant_ctx_as_set_def variable_ctx_as_set_def
       program_as_set_def stack_as_set_def memory_as_set_def storage_as_set_def
       balance_as_set_def log_as_set_def data_sent_as_set_def ext_program_as_set_def)
 done
 
-lemma pcElmEquiv [simp] : "PcElm k \<in> contexts_as_set va_ctx co_ctx =
+lemma pcElmEquiv : "PcElm k \<in> contexts_as_set va_ctx co_ctx =
   (vctx_pc va_ctx = k)"
 apply(auto simp add: contexts_as_set_def constant_ctx_as_set_def variable_ctx_as_set_def
       program_as_set_def stack_as_set_def memory_as_set_def storage_as_set_def
       balance_as_set_def log_as_set_def data_sent_as_set_def ext_program_as_set_def)
 done
 
-lemma gasElmEquiv [simp] : "GasElm g \<in> contexts_as_set va_ctx co_ctx =
+lemma gasElmEquiv: "GasElm g \<in> contexts_as_set va_ctx co_ctx =
   (vctx_gas va_ctx = g)"
 apply(auto simp add: contexts_as_set_def constant_ctx_as_set_def variable_ctx_as_set_def
       program_as_set_def stack_as_set_def memory_as_set_def storage_as_set_def
       balance_as_set_def log_as_set_def data_sent_as_set_def ext_program_as_set_def)
 done
 
-lemma codeElmEquiv [simp] :
+lemma codeElmEquiv:
   "CodeElm (pos, i) \<in> contexts_as_set va_ctx co_ctx =
    ((program_content (cctx_program co_ctx) pos = Some i) \<or>
    (program_content (cctx_program co_ctx) pos = None) \<and> i = Misc STOP)"
 apply(auto simp add: contexts_as_set_def constant_ctx_as_set_def variable_ctx_as_set_def
       program_as_set_def stack_as_set_def memory_as_set_def storage_as_set_def
       balance_as_set_def log_as_set_def data_sent_as_set_def ext_program_as_set_def)
-done
+  done
+
+lemmas stateelm_equiv = stackHeightElmEquiv stackElmEquiv pcElmEquiv gasElmEquiv codeElmEquiv
 
 lemma insert_minus : "a \<noteq> b \<Longrightarrow> insert a s - { b } = insert a (s - {b})"
   apply(simp add: insert_Diff_if)
@@ -694,11 +667,20 @@ lemma short_match [simp] :
 (* sledgehammer *)
 	by (simp add: nth_append)
 		
-declare memory_as_set_def [simp]
-  storage_as_set_def [simp]
-  log_as_set_def [simp]
-  balance_as_set_def [simp]
-  next_state_def [simp]
+lemmas stateelm_as_set =
+  memory_as_set_def
+  storage_as_set_def
+  log_as_set_def
+  balance_as_set_def
+  next_state_def
+  data_sent_as_set_def
+  contract_action_as_set_def
+  stack_as_set_def
+  ext_program_as_set_def
+  program_as_set_def
+  constant_ctx_as_set_def
+  variable_ctx_as_set_def
+  contexts_as_set_def
 
 (**
  ** Inference rules about Hoare triples
@@ -708,6 +690,11 @@ lemma code_diff_union : "(code (a \<union> b)) = (code a ** (code (b - a)))"
   by (rule ext) 
      (auto simp: sep_basic_simps code_def)
 
+lemma code_diff_union' : "(code (a \<union> b)) = (code b ** (code (a - b)))"
+  by (rule ext) 
+     (auto simp: sep_basic_simps code_def)
+
+     
 lemma code_middle:
   "(p ** code (c_1 \<union> c_2) ** rest) =
    (p ** (code c_1 ** (code (c_2 - c_1))) ** rest)"
@@ -723,9 +710,9 @@ lemma shuffle3:
    (p ** code c_1 ** (code (c_2 - c_1) ** rest))"
  by (metis sep_conj_assoc)
 
-lemma execution_continue [simp]:
-  "\<forall> presult. (program_sem s co_ctx a net (program_sem s co_ctx b net presult) = program_sem s co_ctx (b + a) net presult)"
-apply(induction b)
+lemma execution_continue:
+  "(program_sem s co_ctx a net (program_sem s co_ctx b net presult) = program_sem s co_ctx (b + a) net presult)"
+apply(induction b arbitrary: presult)
  apply(simp add: program_sem.simps)
 apply(simp add: program_sem.simps)
 done
@@ -744,7 +731,7 @@ apply(drule_tac x = "program_sem s co_ctx k net presult" in spec)
 apply(drule_tac x = rest in spec)
 apply(simp)
 apply(drule_tac x = s in spec)
-apply(simp)
+apply (simp add:  sep_code_sep   execution_continue)
 done
 
 lemma code_back:
@@ -766,21 +753,6 @@ lemma code_union_s:
 (* sledgehammer *)
 	by (simp add: sup_commute)
 
-declare sep_sep_code [simp del]
-lemma set_compr_disj_union:
-  "{T x| x.  P x \<or> Q x} = {T x | x. P x} \<union> { T x | x. Q x}"
-  by blast
-
-lemma set_compr_double_disj_union:
-  "{T x y| x y.  P x y \<or> Q x y} = {T x y | x y. P x y} \<union> { T x y | x y. Q x y}"
-  by blast
-
-lemma set_compr_double_neg_subseteq:
- "{T x y |x y. Q x y} \<subseteq> x \<Longrightarrow>
-  {T x y |x y. P x y \<and> \<not> Q x y} \<subseteq> x - {T x y |x y. Q x y} \<Longrightarrow>
-  {T x y | x y. P x y \<or> Q x y} \<subseteq> x"
-  by blast
-
 lemma composition:
   "c = cL \<union> cR \<Longrightarrow> triple net F P cL Q \<Longrightarrow> triple net F Q cR R \<Longrightarrow> triple net F P c R"
   apply (simp (no_asm) add: triple_def)
@@ -790,42 +762,23 @@ lemma composition:
   apply (rename_tac co_ctx presult rest stopper)
   apply(drule_tac x = "co_ctx" in spec, simp)
   apply(drule_tac x = "presult" in spec)
-  apply(drule_tac x = "code (cR - cL) ** rest" in spec; simp add: code_more)
+  apply(drule_tac x = "code (cR - cL) ** rest" in spec)
   apply (erule impE)
-   apply clarsimp
-   apply (rule conjI, blast)+
-   apply (erule_tac P="P \<and>* rest" in back_subst)
-   apply blast
+     apply(simp add: code_diff_union sep_conj_assoc)
   apply(drule_tac x = stopper in spec)
   apply clarsimp
- apply (clarsimp simp add: triple_def)
+  apply (clarsimp simp add: triple_def)
   apply(drule_tac x = "co_ctx" in spec, simp)
   apply(drule_tac x = "program_sem stopper co_ctx k net presult" in spec)
   apply(drule_tac x = "code (cL - cR) ** rest" in spec)
   apply (erule disjE)
    prefer 2
-   apply auto[1]
-  apply clarsimp
+   apply fastforce
   apply (erule impE)
-    apply (rule conjI, blast)+
-    apply (erule_tac P="Q \<and>* rest" in back_subst)
-    apply blast
+   apply (simp only: sep_conj_assoc[symmetric] HOL.trans[OF code_diff_union[symmetric] code_diff_union'])
    apply(drule_tac x = stopper in spec)
-   apply clarsimp
-  apply (erule disjE)
-   prefer 2
-   apply auto[1]
-  apply clarsimp
-  apply (rename_tac k m)
-  apply(rule_tac x = "k + m" in exI)
-  apply (rule disjI1)
-  apply (rule conjI)
-   apply (thin_tac "(_ \<and>* _) _")+
-   apply (thin_tac "_ \<subseteq> instruction_result_as_set co_ctx presult")
-   apply (erule (1) set_compr_double_neg_subseteq)
-  apply (erule back_subst[where P="R \<and>* _"])
-  apply blast
- done
+   apply (fastforce simp add: code_diff_union' sep_conj_assoc execution_continue)
+  done
 (** Frame **)
 
 lemma frame:
@@ -874,7 +827,6 @@ lemma strengthen_pre:
   apply(simp)
   apply(drule_tac x = presult in spec)
   apply(drule_tac x = rest in spec)
-  apply simp
   apply (erule impE)
    apply (sep_drule assms(2)[rule_format])
    apply assumption
@@ -904,12 +856,12 @@ lemma false_triple [simp] :
 apply(simp add: triple_def sep_basic_simps pure_def)
 done
 
-lemma get_pure [simp]:
+lemma get_pure:
   "((p ** \<langle> b \<rangle> ** rest) s) = (b \<and> (p ** rest) s)"
 apply(auto simp add: sep_basic_simps pure_def emp_def)
 done
 
-lemma move_pure [simp]: "triple net reaons (p ** \<langle> b \<rangle>) c q = (b \<longrightarrow> triple net reaons p c q)"
+lemma move_pure: "triple net reaons (p ** \<langle> b \<rangle>) c q = (b \<longrightarrow> triple net reaons p c q)"
 apply(auto simp add: move_pure0)
 apply(case_tac b; auto)
   done
@@ -926,8 +878,6 @@ lemma tmp01:
     (rest ** code c ** (\<lambda>s. \<exists>x. p x s)) (case presult of InstructionContinue v \<Rightarrow> contexts_as_set v co_ctx | _ \<Rightarrow> {})"
   by (smt imp_sepL sep_three)
 
-declare sep_code_sep [simp del]
-
 lemma tmp0:
        "\<forall>co_ctx. no_assertion co_ctx \<longrightarrow>
                 (\<forall>presult rest.
@@ -942,14 +892,12 @@ apply(drule_tac x = presult in spec)
 apply(drule_tac x = rest in spec)
 apply(subgoal_tac "(rest ** code c ** (\<lambda>s. \<exists>x. p x s))
      (case presult of InstructionContinue v \<Rightarrow> contexts_as_set v co_ctx | _ \<Rightarrow> {})")
-   apply(simp)
     (*
 apply(rule tmp01)
 apply(simp)
 done*)
     oops
 
-declare sep_code_sep [simp]
 
 lemma preE0:
   "((\<lambda>s. \<exists>x. p x s) ** code c ** rest) s \<Longrightarrow>
@@ -980,7 +928,7 @@ using assms(2)
   apply(subgoal_tac "(rest ** a ** code c) (instruction_result_as_set co_ctx presult)")
    apply(simp )
   apply (sep_rule sep_impL[OF assms(1), rule_format])
-  apply(simp)
+  apply(simp add: code_sep sep_code_sep)
  done
 
 lemma preE1 [simp]:
@@ -998,8 +946,6 @@ lemma preE00:
   apply blast
  done
 
-declare sep_code_sep [simp del]
-
 lemma preE : "triple net reasons (\<lambda> s. \<exists> x. p x s) c q = (\<forall> x. triple net reasons (p x) c q)"
 apply(auto simp add: triple_def)
  apply(erule_tac x = co_ctx in allE)
@@ -1012,12 +958,9 @@ apply(auto simp add: triple_def)
    apply(simp)
   apply(rule_tac x=x in preE00)
   apply(simp)
-  apply (sep_select 2)
-  apply (subst code_sep)
+  apply (sep_simp simp: code_sep )
   apply (simp add: sep_conj_ac)
 done
-
-declare sep_code_sep [simp]
 
 
 (** More rules to come **)
@@ -1071,7 +1014,6 @@ where
  [Pc JUMPDEST]
 "
 
-declare sep_sep_code [simp]
 (* example of if_then_else *)
 
 (* loop *)

@@ -57,8 +57,9 @@ lemma sstore_gas_triple :
            gas_pred (g - Csstore old new) ** continuing)"
   apply (clarsimp simp: triple_def simp_for_triples sep_crunch)
 apply(rule_tac x = 1 in exI)
-apply(case_tac presult ; (solves \<open>clarsimp\<close>)?)
-apply (clarsimp simp add: simp_for_triples sep_crunch
+  apply(case_tac presult ; (solves \<open>clarsimp\<close>)?)
+(*  apply (rule disjCI) *)
+apply_trace (clarsimp simp add: simp_for_triples sep_crunch
        instruction_result_as_set_def  sstore_def
        vctx_update_storage_def)
 apply (erule_tac P=rest in back_subst)
@@ -69,6 +70,7 @@ apply(case_tac elm; simp)
 using some_list_gotcha apply blast
 apply(split if_splits; simp)
 apply(rename_tac elm)
+apply (simp add: set_diff_eq) 
 apply(case_tac elm; simp)
  apply auto[1]
  apply(split if_splits; simp)
