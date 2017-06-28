@@ -9,6 +9,7 @@ dependencies:
     - export OPAMJOBS=2
     - opam init -y --comp=4.04.1
     - echo $BASH_ENV
+    - touch $BASH_ENV
     - echo 'eval `opam config env`' >> $BASH_ENV
     - opam update
     - opam install -y ocamlbuild ocamlfind batteries yojson bignum easy-format bisect_ppx zarith depext sha
