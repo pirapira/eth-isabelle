@@ -631,7 +631,12 @@ apply(auto simp add: contexts_as_set_def constant_ctx_as_set_def variable_ctx_as
       balance_as_set_def log_as_set_def data_sent_as_set_def ext_program_as_set_def)
   done
 
-lemmas stateelm_equiv = stackHeightElmEquiv stackElmEquiv pcElmEquiv gasElmEquiv codeElmEquiv
+lemmas stateelm_equiv_simps = 
+  stackHeightElmEquiv
+  stackElmEquiv
+  pcElmEquiv
+  gasElmEquiv
+  codeElmEquiv
 
 lemma insert_minus : "a \<noteq> b \<Longrightarrow> insert a s - { b } = insert a (s - {b})"
   apply(simp add: insert_Diff_if)

@@ -990,10 +990,10 @@ program_content (cctx_program co_ctx) (vctx_pc x1) = Some (Info BALANCE) \<Longr
   apply(auto simp: )
          apply(rename_tac elm; case_tac elm; auto simp add: instruction_result_as_set_def as_set_simps vctx_advance_pc_def 
 prog_content_vctx_next_instruction inst_size_eq_1)
-        apply (simp add: instruction_result_as_set_def stateelm_equiv advance_pc_simps)+
-     apply(rename_tac elm; case_tac elm; auto simp add: instruction_result_as_set_def stack_as_set_def balance_as_set_def stateelm_equiv vctx_advance_pc_def vctx_next_instruction_def)
+        apply (simp add: instruction_result_as_set_def stateelm_equiv_simps advance_pc_simps)+
+     apply(rename_tac elm; case_tac elm; auto simp add: instruction_result_as_set_def stack_as_set_def balance_as_set_def stateelm_equiv_simps vctx_advance_pc_def vctx_next_instruction_def)
                       apply (clarsimp simp add: contexts_as_set_def variable_ctx_as_set_def stack_as_set_def)+
-    apply (simp add: instruction_result_as_set_def stateelm_equiv )+
+    apply (simp add: instruction_result_as_set_def stateelm_equiv_simps )+
   done
 
 lemma ext_program_size_elm_not_stack:
@@ -1448,7 +1448,7 @@ lemma memory_range_elms_index_aux :
     (\<exists>pos. \<not> length input \<le> pos \<and> begin_word + word_of_int (int pos) = i)"
 apply(induction input)
  apply(simp)
-apply(auto)
+apply(clarsimp)
 apply(drule_tac x = i in spec)
 apply(drule_tac x = aa in spec)
 apply(drule_tac x = "begin_word + 1" in spec)
@@ -1458,37 +1458,21 @@ apply(auto)
 apply(simp add: Word.wi_hom_syms(1))
 done
 
-lemma memory_range_elms_index :
-"MemoryElm (i, a) \<in> memory_range_elms begin_word input \<longrightarrow>
-    (\<exists>pos. \<not> length input \<le> pos \<and> begin_word + word_of_int (int pos) = i)"
-apply(auto simp add: memory_range_elms_index_aux)
-done
-
 lemma memory_range_elms_index_meta :
 "MemoryElm (i, a) \<in> memory_range_elms begin_word input \<Longrightarrow>
     (\<exists>pos. \<not> length input \<le> pos \<and> begin_word + word_of_int (int pos) = i)"
 apply(auto simp add: memory_range_elms_index_aux)
 done
 
-
-lemma contra:
-  "\<not> P \<longrightarrow> \<not> Q \<Longrightarrow> Q \<longrightarrow> P"
-apply(auto)
-done
-
 lemma memory_range_elms_index_contra :
 "(\<forall> pos. pos \<ge> length input \<or> begin_word + (word_of_int (int pos)) \<noteq> i) \<longrightarrow>
  MemoryElm (i, a) \<notin> memory_range_elms begin_word input"
-apply(rule contra)
-apply(simp)
-apply(rule memory_range_elms_index)
-done
+  by (fastforce dest: memory_range_elms_index_meta)
 
 lemma memory_range_elms_index_contra_meta :
 "(\<forall> pos. pos \<ge> length input \<or> begin_word + (word_of_int (int pos)) \<noteq> i) \<Longrightarrow>
  MemoryElm (i, a) \<notin> memory_range_elms begin_word input"
-apply(auto simp add: memory_range_elms_index_contra)
-done
+ by (auto simp add: memory_range_elms_index_contra)
 
 lemma suc_is_word :
 "unat (len_word :: w256) = Suc n \<Longrightarrow>
@@ -1540,21 +1524,12 @@ proof -
     by(simp add: max_word_def)
   qed
 
-lemma no_overwrap [simp]:
+lemma no_overwrap:
   "unat (len_word :: w256) = Suc (length input) \<Longrightarrow>
    MemoryElm (begin_word, a) \<notin> memory_range_elms (begin_word + 1) input"
 apply(rule memory_range_elms_index_contra_meta)
 apply(drule suc_is_word)
-apply(auto)
-apply(drule too_small_to_overwrap)
-apply(auto)
-done
-
-lemma insert_is :
-       "(e \<in> va \<and>
-        va - {e} = R) =
-       (va = insert e R \<and> e \<notin> R)"
-apply(auto)
+apply(auto dest: too_small_to_overwrap)
 done
 
 lemma memory_range_alt :
@@ -1562,17 +1537,17 @@ lemma memory_range_alt :
         unat (len_word :: w256) = length input \<longrightarrow>
         memory_range begin_word input va =
         (va = memory_range_elms begin_word input)"
-apply(induction input)
- apply(simp add: emp_def sep_set_conv)
-apply(clarify)
-apply(drule_tac x = "len_word - 1" in spec)
-apply(drule_tac x = "begin_word + 1" in spec)
-apply(drule_tac x = "va - {MemoryElm (begin_word, a)}" in spec)
+  apply(induction input)
+   apply(simp add: emp_def sep_set_conv)
+  apply(clarify)
+  apply(drule_tac x = "len_word - 1" in spec)
+  apply(drule_tac x = "begin_word + 1" in spec)
+  apply(drule_tac x = "va - {MemoryElm (begin_word, a)}" in spec)
   apply(subgoal_tac "unat (len_word - 1) = length input")
    apply (erule (1) impE)
    apply (subst memory_range.simps, simp)
    apply (sep_simp simp: memory8_sep)
-   apply auto[1]
+   apply (auto simp add: no_overwrap)[1]
   apply unat_arith
  done
 
@@ -1584,7 +1559,7 @@ lemma memory_range_sep :
 "
   apply(induction input arbitrary: begin_word s len_word rest)
    apply clarsimp
-  apply (clarsimp simp: sep_conj_ac)
+  apply (clarsimp simp del: sep_conj_assoc simp: sep_conj_ac)
   apply (drule_tac x="begin_word + 1" in meta_spec)
   apply (drule_tac x="s - {MemoryElm (begin_word, a)}" in meta_spec)
   apply (drule_tac x="len_word -1" in meta_spec)
@@ -1602,7 +1577,7 @@ lemma memory_range_sep :
    apply (simp add: set_diff_eq)
   apply clarsimp
   apply (rule conjI)
-   apply fastforce
+   apply (fastforce simp: no_overwrap)
   apply (simp add: set_diff_eq)
  done
     
@@ -1857,47 +1832,33 @@ apply(induction lst; auto simp add: stack_topmost_elms.simps)
 done
 
 lemma memory_usage_not_in_memory_range [simp] :
-"MemoryUsageElm x8
-       \<in> memory_range_elms in_begin
-           input \<Longrightarrow> False"
+"MemoryUsageElm x8  \<notin> memory_range_elms in_begin  input"
 apply (induction input arbitrary:in_begin)
 apply (auto simp:memory_range_elms.simps)
 done
 
 
-lemma stack_height_after_call [simp] :
+lemma stack_height_after_call:
        "vctx_balance x1 (cctx_this co_ctx) \<ge> vctx_stack x1 ! 2 \<Longrightarrow>
         (StackHeightElm (h + 7) \<in>
           instruction_result_as_set co_ctx (InstructionContinue x1)) \<Longrightarrow>
         (StackHeightElm h
           \<in> instruction_result_as_set co_ctx (subtract_gas g memu (call net x1 co_ctx)))
         "
-apply(simp add: call_def)
-apply(case_tac "vctx_stack x1"; simp)
-apply(case_tac list; simp)
-apply(case_tac lista; simp)
-apply(case_tac listb; simp)
-apply(case_tac listc; simp)
-apply(case_tac listd; simp)
-apply(case_tac liste; simp)
-  apply(auto simp add: instruction_result_as_set_def
+  apply(simp add: call_def as_set_simps stateelm_means_simps)
+    apply(case_tac "vctx_stack x1"; simp add: simp_for_triples instruction_result_as_set_def as_set_simps)
+   apply (rename_tac xs, case_tac xs; simp)
+   apply (rename_tac xs, case_tac xs; simp)
+   apply (rename_tac xs, case_tac xs; simp)
+   apply (rename_tac xs, case_tac xs; simp)
+   apply (rename_tac xs, case_tac xs; simp)
+   apply (rename_tac xs, case_tac xs; simp)
+   apply (rename_tac xs, case_tac xs; simp)
+  apply(auto simp add: instruction_result_as_set_def as_set_simps
 simp_for_triples)
 done
 
-lemma drop_suc :
- "drop (Suc h) lst =
-  drop 1 (drop h lst)"
-  by simp
-
-lemma pqqp :
- "(P :: bool) \<longrightarrow> Q \<Longrightarrow>
-  Q \<longrightarrow> P \<Longrightarrow>
-  P = Q"
-apply(case_tac P; case_tac Q; simp)
-done
-
-
-lemma topmost_elms_means [simp] :
+lemma topmost_elms_means:
    "\<forall> h x1.
     stack_topmost_elms h lst
        \<subseteq> instruction_result_as_set co_ctx (InstructionContinue x1) =
@@ -1905,68 +1866,74 @@ lemma topmost_elms_means [simp] :
      drop h (rev (vctx_stack x1)) = lst)
     "
 apply(induction lst; simp)
- apply(simp add: stack_topmost_elms.simps)
+ apply(simp add: stack_topmost_elms.simps instruction_result_as_set_def as_set_simps)
  apply blast
 apply(simp add: stack_topmost_elms.simps)
 apply(rule allI)
-apply(rule allI)
-apply(rule pqqp; simp)
-  (* sledgehammer *)
-  apply (metis Cons_nth_drop_Suc length_rev)
-apply(simp only: drop_suc)
-apply(rule impI)
-apply(rule conjI)
- apply(rule List.nth_via_drop)
- apply blast
-apply(simp)
+  apply(rule allI)
+  apply (simp (no_asm) add: instruction_result_as_set_def as_set_simps)
+    apply (rule iffI )
+   apply (clarify)
+   apply (rule conjI)
+    apply (simp (no_asm))
+   apply (drule sym[where t="_#_"])
+   apply (simp add: Cons_nth_drop_Suc)+
+   apply (rule conjI)
+   apply (clarsimp)
+   apply (subst nth_via_drop)
+    apply (erule HOL.trans[rotated])
+    apply (subst drop_append)
+    apply simp+
+  apply clarsimp
+  apply (drule arg_cong[where f="drop 1"])
+  apply simp
 done
 
-lemma to_environment_not_continuing [simp] :
+lemma to_environment_not_continuing:
   "ContinuingElm True
        \<notin> instruction_result_as_set co_ctx (InstructionToEnvironment x31 x32 x33)"
-apply(simp add: instruction_result_as_set_def)
+apply(simp add: instruction_result_as_set_def as_set_simps)
 done
 
-lemma balance_not_topmost [simp] :
+lemma balance_not_topmost :
   "\<forall> h. BalanceElm pair \<notin> stack_topmost_elms h lst"
 apply(induction lst; auto simp add: stack_topmost_elms.simps)
 done
 
-lemma this_not_topmost [simp] :
+lemma this_not_topmost :
   "\<forall> h. ThisAccountElm pair \<notin> stack_topmost_elms h lst"
 apply(induction lst; auto simp add: stack_topmost_elms.simps)
 done
 
-lemma continue_not_topmost [simp] :
+lemma continue_not_topmost :
   "\<forall> len. ContinuingElm b
        \<notin> stack_topmost_elms len lst"
 apply(induction lst; auto simp add: stack_topmost_elms.simps)
 done
 
-lemma this_account_i_means [simp] :
+lemma this_account_i_means :
   "ThisAccountElm this \<in> instruction_result_as_set co_ctx (InstructionContinue x1) =
    (cctx_this co_ctx = this)"
-apply(simp add: instruction_result_as_set_def)
-done
+  by (auto simp add: instruction_result_as_set_def as_set_simps)
 
-lemma memory_usage_not_memory_range [simp] :
+lemma memory_usage_not_memory_range:
   "\<forall> in_begin. MemoryUsageElm u \<notin> memory_range_elms in_begin input"
 apply(induction input; auto simp add: memory_range_elms.simps)
 done
 
-lemma memory_usage_not_topmost [simp] :
+lemma memory_usage_not_topmost:
   "\<forall> len. MemoryUsageElm u
        \<notin> stack_topmost_elms len lst"
 apply(induction lst; auto simp add: stack_topmost_elms.simps)
 done
 
-lemma gas_not_topmost [simp] :
+lemma gas_not_topmost:
   "\<forall> h. GasElm pair \<notin> stack_topmost_elms h lst"
 apply(induction lst; auto simp add: stack_topmost_elms.simps)
 done
 
 
-lemma call_new_balance [simp] :
+lemma call_new_balance :
       "v \<le> fund \<Longrightarrow>
        ThisAccountElm this \<in> instruction_result_as_set co_ctx (InstructionContinue x1) \<Longrightarrow>
        vctx_balance x1 this = fund \<Longrightarrow>
@@ -1979,12 +1946,12 @@ apply(clarify)
 apply(auto simp add: call_def failed_for_reasons_def)
 apply(simp add: instruction_result_as_set_def subtract_gas.simps strict_if_def)
 apply(case_tac "vctx_balance x1 (cctx_this co_ctx) < v")
- apply(simp add: update_balance_def)
-apply(simp add: strict_if_def subtract_gas.simps update_balance_def)
+ apply(simp add: as_set_simps)
+apply(simp add: strict_if_def subtract_gas.simps update_balance_def as_set_simps)
 done
 
 
-lemma advance_pc_call [simp] :
+lemma advance_pc_call:
       "program_content (cctx_program co_ctx) (vctx_pc x1) = Some (Misc CALL) \<Longrightarrow>
        k = vctx_pc x1 \<Longrightarrow>
        vctx_pc (vctx_advance_pc co_ctx x1) = vctx_pc x1 + 1"
@@ -1993,14 +1960,13 @@ lemma advance_pc_call [simp] :
 done
 
 
-lemma memory_range_elms_not_continuing [simp] :
+lemma memory_range_elms_not_continuing :
   "(memory_range_elms in_begin input
        \<subseteq> insert (ContinuingElm True) (contexts_as_set x1 co_ctx))
   = (memory_range_elms in_begin input
        \<subseteq> (contexts_as_set x1 co_ctx))
   "
-apply(auto)
-done
+ by (auto)
 
 lemma suc_unat :
 "Suc n = unat (aa :: w256) \<Longrightarrow>
@@ -2012,7 +1978,7 @@ apply(rule unat_suc)
 apply(simp)
 done
 
-lemma memory_range_elms_cut_memory [simp] :
+lemma memory_range_elms_cut_memory :
        "\<forall> in_begin in_size.
         length lst = unat in_size \<longrightarrow> 
         memory_range_elms in_begin lst \<subseteq> variable_ctx_as_set x1 \<longrightarrow>
@@ -2025,10 +1991,14 @@ apply(drule_tac x = "in_begin + 1" in spec)
 apply(drule_tac x = "in_size - 1" in spec)
 apply(auto simp add: memory_range_elms.simps)
 apply(drule suc_unat)
-apply(simp)
+   apply(simp)
+  apply (simp add: cut_memory_cons)
+  apply (rule conjI)
+   apply auto[1]
+ apply (simp add: as_set_simps)
 done
 
-lemma stack_height_in_topmost [simp] :
+lemma stack_height_in_topmost:
    "\<forall> h. StackHeightElm x1a
        \<in> stack_topmost_elms h lst =
     (x1a = h + length lst)"
@@ -2037,7 +2007,7 @@ apply(induction lst)
 apply(auto simp add: stack_topmost_elms.simps)
 done
 
-lemma code_elm_not_stack_topmost [simp] :
+lemma code_elm_not_stack_topmost :
  "\<forall> len. CodeElm x9
        \<notin> stack_topmost_elms len lst"
 apply(induction lst)
@@ -2045,14 +2015,13 @@ apply(induction lst)
 apply(auto simp add: stack_topmost_elms.simps)
 done
 
-lemma stack_elm_c_means [simp] :
+lemma stack_elm_c_means :
   "StackElm x
        \<in> contexts_as_set v c =
    (
     rev (vctx_stack v) ! fst x = snd x \<and>
     fst x < length (vctx_stack v) )"
-apply(simp add: contexts_as_set_def)
-done
+  by(force simp add: as_set_simps)
 
 lemma stack_elm_in_topmost [simp] :
   "\<forall> len. StackElm x2
@@ -2071,15 +2040,13 @@ done
 lemma rev_append_eq :
   "(rev tf @ l) ! a =
    (if a < length tf then rev tf ! a else l ! (a - length tf))"
-apply(auto)
-  by (simp add: nth_append)
+ by(auto simp: nth_append) 
 
 lemma code_elm_in_c :
   "CodeElm x9 \<in> contexts_as_set x1 co_ctx =
    (program_content (cctx_program co_ctx) (fst x9) = Some (snd x9) \<or>
     program_content (cctx_program co_ctx) (fst x9) = None \<and> snd x9 = Misc STOP)"
-apply(simp add: contexts_as_set_def)
-done
+  by (case_tac x9, simp add: stateelm_equiv_simps)
 
 lemma storage_not_stack_topmost [simp] :
    "\<forall> len. StorageElm x3
@@ -2131,7 +2098,7 @@ done
 
 lemma code_elm_c [simp] :
   "CodeElm x \<in> contexts_as_set y c = (CodeElm x \<in> constant_ctx_as_set c)"
-apply(simp add: contexts_as_set_def)
+apply(simp add: contexts_as_set_def as_set_simps)
 done
 
 lemma ext_program_not_topmost_elms [simp] :
@@ -2194,39 +2161,37 @@ apply(induction input)
 apply(simp add: memory_range_elms.simps)
 done
 
-lemma memory_range_stack [simp] :
+lemma memory_range_stack :
 "      x \<in> memory_range_elms in_begin input \<Longrightarrow>
        x \<in> variable_ctx_as_set (x1\<lparr>vctx_stack := sta\<rparr>)
       = (x \<in> variable_ctx_as_set x1)"
-apply(case_tac x; simp)
+apply(case_tac x; simp add: as_set_simps)
 done
 
-lemma memory_range_memory_usage [simp] :
+lemma memory_range_memory_usage  :
 "      x \<in> memory_range_elms in_begin input \<Longrightarrow>
        x \<in> variable_ctx_as_set (x1\<lparr>vctx_memory_usage := u\<rparr>)
       = (x \<in> variable_ctx_as_set x1)"
-apply(case_tac x; simp)
+apply(case_tac x; simp add: as_set_simps)
 done
 
 
-lemma memory_range_balance [simp] :
+lemma memory_range_balance :
 "      x \<in> memory_range_elms in_begin input \<Longrightarrow>
        x \<in> variable_ctx_as_set (x1\<lparr>vctx_balance := u\<rparr>)
       = (x \<in> variable_ctx_as_set x1)"
-apply(case_tac x; simp)
+apply(case_tac x; simp add: as_set_simps)
 done
 
 
-lemma memory_range_advance_pc [simp] :
+lemma memory_range_advance_pc :
 "      x \<in> memory_range_elms in_begin input \<Longrightarrow>
        x \<in> variable_ctx_as_set (vctx_advance_pc co_ctx x1)
      = (x \<in> variable_ctx_as_set x1)
 "
-apply(case_tac x; simp)
-done
+by (case_tac x;simp add: as_set_simps advance_pc_simps)
 
-
-lemma memory_range_action [simp] :
+lemma memory_range_action :
       "x \<in> memory_range_elms in_begin input \<Longrightarrow>
        x \<in> instruction_result_as_set co_ctx
              (InstructionToEnvironment
@@ -2234,17 +2199,14 @@ lemma memory_range_action [simp] :
                v
                cont) =
        (x \<in> variable_ctx_as_set v)"
-apply(auto simp add: instruction_result_as_set_def)
- apply(case_tac x; simp)
-apply(case_tac x; simp)
-done
+by (auto simp add: instruction_result_as_set_def as_set_simps)
 
-lemma storage_not_memory_range [simp] :
+lemma storage_not_memory_range:
   "\<forall> in_begin. StorageElm x3 \<notin> memory_range_elms in_begin input"
 apply(induction input; simp add: memory_range_elms.simps)
 done
 
-lemma memory_range_insert_cont [simp] :
+lemma memory_range_insert_cont :
    "memory_range_elms in_begin input
          \<subseteq> insert (ContinuingElm True) s =
     (memory_range_elms in_begin input
@@ -2252,18 +2214,18 @@ lemma memory_range_insert_cont [simp] :
 apply(auto)
 done
 
-lemma memory_range_constant_union [simp] :
+lemma memory_range_constant_union :
   "memory_range_elms in_begin input \<subseteq> constant_ctx_as_set co_ctx \<union> s =
    (memory_range_elms in_begin input \<subseteq> s)"
 apply(auto simp add: constant_ctx_as_set_def program_as_set_def)
 done
 
-lemma memory_range_elms_i [simp] :
+lemma memory_range_elms_i :
       "memory_range_elms in_begin input
        \<subseteq> instruction_result_as_set co_ctx (InstructionContinue x1) =
        (memory_range_elms in_begin input \<subseteq>
         variable_ctx_as_set x1)"
-apply(auto simp add: instruction_result_as_set_def contexts_as_set_def)
+apply(auto simp add: instruction_result_as_set_def as_set_simps)
 done
 
 lemma memory_range_continue [simp] :
@@ -2280,14 +2242,11 @@ shows
    x \<in> instruction_result_as_set co_ctx
          (subtract_gas (meter_gas (Misc CALL) x1 co_ctx net) memu (call net x1 co_ctx)) =
   (x \<in> instruction_result_as_set co_ctx (InstructionContinue x1))"
-apply(simp add: call_def)
-apply(case_tac "vctx_stack x1"; simp)
-apply(case_tac list; simp)
-apply(case_tac lista; simp)
-apply(case_tac listb;simp)
-apply(case_tac listc; simp)
-apply(case_tac listd; simp)
-apply(case_tac liste; simp)
+  apply(simp add: call_def)
+   apply (clarsimp simp:)
+    
+  apply(case_tac "vctx_stack x1"; simp)
+ apply (rename_tac xs, case_tac xs; simp)+
 done
 
 
