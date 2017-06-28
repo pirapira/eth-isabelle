@@ -1,0 +1,28 @@
+dependencies:
+  override:
+    - sudo apt-get -qq update
+    - sudo apt-get -qq install libgmp3-dev
+    - wget https://raw.github.com/ocaml/opam/master/shell/opam_installer.sh -O - | sudo sh -s /usr/local/bin
+    - export OPAMJOBS=2
+    - opam init -y --comp=4.02.3
+    - eval `opam config env`
+    - opam update
+    - opam install -y ocamlbuild ocamlfind batteries yojson bignum easy-format bisect_ppx zarith depext sha
+    - git clone https://github.com/mrsmkl/ECC-OCaml.git ECC-OCaml
+    - make -C ECC-OCaml/src depend
+    - make -C ECC-OCaml/src
+    - make -C ECC-OCaml/src install || echo "fails the second time and on"
+    - git clone https://bitbucket.org/Peter_Sewell/lem.git lemdir
+    - make -C lemdir || echo "failure expected"
+    - export PATH=./lemdir:$PATH
+    - wget https://isabelle.in.tum.de/dist/Isabelle2016-1_app.tar.gz
+    - tar xf Isabelle2016-1_app.tar.gz
+    - export PATH=./Isabelle2016-1/bin:$PATH
+test:
+  override:
+    - make lem-ocaml
+    - make lem-thy
+    - make lem-hol
+    - make lem-coq
+    - cd tester && sh compile.sh && ./runVmTest.native
+    - make light-isabelle
