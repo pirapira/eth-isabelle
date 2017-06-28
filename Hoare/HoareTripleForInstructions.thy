@@ -408,6 +408,7 @@ lemma advance_pc_as_set:
    (contexts_as_set (vctx_advance_pc co_ctx v) co_ctx) =
    (contexts_as_set v co_ctx) \<union> {PcElm (vctx_pc v + 1)} - {PcElm (vctx_pc v)}"
   by (auto simp add: memory_usage_element_means as_set_simps vctx_next_instruction_def
+       pop_advance advance_pc_preserves_memory_usage vctx_advance_pc_def inst_size_pop )
 
 lemma gas_change_as_set:
   "(contexts_as_set (x1\<lparr>vctx_gas := new_gas\<rparr>) co_ctx) 
@@ -1151,7 +1152,7 @@ lemmas not_constant_simps =
   sent_data_not_constant
 
 
-lemma short_rev_append [simp]:
+lemma short_rev_append:
  "a < length t \<Longrightarrow> (rev t @ lst) ! a = rev t ! a"
 	by (simp add: nth_append)
 
