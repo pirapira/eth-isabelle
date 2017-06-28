@@ -169,7 +169,7 @@ type network =
 | Metropolis
 
 
-val network_of_block_number : natural -> network
+val network_of_block_number : integer -> network
 let network_of_block_number bn =
   if bn < 1150000 then Frontier
   else if bn < 2463000 then Homestead
@@ -727,10 +727,10 @@ let Gmid = 8
 val Ghigh : integer
 let Ghigh = 10
 
-val eip150_block : natural
+val eip150_block : integer
 let inline eip150_block = 2463*1000
 
-val homestead_block : natural
+val homestead_block : integer
 let homestead_block = 1150*1000
 
 val Gextcode : network -> integer
@@ -2126,7 +2126,7 @@ let empty_memory = (fun _ -> 0)
 
 indreln [build_vctx_called : account_state -> call_env -> variable_ctx -> bool]
   vctx_called : forall bal a env origin ext block gas existence.
-    word256ToNatural block.block_number >= eip150_block && (* only the newest version of EVM matters *)
+    word256ToInteger block.block_number >= eip150_block && (* only the newest version of EVM matters *)
     bal a.account_address = a.account_balance ==>
     build_vctx_called a env
  <| vctx_stack = []; (* The stack is initialized for every invocation *)

@@ -443,7 +443,7 @@ let next net = function
          let acc = <| acc with account_balance = args.createarg_value + old_balance; account_exists = true |> in
          let cctx = <| cctx_this = addr; cctx_program = make_program args.createarg_code; cctx_hash_filter = c.cctx_hash_filter |> in
          let n_state = update_world n_state addr acc in
-         let passed_gas : integer = if word256ToNatural v.vctx_block.block_number >= eip150_block then L v.vctx_gas else v.vctx_gas in
+         let passed_gas : integer = if word256ToInteger v.vctx_block.block_number >= eip150_block then L v.vctx_gas else v.vctx_gas in
          let remaining_gas = v.vctx_gas - passed_gas in
          let nv = create_env acc n_state args.createarg_value [] (word256FromInteger passed_gas) c.cctx_this v.vctx_origin v.vctx_block in
          let v = <| v with vctx_gas = remaining_gas |> in
@@ -487,7 +487,7 @@ let next net = function
          | (old_state,nv,c,CreateAddress new_addr) :: rest ->
            if bytes = [] && length rest = 0 && global.g_create then Finished <| f_state=n_state; f_killed=global.g_killed; f_gas=v.vctx_gas; f_refund=v.vctx_refund |> else
            let (n_state, v) =
-              if v.vctx_gas < integerFromNat (200*length bytes) && homestead_block <= word256ToNatural v.vctx_block.block_number then
+              if v.vctx_gas < integerFromNat (200*length bytes) && homestead_block <= word256ToInteger v.vctx_block.block_number then
                  (old_state, <| v with vctx_gas = 0 |>) 
               else if v.vctx_gas < integerFromNat (200*length bytes) then (n_state, v)
               else (create_account n_state new_addr bytes, <| v with vctx_gas = v.vctx_gas - integerFromNat (200*length bytes) |>) in
@@ -520,7 +520,7 @@ let charge_gas state addr gas_value =
 
 let calc_igas tr state block =
   let igas = 21000 + txdatacost tr.tr_data in
-  if word256ToNatural block.block_number < homestead_block then igas else
+  if word256ToInteger block.block_number < homestead_block then igas else
   match tr.tr_to with
   | Nothing -> igas + 32000
   | Just addr -> igas (* + (if (state addr).account_exists then 0 else 32000) *)
