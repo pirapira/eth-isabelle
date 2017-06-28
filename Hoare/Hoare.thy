@@ -155,7 +155,15 @@ text \<open>The old sep_commute and sep_assoc are now in sep_conj_ac and
 lemmas sep_basic_simps =  sep_conj_def sep_set_conv
 
 lemma sep_eq_alts [sep_select]:
-  "(\<And>s. T s = (P \<and>* R) s) \<Longrightarrow> T s \<and> A \<Longrightarrow> (P \<and>* R) s \<and> A" by clarsimp
+  "(\<And>s. T s = (P \<and>* R) s) \<Longrightarrow> T s \<and> A \<Longrightarrow> (P \<and>* R) s \<and> A"
+  "(\<And>s. T s = (P \<and>* R) s) \<Longrightarrow> T = B \<Longrightarrow> (P \<and>* R) = B"
+  "(\<And>s. T s = (P \<and>* R) s) \<Longrightarrow> T = D \<Longrightarrow> D = (P \<and>* R)"
+  by auto+
+    
+lemma sep_select_ext[sep_select]:
+   "(\<And>s. T s = (P \<and>* R) s) \<Longrightarrow> T s = B s \<Longrightarrow> (P \<and>* R) s = B s"
+  "(\<And>s. T s = (P \<and>* R) s) \<Longrightarrow> T s = D s \<Longrightarrow> D s = (P \<and>* R) s"
+  by auto+
 
 lemma sep_conj_first:
   "(A \<and> (P \<and>* R) s) = ((P \<and>* R) s \<and> A)"
@@ -233,13 +241,6 @@ method sep_simp_asm uses simp =
 method sep_simp uses simp =
   ((sep_simp_asm simp: simp, (sep_simp_no_asm simp: simp)?) |
   (sep_simp_no_asm simp: simp, (sep_simp_asm simp: simp)?))[1]
-
-lemma sep_lc: "(a ** b ** c) = (b ** a ** c)"
- by (simp add: sep_conj_ac)
-
-lemma sep_three : "(c ** a ** b) = (a ** b ** c)"
- by (simp add: sep_conj_ac)
-
 
 definition emp :: "'a set_pred"
   where
@@ -360,17 +361,6 @@ where
 lemma memory8_sep :
  "(memory8 idx v ** rest) s = (MemoryElm (idx, v) \<in> s \<and> rest (s - {MemoryElm (idx, v)}))"
  by (solve_sep_iff simp: memory8_def)
-
-lemma sep_memory8_sep [simp] :
-"(a ** memory8 idx v ** rest) s = (MemoryElm (idx, v) \<in> s \<and> (a ** rest) (s - {MemoryElm (idx, v)}))"
-proof -
-  have "(a ** memory8 idx v ** rest) s = (memory8 idx v ** a ** rest) s"
-    by (metis sep_conj_assoc sep_conj_commute)
-  moreover have "(memory8 idx v ** a ** rest) s = (MemoryElm (idx, v) \<in> s \<and> (a ** rest) (s - {MemoryElm (idx, v)}))"
-    by (rule memory8_sep)
-  ultimately show ?thesis
-    by auto
-qed
     
 fun memory_range :: "w256 \<Rightarrow> byte list \<Rightarrow> state_element set \<Rightarrow> bool"
 where
@@ -667,21 +657,6 @@ lemma short_match [simp] :
 (* sledgehammer *)
 	by (simp add: nth_append)
 		
-lemmas stateelm_as_set =
-  memory_as_set_def
-  storage_as_set_def
-  log_as_set_def
-  balance_as_set_def
-  next_state_def
-  data_sent_as_set_def
-  contract_action_as_set_def
-  stack_as_set_def
-  ext_program_as_set_def
-  program_as_set_def
-  constant_ctx_as_set_def
-  variable_ctx_as_set_def
-  contexts_as_set_def
-
 (**
  ** Inference rules about Hoare triples
  ** Following Magnus Myreen's thesis, 3.5
@@ -764,7 +739,7 @@ lemma composition:
   apply(drule_tac x = "presult" in spec)
   apply(drule_tac x = "code (cR - cL) ** rest" in spec)
   apply (erule impE)
-     apply(simp add: code_diff_union sep_conj_assoc)
+     apply(simp add: code_diff_union)
   apply(drule_tac x = stopper in spec)
   apply clarsimp
   apply (clarsimp simp add: triple_def)
@@ -777,7 +752,7 @@ lemma composition:
   apply (erule impE)
    apply (simp only: sep_conj_assoc[symmetric] HOL.trans[OF code_diff_union[symmetric] code_diff_union'])
    apply(drule_tac x = stopper in spec)
-   apply (fastforce simp add: code_diff_union' sep_conj_assoc execution_continue)
+   apply (fastforce simp add: code_diff_union' execution_continue)
   done
 (** Frame **)
 
@@ -789,7 +764,7 @@ lemma frame:
   apply (drule spec[where x=co_ctx])
   apply clarsimp
   apply (drule spec2[where x=presult and y="R ** rest"])
-  apply (simp add:sep_conj_ac )
+  apply (simp del: sep_conj_assoc add: sep_conj_ac)
   done
  done
 
@@ -876,7 +851,9 @@ lemma move_pureL [simp]: "triple net reaons (\<langle> b \<rangle> ** p) c q = (
 lemma tmp01:
     "(rest ** code c ** p x) (case presult of InstructionContinue v \<Rightarrow> contexts_as_set v co_ctx | _ \<Rightarrow> {}) \<Longrightarrow>
     (rest ** code c ** (\<lambda>s. \<exists>x. p x s)) (case presult of InstructionContinue v \<Rightarrow> contexts_as_set v co_ctx | _ \<Rightarrow> {})"
-  by (smt imp_sepL sep_three)
+  apply (sep_cancel)+
+  apply blast
+  done
 
 lemma tmp0:
        "\<forall>co_ctx. no_assertion co_ctx \<longrightarrow>
@@ -959,7 +936,7 @@ apply(auto simp add: triple_def)
   apply(rule_tac x=x in preE00)
   apply(simp)
   apply (sep_simp simp: code_sep )
-  apply (simp add: sep_conj_ac)
+  apply (simp add: sep_conj_commute)
 done
 
 
