@@ -2,6 +2,9 @@ machine:
   environment:
     BASH_ENV: "~/.bashrc"
 dependencies:
+  cache_directories:
+    - "~/.opam"
+    - "~/.isabelle"
   override:
     - sudo apt-get -qq update
     - sudo apt-get -qq install libgmp3-dev
