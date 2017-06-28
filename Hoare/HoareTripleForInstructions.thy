@@ -1822,6 +1822,12 @@ lemma stack_topmost_not_code:
      (stack_topmost_elms h lst \<subseteq> s)"
 by (induction lst arbitrary: h; auto simp add: stack_topmost_elms.simps)
 
+lemma memory_usage_not_in_memory_range [simp] :
+"MemoryUsageElm x8  \<notin> memory_range_elms in_begin  input"
+apply (induction input arbitrary:in_begin)
+apply (auto simp:memory_range_elms.simps)
+done
+
 lemma stack_height_after_call:
        "vctx_balance x1 (cctx_this co_ctx) \<ge> vctx_stack x1 ! 2 \<Longrightarrow>
         (StackHeightElm (h + 7) \<in>
@@ -2213,11 +2219,11 @@ shows
    x \<in> instruction_result_as_set co_ctx
          (subtract_gas (meter_gas (Misc CALL) x1 co_ctx net) memu (call net x1 co_ctx)) =
   (x \<in> instruction_result_as_set co_ctx (InstructionContinue x1))"
-  apply_trace (simp add: call_def)
-    thm simp_for_triples
-    find_theorems name:memory_range_ name:Triple
-    apply_trace (auto simp: instruction_result_as_set_def subtract_gas.simps memory_range_simps split: list.splits)
-    apply ((auto simp: as_set_simps memory_usage_not_in_memory_range advance_pc_simps)[1])+
+  apply(simp add: call_def)
+   apply (clarsimp simp:)
+    
+  apply(case_tac "vctx_stack x1"; simp)
+ apply (rename_tac xs, case_tac xs; simp)+
 done
 
 
