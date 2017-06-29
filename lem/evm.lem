@@ -171,9 +171,9 @@ type network =
 
 val network_of_block_number : integer -> network
 let network_of_block_number bn =
-  if bn < 1150000 then Frontier
-  else if bn < 2463000 then Homestead
-  else if bn < 2675000 then EIP150
+  if bn < 115 * 100 * 100 then Frontier
+  else if bn < 3 * 821 * 10 * 100 then Homestead
+  else if bn < 5 * 5 * 107 * 10 * 100 then EIP150
   else EIP158
 (* This needs to be updated when a new fork is planned. *)
 
