@@ -220,7 +220,7 @@ The simp rules passed as argument must be of the form @{term "(some_sep_prop n \
 \<close>
 method sep_simp_no_asm uses simp =
   ((sep_simp_aux,  (sep_subst simp: simp)?)+)[1] |
-  sep_subst simp: simp
+  (sep_subst simp: simp, (solves \<open>sep_simp_aux\<close> (* e.g. solves with refl *))?)
 
 text \<open>Same as sep_simp_no_asm but for assumptions. sep_simp_asm can take several
 rules to simplify, it rule attempt to apply all of them, multiple times.\<close>
@@ -311,7 +311,7 @@ lemma gas_any_sep :
 lemma sep_gas_any_sep:
   "(a ** gas_any ** rest) s =
    (\<exists> g. GasElm g \<in> s \<and> (a ** rest) (s - {GasElm g}))"
- by (metis gas_any_sep sep_conj_assoc sep_conj_commute)
+ by (sep_simp simp: gas_any_sep)
 
 lemma sep_log_number_sep:
   "(log_number n \<and>* R) s =
@@ -496,7 +496,7 @@ lemma sep_stack_height : "(rest ** stack_height h) s =
 
 lemma sep_stack_height_sep: "(a ** stack_height h ** rest) s =
   (StackHeightElm h \<in> s \<and> (a ** rest) (s - {StackHeightElm h})) "
-  by (metis stack_height_sep sep_conj_commute sep_conj_assoc)
+  by (sep_simp simp: stack_height_sep)
 
 
 lemma stack_sep : "(stack p w ** rest) s =
@@ -509,10 +509,7 @@ lemma sep_stack : "(rest ** stack p w) s =
 
 lemma sep_stack_sep  : "(a ** stack p w ** rest) s =
   (StackElm (p, w) \<in> s \<and> (a ** rest) (s - {StackElm (p, w)}))"
-  apply (subst sep_conj_commute)
-  apply (subst sep_conj_assoc)
-  apply (simp only: stack_sep sep_conj_commute)
-done
+  by (sep_simp simp: stack_sep)
 
 
 lemma program_counter_sep : "(program_counter w ** rest) s =
@@ -526,10 +523,7 @@ lemma sep_program_counter : "(rest ** program_counter w) s =
 
 lemma sep_program_counter_sep : "(a ** program_counter w ** rest) s =
   (PcElm w \<in> s \<and> (a ** rest) (s - {PcElm w}))"
-  apply (subst sep_conj_commute)
-  apply (subst sep_conj_assoc)
-  apply (simp only: program_counter_sep sep_conj_commute)
-done
+  by (sep_simp simp: program_counter_sep)
 
 lemma code_sep: "(code pairs ** rest) s =
   ({ CodeElm(pos, i) | pos i. (pos, i) \<in> pairs } \<subseteq> s \<and> (rest (s - { CodeElm(pos, i) | pos i. (pos, i) \<in> pairs })))"
@@ -545,21 +539,15 @@ lemma code_sep: "(code pairs ** rest) s =
 
 lemma sep_code : "(rest ** code pairs) s =
   ({ CodeElm(pos, i) | pos i. (pos, i) \<in> pairs } \<subseteq> s \<and> (rest (s - { CodeElm(pos, i) | pos i. (pos, i) \<in> pairs })))"
-  apply (subst code_sep[symmetric])
-  apply (metis sep_conj_commute)
- done
+  by (sep_simp simp: code_sep)
 
 lemma sep_code_sep: "(a ** code pairs ** rest) s =
   ({ CodeElm(pos, i) | pos i. (pos, i) \<in> pairs } \<subseteq> s \<and> ((a ** rest) (s - { CodeElm(pos, i) | pos i. (pos, i) \<in> pairs })))"
-  apply (subst code_sep[symmetric])
-  apply (metis sep_conj_commute sep_conj_assoc)
- done
+  by (sep_simp simp: code_sep)
 
 lemma sep_sep_code : "(a ** b ** code pairs) s =
   ({ CodeElm(pos, i) | pos i. (pos, i) \<in> pairs } \<subseteq> s \<and> ((a ** b) (s - { CodeElm(pos, i) | pos i. (pos, i) \<in> pairs })))"
-  apply (subst code_sep[symmetric])
-  apply (metis sep_conj_commute sep_conj_assoc)
- done
+  by (sep_simp simp: code_sep)
 
 
 lemma gas_pred_sep : "(gas_pred g ** rest) s =
@@ -574,7 +562,7 @@ lemma sep_gas_pred : "(rest ** gas_pred g) s =
 lemma sep_gas_pred_sep:
   "(a ** gas_pred g ** b) s =
    ( GasElm g \<in> s \<and> (a ** b) (s - { GasElm g } ) )"
- by (metis gas_pred_sep[symmetric] sep_conj_commute sep_conj_assoc)
+ by (sep_simp simp: gas_pred_sep)
 
 
 lemma memory_usage_sep: 
@@ -590,7 +578,7 @@ lemma sep_memory_usage:
 lemma sep_memory_usage_sep:
   "(a ** memory_usage u ** rest) s =
    (MemoryUsageElm u \<in> s \<and> (a ** rest) (s - {MemoryUsageElm u}))"
-	by (metis memory_usage_sep sep_conj_commute sep_conj_assoc)
+	by (sep_simp simp:  memory_usage_sep)
 
 
 lemma stackHeightElmEquiv: "StackHeightElm h \<in> contexts_as_set v c =
