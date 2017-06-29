@@ -24,7 +24,7 @@ dependencies:
     - touch $BASH_ENV
     - echo 'eval `opam config env`' >> $BASH_ENV
     - opam update
-    - opam install -y ocamlbuild ocamlfind batteries yojson bignum easy-format bisect_ppx zarith depext sha:
+    - opam install -y ocamlbuild ocamlfind batteries yojson bignum easy-format bisect_ppx zarith depext sha coq:
         timeout: 3600
     - git clone https://github.com/mrsmkl/ECC-OCaml.git ECC-OCaml
     - echo $PATH
@@ -44,3 +44,4 @@ test:
     - make lem-thy
     - make lem-hol
     - make lem-coq
+    - (cd lem && make)
