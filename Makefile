@@ -16,7 +16,7 @@ clean-hol:
 clean-ocaml:
 	git clean -fx lem/*.ml
 
-all-isabelle: Parse.thy ContractSem.thy RelationalSem.thy example/Optimization.thy example/AlwaysFail.thy example/FailOnReentrance.thy example/Deed.thy lem/Block.thy lem/Evm.thy lem/Keccak.thy lem/Rlp.thy lem/Word160.thy lem/Word256.thy lem/Word8.thy lem/Word4.thy Hoare/HoareTripleForInstructions.thy Hoare/HoareTripleForInstructions2.thy
+all-isabelle: Parse.thy ContractSem.thy RelationalSem.thy example/Optimization.thy example/AlwaysFail.thy example/FailOnReentrance.thy example/Deed.thy lem/Block.thy lem/Evm.thy lem/Keccak.thy lem/Rlp.thy lem/Word160.thy lem/Word256.thy lem/Word8.thy lem/Word4.thy Hoare/HoareTripleForInstructions.thy Hoare/HoareTripleForInstructions2.thy lem/Word64.thy
 	isabelle build -j 2 -d . all
 
 light-isabelle: Parse.thy ContractSem.thy RelationalSem.thy example/Optimization.thy example/AlwaysFail.thy example/FailOnReentrance.thy lem/Block.thy lem/Evm.thy lem/Keccak.thy lem/Rlp.thy lem/Word160.thy lem/Word256.thy lem/Word8.thy lem/Word4.thy Hoare/HoareTripleForInstructions.thy Hoare/HoareTripleForInstructions2.thy
