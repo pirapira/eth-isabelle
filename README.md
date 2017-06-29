@@ -1,6 +1,7 @@
 # Formalization of Ethereum Virtual Machine in Lem
 
 [![Build Status](https://travis-ci.org/pirapira/eth-isabelle.svg?branch=master)](https://travis-ci.org/pirapira/eth-isabelle)
+[![CircleCI](https://circleci.com/gh/pirapira/eth-isabelle/tree/master.svg?style=svg)](https://circleci.com/gh/pirapira/eth-isabelle/tree/master)
 
 This repository contains
 
