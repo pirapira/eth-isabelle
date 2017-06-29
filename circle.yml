@@ -24,7 +24,7 @@ dependencies:
     - touch $BASH_ENV
     - echo 'eval `opam config env`' >> $BASH_ENV
     - opam update
-    - opam install -y ocamlbuild ocamlfind batteries yojson bignum easy-format bisect_ppx zarith depext sha:
+    - opam install -y ocamlbuild ocamlfind batteries yojson bignum easy-format bisect_ppx zarith depext sha coq:
         timeout: 3600
     - git clone https://github.com/mrsmkl/ECC-OCaml.git ECC-OCaml
     - echo $PATH
@@ -34,7 +34,8 @@ dependencies:
     - make -C ECC-OCaml/src install || echo "fails the second time and on"
     - git clone https://bitbucket.org/Peter_Sewell/lem.git lemdir
     - make -C lemdir || echo "failure expected"
-    - echo 'export PATH=./lemdir:$PATH' >> $BASH_ENV
+    - make -C lemdir coq-libs
+    - sudo make -C lemdir install
     - wget https://isabelle.in.tum.de/dist/Isabelle2016-1_app.tar.gz
     - tar xf Isabelle2016-1_app.tar.gz
     - echo 'export PATH=./Isabelle2016-1/bin:$PATH' >> $BASH_ENV
@@ -44,3 +45,4 @@ test:
     - make lem-thy
     - make lem-hol
     - make lem-coq
+    - (cd lem && make)
