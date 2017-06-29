@@ -1,0 +1,46 @@
+machine:
+  environment:
+    BASH_ENV: "$HOME/.bashrc"
+dependencies:
+  pre:
+    - mkdir -p ~/.opam
+    - mkdir -p ~/.isabelle
+  cache_directories:
+    - "~/.opam"
+    - "~/.isabelle"
+  override:
+    - git submodule update --init
+    - sed -n '/pyenv/!p' $HOME/.circlerc > tmp
+    - mv tmp $HOME/.circlerc
+    - sed -n '/phpenv/!p' $HOME/.circlerc > tmp
+    - mv tmp $HOME/.circlerc
+    - cat $HOME/.circlerc
+    - sudo apt-get -qq update
+    - sudo apt-get -qq install libgmp3-dev
+    - wget https://raw.github.com/ocaml/opam/master/shell/opam_installer.sh -O - | sudo sh -s /usr/local/bin
+    - export OPAMJOBS=1
+    - opam init -y --comp=4.04.1
+    - echo $BASH_ENV
+    - touch $BASH_ENV
+    - echo 'eval `opam config env`' >> $BASH_ENV
+    - opam update
+    - opam install -y ocamlbuild ocamlfind batteries yojson bignum easy-format bisect_ppx zarith depext sha:
+        timeout: 3600
+    - git clone https://github.com/mrsmkl/ECC-OCaml.git ECC-OCaml
+    - echo $PATH
+    - which ocamldep
+    - make -C ECC-OCaml/src depend
+    - make -C ECC-OCaml/src
+    - make -C ECC-OCaml/src install || echo "fails the second time and on"
+    - git clone https://bitbucket.org/Peter_Sewell/lem.git lemdir
+    - make -C lemdir || echo "failure expected"
+    - echo 'export PATH=./lemdir:$PATH' >> $BASH_ENV
+    - wget https://isabelle.in.tum.de/dist/Isabelle2016-1_app.tar.gz
+    - tar xf Isabelle2016-1_app.tar.gz
+    - echo 'export PATH=./Isabelle2016-1/bin:$PATH' >> $BASH_ENV
+test:
+  override:
+    - make lem-ocaml
+    - make lem-thy
+    - make lem-hol
+    - make lem-coq
