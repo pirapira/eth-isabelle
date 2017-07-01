@@ -654,14 +654,14 @@ lemma insert_functional : "e = f \<Longrightarrow> s = t \<Longrightarrow> inser
   apply(auto)
   done
 
-lemma lookup_over [simp] : "(rev lista @ (aa # l)) ! length lista = aa"
+lemma lookup_over : "(rev lista @ (aa # l)) ! length lista = aa"
 	by (metis length_rev nth_append_length)
 
-lemma lookup_over1 [simp] : "(rev lista @ (w # a # l)) ! Suc (length lista) = a"
+lemma lookup_over1 : "(rev lista @ (w # a # l)) ! Suc (length lista) = a"
 (* sledgehammer *)
 	by (metis add.left_neutral append.assoc append_Nil2 length_append length_rev list.size(3) list.size(4) nth_append_length plus_nat.simps(2) rev.simps(2) rev_append rev_rev_ident)
 
-lemma short_match [simp] :
+lemma short_match :
   "idx < length lista \<Longrightarrow> (rev lista @ l) ! idx = (rev lista @ m) ! idx"
 (* sledgehammer *)
 	by (simp add: nth_append)
@@ -835,7 +835,7 @@ lemma move_pure0 :
 apply(simp add: triple_def remove_true)
 done
 
-lemma false_triple [simp] :
+lemma false_triple :
   "triple net reasons (p ** \<langle> False \<rangle>) c q"
 apply(simp add: triple_def sep_basic_simps pure_def)
 done
@@ -846,15 +846,15 @@ apply(auto simp add: sep_basic_simps pure_def emp_def)
 done
 
 lemma move_pure: "triple net reaons (p ** \<langle> b \<rangle>) c q = (b \<longrightarrow> triple net reaons p c q)"
-apply(auto simp add: move_pure0)
-apply(case_tac b; auto)
+apply(auto simp add: move_pure0 false_triple)
+apply(case_tac b; auto simp: false_triple)
   done
 
 lemma pure_sepD:
   "(\<langle>P\<rangle> ** R) s \<Longrightarrow> R s"
   by (simp add: pure_def emp_def sep_basic_simps)
     
-lemma move_pureL [simp]: "triple net reaons (\<langle> b \<rangle> ** p) c q = (b \<longrightarrow> triple net reaons p c q)"
+lemma move_pureL: "triple net reaons (\<langle> b \<rangle> ** p) c q = (b \<longrightarrow> triple net reaons p c q)"
  by (metis move_pure sep_conj_commute)
 
 lemma tmp01:
@@ -917,7 +917,7 @@ using assms(2)
   apply(simp add: code_sep sep_code_sep)
  done
 
-lemma preE1 [simp]:
+lemma preE1:
 "((\<lambda>s. \<exists>x. p x s) ** rest) u
 =
 (\<exists> x. (p x ** rest) u)
@@ -933,7 +933,7 @@ lemma preE00:
  done
 
 lemma preE : "triple net reasons (\<lambda> s. \<exists> x. p x s) c q = (\<forall> x. triple net reasons (p x) c q)"
-apply(auto simp add: triple_def)
+apply(auto simp add: triple_def preE1)
  apply(erule_tac x = co_ctx in allE)
  apply simp
  apply(drule_tac x = presult in spec)
@@ -1016,6 +1016,61 @@ where
  * Failures are considered as success.
  *)
 
-
+lemmas Hoare_legacy_simps = 
+sep_logged
+gas_any_sep
+sep_gas_any_sep
+sep_log_number_sep
+memory8_sep
+annotation_failure_as_set
+no_assertion_pass
+pure_sep
+continuing_sep
+sep_continuing_sep
+storage_sep
+sep_storage
+stack_height_sep
+sep_stack_height
+sep_stack_height_sep
+stack_sep
+sep_stack
+sep_stack_sep
+program_counter_sep
+sep_program_counter
+sep_program_counter_sep
+code_sep
+sep_code
+sep_code_sep
+sep_sep_code
+gas_pred_sep
+sep_gas_pred
+sep_gas_pred_sep
+memory_usage_sep
+sep_memory_usage
+sep_memory_usage_sep
+stackHeightElmEquiv
+stackElmEquiv
+pcElmEquiv
+gasElmEquiv
+codeElmEquiv
+lookup_over
+lookup_over1
+short_match
+memory_as_set_def
+storage_as_set_def
+log_as_set_def
+balance_as_set_def
+next_state_def
+execution_continue
+sep_true
+false_triple
+get_pure
+move_pure
+move_pureL
+sep_code_sep
+preE1
+sep_code_sep
+sep_sep_code
+  
 
 end
