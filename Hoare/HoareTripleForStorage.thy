@@ -57,23 +57,24 @@ lemma sstore_gas_triple :
            gas_pred (g - Csstore old new) ** continuing)"
   apply (clarsimp simp: triple_def simp_for_triples sep_crunch)
 apply(rule_tac x = 1 in exI)
-  apply(case_tac presult ; (solves \<open>clarsimp\<close>)?)
+  apply(case_tac presult ; (solves \<open>clarsimp simp:Hoare_legacy_simps HoareTripleForInstructions_legacy_simps\<close>)?)
 (*  apply (rule disjCI) *)
 apply_trace (clarsimp simp add: simp_for_triples sep_crunch
        instruction_result_as_set_def  sstore_def
-       vctx_update_storage_def)
+       vctx_update_storage_def Hoare_legacy_simps HoareTripleForInstructions_legacy_simps)
 apply (erule_tac P=rest in back_subst)
 apply(rule Set.equalityI; clarify)
 apply(rename_tac elm)
 apply(simp add: vctx_update_storage_def) 
-apply(case_tac elm; simp)
+apply(case_tac elm; simp add: Hoare_legacy_simps HoareTripleForInstructions_legacy_simps)
 using some_list_gotcha apply blast
-apply(split if_splits; simp)
+apply(split if_splits; simp add: Hoare_legacy_simps HoareTripleForInstructions_legacy_simps)
 apply(rename_tac elm)
 apply (simp add: set_diff_eq) 
-apply(case_tac elm; simp)
+apply(case_tac elm; simp add: Hoare_legacy_simps HoareTripleForInstructions_legacy_simps)
  apply auto[1]
- apply(split if_splits; simp)
+  apply_trace(split if_splits; simp add: Hoare_legacy_simps HoareTripleForInstructions_legacy_simps)
+  find_theorems  "ContinuingElm ?b \<notin> contexts_as_set ?x32.0 ?co_ctx"
 done
 
 (*
