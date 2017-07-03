@@ -469,6 +469,119 @@ definition triple_cfg_sem_t :: "cfg \<Rightarrow> pred \<Rightarrow> vertex \<Ri
        ((post ** code (cfg_insts c) ** rest) (instruction_result_as_set co_ctx
             (program_sem_t_alt co_ctx net presult)))"
 
+(* Lemmas to group code elements *)
+lemma block_in_insts_:
+"n \<in> set xs \<Longrightarrow>
+cfg_blocks c n = Some (b, t) \<Longrightarrow>
+set b \<subseteq> set (cfg_insts_aux c xs)"
+apply(induction xs)
+ apply(simp)
+apply(case_tac "n \<in> set xs")
+ apply(case_tac "cfg_blocks c a = None")
+	apply(auto)
+done
+
+lemma block_in_insts:
+"cfg_status c = None \<Longrightarrow>
+wf_cfg c \<Longrightarrow>
+cfg_blocks c n = Some (b, t) \<Longrightarrow>
+set b \<subseteq> cfg_insts c"
+apply(simp add: wf_cfg_def cfg_insts_def)
+apply(drule_tac x = n in spec)+
+apply(drule_tac x=b in spec)
+apply(erule conjE)
+apply(drule_tac x = t in spec)
+apply(drule_tac x = "n + inst_size_list b" in spec)
+apply(erule conjE, simp add: block_in_insts_)+
+done
+
+lemma decomp_set:
+"P \<subseteq> Q =
+(Q = (Q - P) \<union> P)"
+by auto
+
+lemma code_decomp:
+" P \<subseteq> Q \<Longrightarrow>
+{CodeElm (pos, i) |pos i.
+         (pos, i) \<in> Q} =
+({CodeElm (pos, i) |pos i.
+         (pos, i) \<in> Q \<and> (pos, i) \<notin> P} \<union>
+        {CodeElm (pos, i) |pos i.
+         (pos, i) \<in> P})
+"
+by auto
+
+lemma subset_minus:
+"P \<inter> Q = {} \<Longrightarrow> P \<subseteq> R - Q \<Longrightarrow> P \<subseteq> R"
+by auto
+
+lemma code_code_sep_:
+"P \<subseteq> Q \<Longrightarrow>
+(code P \<and>* code (Q - P) \<and>* r) s =
+(code Q \<and>* r) s"
+ apply(simp)
+ apply(rule iffI; rule conjI; (erule conjE)+)
+		apply(simp add: code_decomp)
+		apply(subgoal_tac "{CodeElm (pos, i) |pos i. (pos, i) \<in> P} \<inter> {CodeElm (pos, i) |pos i.
+         (pos, i) \<in> Q \<and> (pos, i) \<notin> P} = {}")
+		 apply(auto simp add: subset_minus)[1]
+		apply(auto)[1]
+	 apply(auto simp add: subset_minus diff_diff_union code_decomp)[1]
+	apply(subgoal_tac "{CodeElm (pos, i) |pos i.
+     (pos, i) \<in> Q \<and> (pos, i) \<notin> P} \<subseteq> {CodeElm (pos, i) |pos i.
+     (pos, i) \<in> Q}")
+	 apply(simp)
+	apply(auto)[1]
+ apply(rule conjI)
+	apply(auto)[1]
+ apply(auto simp add: subset_minus diff_diff_union code_decomp)
+done
+
+lemma code_code_sep:
+"cfg_status cfg = None \<Longrightarrow>
+wf_cfg cfg \<Longrightarrow>
+cfg_blocks cfg n = Some (insts, ty) \<Longrightarrow>
+(code (set insts) \<and>* code (cfg_insts cfg - set insts) \<and>* r) s =
+(code (cfg_insts cfg) \<and>* r) s"
+ apply(subgoal_tac "set insts \<subseteq> cfg_insts cfg")
+	apply(simp only: code_code_sep_)
+ apply(simp add: block_in_insts)
+done
+
+lemma sep_code_code_sep:
+"cfg_status cfg = None \<Longrightarrow>
+wf_cfg cfg \<Longrightarrow>
+cfg_blocks cfg n = Some (insts, ty) \<Longrightarrow>
+(p \<and>* code (set insts) \<and>* code (cfg_insts cfg - set insts) \<and>* r) s =
+(p \<and>* code (cfg_insts cfg) \<and>* r) s"
+ apply(rule iffI)
+  apply(sep_select_asm 3)
+	apply(sep_select_asm 3)
+  apply(sep_select 2)
+	apply(simp only: code_code_sep)
+ apply(sep_select 3)
+ apply(sep_select 3)
+ apply(sep_select_asm 2)
+ apply(simp only: code_code_sep)
+done
+
+lemma sep_sep_sep_code_code:
+"cfg_status cfg = None \<Longrightarrow>
+wf_cfg cfg \<Longrightarrow>
+cfg_blocks cfg n = Some (insts, ty) \<Longrightarrow>
+(p \<and>* q \<and>* r \<and>* code (set insts) \<and>* code (cfg_insts cfg - set insts)) s =
+(p \<and>* q \<and>* r \<and>* code (cfg_insts cfg)) s"
+ apply(rule iffI)
+  apply(sep_select_asm 5)
+	apply(sep_select_asm 5)
+  apply(sep_select 4)
+	apply(simp only: code_code_sep)
+ apply(sep_select 5)
+ apply(sep_select 5)
+ apply(sep_select_asm 4)
+ apply(simp only: code_code_sep)
+done
+
 lemma cfg_no_sem_t:
 notes sep_fun_simps[simp del]
 shows
