@@ -455,4 +455,107 @@ lemma program_sem_t_alt_eq:
   apply(simp add: program_sem_t.simps program_sem_t_alt.simps)+
 done
 
+(* Define the semantic of triple_cfg using program_sem_t and prove it sound *)
+
+definition triple_cfg_sem_t :: "cfg \<Rightarrow> pred \<Rightarrow> vertex \<Rightarrow> pred \<Rightarrow> bool" where
+"triple_cfg_sem_t c pre v post ==
+    \<forall> co_ctx presult rest net (stopper::instruction_result \<Rightarrow> unit).
+				no_assertion co_ctx \<longrightarrow>
+        (cctx_program co_ctx = program_from_cfg c) \<longrightarrow>
+        wf_cfg c \<longrightarrow>
+        cfg_status c = None \<longrightarrow>
+        cfg_blocks c (v_ind v) = Some (snd v) \<longrightarrow>
+       (pre ** code (cfg_insts c) ** rest) (instruction_result_as_set co_ctx presult) \<longrightarrow>
+       ((post ** code (cfg_insts c) ** rest) (instruction_result_as_set co_ctx
+            (program_sem_t_alt co_ctx net presult)))"
+
+lemma cfg_no_sem_t:
+notes sep_fun_simps[simp del]
+shows
+" triple_seq pre insts post \<Longrightarrow> 
+  triple_cfg_sem_t cfg pre (n, insts, No) post"
+sorry
+
+lemma cfg_next_sem_t:
+notes sep_fun_simps[simp del]
+shows
+"\<And>cfg n i ii bi ti pre insts q post.
+       cfg_edges cfg n = Some (i, None) \<Longrightarrow>
+       cfg_blocks cfg i = Some (bi, ti) \<Longrightarrow>
+       triple_seq pre insts (program_counter i \<and>* q) \<Longrightarrow>
+       triple_cfg_sem_t cfg (program_counter i \<and>* q) (i, bi, ti) post \<Longrightarrow>
+       triple_cfg_sem_t cfg pre (n, insts, Next) post"
+sorry
+
+lemma cfg_jump_sem_t:
+notes sep_fun_simps[simp del]
+shows
+"\<And>cfg n dest bi ti pre insts p g m h rest post.
+       cfg_edges cfg n = Some (dest, None) \<Longrightarrow>
+       cfg_blocks cfg dest = Some (bi, ti) \<Longrightarrow>
+       triple_seq pre insts
+        (program_counter p \<and>*
+         gas_pred g \<and>*
+         memory_usage m \<and>*
+         stack_height (Suc h) \<and>*
+         stack h (word_of_int dest) \<and>*
+         \<langle> h \<le> 1023 \<and> Gmid \<le> g \<and> 0 \<le> m \<rangle> \<and>* continuing \<and>* rest) \<Longrightarrow>
+       triple_cfg cfg
+        (program_counter dest \<and>*
+         gas_pred (g - Gmid) \<and>*
+         memory_usage m \<and>* stack_height h \<and>* continuing \<and>* rest)
+        (dest, bi, ti) post \<Longrightarrow>
+       triple_cfg_sem_t cfg
+        (program_counter dest \<and>*
+         gas_pred (g - Gmid) \<and>*
+         memory_usage m \<and>* stack_height h \<and>* continuing \<and>* rest)
+        (dest, bi, ti) post \<Longrightarrow>
+       triple_cfg_sem_t cfg pre (n, insts, Jump) post"
+sorry
+
+lemma cfg_jumpi_sem_t:
+notes sep_fun_simps[simp del]
+shows
+"\<And>cfg n dest j bi ti bj tj pre insts h g m cond p rest r post.
+       cfg_edges cfg n = Some (dest, Some j) \<Longrightarrow>
+       cfg_blocks cfg dest = Some (bi, ti) \<Longrightarrow>
+       cfg_blocks cfg j = Some (bj, tj) \<Longrightarrow>
+       triple_seq pre insts
+        (\<langle> h \<le> 1022 \<and> Ghigh \<le> g \<and> 0 \<le> m \<rangle> \<and>*
+         stack_height (Suc (Suc h)) \<and>*
+         stack (Suc h) (word_of_int dest) \<and>*
+         stack h cond \<and>*
+         gas_pred g \<and>*
+         continuing \<and>*
+         memory_usage m \<and>* program_counter p \<and>* rest) \<Longrightarrow>
+       r =
+       (stack_height h \<and>*
+        gas_pred (g - Ghigh) \<and>*
+        continuing \<and>* memory_usage m \<and>* rest) \<Longrightarrow>
+       (cond \<noteq> 0 \<Longrightarrow>
+        triple_cfg cfg (r \<and>* program_counter dest) (dest, bi, ti)
+         post) \<Longrightarrow>
+       (cond \<noteq> 0 \<Longrightarrow>
+        triple_cfg_sem_t cfg (r \<and>* program_counter dest)
+         (dest, bi, ti) post) \<Longrightarrow>
+       (cond = 0 \<Longrightarrow>
+        triple_cfg cfg (r \<and>* program_counter j) (j, bj, tj) post) \<Longrightarrow>
+       (cond = 0 \<Longrightarrow>
+        triple_cfg_sem_t cfg (r \<and>* program_counter j) (j, bj, tj)
+         post) \<Longrightarrow>
+       triple_cfg_sem_t cfg pre (n, insts, Jumpi) post"
+sorry
+
+lemma triple_cfg_soundness_t :
+notes sep_fun_simps[simp del]
+shows
+"triple_cfg c pre v post \<Longrightarrow> triple_cfg_sem_t c pre v post"
+ apply(induction rule: triple_cfg.induct)
+     apply(simp add: cfg_no_sem_t)
+    apply(simp add: cfg_next_sem_t)
+   apply(simp add: cfg_jump_sem_t)
+  apply(simp add: cfg_jumpi_sem_t)
+ apply(simp add: triple_cfg_sem_t_def)
+done
+
 end
