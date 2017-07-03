@@ -180,4 +180,22 @@ definition build_cfg :: "inst list \<Rightarrow> cfg" where
   cfg_status = snd edges |)
 )))"
 
+(* Verification *)
+
+(* Check that we can rebuild the initial list of instructions from basic blocks *)
+fun reconstruct_bytecode :: "vertices \<Rightarrow> inst list" where
+ "reconstruct_bytecode [] = []"
+| "reconstruct_bytecode ((n,b,Jump)#q) = (map snd b)@[Pc JUMP] @ (reconstruct_bytecode q)"
+| "reconstruct_bytecode ((n,b,Jumpi)#q) = (map snd b)@[Pc JUMPI] @ (reconstruct_bytecode q)"
+| "reconstruct_bytecode ((n,b,_)#q) = (map snd b) @ (reconstruct_bytecode q)"
+
+lemma rev_basic_blocks: "reconstruct_bytecode (aux_basic_block i p bp b) = (map snd (rev b))@i"
+apply(induction i arbitrary: p bp b)
+apply(auto simp: Let_def split: inst.split misc_inst.split pc_inst.split)
+done
+
+theorem reverse_basic_blocks: "reconstruct_bytecode (build_basic_blocks i) = i"
+apply(simp add: rev_basic_blocks build_basic_blocks_def)
+done
+
 end
