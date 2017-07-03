@@ -625,6 +625,8 @@ cfg_blocks cfg n = Some (insts, ty) \<Longrightarrow>
  apply(simp only: code_code_sep)
 done
 
+(*NEXT case *)
+
 lemma cfg_next_sem_t:
 notes sep_fun_simps[simp del]
 shows
@@ -652,6 +654,176 @@ shows
  apply (erule_tac P="(post \<and>* rest \<and>* code (cfg_insts cfg))" in back_subst)
  apply(subst program_sem_t_alt_exec_continue )
  apply(simp)
+done
+
+(*Lemmas for Jump and Jumpi *)
+lemmas uint_word_reverse = word_of_int_inverse[OF refl]
+
+definition
+ uniq_stateelm :: "state_element set \<Rightarrow> bool"
+where
+ "uniq_stateelm s ==
+(\<forall>v. PcElm v \<in> s \<longrightarrow> (\<forall>x. PcElm x \<in> s \<longrightarrow> x = v)) \<and>
+(\<forall>v. GasElm v \<in> s \<longrightarrow> (\<forall>x. GasElm x \<in> s \<longrightarrow> x = v)) \<and>
+(\<forall>v. StackHeightElm v \<in> s \<longrightarrow> (\<forall>v'. StackHeightElm v' \<in> s \<longrightarrow> v' = v)) \<and>
+(\<forall>v. StackHeightElm v \<in> s \<longrightarrow> (\<forall>h u. h \<ge> v \<longrightarrow> StackElm (h,u) \<notin> s))"
+
+lemma uniq_gaselm:
+"s = instruction_result_as_set co_ctx presult \<Longrightarrow>
+(\<forall>v. GasElm v \<in> s \<longrightarrow> (\<forall>x. GasElm x \<in> s \<longrightarrow> x = v))"
+by(simp add:instruction_result_as_set_def split:instruction_result.splits)
+
+lemma uniq_gaselm_plus[rule_format]:
+"instruction_result_as_set co_ctx presult = s + y \<Longrightarrow>
+(\<forall>v. GasElm v \<in> s \<longrightarrow> (\<forall>x. GasElm x \<in> s \<longrightarrow> x = v))"
+by (drule sym, drule uniq_gaselm, simp add: plus_set_def)
+
+lemma uniq_pcelm:
+"s = instruction_result_as_set co_ctx presult \<Longrightarrow>
+(\<forall>v. PcElm v \<in> s \<longrightarrow> (\<forall>x. PcElm x \<in> s \<longrightarrow> x = v))"
+by(simp add:instruction_result_as_set_def split:instruction_result.splits)
+
+lemma uniq_pcelm_plus[rule_format]:
+"instruction_result_as_set co_ctx presult = s + y \<Longrightarrow>
+(\<forall>v. PcElm v \<in> s \<longrightarrow> (\<forall>x. PcElm x \<in> s \<longrightarrow> x = v))"
+by (drule sym, drule uniq_pcelm, simp add: plus_set_def)
+
+lemma uniq_stackheightelm:
+"x = instruction_result_as_set co_ctx presult \<Longrightarrow>
+(\<forall>v. StackHeightElm v \<in> x \<longrightarrow> (\<forall>v'. StackHeightElm v' \<in> x \<longrightarrow> v' = v))"
+by (simp add:instruction_result_as_set_def split:instruction_result.splits)
+
+lemma uniq_stackheightelm_plus[rule_format]:
+"instruction_result_as_set co_ctx presult = x + y \<Longrightarrow>
+(\<forall>v. StackHeightElm v \<in> x \<longrightarrow> (\<forall>v'. StackHeightElm v' \<in> x \<longrightarrow> v' = v))"
+by (drule sym, drule uniq_stackheightelm, simp add: plus_set_def)
+
+lemma stack_max_elm:
+"s = instruction_result_as_set co_ctx presult \<Longrightarrow>
+(\<forall>v. StackHeightElm v \<in> s \<longrightarrow> (\<forall>h u. h \<ge> v \<longrightarrow> StackElm (h,u) \<notin> s))"
+by(simp add:instruction_result_as_set_def split:instruction_result.splits)
+
+lemma stack_max_elm_plus[rule_format]:
+"instruction_result_as_set co_ctx presult = s + y \<Longrightarrow>
+(\<forall>v. StackHeightElm v \<in> s \<longrightarrow> (\<forall>h u. h \<ge> v \<longrightarrow> StackElm (h,u) \<notin> s))"
+by (drule sym, drule stack_max_elm, simp add: plus_set_def)
+
+lemmas uniq_stateelm_simps=
+uniq_stateelm_def
+uniq_gaselm_plus uniq_pcelm_plus uniq_stackheightelm_plus
+stack_max_elm_plus
+
+lemma inst_res_as_set_uniq_stateelm:
+"(pre \<and>* code (cfg_insts cfg) \<and>* resta)
+        (instruction_result_as_set co_ctx
+          presult) \<Longrightarrow>
+       \<exists>s. pre s \<and> uniq_stateelm s"
+apply(clarsimp simp add: sep_conj_def)
+apply(rule_tac x=x in exI)
+apply(simp add: uniq_stateelm_simps)
+done
+
+lemma pc_after_inst:
+"triple_inst pre x post \<Longrightarrow> x = (n, i) \<Longrightarrow> reg_inst i \<Longrightarrow>
+\<exists>s. pre s \<and> uniq_stateelm s \<Longrightarrow>
+\<exists>q. post = (program_counter (n + inst_size i) ** q) \<and>
+    (\<exists>s0. (program_counter (n + inst_size i) ** q) s0 \<and> uniq_stateelm s0)"
+ apply(induct rule: triple_inst.induct; clarsimp)
+   apply(rule_tac x="(continuing \<and>*
+            memory_usage m \<and>*
+            stack_height (Suc h) \<and>*
+            gas_pred (g - Gverylow) \<and>*
+            stack h (word_rcat lst) \<and>*
+            rest)" in exI)
+   apply(rule conjI)
+    apply(simp add: inst_size_simps del: sep_fun_simps sep_lc)
+    apply (rule ext)
+    apply (rule iffI)
+     apply(sep_select_asm  3)
+     apply(sep_cancel)+
+     apply(simp add: program_counter_def)
+    apply(sep_select 3)
+    apply(sep_cancel)+
+    apply(simp add: program_counter_def)
+   apply(rule_tac x="(s - {GasElm g} - {PcElm n} -
+         {StackHeightElm h}) \<union> {GasElm (g - Gverylow)} \<union> {StackElm (h, word_rcat lst)} \<union>
+{ StackHeightElm (Suc h)} \<union> {PcElm (n + inst_size (Stack (PUSH_N lst)))}" in exI)
+   apply(clarsimp simp add: gas_value_simps)
+   apply(rule conjI)
+    apply(erule_tac P=rest in back_subst)
+    apply(auto simp add: uniq_stateelm_def)[1]
+   apply (auto simp add: uniq_stateelm_def)[1]
+  apply(rule_tac x="continuing \<and>*
+            memory_usage m \<and>*
+            stack_height h \<and>*
+            gas_pred (g - Gjumpdest) \<and>* rest" in exI)
+  apply(rule conjI)
+   apply(simp add: inst_size_simps)
+  apply(rule_tac x="(s - {GasElm g} - {PcElm n}) \<union> {GasElm (g - Gjumpdest)} \<union>
+				{PcElm (n + inst_size (Pc JUMPDEST))}" in exI)
+  apply(clarsimp simp add: gas_value_simps)
+  apply(rule conjI)
+   apply(erule_tac P=rest in back_subst)
+   apply(auto simp add: uniq_stateelm_def)[1]
+  apply (auto simp add: uniq_stateelm_def)[1]
+ apply(drule meta_mp)
+ apply(rule_tac x=s in exI; rule conjI; simp)
+ apply(assumption)
+apply(simp add: pure_def)
+done
+
+lemma triple_seq_empty_case[OF _ refl] :
+"triple_seq q xs r \<Longrightarrow> xs = [] \<Longrightarrow>
+ \<exists>q'. (\<forall>s. q s \<longrightarrow> q' s) \<and> (\<forall>s. q' s \<longrightarrow> r s)"
+  apply(induct rule: triple_seq.induct, simp_all)
+apply(rule_tac x=post in exI, simp)
+  apply force
+apply(rule_tac x=post in exI, simp)
+apply(simp add: pure_def)
+done
+
+lemma triple_seq_empty_case' :
+"triple_seq q [] r \<Longrightarrow>
+ (\<forall>s. q s \<longrightarrow> r s)"
+by(drule triple_seq_empty_case, fastforce)
+
+lemma pc_after_seq:
+notes sep_fun_simps[simp del]
+shows
+" triple_seq pre insts post' \<Longrightarrow>
+\<exists>s. pre s \<and> uniq_stateelm s \<Longrightarrow>
+\<forall>s. post' s = (program_counter m \<and>* post) s \<Longrightarrow>
+fst (hd insts) = n \<Longrightarrow>
+insts \<noteq> [] \<Longrightarrow>
+seq_block insts \<Longrightarrow>
+reg_block insts \<Longrightarrow>
+ m = n + inst_size_list insts"
+ apply(induction arbitrary:n post rule:triple_seq.induct)
+    apply(simp)
+    apply(case_tac xs; clarsimp)
+     apply(drule triple_seq_empty_case'; clarsimp)
+     apply(simp add: reg_block_def)
+     apply(drule_tac n=a and i=b and pre=pre and post=q in pc_after_inst; clarsimp)
+      apply(fastforce)
+     apply(thin_tac "uniq_stateelm s")
+		 apply(thin_tac "\<forall>s. _ s = _ s")
+     apply(simp add: program_counter_sep uniq_stateelm_def)
+    apply(drule_tac x="a + inst_size b" and y=posta in meta_spec2)
+    apply(clarsimp)
+    apply(simp add:reg_block_def)
+    apply(erule conjE)+
+    apply(drule_tac n=a and i=b in pc_after_inst)
+       apply(simp)+
+     apply(fastforce)
+    apply(drule meta_mp; clarsimp)
+   apply(clarsimp)
+  apply(drule_tac x=n and y=post in meta_spec2)
+  apply(drule meta_mp)
+  apply(clarsimp)
+   apply(rule_tac x=s in exI)
+   apply(fastforce)
+  apply(simp)
+ apply (fastforce simp: pure_def)
 done
 
 lemma cfg_jump_sem_t:

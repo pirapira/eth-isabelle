@@ -876,6 +876,13 @@ lemma stack_elm_means [simp] :
 apply(auto simp add: instruction_result_as_set_def contexts_as_set_def)
 done
 
+lemma memory_usage_means [simp] :
+  "MemoryUsageElm m \<in> instruction_result_as_set co_ctx (InstructionContinue x1)
+  = (vctx_memory_usage x1 = m)"
+apply(auto simp add: instruction_result_as_set_def contexts_as_set_def
+    constant_ctx_as_set_def program_as_set_def)
+done
+
 lemma balance_not_constant [simp] :
   "BalanceElm ab \<notin> constant_ctx_as_set co_ctx"
 apply(simp add: constant_ctx_as_set_def program_as_set_def)
