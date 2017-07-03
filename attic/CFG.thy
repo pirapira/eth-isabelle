@@ -198,4 +198,53 @@ theorem reverse_basic_blocks: "reconstruct_bytecode (build_basic_blocks i) = i"
 apply(simp add: rev_basic_blocks build_basic_blocks_def)
 done
 
+(* Define a 'program' from a CFG *)
+
+fun cfg_insts_aux :: "cfg \<Rightarrow> int list \<Rightarrow> pos_inst list" where
+  "cfg_insts_aux c [] = []"
+| "cfg_insts_aux c (x#xs) = (case cfg_blocks c x of
+    None \<Rightarrow> cfg_insts_aux c xs
+  | Some (b,_) \<Rightarrow> b @ (cfg_insts_aux c xs))"
+
+definition cfg_insts :: "cfg \<Rightarrow> pos_inst set" where
+"cfg_insts c = set (cfg_insts_aux c (cfg_indexes c))"
+
+fun inst_size_list::"pos_inst list \<Rightarrow> int" where
+"inst_size_list [] = 0"
+| "inst_size_list (x#xs) = inst_size (snd x) + inst_size_list xs"
+
+fun cfg_pos_insts :: "vert list \<Rightarrow> pos_inst list" where
+ "cfg_pos_insts [] = []"
+| "cfg_pos_insts ((b,Jump)#q) = (case last b of
+  (n,i) \<Rightarrow> b@[(n + inst_size i, Pc JUMP)] @ (cfg_pos_insts q))"
+| "cfg_pos_insts ((b,Jumpi)#q) = (case last b of
+  (n,i) \<Rightarrow> b@[(n + inst_size i, Pc JUMPI)] @ (cfg_pos_insts q))"
+| "cfg_pos_insts ((b,_)#q) = b@ (cfg_pos_insts q)"
+
+fun cfg_vertices:: "cfg \<Rightarrow> int list \<Rightarrow> vert list" where
+"cfg_vertices c [] = []"
+| "cfg_vertices c (x#xs) = (case cfg_blocks c x of
+  None \<Rightarrow> cfg_vertices c xs
+  | Some b \<Rightarrow> b # (cfg_vertices c xs))"
+
+definition cfg_content ::"cfg \<Rightarrow> int \<Rightarrow> inst option " where
+"cfg_content c i = (case find (\<lambda>u. fst u = i) (cfg_pos_insts (cfg_vertices c (cfg_indexes c))) of
+  None \<Rightarrow> None
+| Some u \<Rightarrow> Some (snd u))"
+
+definition cfg_length :: "cfg \<Rightarrow> int " where
+"cfg_length c =
+  (case cfg_blocks c (last (cfg_indexes c)) of
+    None \<Rightarrow> 0 (*Should not happen*)
+  | Some (i,Jump) \<Rightarrow> fst (last i) +  inst_size (snd (last i))
+  | Some (i,Jumpi) \<Rightarrow> fst (last i) + inst_size (snd (last i))
+  | Some (i,_) \<Rightarrow> fst (last i))"
+
+definition program_from_cfg:: "cfg \<Rightarrow> program" where
+"program_from_cfg c = ( (|
+  program_content = cfg_content c,
+  program_length = cfg_length c,
+  program_annotation = (\<lambda> _ .  [])
+|) )"
+
 end
