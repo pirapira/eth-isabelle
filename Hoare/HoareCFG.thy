@@ -48,7 +48,7 @@ inductive triple_inst :: "pred \<Rightarrow> pos_inst \<Rightarrow> pred \<Right
        program_counter n \<and>* action (ContractReturn []) \<and>*
        gas_pred g \<and>* rest)"
 | inst_jumpdest :
-    "triple_inst 
+    "triple_inst
       (\<langle> h \<le> 1024 \<and> Gjumpdest \<le> g \<and> m \<ge> 0\<rangle> \<and>*
        continuing \<and>* memory_usage m \<and>* program_counter n \<and>*
        stack_height h \<and>* gas_pred g \<and>* rest)
@@ -56,37 +56,37 @@ inductive triple_inst :: "pred \<Rightarrow> pos_inst \<Rightarrow> pred \<Right
       (continuing \<and>* program_counter (n + 1) \<and>*
        memory_usage m \<and>* stack_height h \<and>*
        gas_pred (g - Gjumpdest) \<and>* rest)"
-| inst_strengthen_pre: 
+| inst_strengthen_pre:
     "triple_inst p i q \<Longrightarrow> (\<And>s. r s \<longrightarrow> p s) \<Longrightarrow> triple_inst r i q"
-| inst_false_pre: 
+| inst_false_pre:
     "triple_inst \<langle>False\<rangle> i post"
 
 inductive triple_seq :: "pred \<Rightarrow> pos_inst list \<Rightarrow> pred \<Rightarrow> bool" where
-  seq_inst : 
+  seq_inst :
   "\<lbrakk>triple_inst pre x q;
     triple_seq q xs post \<rbrakk> \<Longrightarrow>
    triple_seq pre (x#xs) post"
-| seq_empty: 
+| seq_empty:
   "(\<And>s. pre s \<longrightarrow> post s) \<Longrightarrow>
    triple_seq pre [] post"
-| seq_strengthen_pre: 
+| seq_strengthen_pre:
   "triple_seq p xs q \<Longrightarrow>
    (\<And>s. r s \<longrightarrow> p s) \<Longrightarrow>
    triple_seq r xs q"
-| seq_false_pre: 
+| seq_false_pre:
   "triple_seq \<langle>False\<rangle> xs post"
 
 inductive triple_cfg :: "cfg \<Rightarrow> pred \<Rightarrow> vertex \<Rightarrow> pred \<Rightarrow> bool" where
-  cfg_no : 
+  cfg_no :
   "triple_seq pre insts post \<Longrightarrow>
    triple_cfg cfg pre (n, insts, No) post"
-| cfg_next : 
+| cfg_next :
   "\<lbrakk>cfg_edges cfg n = Some (i, None);
     cfg_blocks cfg i = Some (bi, ti);
     triple_seq pre insts (program_counter i \<and>* q);
     triple_cfg cfg (program_counter i \<and>* q) (i, bi, ti) post\<rbrakk> \<Longrightarrow>
    triple_cfg cfg pre (n, insts, Next) post"
-| cfg_jump : 
+| cfg_jump :
   "\<lbrakk>cfg_edges cfg n = Some (dest, None);
     cfg_blocks cfg dest = Some (bi, ti);
     triple_seq pre insts
@@ -98,10 +98,10 @@ inductive triple_cfg :: "cfg \<Rightarrow> pred \<Rightarrow> vertex \<Rightarro
     triple_cfg cfg
       (program_counter dest \<and>* gas_pred (g - Gmid) \<and>*
        memory_usage m \<and>* stack_height h \<and>*
-       continuing \<and>* rest) 
+       continuing \<and>* rest)
       (dest, bi, ti) post\<rbrakk> \<Longrightarrow>
    triple_cfg cfg pre (n, insts, Jump) post"
-| cfg_jumpi : 
+| cfg_jumpi :
   "\<lbrakk>cfg_edges cfg n = Some (dest, Some j);
     cfg_blocks cfg dest = Some (bi, ti);
     cfg_blocks cfg j = Some (bj, tj);
@@ -117,7 +117,7 @@ inductive triple_cfg :: "cfg \<Rightarrow> pred \<Rightarrow> vertex \<Rightarro
     (cond \<noteq> 0 \<Longrightarrow> triple_cfg cfg (r \<and>* program_counter dest) (dest, bi, ti) post);
     (cond = 0 \<Longrightarrow> triple_cfg cfg (r \<and>* program_counter j) (j, bj, tj) post)\<rbrakk> \<Longrightarrow>
    triple_cfg cfg pre (n, insts, Jumpi) post"
-| cfg_false_pre: 
+| cfg_false_pre:
   "triple_cfg cfg \<langle>False\<rangle> i post"
 
 (* Group lemmas *)
@@ -259,7 +259,7 @@ lemma inst_stop_sem:
 done
 
 lemma inst_push_sem:
-"triple_inst_sem 
+"triple_inst_sem
   (\<langle> h \<le> 1023 \<and> length lst > 0 \<and> 32 \<ge> length lst \<and> Gverylow \<le> g \<and> m \<ge> 0\<rangle> \<and>*
    continuing \<and>* program_counter n \<and>*
    memory_usage m \<and>* stack_height h \<and>*
@@ -398,7 +398,7 @@ done
 (* It makes some proofs easier *)
 
 (*val program_sem_t_alt: constant_ctx -> network -> instruction_result -> instruction_result*)
-function (sequential,domintros)  program_sem_t_alt  :: " constant_ctx \<Rightarrow> network \<Rightarrow> instruction_result \<Rightarrow> instruction_result "  where 
+function (sequential,domintros)  program_sem_t_alt  :: " constant_ctx \<Rightarrow> network \<Rightarrow> instruction_result \<Rightarrow> instruction_result "  where
 "program_sem_t_alt c net  (InstructionToEnvironment x y z) = (InstructionToEnvironment x y z)"
 |" program_sem_t_alt c net InstructionAnnotationFailure = InstructionAnnotationFailure"
 |" program_sem_t_alt c net (InstructionContinue v) =
@@ -420,7 +420,7 @@ function (sequential,domintros)  program_sem_t_alt  :: " constant_ctx \<Rightarr
                )
               ))
               v None
-     ))" 
+     ))"
 by pat_completeness auto
 
 termination program_sem_t_alt
@@ -1343,7 +1343,7 @@ done
 lemma cfg_no_sem_t:
 notes sep_fun_simps[simp del]
 shows
-" triple_seq pre insts post \<Longrightarrow> 
+" triple_seq pre insts post \<Longrightarrow>
   triple_cfg_sem_t cfg pre (n, insts, No) post"
  apply(simp add: triple_cfg_sem_t_def; clarsimp)
  apply(insert pc_before_seq[where n=n and pre=pre and insts=insts and post=post]; simp)
