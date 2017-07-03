@@ -394,4 +394,65 @@ lemma triple_seq_soundness:
  apply(simp add: triple_seq_sem_def)
 done
 
+(* Re-define program_sem_t and prove the new one equivalent to the original one *)
+(* It makes some proofs easier *)
+
+(*val program_sem_t_alt: constant_ctx -> network -> instruction_result -> instruction_result*)
+function (sequential,domintros)  program_sem_t_alt  :: " constant_ctx \<Rightarrow> network \<Rightarrow> instruction_result \<Rightarrow> instruction_result "  where 
+"program_sem_t_alt c net  (InstructionToEnvironment x y z) = (InstructionToEnvironment x y z)"
+|" program_sem_t_alt c net InstructionAnnotationFailure = InstructionAnnotationFailure"
+|" program_sem_t_alt c net (InstructionContinue v) =
+     (if \<not> (check_annotations v c) then InstructionAnnotationFailure else
+     (case  vctx_next_instruction v c of
+        None => InstructionToEnvironment (ContractFail [ShouldNotHappen]) v None
+      | Some i =>
+        if check_resources v c(vctx_stack   v) i net then
+          (* This if is required to prove that vctx_gas is stictly decreasing on program_sem's recursion *)
+          (if(vctx_gas   v) \<le>( 0 :: int) then
+              instruction_sem v c i net
+          else  program_sem_t_alt c net (instruction_sem v c i net))
+        else
+          InstructionToEnvironment (ContractFail
+              ((case  inst_stack_numbers i of
+                 (consumed, produced) =>
+                 (if (((int (List.length(vctx_stack   v)) + produced) - consumed) \<le>( 1024 :: int)) then [] else [TooLongStack])
+                  @ (if meter_gas i v c net \<le>(vctx_gas   v) then [] else [OutOfGas])
+               )
+              ))
+              v None
+     ))" 
+by pat_completeness auto
+
+termination program_sem_t_alt
+  apply (relation "measure (\<lambda>(c,net,ir). nat (case ir of InstructionContinue v \<Rightarrow>  vctx_gas v | _ \<Rightarrow> 0))")
+   apply (simp)
+  apply clarsimp
+  subgoal for const net var inst
+    apply (case_tac "instruction_sem var const inst net" ; simp)
+    apply (clarsimp simp add: check_resources_def prod.case_eq_if )
+     apply (frule instruction_sem_continuing)
+     apply (erule (3) inst_sem_gas_consume)
+  apply (simp add: vctx_next_instruction_def split:option.splits)
+    done
+done
+declare program_sem_t_alt.simps[simp del]
+
+lemma program_sem_t_alt_eq_continue:
+"program_sem_t cctx net (InstructionContinue x) = program_sem_t_alt cctx net (InstructionContinue x)"
+thm program_sem_t.induct[where P="\<lambda>x y z. program_sem_t x y z = program_sem_t_alt x y z"]
+ apply(induction
+ rule: program_sem_t.induct[where P="\<lambda>x y z. program_sem_t x y z = program_sem_t_alt x y z"] )
+ apply(case_tac p; clarsimp)
+   apply(simp (no_asm) add:program_sem_t_alt.simps program_sem_t.simps)
+   apply(simp split:option.splits)
+  apply(simp add:program_sem_t_alt.simps program_sem_t.simps)+
+done
+
+lemma program_sem_t_alt_eq:
+"program_sem_t_alt cctx net pr = program_sem_t cctx net pr"
+ apply(case_tac pr)
+   apply(simp add: program_sem_t_alt_eq_continue)
+  apply(simp add: program_sem_t.simps program_sem_t_alt.simps)+
+done
+
 end
