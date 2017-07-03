@@ -656,8 +656,7 @@ shows
  apply(simp)
 done
 
-(*Lemmas for Jump and Jumpi *)
-lemmas uint_word_reverse = word_of_int_inverse[OF refl]
+(* Definition of uniq_stateelm to say that a set have a most one element for some state elements *)
 
 definition
  uniq_stateelm :: "state_element set \<Rightarrow> bool"
@@ -722,6 +721,19 @@ apply(clarsimp simp add: sep_conj_def)
 apply(rule_tac x=x in exI)
 apply(simp add: uniq_stateelm_simps)
 done
+
+lemma uniq_stateelm_subset:
+"Q = P + R \<Longrightarrow> uniq_stateelm Q \<Longrightarrow> uniq_stateelm P"
+by(simp add: uniq_stateelm_simps plus_set_def)
+
+lemma uniq_stateelm_inst_res:
+"uniq_stateelm (instruction_result_as_set co_ctx presult)"
+apply(case_tac presult)
+apply(simp add: as_set_simps uniq_stateelm_simps)+
+done
+
+(*Lemmas for Jump and Jumpi *)
+lemmas uint_word_reverse = word_of_int_inverse[OF refl]
 
 lemma pc_after_inst:
 "triple_inst pre x post \<Longrightarrow> x = (n, i) \<Longrightarrow> reg_inst i \<Longrightarrow>
@@ -1208,12 +1220,196 @@ shows
   in jumpi_sem_non_zero; simp del:sep_lc)
 done
 
+(* NO case *)
+lemma program_sem_to_environment:
+"program_sem st c k n (InstructionToEnvironment x y z) = InstructionToEnvironment x y z"
+ by(induction k; simp add: program_sem.simps)
+
+lemma program_sem_failure:
+"program_sem st c k n (InstructionAnnotationFailure) = InstructionAnnotationFailure"
+ by(induction k; simp add: program_sem.simps)
+
+lemma pc_before_inst:
+"triple_inst pre x post \<Longrightarrow>
+x = (n, i) \<Longrightarrow>
+pre s \<and> uniq_stateelm s \<Longrightarrow>
+PcElm n \<in> s"
+ apply(induct rule: triple_inst.induct; clarsimp)
+ apply(simp add: pure_def)
+done
+
+lemma pc_before_seq:
+"triple_seq pre insts post \<Longrightarrow>
+fst (hd insts) = n \<Longrightarrow>
+insts \<noteq> [] \<Longrightarrow>
+pre s \<and> uniq_stateelm s \<Longrightarrow>
+PcElm n \<in> s"
+ apply(induction rule:triple_seq.induct; clarsimp)
+   apply(simp add: pc_before_inst)
+ apply(simp add: pure_def)
+done
+
+lemma execution_stop:
+"\<forall>v. program_sem stopper co_ctx k net presult \<noteq>
+		InstructionContinue v \<Longrightarrow>
+program_sem_t_alt co_ctx net presult = program_sem stopper co_ctx k net presult"
+ apply(case_tac "program_sem stopper co_ctx k net presult")
+   apply(fastforce)
+  apply(insert program_sem_t_alt_exec_continue[where stopper=stopper and co_ctx=co_ctx and k=k and net=net and presult=presult])
+  apply(drule sym[where t="program_sem_t_alt co_ctx net presult"])
+  apply(clarsimp simp add: program_sem_t_alt.simps)
+ apply(insert program_sem_t_alt_exec_continue[where stopper=stopper and co_ctx=co_ctx and k=k and net=net and presult=presult])
+ apply(drule sym[where t="program_sem_t_alt co_ctx net presult"])
+ apply(clarsimp simp add: program_sem_t_alt.simps)
+done
+
+lemma pc_advance_continue:
+"reg_inst i \<Longrightarrow>
+        program_content (cctx_program co_ctx)
+         (vctx_pc x) = Some i \<Longrightarrow>
+       vctx_next_instruction x co_ctx = Some x2 \<Longrightarrow>
+       check_resources x co_ctx (vctx_stack x) x2 net \<Longrightarrow>
+       instruction_sem x co_ctx x2 net =
+       InstructionContinue x1 \<Longrightarrow>
+       vctx_pc x + int (length (inst_code i)) = vctx_pc x1"
+apply(case_tac x2; simp add: instruction_simps)
+						apply(rename_tac y; case_tac y; clarsimp; simp add: instruction_simps split:list.splits; clarsimp)
+					 apply(rename_tac y; case_tac y; clarsimp; simp add: instruction_simps split:list.splits; clarsimp)
+					apply(rename_tac y; case_tac y; clarsimp; simp add: instruction_simps Let_def M_def split:list.splits if_splits; clarsimp)
+				 apply(rename_tac y; case_tac y; clarsimp; simp add: instruction_simps split:list.splits; clarsimp)
+				apply(split option.splits; clarsimp; simp add: instruction_simps split:list.splits; clarsimp)
+			 apply(rename_tac y; case_tac y; clarsimp)
+						 apply(simp add: instruction_simps M_def split:list.splits; clarsimp)+
+			apply(rename_tac y; case_tac y; clarsimp; simp add: instruction_simps sstore_def vctx_update_storage_def split:list.splits; clarsimp)
+		 apply(rename_tac y; case_tac y; clarsimp; simp add: instruction_simps reg_inst.simps pc_def split:list.splits; clarsimp)
+		apply(rename_tac y; case_tac y; clarsimp; simp add: instruction_simps split:list.splits; clarsimp)
+	 apply(simp add: instruction_simps swap_def split:list.splits option.splits; clarsimp)
+	apply(rename_tac y; case_tac y; simp add: instruction_simps log_def split:list.splits; clarsimp)
+ apply(rename_tac y; case_tac y; clarsimp)
+		 apply(simp add: instruction_simps reg_inst.simps create_def call_def callcode_def delegatecall_def Let_def split:list.splits if_splits; clarsimp)+
+done
+
+lemma stop_after_no_continue:
+notes sep_fun_simps[simp del] last_def[simp del]
+shows
+"insts = (vctx_pc x,i)#xs \<Longrightarrow>
+last_no insts \<Longrightarrow>
+seq_block insts \<Longrightarrow>
+reg_vertex (m, insts, No) \<Longrightarrow>
+\<forall>a b. (a,b)\<in> (set insts) \<longrightarrow>
+   (program_content (cctx_program co_ctx) a = Some b \<or>
+   program_content (cctx_program co_ctx) a = None \<and> b = Misc STOP) \<Longrightarrow>
+cctx_program co_ctx = program_from_cfg cfg \<Longrightarrow>
+\<forall>v. program_sem stopper co_ctx (length insts) net (InstructionContinue x) \<noteq>
+		InstructionContinue v"
+ apply(induction insts arbitrary: i x xs)
+  apply(simp)
+ apply(clarsimp)
+ apply(case_tac xs)
+	apply(simp)
+	apply(thin_tac "(\<And>i x xs. False \<Longrightarrow> _ x i xs \<Longrightarrow> _ x i xs \<Longrightarrow> _ x i xs \<Longrightarrow> \<forall>v. _ x i xs v)")
+  apply(simp add: last_no_def)
+	apply(case_tac i; simp)
+	apply(case_tac x13; simp)
+		apply(simp add: program_sem.simps instruction_simps stop_def split: if_splits)
+    apply(case_tac "program_content (program_from_cfg cfg) (vctx_pc x)";
+          simp add: program_sem.simps instruction_simps stop_def split: option.splits if_splits)
+	 apply(simp add: program_sem.simps instruction_simps ret_def split: if_splits list.splits)
+	apply(simp add: program_sem.simps instruction_simps suicide_def split: if_splits list.splits)
+ apply(drule subst[OF program_sem.simps(2), where P="\<lambda>u. u = _"])
+ apply(simp add: instruction_simps)
+ apply(simp split: if_splits)
+	apply(simp add: program_sem_failure)
+ apply(simp split: option.splits)
+	apply(simp add: program_sem_to_environment)
+ apply(simp add: program_sem_to_environment split: if_splits)
+ apply(clarsimp)
+ apply(drule_tac x="b" in meta_spec; simp)
+ apply(case_tac "(instruction_sem x co_ctx x2 net)")
+	 apply(simp)
+	 apply(drule_tac x=x1 and y=list in meta_spec2)
+	 apply(subgoal_tac "vctx_pc x + int (length (inst_code i)) = vctx_pc x1")
+		apply(simp add: last_no_def reg_block_def reg_vertex_def)
+	 apply(insert pc_advance_continue[where co_ctx=co_ctx])
+   apply(drule_tac x=i and y=x in meta_spec2;
+          drule_tac x=x2 and y=net in meta_spec2; drule_tac x=x1 in meta_spec)
+   apply(simp add: reg_block_def reg_vertex_def)
+   apply(drule_tac x="vctx_pc x" and y=i in spec2; simp)
+   apply(drule conjunct1, erule disjE; simp)
+	apply(simp add: program_sem_failure)
+ apply(simp add: program_sem_to_environment)
+done
+
 lemma cfg_no_sem_t:
 notes sep_fun_simps[simp del]
 shows
 " triple_seq pre insts post \<Longrightarrow> 
   triple_cfg_sem_t cfg pre (n, insts, No) post"
-sorry
+ apply(simp add: triple_cfg_sem_t_def; clarsimp)
+ apply(insert pc_before_seq[where n=n and pre=pre and insts=insts and post=post]; simp)
+ apply(drule triple_seq_soundness)
+ apply(simp add: triple_seq_sem_def)
+ apply(rename_tac co_ctx presult rest net)
+ apply(drule_tac x = co_ctx in spec)
+ apply(clarify)
+ apply(drule_tac x = presult and y = "code (cfg_insts cfg - set insts) \<and>* rest" in spec2)
+ apply(drule mp)
+ apply(simp add: sep_code_code_sep)
+ apply(drule_tac x="\<lambda>x. ()" and y=net in spec2)
+ apply(subgoal_tac "wf_cfg cfg")
+  prefer 2 apply(assumption)
+ apply(subst (asm) wf_cfg_def)
+ apply(simp)
+ apply(drule spec2[where x=n and y=insts])
+ apply(erule conjE)
+ apply(drule spec[where x=No])
+ apply(drule mp, assumption)
+ apply(drule conjunct2, drule conjunct2, drule conjunct1)
+ apply(drule spec)
+ apply(drule conjunct2, drule spec)
+ apply(drule conjunct2)+
+ apply(drule mp, assumption)
+ apply(drule conjunct2)
+ apply(simp add: sep_code_code_sep)
+ apply(subst execution_stop[where k="length insts" and stopper="\<lambda>x. ()"])
+ apply(case_tac presult)
+    apply(case_tac insts)
+     apply(clarsimp)
+    apply(subgoal_tac "a = (vctx_pc x1, snd a)")
+     apply(cut_tac x=x1 and i="snd a" and xs=list and m=n and co_ctx=co_ctx and net=net
+      in stop_after_no_continue[where insts=insts and stopper="\<lambda>x. ()" and cfg=cfg]; simp)
+       apply(simp add: wf_cfg_def)
+      apply(simp add: wf_cfg_def)
+     apply(drule_tac r=rest and s="instruction_result_as_set co_ctx (InstructionContinue x1)"
+        in sep_code_code_sep[where p=pre]; simp)
+     apply(sep_simp simp: code_sep[where rest="pre \<and>* _" and pairs="set _"])
+     apply(simp add: instruction_result_as_set_def)
+     apply(clarsimp)
+     apply(subgoal_tac "CodeElm (aa, ba) \<in> insert (ContinuingElm True) (contexts_as_set x1 co_ctx)")
+      apply(clarsimp)
+     apply(subgoal_tac "CodeElm (aa, ba) \<in> {CodeElm (pos, i) |pos i. (pos, i) \<in> set list}")
+      apply(rule_tac A="{CodeElm (pos, i) |pos i. (pos, i) \<in> set list}" in set_rev_mp; simp)
+     apply(simp)
+    apply(clarsimp)
+    apply(simp add: sep_conj_def[where P=pre])
+    apply(clarsimp)
+    apply(drule_tac x=x in meta_spec)
+    apply(drule meta_mp)
+     apply(simp)
+     apply(rule_tac Q="instruction_result_as_set co_ctx (InstructionContinue x1)"
+           and R=y in uniq_stateelm_subset)
+      apply(simp)
+     apply(rule uniq_stateelm_inst_res)
+    apply(subgoal_tac "PcElm n \<in> instruction_result_as_set co_ctx (InstructionContinue x1)")
+     apply(thin_tac "instruction_result_as_set _ _ = _")
+     apply(drule subst[OF instruction_result_as_set_def, where P="\<lambda>u. PcElm n \<in> u"], simp)
+     apply(simp add: wf_cfg_def, fastforce)
+    apply(simp add: plus_set_def)
+   apply(simp add: program_sem_failure)
+  apply(simp add: program_sem_to_environment)
+ apply(simp)
+done
+
 
 lemma triple_cfg_soundness_t :
 notes sep_fun_simps[simp del]
