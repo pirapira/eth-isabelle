@@ -81,14 +81,14 @@ inductive triple_cfg :: "cfg \<Rightarrow> pred \<Rightarrow> vertex \<Rightarro
   "triple_seq pre insts post \<Longrightarrow>
    triple_cfg cfg pre (n, insts, No) post"
 | cfg_next :
-  "\<lbrakk>cfg_edges cfg n = Some (i, None);
+  "\<lbrakk>i = n + inst_size_list insts;
     cfg_blocks cfg i = Some (bi, ti);
     triple_seq pre insts (program_counter i \<and>* q);
     triple_cfg cfg (program_counter i \<and>* q) (i, bi, ti) post\<rbrakk> \<Longrightarrow>
    triple_cfg cfg pre (n, insts, Next) post"
 | cfg_jump :
-  "\<lbrakk>cfg_edges cfg n = Some (dest, None);
-    cfg_blocks cfg dest = Some (bi, ti);
+  "\<lbrakk>cfg_blocks cfg dest = Some (bi, ti);
+    bi = (dest, Pc JUMPDEST) # bbi;
     triple_seq pre insts
       (program_counter p \<and>* gas_pred g \<and>*
        memory_usage m \<and>* stack_height (Suc h) \<and>*
@@ -102,8 +102,9 @@ inductive triple_cfg :: "cfg \<Rightarrow> pred \<Rightarrow> vertex \<Rightarro
       (dest, bi, ti) post\<rbrakk> \<Longrightarrow>
    triple_cfg cfg pre (n, insts, Jump) post"
 | cfg_jumpi :
-  "\<lbrakk>cfg_edges cfg n = Some (dest, Some j);
+  "\<lbrakk>j = n + 1 + inst_size_list insts;
     cfg_blocks cfg dest = Some (bi, ti);
+    bi = (dest, Pc JUMPDEST) # bbi;
     cfg_blocks cfg j = Some (bj, tj);
     triple_seq pre insts
       ((\<langle> h \<le> 1022  \<and> Ghigh \<le> g \<and> m \<ge> 0\<rangle> \<and>*
@@ -506,7 +507,6 @@ definition triple_cfg_sem_t :: "cfg \<Rightarrow> pred \<Rightarrow> vertex \<Ri
 				no_assertion co_ctx \<longrightarrow>
         (cctx_program co_ctx = program_from_cfg c) \<longrightarrow>
         wf_cfg c \<longrightarrow>
-        cfg_status c = None \<longrightarrow>
         cfg_blocks c (v_ind v) = Some (snd v) \<longrightarrow>
        (pre ** code (cfg_insts c) ** rest) (instruction_result_as_set co_ctx presult) \<longrightarrow>
        ((post ** code (cfg_insts c) ** rest) (instruction_result_as_set co_ctx
@@ -525,8 +525,7 @@ apply(case_tac "n \<in> set xs")
 done
 
 lemma block_in_insts:
-"cfg_status c = None \<Longrightarrow>
-wf_cfg c \<Longrightarrow>
+"wf_cfg c \<Longrightarrow>
 cfg_blocks c n = Some (b, t) \<Longrightarrow>
 set b \<subseteq> cfg_insts c"
 apply(simp add: wf_cfg_def cfg_insts_def)
@@ -581,8 +580,7 @@ lemma code_code_sep_:
 done
 
 lemma code_code_sep:
-"cfg_status cfg = None \<Longrightarrow>
-wf_cfg cfg \<Longrightarrow>
+"wf_cfg cfg \<Longrightarrow>
 cfg_blocks cfg n = Some (insts, ty) \<Longrightarrow>
 (code (set insts) \<and>* code (cfg_insts cfg - set insts) \<and>* r) s =
 (code (cfg_insts cfg) \<and>* r) s"
@@ -592,8 +590,7 @@ cfg_blocks cfg n = Some (insts, ty) \<Longrightarrow>
 done
 
 lemma sep_code_code_sep:
-"cfg_status cfg = None \<Longrightarrow>
-wf_cfg cfg \<Longrightarrow>
+"wf_cfg cfg \<Longrightarrow>
 cfg_blocks cfg n = Some (insts, ty) \<Longrightarrow>
 (p \<and>* code (set insts) \<and>* code (cfg_insts cfg - set insts) \<and>* r) s =
 (p \<and>* code (cfg_insts cfg) \<and>* r) s"
@@ -609,8 +606,7 @@ cfg_blocks cfg n = Some (insts, ty) \<Longrightarrow>
 done
 
 lemma sep_sep_sep_code_code:
-"cfg_status cfg = None \<Longrightarrow>
-wf_cfg cfg \<Longrightarrow>
+"wf_cfg cfg \<Longrightarrow>
 cfg_blocks cfg n = Some (insts, ty) \<Longrightarrow>
 (p \<and>* q \<and>* r \<and>* code (set insts) \<and>* code (cfg_insts cfg - set insts)) s =
 (p \<and>* q \<and>* r \<and>* code (cfg_insts cfg)) s"
@@ -631,7 +627,7 @@ lemma cfg_next_sem_t:
 notes sep_fun_simps[simp del]
 shows
 "\<And>cfg n i ii bi ti pre insts q post.
-       cfg_edges cfg n = Some (i, None) \<Longrightarrow>
+       i = n + inst_size_list insts \<Longrightarrow>
        cfg_blocks cfg i = Some (bi, ti) \<Longrightarrow>
        triple_seq pre insts (program_counter i \<and>* q) \<Longrightarrow>
        triple_cfg_sem_t cfg (program_counter i \<and>* q) (i, bi, ti) post \<Longrightarrow>
@@ -649,9 +645,9 @@ shows
  apply(simp add: sep_code_code_sep)
  apply(drule_tac x = "stopper" in spec)
  apply(drule_tac x = "net" in spec)
- apply(simp add: sep_conj_ac sep_sep_sep_code_code)
+ apply(simp add: code_code_sep)
  apply(drule_tac x = "net" in spec)
- apply (erule_tac P="(post \<and>* rest \<and>* code (cfg_insts cfg))" in back_subst)
+ apply (erule_tac P="(post \<and>* code (cfg_insts cfg) \<and>* rest)" in back_subst)
  apply(subst program_sem_t_alt_exec_continue )
  apply(simp)
 done
@@ -838,47 +834,64 @@ reg_block insts \<Longrightarrow>
  apply (fastforce simp: pure_def)
 done
 
+lemma
+"cfg_blocks cfg n = Some (bi, ti) \<Longrightarrow>
+b \<in> set bi \<Longrightarrow>
+n \<in> set xs \<Longrightarrow>
+b \<in> set (cfg_pos_insts (cfg_vertices cfg xs))"
+ apply(induction xs; simp)
+ apply(case_tac "n=a";simp)
+  apply(case_tac ti)
+     apply(simp)
+    apply(clarsimp)
+    apply(induction bi)
+     apply(simp)
+    apply(simp)
+    apply(case_tac bi; clarsimp)
+oops
+
+lemma
+"cfg_blocks cfg n = Some (bi, ti) \<Longrightarrow>
+ bi = (n, i) # bbi \<Longrightarrow>
+ wf_cfg cfg \<Longrightarrow>
+ program_content (program_from_cfg cfg) n = Some i"
+ apply(simp add: program_from_cfg_def cfg_content_def)
+ apply(induction "cfg_indexes cfg")
+  apply(simp add: wf_cfg_def)
+ apply(simp)
+oops
+
 (* JUMP case *)
 lemma extract_info_jump:
-"cfg_edges cfg n = Some (dest, None) \<Longrightarrow>
- cfg_blocks cfg dest = Some (bi, ti) \<Longrightarrow>
+"cfg_blocks cfg dest = Some (bi, ti) \<Longrightarrow>
  wf_cfg cfg \<Longrightarrow>
- cfg_status cfg = None \<Longrightarrow>
  cfg_blocks cfg n = Some (insts, Jump) \<Longrightarrow>
 uint (word_of_int dest::w256) = dest \<and>
-program_content (program_from_cfg cfg) dest = Some (Pc JUMPDEST) \<and>
 program_content (program_from_cfg cfg) (n + inst_size_list insts) = Some (Pc JUMP)"
  apply(rule conjI)
   apply(subst (asm) wf_cfg_def)
-  apply(drule mp, assumption)
   apply(drule spec2[where x="dest" and y="bi"])
   apply(drule spec2[where x="ti" and y="0"])
-  apply(drule spec2[where x="0" and y="0"])
   apply(drule conjunct1)
   apply(drule mp, assumption)
   apply(erule conjE)+
   apply(simp add: uint_word_reverse)
  apply(subst (asm) wf_cfg_def)
- apply(drule mp, assumption)
  apply(drule spec2[where x=n and y=insts])
- apply(drule spec2[where x=Jump and y=dest])
- apply(drule spec2[where x="n + inst_size_list insts" and y=0])
- apply(drule conjunct2)
+ apply(drule spec2[where x=Jump and y="n + inst_size_list insts"])
  apply(drule conjunct2)
  apply(drule conjunct1)
- apply(drule mp, assumption)
  apply(simp)
 done
 
 lemma jump_sem:
 notes sep_fun_simps[simp del]
 shows
-"cfg_edges cfg n = Some (dest, None) \<Longrightarrow>
- cfg_blocks cfg dest = Some (bi, ti) \<Longrightarrow>
+"cfg_blocks cfg dest = Some (bi, ti) \<Longrightarrow>
+ bi = (dest, Pc JUMPDEST) # bbi \<Longrightarrow>
  no_assertion co_ctx \<Longrightarrow>
  cctx_program co_ctx = program_from_cfg cfg \<Longrightarrow>
  wf_cfg cfg \<Longrightarrow>
- cfg_status cfg = None \<Longrightarrow>
  cfg_blocks cfg n = Some (insts, Jump) \<Longrightarrow>
        (code (cfg_insts cfg) \<and>*
         (continuing \<and>*
@@ -909,9 +922,9 @@ shows
    apply(clarsimp)
    apply(simp add: instruction_sem_simps jump_def inst_numbers_simps)
    apply (sep_simp simp: continuing_sep memory_usage_sep pure_sep gas_pred_sep stack_sep stack_height_sep program_counter_sep)+
-   apply(clarsimp)
+   apply(clarsimp split: option.splits)
    apply(erule_tac P="restb \<and>* code (cfg_insts cfg) \<and>* rest" in back_subst)
-   apply(auto simp add: as_set_simps)[1]
+   apply(auto simp add: as_set_simps)[1
   apply(simp)+
 done
 
@@ -983,7 +996,6 @@ lemma extract_info_jumpi:
        cfg_blocks cfg dest = Some (bi, ti) \<Longrightarrow>
        cfg_blocks cfg j = Some (bj, tj) \<Longrightarrow>
        wf_cfg cfg \<Longrightarrow>
-       cfg_status cfg = None \<Longrightarrow>
        cfg_blocks cfg n = Some (insts, Jumpi) \<Longrightarrow>
 dest = uint (word_of_int dest::256 word) \<and>
 program_content (program_from_cfg cfg) (n + inst_size_list insts) = Some (Pc JUMPI) \<and>
@@ -1036,7 +1048,6 @@ shows
        no_assertion co_ctx \<Longrightarrow>
        cctx_program co_ctx = program_from_cfg cfg \<Longrightarrow>
        wf_cfg cfg \<Longrightarrow>
-       cfg_status cfg = None \<Longrightarrow>
        cfg_blocks cfg n = Some (insts, Jumpi) \<Longrightarrow>
        (code (cfg_insts cfg) \<and>*
         (continuing \<and>*
@@ -1090,7 +1101,6 @@ shows
        no_assertion co_ctx \<Longrightarrow>
        cctx_program co_ctx = program_from_cfg cfg \<Longrightarrow>
        wf_cfg cfg \<Longrightarrow>
-       cfg_status cfg = None \<Longrightarrow>
        cfg_blocks cfg n = Some (insts, Jumpi) \<Longrightarrow>
        (code (cfg_insts cfg) \<and>*
         (continuing \<and>*
