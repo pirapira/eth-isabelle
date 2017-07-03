@@ -5,6 +5,7 @@ imports Main
  "../sep_algebra/EvmSep"
  "../sep_algebra/Sep_Tactics"
  "~~/src/HOL/Eisbach/Eisbach"
+
 begin
 
 lemma not_at_least_one :
@@ -477,7 +478,6 @@ where
  (\<exists> reasons a b.
               r = InstructionToEnvironment (ContractFail reasons) a b
               \<and> set reasons \<subseteq> allowed))"
-
 
 definition triple ::
  "network \<Rightarrow> failure_reason set \<Rightarrow> (state_element set \<Rightarrow> bool) \<Rightarrow> (int * inst) set \<Rightarrow> (state_element set \<Rightarrow> bool) \<Rightarrow> bool"

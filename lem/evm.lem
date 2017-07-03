@@ -1806,9 +1806,9 @@ let check_resources v c s i net =
   match inst_stack_numbers i with
   | (consumed, produced) ->
     (intFromNat (length s) + produced - consumed <= 1024) &&
-    (meter_gas i v c net <= v.vctx_gas)
+    (meter_gas i v c net <= v.vctx_gas) &&
+    (0 <= v.vctx_memory_usage)
   end
-
 
 val subtract_gas : integer -> integer -> instruction_result -> instruction_result
 let subtract_gas consumption memory_usage orig =
@@ -1972,9 +1972,8 @@ let check_annotations v c =
   let annots : list annotation = c.cctx_program.program_annotation v.vctx_pc in
   List.all (fun annot -> annot (build_aenv v c)) annots
 
-
-val next_state: (instruction_result -> unit) -> constant_ctx -> network -> instruction_result -> instruction_result
-let next_state stopper c net pr =
+val next_state: (instruction_result -> unit) -> constant_ctx -> instruction_result -> instruction_result
+let next_state stopper c pr =
   match pr with
   | InstructionToEnvironment _ _ _ ->
     let () = stopper pr in pr
@@ -1984,17 +1983,14 @@ let next_state stopper c net pr =
      match vctx_next_instruction v c with
       | Nothing -> InstructionToEnvironment (ContractFail [ShouldNotHappen]) v Nothing
       | Just i ->
-        (*
-        prerr_endline ("Inst " ^ String.concat "," (List.map (fun x -> Z.format "%x" (word8ToNatural x)) (inst_code i)));
-        *)
-        if check_resources v c v.vctx_stack i net then
-          instruction_sem v c i net
+        if check_resources v c v.vctx_stack i then
+          instruction_sem v c i
         else
           InstructionToEnvironment (ContractFail
               (match inst_stack_numbers i with
                | (consumed, produced) ->
                  (if (intFromNat (length v.vctx_stack) + produced - consumed <= 1024) then [] else [TooLongStack])
-                  ++ (if meter_gas i v c net <= v.vctx_gas then [] else [OutOfGas])
+                  ++ (if meter_gas i v c <= v.vctx_gas then [] else [OutOfGas])
                end
               ))
               v Nothing
@@ -2015,6 +2011,35 @@ match fuel with
  | fuel_pred + 1 -> program_sem stopper c fuel_pred net (next_state stopper c net pr)
 end
 declare termination_argument program_sem = automatic
+
+val program_sem_t: constant_ctx -> network -> instruction_result -> instruction_result
+let rec program_sem_t c net p =
+  match p with
+  | InstructionToEnvironment _ _ _ -> p
+  | InstructionAnnotationFailure -> p
+  | InstructionContinue v ->
+     if not (check_annotations v c) then InstructionAnnotationFailure else
+     match vctx_next_instruction v c with
+      | Nothing -> InstructionToEnvironment (ContractFail [ShouldNotHappen]) v Nothing
+      | Just i ->
+        if check_resources v c v.vctx_stack i net then
+          (* This if is required to prove that vctx_gas is stictly decreasing on program_sem's recursion *)
+          (if v.vctx_gas <= 0 then
+              instruction_sem v c i net
+          else  program_sem_t c net (instruction_sem v c i net))
+        else
+          InstructionToEnvironment (ContractFail
+              (match inst_stack_numbers i with
+               | (consumed, produced) ->
+                 (if (intFromNat (length v.vctx_stack) + produced - consumed <= 1024) then [] else [TooLongStack])
+                  ++ (if meter_gas i v c net <= v.vctx_gas then [] else [OutOfGas])
+               end
+              ))
+              v Nothing
+     end
+  end
+
+declare termination_argument program_sem_t = manual
 
 (* subsection {* Account's State *} *)
 
