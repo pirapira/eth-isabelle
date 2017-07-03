@@ -263,4 +263,58 @@ definition program_from_cfg:: "cfg \<Rightarrow> program" where
   program_annotation = (\<lambda> _ .  [])
 |) )"
 
+(* Define how CFGs should be for the program logic to be sound *)
+
+fun reg_inst :: "inst \<Rightarrow> bool" where
+ "reg_inst (Pc JUMP) = False"
+| "reg_inst (Pc JUMPI) = False"
+|"reg_inst (Pc _) = True"
+|"reg_inst (Misc STOP) = False"
+|"reg_inst (Misc RETURN) = False"
+|"reg_inst (Misc SUICIDE) = False"
+|"reg_inst (Misc _) = True"
+|"reg_inst _ = True"
+
+definition reg_block :: "pos_inst list \<Rightarrow> bool" where
+"reg_block xs = list_all reg_inst (map snd xs)"
+
+definition reg_vertex :: "vertex \<Rightarrow> bool" where
+"reg_vertex v = (case v_ty v of
+No \<Rightarrow> reg_block (butlast (v_insts v))
+| _ \<Rightarrow> reg_block (v_insts v))"
+
+fun seq_block :: "pos_inst list \<Rightarrow> bool" where 
+"seq_block [] = True"
+| "seq_block [x] = True"
+| "seq_block (x#y#xs) = (fst y = fst x + inst_size (snd x) \<and> seq_block (y#xs))"
+
+definition last_no::"pos_inst list \<Rightarrow> bool" where
+"last_no insts == snd (last insts) \<in> {Misc STOP, Misc RETURN, Misc SUICIDE}"
+
+definition wf_cfg:: "cfg \<Rightarrow> bool" where
+"wf_cfg c == cfg_status c = None \<longrightarrow>
+(\<forall>n insts ty m i j.
+(cfg_blocks c n = Some (insts, ty) \<longrightarrow>
+	n \<in> set (cfg_indexes c) \<and> reg_vertex (n, insts, ty) \<and>
+  insts \<noteq> [] \<and> (fst (hd insts) = n) \<and> seq_block insts \<and>
+  0 < n \<and> n < 2 ^ 256) \<and>
+(cfg_blocks c n = Some (insts, Next) \<longrightarrow>
+	cfg_edges c n = Some (m, None) \<longrightarrow>
+	(m = n + inst_size_list insts)) \<and>
+(cfg_blocks c n = Some (insts, Jump) \<longrightarrow>
+	i = n + inst_size_list insts \<longrightarrow>
+	cfg_edges c n = Some (m, None) \<longrightarrow>
+	(program_content (program_from_cfg c) m = Some (Pc JUMPDEST) \<and>
+	 program_content (program_from_cfg c) i = Some (Pc JUMP))) \<and>
+(cfg_blocks c n = Some (insts, Jumpi) \<longrightarrow>
+	i = n + inst_size_list insts \<longrightarrow>
+	cfg_edges c n = Some (m, Some j) \<longrightarrow>
+	(program_content (program_from_cfg c) m = Some (Pc JUMPDEST) \<and>
+	 program_content (program_from_cfg c) i = Some (Pc JUMPI) \<and>
+	 j = i + 1)) \<and>
+(cfg_blocks c n = Some (insts, No) \<longrightarrow>
+	(cfg_edges c n = None \<and>
+   last_no insts))
+)"
+
 end
