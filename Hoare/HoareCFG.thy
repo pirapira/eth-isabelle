@@ -625,13 +625,6 @@ cfg_blocks cfg n = Some (insts, ty) \<Longrightarrow>
  apply(simp only: code_code_sep)
 done
 
-lemma cfg_no_sem_t:
-notes sep_fun_simps[simp del]
-shows
-" triple_seq pre insts post \<Longrightarrow> 
-  triple_cfg_sem_t cfg pre (n, insts, No) post"
-sorry
-
 lemma cfg_next_sem_t:
 notes sep_fun_simps[simp del]
 shows
@@ -641,7 +634,25 @@ shows
        triple_seq pre insts (program_counter i \<and>* q) \<Longrightarrow>
        triple_cfg_sem_t cfg (program_counter i \<and>* q) (i, bi, ti) post \<Longrightarrow>
        triple_cfg_sem_t cfg pre (n, insts, Next) post"
-sorry
+ apply(drule triple_seq_soundness)
+ apply(simp only: triple_seq_sem_def triple_cfg_sem_t_def)
+ apply(rule allI)+
+ apply(clarify)
+ apply(rename_tac co_ctx presult rest net stopper)
+ apply(drule_tac x = "co_ctx" in spec)+
+ apply(drule_tac x = "(program_sem stopper co_ctx (length insts) net presult)" in spec)
+ apply(drule_tac x = "rest" in spec)
+ apply(drule_tac x = presult in spec)
+ apply(drule_tac x = "code (cfg_insts cfg - set insts) \<and>* rest" in spec)
+ apply(simp add: sep_code_code_sep)
+ apply(drule_tac x = "stopper" in spec)
+ apply(drule_tac x = "net" in spec)
+ apply(simp add: sep_conj_ac sep_sep_sep_code_code)
+ apply(drule_tac x = "net" in spec)
+ apply (erule_tac P="(post \<and>* rest \<and>* code (cfg_insts cfg))" in back_subst)
+ apply(subst program_sem_t_alt_exec_continue )
+ apply(simp)
+done
 
 lemma cfg_jump_sem_t:
 notes sep_fun_simps[simp del]
@@ -700,6 +711,13 @@ shows
         triple_cfg_sem_t cfg (r \<and>* program_counter j) (j, bj, tj)
          post) \<Longrightarrow>
        triple_cfg_sem_t cfg pre (n, insts, Jumpi) post"
+sorry
+
+lemma cfg_no_sem_t:
+notes sep_fun_simps[simp del]
+shows
+" triple_seq pre insts post \<Longrightarrow> 
+  triple_cfg_sem_t cfg pre (n, insts, No) post"
 sorry
 
 lemma triple_cfg_soundness_t :
