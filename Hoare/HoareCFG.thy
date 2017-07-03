@@ -455,6 +455,49 @@ lemma program_sem_t_alt_eq:
   apply(simp add: program_sem_t.simps program_sem_t_alt.simps)+
 done
 
+(* program_sem_t_alt never returns InstructionContinue  *)
+
+lemma program_sem_no_gas_not_continuing_1:
+  "\<lbrakk>vctx_gas var \<le> 0 ; 0\<le> vctx_memory_usage var \<rbrakk> \<Longrightarrow>
+\<forall>v. program_sem_t_alt const net (InstructionContinue var) \<noteq> InstructionContinue v"
+ by(simp add: program_sem_t_alt_eq program_sem_no_gas_not_continuing)
+
+(* How to compose program_sem and program_sem_t_alt *)
+
+lemma program_sem_t_alt_exec_continue_1:
+" program_sem_t_alt co_ctx net
+   (program_sem stopper co_ctx (Suc 0) net presult) =
+  program_sem_t_alt co_ctx net presult"
+ apply(case_tac presult)
+   apply(simp add: program_sem.simps program_sem_t_alt.simps)
+   apply(insert program_sem_no_gas_not_continuing_1)[1]
+   apply(drule_tac x=x1 and y=co_ctx in meta_spec2)
+   apply(drule_tac x=net in meta_spec)
+   apply(simp split: option.splits)
+   apply (rule conjI)
+    apply (simp add: program_sem_t_alt.simps)
+   apply clarsimp
+   apply (simp add: program_sem_t_alt.simps)
+   apply(clarsimp)
+   apply(simp add: check_resources_def)
+   apply(case_tac "inst_stack_numbers x2"; clarsimp)
+   apply(case_tac "instruction_sem x1 co_ctx x2 net")
+     apply(drule_tac x=x1a in spec; simp)
+    apply (simp add: program_sem_t_alt.simps)+
+  apply (simp add: program_sem_t_alt.simps program_sem.simps)+
+done
+
+lemma program_sem_t_alt_exec_continue:
+notes sep_fun_simps[simp del]
+shows
+"program_sem_t_alt co_ctx net (program_sem stopper co_ctx k net presult) =
+       program_sem_t_alt co_ctx net presult"
+ apply(induction k arbitrary: presult)
+  apply(simp add: program_sem.simps)
+ apply(drule_tac x="program_sem stopper co_ctx 1 net presult" in meta_spec)
+ apply(simp add:program_sem_t_alt_exec_continue_1)
+done
+
 (* Define the semantic of triple_cfg using program_sem_t and prove it sound *)
 
 definition triple_cfg_sem_t :: "cfg \<Rightarrow> pred \<Rightarrow> vertex \<Rightarrow> pred \<Rightarrow> bool" where
