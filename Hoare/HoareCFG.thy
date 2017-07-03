@@ -826,6 +826,83 @@ reg_block insts \<Longrightarrow>
  apply (fastforce simp: pure_def)
 done
 
+(* JUMP case *)
+lemma extract_info_jump:
+"cfg_edges cfg n = Some (dest, None) \<Longrightarrow>
+ cfg_blocks cfg dest = Some (bi, ti) \<Longrightarrow>
+ wf_cfg cfg \<Longrightarrow>
+ cfg_status cfg = None \<Longrightarrow>
+ cfg_blocks cfg n = Some (insts, Jump) \<Longrightarrow>
+uint (word_of_int dest::w256) = dest \<and>
+program_content (program_from_cfg cfg) dest = Some (Pc JUMPDEST) \<and>
+program_content (program_from_cfg cfg) (n + inst_size_list insts) = Some (Pc JUMP)"
+ apply(rule conjI)
+  apply(subst (asm) wf_cfg_def)
+  apply(drule mp, assumption)
+  apply(drule spec2[where x="dest" and y="bi"])
+  apply(drule spec2[where x="ti" and y="0"])
+  apply(drule spec2[where x="0" and y="0"])
+  apply(drule conjunct1)
+  apply(drule mp, assumption)
+  apply(erule conjE)+
+  apply(simp add: uint_word_reverse)
+ apply(subst (asm) wf_cfg_def)
+ apply(drule mp, assumption)
+ apply(drule spec2[where x=n and y=insts])
+ apply(drule spec2[where x=Jump and y=dest])
+ apply(drule spec2[where x="n + inst_size_list insts" and y=0])
+ apply(drule conjunct2)
+ apply(drule conjunct2)
+ apply(drule conjunct1)
+ apply(drule mp, assumption)
+ apply(simp)
+done
+
+lemma jump_sem:
+notes sep_fun_simps[simp del]
+shows
+"cfg_edges cfg n = Some (dest, None) \<Longrightarrow>
+ cfg_blocks cfg dest = Some (bi, ti) \<Longrightarrow>
+ no_assertion co_ctx \<Longrightarrow>
+ cctx_program co_ctx = program_from_cfg cfg \<Longrightarrow>
+ wf_cfg cfg \<Longrightarrow>
+ cfg_status cfg = None \<Longrightarrow>
+ cfg_blocks cfg n = Some (insts, Jump) \<Longrightarrow>
+       (code (cfg_insts cfg) \<and>*
+        (continuing \<and>*
+         gas_pred g \<and>*
+         program_counter (n + inst_size_list insts) \<and>*
+         stack_height (Suc h) \<and>*
+         stack h (word_of_int dest) \<and>*
+         memory_usage m \<and>*
+         \<langle> h \<le> 1023 \<and> Gmid \<le> g \<and> 0 \<le> m \<rangle> \<and>*
+         restb) \<and>*
+        rest)
+        (instruction_result_as_set co_ctx presult) \<Longrightarrow>
+       (code (cfg_insts cfg) \<and>*
+        (continuing \<and>*
+         program_counter dest \<and>*
+         stack_height h \<and>*
+         gas_pred (g - Gmid) \<and>*
+         memory_usage m \<and>* restb) \<and>*
+        rest)
+        (instruction_result_as_set co_ctx
+          (program_sem stopper co_ctx (Suc 0) net
+            presult))"
+ apply (sep_simp_asm simp: continuing_sep memory_usage_sep pure_sep gas_pred_sep stack_sep stack_height_sep program_counter_sep )
+ apply(clarsimp)
+ apply(insert extract_info_jump[where cfg=cfg and n=n and dest=dest and bi=bi and ti=ti and insts=insts]; clarsimp)
+ apply(case_tac presult)
+   apply(simp add: program_sem.simps instruction_sem_simps inst_numbers_simps)
+   apply(clarsimp)
+   apply(simp add: instruction_sem_simps jump_def inst_numbers_simps)
+   apply (sep_simp simp: continuing_sep memory_usage_sep pure_sep gas_pred_sep stack_sep stack_height_sep program_counter_sep)+
+   apply(clarsimp)
+   apply(erule_tac P="restb \<and>* code (cfg_insts cfg) \<and>* rest" in back_subst)
+   apply(auto simp add: as_set_simps)[1]
+  apply(simp)+
+done
+
 lemma cfg_jump_sem_t:
 notes sep_fun_simps[simp del]
 shows
@@ -850,7 +927,38 @@ shows
          memory_usage m \<and>* stack_height h \<and>* continuing \<and>* rest)
         (dest, bi, ti) post \<Longrightarrow>
        triple_cfg_sem_t cfg pre (n, insts, Jump) post"
-sorry
+ apply(simp only: triple_cfg_sem_t_def; clarify)
+ apply(cut_tac m=p and n=n
+			 and post=" (gas_pred g \<and>* memory_usage m \<and>* stack_height (Suc h) \<and>*
+         stack h (word_of_int dest) \<and>* \<langle> h \<le> 1023 \<and> Gmid \<le> g \<and> 0 \<le> m \<rangle> \<and>* continuing \<and>* rest)"
+			 in pc_after_seq)
+				apply(assumption)
+			apply(simp add: inst_res_as_set_uniq_stateelm)
+		 apply(simp add: wf_cfg_def)+
+	apply(simp add: reg_vertex_def)
+	apply(drule_tac x=n and y=insts in spec2; drule conjunct1)
+	apply(drule_tac x=Jump in spec; simp)
+ apply(drule triple_seq_soundness)
+ apply(simp only: triple_seq_sem_def)
+ apply(rename_tac cfg n dest bi ti pre insts p g m h restb post co_ctx presult rest
+       net stopper)
+ apply(drule_tac x = "co_ctx" in spec)+
+ apply(drule_tac x = "(program_sem stopper co_ctx (Suc (length insts)) net presult)" and y = "rest" in spec2)
+ apply(drule_tac x = "presult" and y = "code (cfg_insts cfg - set insts) \<and>* rest" in spec2)
+ apply(clarsimp)
+ apply(simp add: sep_code_code_sep )
+ apply(drule_tac x = "stopper" and y= net in spec2)
+ apply (erule impE)
+  prefer 2
+  apply(drule_tac x = "net" in spec)
+  apply (erule_tac P="post \<and>* code (cfg_insts cfg) \<and>* rest" in back_subst)
+  apply(subst program_sem_t_alt_exec_continue; simp )
+  apply(simp add: code_code_sep)
+  apply(drule_tac co_ctx=co_ctx and stopper=stopper and insts=insts and net=net and
+    presult="(program_sem stopper co_ctx (length insts) net presult)" and h=h
+    and g=g and m=m and rest=rest
+   in jump_sem; simp)
+done
 
 lemma cfg_jumpi_sem_t:
 notes sep_fun_simps[simp del]
