@@ -35,6 +35,71 @@ lemma lst_longer [dest!]:
   "length l = Suc h \<Longrightarrow> \<exists> a t. l = a # t \<and> length t = h"
 	by (simp add: length_Suc_conv)
 
+	  
+lemma rev_append  :
+  "(rev l ! a \<noteq> (rev l @ l') ! a) =
+   ((a \<ge> length l) \<and> (rev l) ! a \<noteq> l' ! (a - length l))"
+apply(simp add: nth_append)
+done
+
+lemma rev_append_inv  :
+  "((rev l @ l') ! a \<noteq> rev l ! a) =
+   ((a \<ge> length l) \<and> (rev l) ! a \<noteq> l' ! (a - length l))"
+apply(auto simp add: nth_append)
+done
+
+lemma rev_rev_append  :
+  "((rev l @ a0) ! idx \<noteq> (rev l @ a1) ! idx)
+   =
+   (idx \<ge> length l \<and> a0 ! (idx - length l) \<noteq> a1 ! (idx - length l))"
+apply(auto simp add: nth_append)
+done
+
+lemma over_one :
+ "length lst = a \<Longrightarrow> (rev lst @ (v # l)) ! a = v"
+apply(simp add: nth_append)
+done
+
+lemma over_one_rev  :
+  "((rev l @ (w # x)) ! idx \<noteq> w) =
+    (idx < (length l) \<and> (rev l) ! idx \<noteq> w ) \<or> ( idx > (length l) \<and> x ! (idx - length l - 1) \<noteq> w)"
+apply(simp add: nth_append)
+by (simp add: nth_Cons')
+
+lemma over_one_rev'  :
+  "((rev l @ [w, v]) ! idx \<noteq> w) =
+    (idx < (length l) \<and> (rev l) ! idx \<noteq> w ) \<or> ( idx > (length l) \<and> [v] ! (idx - length l - 1) \<noteq> w)"
+apply(auto simp add: nth_append nth_Cons')
+done
+
+
+lemma over_two :
+ "Suc (length lst) = a \<Longrightarrow> (rev lst @ (v # w # l)) ! a = w"
+apply(simp add: nth_append)
+done
+
+lemma over_two_rev  :
+  "((rev l @ (w #  v # x)) ! idx \<noteq> v) =
+    (idx \<le> (length l) \<and> (rev l @ [w]) ! idx \<noteq> v ) \<or> ( idx > Suc (length l) \<and> x ! (idx - length l - 2) \<noteq> v )"
+apply(simp add: nth_append)
+(* sledgehammer *)
+by (metis Suc_diff_Suc diff_self_eq_0 less_antisym linorder_neqE_nat nth_Cons_0 nth_Cons_Suc)
+    
+lemmas rev_nth_simps =
+  lookup_over
+  lookup_over1
+  short_match
+  rev_append
+  rev_append_inv
+  rev_rev_append
+  over_one
+  over_one_rev
+  over_one_rev'
+  over_two
+  over_two_rev
+
+	  
+	  
 lemma advance_pc_advance:
   " vctx_next_instruction x1 co_ctx = Some i \<Longrightarrow>
     inst_size i = 1 \<Longrightarrow>
@@ -93,6 +158,13 @@ lemma memory_element_means:
    (vctx_memory v (fst addrw) = snd addrw)"
   by (case_tac addrw; auto simp: as_set_simps)
 
+lemma balance_all:
+  "P \<in> balance_as_set b \<Longrightarrow> P \<in> range BalanceElm"
+by (fastforce simp add: balance_as_set_def)
+
+lemma not_balance_all:
+  "p \<notin> range BalanceElm \<Longrightarrow> p \<notin> balance_as_set b"
+by (fastforce simp add: balance_as_set_def)
 
 lemma pc_not_balance:
   "PcElm p \<notin> balance_as_set b"
@@ -143,6 +215,89 @@ lemma sent_data_length_means:
   "SentDataLengthElm x15 \<in> variable_ctx_as_set x1 = (x15 = length (vctx_data_sent x1))"
   by (auto simp: as_set_simps)
 
+lemma block_number_elm_c_means :
+"BlockNumberElm x22 \<in> contexts_as_set x1 co_ctx =
+ (x22 = block_number (vctx_block x1))"
+by (simp add: as_set_simps)
+
+lemma balance_elm_means :
+ "BalanceElm p \<in> variable_ctx_as_set v = (vctx_balance v (fst p) = (snd p))"
+  by (case_tac p; auto simp: as_set_simps)
+
+lemma stack_as_set_cons_means:
+  "x \<in> stack_as_set (w # lst) =
+   (x = StackHeightElm (Suc (length lst)) \<or>
+   x = StackElm (length lst, w) \<or>
+   x \<in> stack_as_set lst - {StackHeightElm (length lst)})"
+ by (auto simp add: as_set_simps rev_nth_simps)
+
+
+lemma ext_program_size_elm_means :
+   "ExtProgramSizeElm ab \<in> variable_ctx_as_set v =
+    (program_length (vctx_ext_program v (fst ab)) = snd ab)"
+apply(auto simp add: as_set_simps)
+apply(case_tac ab; auto)
+done
+
+lemma ext_program_size_c_means :
+  "ExtProgramSizeElm ab \<in> contexts_as_set v co_ctx =
+   (program_length (vctx_ext_program v (fst ab)) = snd ab)"
+  apply (rule iffI)
+  apply(clarsimp simp add: as_set_simps )+
+  apply (rule exI[where x="(fst ab)"])
+    apply clarsimp
+  done
+
+lemma ext_program_elm_means   :
+  "ExtProgramElm abc \<in> variable_ctx_as_set v =
+   (program_as_natural_map ((vctx_ext_program v) (fst abc)) (fst (snd abc)) = (snd (snd abc)))"
+apply(case_tac abc ; auto simp add: as_set_simps)
+done
+
+lemma ext_program_c_means :
+  "ExtProgramElm abc \<in> contexts_as_set v co_ctx =
+   (program_as_natural_map ((vctx_ext_program v) (fst abc)) (fst (snd abc)) = (snd (snd abc)))"
+  by(case_tac abc, auto simp add: as_set_simps)
+lemma blockhash_elm_means :
+  "BlockhashElm ab \<in> variable_ctx_as_set x1 =
+   (block_blockhash (vctx_block x1) (fst ab) = snd ab)"
+  by(case_tac ab; auto simp add: as_set_simps vctx_advance_pc_def)
+
+lemma blockhash_c_means :
+  "BlockhashElm ab \<in> contexts_as_set x1 co_ctx =
+   (block_blockhash (vctx_block x1) (fst ab) = snd ab)"
+  by(case_tac ab; auto simp add: as_set_simps vctx_advance_pc_def)
+
+lemma coinbase_elm_means :
+  "CoinbaseElm v \<in> variable_ctx_as_set x2 =
+   ((block_coinbase (vctx_block x2)) = v)"
+  by(case_tac v; auto simp add: as_set_simps)
+
+lemma coinbase_c_means :
+  "CoinbaseElm x23 \<in> contexts_as_set x1 co_ctx =
+  (block_coinbase (vctx_block x1) = x23)"
+by (auto simp add: as_set_simps)
+
+lemma timestamp_elm_means :
+  "TimestampElm t \<in> variable_ctx_as_set x1 =
+   (t = block_timestamp (vctx_block x1))"
+by (auto simp add: as_set_simps vctx_advance_pc_def)
+
+lemma timestamp_c_means :
+ "TimestampElm t \<in> contexts_as_set x1 co_ctx =
+   (t = block_timestamp (vctx_block x1))"
+by (auto simp add: as_set_simps vctx_advance_pc_def)
+
+lemma difficulty_elm_means :
+  "DifficultyElm x24 \<in> variable_ctx_as_set x1 =
+   (x24 = block_difficulty (vctx_block x1))"
+by (auto simp add: as_set_simps vctx_advance_pc_def)
+
+lemma difficulty_c_means :
+  "DifficultyElm x24 \<in> contexts_as_set x1 co_ctx =
+   (x24 = block_difficulty (vctx_block x1))"
+  by (auto simp add: as_set_simps vctx_advance_pc_def)
+    
 lemmas stateelm_means_simps = 
   stack_height_element_means
   stack_element_means
@@ -159,10 +314,23 @@ lemmas stateelm_means_simps =
   sent_value_means
   sent_data_means
   sent_data_length_means
-  
-  
-  
-  
+  caller_elm_means
+  block_number_elm_c_means
+  balance_elm_means
+  stack_as_set_cons_means
+  ext_program_size_elm_means
+  ext_program_size_c_means
+  ext_program_elm_means
+  ext_program_c_means
+  blockhash_elm_means
+  blockhash_c_means
+  coinbase_elm_means
+  coinbase_c_means
+  timestamp_elm_means
+  timestamp_c_means
+  difficulty_elm_means
+  difficulty_c_means
+
 lemma inst_size_nonzero[simp]:
  "inst_size a \<noteq> 0"
 apply(simp add: inst_size_def)
@@ -174,11 +342,19 @@ apply(case_tac l; simp)
 apply(split if_splits; auto)
 done
 
-lemma advance_pc_different:
+lemma advance_pc_different[simp]:
   "vctx_pc (vctx_advance_pc co_ctx x1) \<noteq> vctx_pc x1"
 apply(simp add: vctx_advance_pc_def)
 apply(case_tac "vctx_next_instruction x1 co_ctx"; auto)
 done
+
+lemma stateelm_program_all:
+  "P \<in> program_as_set ctx \<Longrightarrow> P \<in> range CodeElm"
+by (auto simp add: program_as_set_def)
+
+lemma stateelm_not_program_all:
+  "P \<notin> range CodeElm \<Longrightarrow> P \<notin> program_as_set ctx"
+by (auto simp add: program_as_set_def)
 
 lemma stack_elm_not_program:
   "StackElm x2 \<notin> program_as_set (cctx_program co_ctx)"
@@ -218,64 +394,13 @@ apply(simp add: constant_ctx_as_set_def program_as_set_def)
 done
 
 
-lemma code_elm_not_variable :
+lemma code_elm_not_variable[simp] :
  "CodeElm c \<notin> variable_ctx_as_set v"
   by (auto simp: as_set_simps)
 
-lemma this_account_elm_not_variable:
-  "ThisAccountElm t
-           \<notin> variable_ctx_as_set v"
+lemma this_account_elm_not_variable [simp]:
+  "ThisAccountElm t \<notin> variable_ctx_as_set v"
  by (auto simp: as_set_simps)
-
-lemma rev_append  :
-  "(rev l ! a \<noteq> (rev l @ l') ! a) =
-   ((a \<ge> length l) \<and> (rev l) ! a \<noteq> l' ! (a - length l))"
-apply(simp add: nth_append)
-done
-
-lemma rev_append_inv  :
-  "((rev l @ l') ! a \<noteq> rev l ! a) =
-   ((a \<ge> length l) \<and> (rev l) ! a \<noteq> l' ! (a - length l))"
-apply(auto simp add: nth_append)
-done
-
-lemma rev_rev_append  :
-  "((rev l @ a0) ! idx \<noteq> (rev l @ a1) ! idx)
-   =
-   (idx \<ge> length l \<and> a0 ! (idx - length l) \<noteq> a1 ! (idx - length l))"
-apply(auto simp add: nth_append)
-done
-
-lemma over_one :
- "length lst = a \<Longrightarrow> (rev lst @ (v # l)) ! a = v"
-apply(simp add: nth_append)
-done
-
-lemma over_one_rev  :
-  "((rev l @ (w # x)) ! idx \<noteq> w) =
-    (idx < (length l) \<and> (rev l) ! idx \<noteq> w ) \<or> ( idx > (length l) \<and> x ! (idx - length l - 1) \<noteq> w)"
-apply(simp add: nth_append)
-by (simp add: nth_Cons')
-
-lemma over_one_rev'  :
-  "((rev l @ [w, v]) ! idx \<noteq> w) =
-    (idx < (length l) \<and> (rev l) ! idx \<noteq> w ) \<or> ( idx > (length l) \<and> [v] ! (idx - length l - 1) \<noteq> w)"
-apply(auto simp add: nth_append nth_Cons')
-done
-
-
-lemma over_two :
- "Suc (length lst) = a \<Longrightarrow> (rev lst @ (v # w # l)) ! a = w"
-apply(simp add: nth_append)
-done
-
-lemma over_two_rev  :
-  "((rev l @ (w #  v # x)) ! idx \<noteq> v) =
-    (idx \<le> (length l) \<and> (rev l @ [w]) ! idx \<noteq> v ) \<or> ( idx > Suc (length l) \<and> x ! (idx - length l - 2) \<noteq> v )"
-apply(simp add: nth_append)
-(* sledgehammer *)
-by (metis Suc_diff_Suc diff_self_eq_0 less_antisym linorder_neqE_nat nth_Cons_0 nth_Cons_Suc)
-
 
 lemma advance_pc_preserves_storage :
  "vctx_storage (vctx_advance_pc co_ctx x1) = vctx_storage x1"
@@ -307,7 +432,7 @@ lemma advance_pc_preserves_caller :
 apply(simp add: vctx_advance_pc_def)
 done
 
-lemma advance_pc_preseerves_caller :
+lemma advance_pc_preserves_value_sent :
   "vctx_value_sent (vctx_advance_pc co_ctx x1) = vctx_value_sent x1"
 apply(simp add: vctx_advance_pc_def)
 done
@@ -321,10 +446,6 @@ lemma advance_pc_preserves_block :
   " vctx_block (vctx_advance_pc co_ctx x1) = vctx_block x1"
 apply(simp add: vctx_advance_pc_def)
 done
-
-lemma balance_elm_means :
- "BalanceElm p \<in> variable_ctx_as_set v = (vctx_balance v (fst p) = (snd p))"
- by (case_tac p; auto simp: as_set_simps)
 
 lemma advance_pc_keeps_stack :
   "(vctx_stack (vctx_advance_pc co_ctx v)) = vctx_stack v"
@@ -381,7 +502,7 @@ proof -
     by auto
 qed
 
-lemma Gverylow_positive :
+lemma Gverylow_positive[simp] :
   "Gverylow > 0"
 apply(simp add: Gverylow_def)
 done
@@ -421,7 +542,7 @@ lemma stack_change_as_set:
     "
 by (auto simp add: as_set_simps)
 
-lemma stack_height_in:
+lemma stack_height_in[simp]:
   "StackHeightElm (length t) \<in> stack_as_set t"
 apply(simp add: stack_as_set_def)
 done
@@ -440,28 +561,26 @@ lemma action_not_context :
   "ContractActionElm a \<notin> contexts_as_set x1 co_ctx"
 by (simp add: as_set_simps)
 
-lemma failed_is_failed :
+lemma failed_is_failed[simp]:
    "failed_for_reasons {OutOfGas} (InstructionToEnvironment (ContractFail [OutOfGas]) a b)"
 apply(simp add: failed_for_reasons_def)
 done
 
-lemma stack_height_increment:
+lemma stack_height_increment[simp]:
   "StackHeightElm (Suc (length lst)) \<in> stack_as_set (x # lst)"
 apply(simp add: stack_as_set_def)
 done
 
-lemma stack_inc_element  :
-   "StackElm (length lst, elm)
-     \<in> stack_as_set (elm # lst)"
+lemma stack_inc_element [simp] :
+   "StackElm (length lst, elm) \<in> stack_as_set (elm # lst)"
 by (simp add: as_set_simps nth_append)
 
-lemma caller_elm_means_c:
+lemma caller_elm_means_c[simp]:
   "(CallerElm c \<in> contexts_as_set x1 co_ctx) = (vctx_caller x1 = c)"
 by (auto simp add: as_set_simps)
 
-lemma continue_not_failed :
-  "\<not> failed_for_reasons {OutOfGas}
-           (InstructionContinue v)"
+lemma continue_not_failed[simp] :
+  "\<not> failed_for_reasons {OutOfGas}  (InstructionContinue v)"
 apply(simp add: failed_for_reasons_def)
 done
 
@@ -543,22 +662,6 @@ lemma ext_program_size_not_constant:
 apply(simp add: constant_ctx_as_set_def program_as_set_def)
 done
 
-lemma ext_program_size_elm_means :
-   "ExtProgramSizeElm ab \<in> variable_ctx_as_set v =
-    (program_length (vctx_ext_program v (fst ab)) = snd ab)"
-apply(auto simp add: as_set_simps)
-apply(case_tac ab; auto)
-done
-
-lemma ext_program_size_c_means :
-  "ExtProgramSizeElm ab \<in> contexts_as_set v co_ctx =
-   (program_length (vctx_ext_program v (fst ab)) = snd ab)"
-  apply (rule iffI)
-  apply(clarsimp simp add: as_set_simps )+
-  apply (rule exI[where x="(fst ab)"])
-    apply clarsimp
-done
-
 lemma ext_program_advance_pc :
   " vctx_ext_program (vctx_advance_pc co_ctx x1)
   = vctx_ext_program x1"
@@ -575,16 +678,6 @@ lemma ext_program_elm_not_constant :
 apply(simp add: constant_ctx_as_set_def program_as_set_def)
 done
 
-lemma ext_program_elm_means   :
-  "ExtProgramElm abc \<in> variable_ctx_as_set v =
-   (program_as_natural_map ((vctx_ext_program v) (fst abc)) (fst (snd abc)) = (snd (snd abc)))"
-apply(case_tac abc ; auto simp add: as_set_simps)
-done
-
-lemma ext_program_c_means :
-  "ExtProgramElm abc \<in> contexts_as_set v co_ctx =
-   (program_as_natural_map ((vctx_ext_program v) (fst abc)) (fst (snd abc)) = (snd (snd abc)))"
-  by(case_tac abc, auto simp add: as_set_simps)
 
 lemma advance_keeps_ext_program_elm :
   "ExtProgramElm abc \<in> contexts_as_set (vctx_advance_pc co_ctx x1) co_ctx
@@ -594,17 +687,6 @@ lemma advance_keeps_ext_program_elm :
 lemma blockhash_not_constant:
   "BlockhashElm ab \<notin> constant_ctx_as_set co_ctx"
   by(auto simp add: as_set_simps vctx_advance_pc_def)
-
-lemma blockhash_elm_means :
-  "BlockhashElm ab \<in> variable_ctx_as_set x1 =
-   (block_blockhash (vctx_block x1) (fst ab) = snd ab)"
-  by(case_tac ab; auto simp add: as_set_simps vctx_advance_pc_def)
-
-
-lemma blockhash_c_means :
-  "BlockhashElm ab \<in> contexts_as_set x1 co_ctx =
-   (block_blockhash (vctx_block x1) (fst ab) = snd ab)"
-  by(case_tac ab; auto simp add: as_set_simps vctx_advance_pc_def)
 
 lemma advance_keeps_blockhash_elm :
   "BlockhashElm ab \<in> contexts_as_set (vctx_advance_pc co_ctx x1) co_ctx =
@@ -616,17 +698,6 @@ lemma coinbase_elm_not_constant :
 "CoinbaseElm v \<notin> constant_ctx_as_set co_ctx"
   by(case_tac v; auto simp add: as_set_simps vctx_advance_pc_def)
 
-lemma coinbase_elm_means :
-  "CoinbaseElm v \<in> variable_ctx_as_set x2 =
-   ((block_coinbase (vctx_block x2)) = v)"
-  by(case_tac v; auto simp add: as_set_simps)
-
-
-lemma coinbase_c_means :
-  "CoinbaseElm x23 \<in> contexts_as_set x1 co_ctx =
-  (block_coinbase (vctx_block x1) = x23)"
-by (auto simp add: as_set_simps)
-
 lemma advance_keeps_conbase_elm :
   "CoinbaseElm x22 \<in> contexts_as_set (vctx_advance_pc co_ctx x1) co_ctx =
   (CoinbaseElm x22 \<in> contexts_as_set x1 co_ctx)"
@@ -637,18 +708,6 @@ lemma timestamp_not_constant :
 apply(simp add: constant_ctx_as_set_def program_as_set_def)
 done
 
-lemma timestamp_elm_means :
-  "TimestampElm t \<in> variable_ctx_as_set x1 =
-   (t = block_timestamp (vctx_block x1))"
-by (auto simp add: as_set_simps vctx_advance_pc_def)
-
-lemma timestamp_c_means :
- "TimestampElm t \<in> contexts_as_set x1 co_ctx =
-   (t = block_timestamp (vctx_block x1))"
-by (auto simp add: as_set_simps vctx_advance_pc_def)
-
-
-
 lemma advance_keeps_timestamp_elm :
   "TimestampElm t \<in> contexts_as_set (vctx_advance_pc co_ctx x1) co_ctx
   = (TimestampElm t \<in> contexts_as_set x1 co_ctx)"
@@ -657,17 +716,6 @@ by (auto simp add: as_set_simps vctx_advance_pc_def)
 lemma difficulty_not_constant :
   "DifficultyElm x24 \<notin> constant_ctx_as_set co_ctx"
 by (auto simp add: as_set_simps vctx_advance_pc_def)
-
-lemma difficulty_elm_means :
-  "DifficultyElm x24 \<in> variable_ctx_as_set x1 =
-   (x24 = block_difficulty (vctx_block x1))"
-by (auto simp add: as_set_simps vctx_advance_pc_def)
-
-lemma difficulty_c_means :
-  "DifficultyElm x24 \<in> contexts_as_set x1 co_ctx =
-   (x24 = block_difficulty (vctx_block x1))"
-by (auto simp add: as_set_simps vctx_advance_pc_def)
-
 
 lemma advance_keeps_difficulty_elm:
   "DifficultyElm x24 \<in> contexts_as_set (vctx_advance_pc co_ctx x1) co_ctx
@@ -868,12 +916,6 @@ lemma contract_action_elm_not_stack :
  "ContractActionElm x19 \<notin> stack_as_set lst"
 by (auto dest: not_stack_all)
 
-lemma block_number_elm_c_means :
-"BlockNumberElm x22 \<in> contexts_as_set x1 co_ctx =
- (x22 = block_number (vctx_block x1))"
-apply(simp add: as_set_simps)
-done
-
 lemma log_num_v_advance  :
   "LogNumElm x6 \<in> variable_ctx_as_set (vctx_advance_pc co_ctx x1) =
    (LogNumElm x6 \<in> variable_ctx_as_set x1)"
@@ -940,6 +982,11 @@ lemma inst_size_eq_1:
   apply (case_tac x  ;fastforce simp add: stack_inst_code.simps)
   done
 
+lemma inst_size_no_stack_eq_1[simplified image_def, simp]:
+  "inst \<notin> (Stack ` range PUSH_N) \<Longrightarrow> inst_size inst = 1"
+  "inst \<notin> range Stack \<Longrightarrow> inst_size inst = 1"
+  by (auto intro: inst_size_eq_1)
+
 lemma advance_pc_no_inst:
  "vctx_pc (vctx_advance_pc co_ctx x1) = vctx_pc x1 \<Longrightarrow> program_content (cctx_program co_ctx) (vctx_pc x1) = None"
   by (simp add: vctx_advance_pc_def vctx_next_instruction_def split:option.splits)
@@ -959,25 +1006,37 @@ lemmas advance_pc_simps =
   advance_pc_keeps_stack
   data_sent_advance_pc
   advance_pc_preserves_logs
-  advance_pc_preseerves_caller
+  advance_pc_preserves_value_sent
   advance_pc_preserves_caller
   advance_pc_preserves_origin
   advance_pc_preserves_block
   advance_pc_no_inst
   swap_advance
+  log_num_v_advance
+  log_num_advance
+  advance_keeps_balance_elm
+  advance_keeps_blockhash_elm
+  advance_keeps_conbase_elm
+  advance_keeps_difficulty_elm
+  advance_keeps_ext_program_elm
+  advance_keeps_ext_program_size_elm
+  advance_keeps_gaslimit_elm
+  advance_keeps_gasprice_elm
+  advance_keeps_log_elm
+  advance_keeps_memory_elm
+  advance_keeps_memory_usage_elm
+  advance_keeps_origin_elm
+  advance_keeps_sent_data_elm
+  advance_keeps_sent_data_length_elm
+  advance_keeps_sent_value_elm
+  advance_keeps_storage_elm
+  advance_keeps_this_account_elm
+  advance_keeps_timestamp_elm
+  account_existence_advance
+  (*pop_advance *)
+
+
   
-lemmas rev_nth_simps =
-  lookup_over
-  lookup_over1
-  short_match
-  rev_append
-  rev_append_inv
-  rev_rev_append
-  over_one
-  over_one_rev
-  over_one_rev'
-  over_two
-  over_two_rev
 
 lemma balance0 :
 notes rev_nth_simps[simp]
@@ -1199,14 +1258,6 @@ lemma pc_update :
   (x = PcElm p \<or> x \<in> contexts_as_set x1 co_ctx - {PcElm (vctx_pc x1)})"
 by (auto simp add: as_set_simps)
 
-lemma stack_as_set_cons:
-  "x \<in> stack_as_set (w # lst) =
-   (x = StackHeightElm (Suc (length lst)) \<or>
-   x = StackElm (length lst, w) \<or>
-   x \<in> stack_as_set lst - {StackHeightElm (length lst)})"
- by (auto simp add: as_set_simps rev_nth_simps)
-
-
 lemma not_continuing_sep :
   "(not_continuing ** rest) s =
    (ContinuingElm False \<in> s \<and> rest (s - {ContinuingElm False}))"
@@ -1369,7 +1420,7 @@ lemma cut_memory_zero [simp] :
 apply(simp add: cut_memory_aux.simps cut_memory_def cut_memory_aux_alt_eqv)
 done
 
-lemma cut_memory_aux_cons :
+lemma cut_memory_aux_cons[simp] :
   "(cut_memory_aux b (Suc n) m = a # lst) =
    (m b = a \<and> cut_memory_aux (b + 1) n m = lst)"
 apply(simp add: cut_memory_aux.simps cut_memory_def)
@@ -1378,7 +1429,7 @@ done
 lemma unat_minus_one2 : "unat x = Suc n \<Longrightarrow> unat (x - 1) = n"
   by (metis diff_Suc_1 nat.simps(3) unat_eq_zero unat_minus_one)
 
-lemma cut_memory_cons :
+lemma cut_memory_cons[simp] :
   "(cut_memory b n m = a # lst) =
    (n \<noteq> 0 \<and> m b = a \<and> cut_memory (b + 1) (n - 1) m = lst)"
 apply(auto simp:cut_memory_def cut_memory_aux.simps cut_memory_aux_alt_eqv)
@@ -1395,7 +1446,7 @@ lemma memory_range_cons :
 "(memory_range b (a # lst) ** rest) s = (memory8 b a ** memory_range (b + 1) lst ** rest) s"
  by (simp only: memory_range.simps sep_conj_ac)
 
-lemma cut_memory_memory_range :
+lemma cut_memory_memory_range[rule_format] :
   "\<forall> rest b n.
    unat n = length lst \<longrightarrow>
    (memory_range b lst ** rest) (instruction_result_as_set c (InstructionContinue v))
@@ -1463,7 +1514,7 @@ lemma emp_sep [simp] :
 apply(simp add: emp_def sep_basic_simps)
 done
 
-lemma memory_range_elms_index_aux :
+lemma memory_range_elms_index_aux[rule_format] :
 "\<forall> i a begin_word. MemoryElm (i, a) \<in> memory_range_elms begin_word input \<longrightarrow>
     (\<exists>pos. \<not> length input \<le> pos \<and> begin_word + word_of_int (int pos) = i)"
 apply(induction input)
@@ -1478,13 +1529,9 @@ apply(auto)
 apply(simp add: Word.wi_hom_syms(1))
 done
 
-lemma memory_range_elms_index_meta :
-"MemoryElm (i, a) \<in> memory_range_elms begin_word input \<Longrightarrow>
-    (\<exists>pos. \<not> length input \<le> pos \<and> begin_word + word_of_int (int pos) = i)"
-apply(auto simp add: memory_range_elms_index_aux)
-done
+lemmas memory_range_elms_index_meta = memory_range_elms_index_aux
 
-lemma memory_range_elms_index_contra :
+lemma memory_range_elms_index_contra[rule_format] :
 "(\<forall> pos. pos \<ge> length input \<or> begin_word + (word_of_int (int pos)) \<noteq> i) \<longrightarrow>
  MemoryElm (i, a) \<notin> memory_range_elms begin_word input"
   by (fastforce dest: memory_range_elms_index_meta)
@@ -1544,7 +1591,7 @@ proof -
     by(simp add: max_word_def)
   qed
 
-lemma no_overwrap:
+lemma no_overwrap[simp]:
   "unat (len_word :: w256) = Suc (length input) \<Longrightarrow>
    MemoryElm (begin_word, a) \<notin> memory_range_elms (begin_word + 1) input"
 apply(rule memory_range_elms_index_contra_meta)
@@ -1772,7 +1819,7 @@ lemma gas_not_stack_topmost :
 apply(induction lst; simp add: stack_topmost_elms.simps)
 done
 
-lemma stack_topmost_empty:
+lemma stack_topmost_empty[simp]:
  "x \<in> stack_topmost_elms h [] = (x = StackHeightElm h)"
 apply(simp add: stack_topmost_elms.simps)
 done
@@ -2612,10 +2659,6 @@ lemma memory_range_elms_in_c :
 lemma memory_usage_not_ext_program  :
   "MemoryUsageElm u \<notin> ext_program_as_set e"
  by  (auto simp: as_set_simps)
-
-lemma not_balance_all:
-  "P \<in> balance_as_set b \<Longrightarrow> P \<in> range BalanceElm"
-  by (auto simp: as_set_simps)
     
 lemma memory_usage_not_balance  :
   "MemoryUsageElm u \<notin> balance_as_set b"
@@ -2927,7 +2970,7 @@ done
 
 lemma log_num_not_balance  :
   "LogNumElm x6 \<notin> balance_as_set b"
-by (auto dest: not_balance_all)
+by (auto dest: balance_all)
 
 
 lemma log_num_balance_update  :
@@ -3145,6 +3188,100 @@ lemmas sep_crunch = caller_sep
                     sep_sep_account_existence_sep
                     sep_conj_assoc
 
+lemmas not_context_simps = 
+   continuing_not_context
+   action_not_context
+
+lemmas evm_simps = (* general category of EVM simp rules *)
+  advance_pc_advance
+
+lemmas constant_diff =
+  constant_diff_gas
+  constant_diff_pc
+  constant_diff_stack
+  constant_diff_stack_height
+  
+lemma stateelm_constant_all:
+  "P \<in> constant_ctx_as_set ctx \<Longrightarrow> P \<in> range CodeElm \<union> range ThisAccountElm"
+by (auto simp add: as_set_simps)
+
+lemma stateelm_not_constant_all:
+  "P \<notin> range CodeElm \<union> range ThisAccountElm \<Longrightarrow> P \<notin> constant_ctx_as_set ctx"
+  by (auto simp add: as_set_simps)
+    
+lemma not_variable_all:
+  "ThisAccountElm t  \<notin> variable_ctx_as_set v"
+  "CodeElm e \<notin> variable_ctx_as_set v"
+  by (auto simp: as_set_simps)
+    
+lemma ext_all:
+  "P \<in> ext_program_as_set x \<Longrightarrow> P \<in> range ExtProgramSizeElm \<union> range ExtProgramElm"
+ by (auto simp add: as_set_simps)
+
+lemma not_ext_all:
+  "P \<notin> range ExtProgramSizeElm \<union> range ExtProgramElm \<Longrightarrow> P \<notin> ext_program_as_set x"
+  by (auto simp add: as_set_simps)
+
+lemmas as_set_plus_simps = 
+  gas_change_as_set
+  advance_pc_as_set
+  stack_change_as_set
+  variable_ctx_as_set_updte_mu
+  
+lemmas stateelm_dest = 
+  stateelm_constant_all
+  stateelm_not_constant_all
+  stateelm_program_all
+  stateelm_not_program_all
+  balance_all
+  not_memory_range_all
+  not_stack_all
+  not_topmost_all
+  ext_all
+  not_ext_all
+
+lemmas list_ninja_kit=
+  rev_append
+rev_append_inv
+rev_rev_append
+over_one
+over_one_rev
+over_one_rev'
+over_two
+over_two_rev
+
+lemmas stateelm_subset_diff_elim =
+  memory_range_in_minus_balance
+  memory_range_elms_in_x_minus_lognum
+  memory_range_elms_in_minus_continuing
+  memory_range_elms_in_minus_gas
+  memory_range_elms_in_minus_mu
+  memory_range_elms_in_minus_stack
+  memory_range_elms_in_minus_stackheight
+  memory_range_elms_in_minus_this
+  memory_range_elms_not_account_existence
+  memory_range_elms_not_code
+  memory_range_elms_not_pc
+  stack_topmost_in_minus_balance
+  stack_topmost_in_minus_continuing
+  stack_topmost_in_minus_gas
+  stack_topmost_minus_lognum
+  stack_topmost_in_minus_memoryusage
+  stack_topmost_in_minus_pc
+  stack_topmost_in_minus_this
+  stack_topmost_not_account_existence
+  stack_topmost_not_pc
+  stack_topmost_not_code
+  
+lemmas extra_sep=
+  block_number_pred_sep
+  sep_block_number_pred_sep
+
+
+find_theorems -name:dvance_pc_simp -name:advance_keeps "?X \<in> contexts_as_set (vctx_advance_pc ?co_ctx ?x1) ?co_ctx =
+  (?X \<in> contexts_as_set ?x1 ?co_ctx)"
+
+
 lemmas HoareTripleForInstructions_legacy_simps =
 continuing_not_context
 (* arith_inst_size_one *)
@@ -3197,7 +3334,7 @@ advance_pc_preserves_logs
 advance_pc_preserves_memory_usage
 advance_pc_preserves_balance
 advance_pc_preserves_caller
-advance_pc_preseerves_caller
+advance_pc_preserves_value_sent
 advance_pc_preserves_origin
 advance_pc_preserves_block
 balance_elm_means
@@ -3280,6 +3417,7 @@ code_elm_means
 pc_elm_means
 block_number_pred_sep
 sep_block_number_pred_sep
+
 block_number_elm_not_constant
 block_number_elm_in_v_means
 block_number_elm_means
@@ -3338,7 +3476,7 @@ code_elms
 memory_usage_elm_means
 pc_update_v
 pc_update
-stack_as_set_cons
+stack_as_set_cons_means
 cut_memory_zero
 cut_memory_aux_cons
 cut_memory_cons

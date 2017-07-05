@@ -654,14 +654,14 @@ lemma insert_functional : "e = f \<Longrightarrow> s = t \<Longrightarrow> inser
   apply(auto)
   done
 
-lemma lookup_over : "(rev lista @ (aa # l)) ! length lista = aa"
+lemma lookup_over[simp] : "(rev lista @ (aa # l)) ! length lista = aa"
 	by (metis length_rev nth_append_length)
 
-lemma lookup_over1 : "(rev lista @ (w # a # l)) ! Suc (length lista) = a"
+lemma lookup_over1[simp] : "(rev lista @ (w # a # l)) ! Suc (length lista) = a"
 (* sledgehammer *)
 	by (metis add.left_neutral append.assoc append_Nil2 length_append length_rev list.size(3) list.size(4) nth_append_length plus_nat.simps(2) rev.simps(2) rev_append rev_rev_ident)
 
-lemma short_match :
+lemma short_match[simp] :
   "idx < length lista \<Longrightarrow> (rev lista @ l) ! idx = (rev lista @ m) ! idx"
 (* sledgehammer *)
 	by (simp add: nth_append)
@@ -826,8 +826,12 @@ lemma remove_true:
  "(p ** \<langle>True\<rangle> ** rest) = (p ** rest)"
  by (simp add: pure_def sep_conj_def emp_def)
     
-lemma sep_true [simp] :
+lemma true_sep [simp] :
   "(p ** \<langle>True\<rangle>) = p"
+ by (simp add: pure_def sep_conj_def emp_def)
+
+lemma sep_true [simp] :
+  "(\<langle>True\<rangle> ** p) = p"
  by (simp add: pure_def sep_conj_def emp_def)
 
 lemma move_pure0 :
