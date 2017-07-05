@@ -884,6 +884,15 @@ program_content (program_from_cfg cfg) (n + inst_size_list insts) = Some (Pc JUM
  apply(simp)
 done
 
+lemma program_content_some:
+"cfg_blocks cfg dest = Some ((dest, Pc JUMPDEST) # bbi, ti) \<Longrightarrow>
+ {CodeElm (pos, i) |pos i. (pos, i) \<in> cfg_insts cfg}
+       \<subseteq> instruction_result_as_set co_ctx
+           (InstructionContinue x1) \<Longrightarrow>
+ program_content (program_from_cfg cfg) dest = Some (Pc JUMPDEST)"
+sorry
+
+
 lemma jump_sem:
 notes sep_fun_simps[simp del]
 shows
@@ -914,42 +923,51 @@ shows
         (instruction_result_as_set co_ctx
           (program_sem stopper co_ctx (Suc 0) net
             presult))"
- apply (sep_simp_asm simp: continuing_sep memory_usage_sep pure_sep gas_pred_sep stack_sep stack_height_sep program_counter_sep )
+ apply (sep_simp_asm simp: code_sep continuing_sep memory_usage_sep pure_sep gas_pred_sep stack_sep stack_height_sep program_counter_sep )
  apply(clarsimp)
  apply(insert extract_info_jump[where cfg=cfg and n=n and dest=dest and bi=bi and ti=ti and insts=insts]; clarsimp)
  apply(case_tac presult)
    apply(simp add: program_sem.simps instruction_sem_simps inst_numbers_simps)
    apply(clarsimp)
    apply(simp add: instruction_sem_simps jump_def inst_numbers_simps)
-   apply (sep_simp simp: continuing_sep memory_usage_sep pure_sep gas_pred_sep stack_sep stack_height_sep program_counter_sep)+
+   apply (sep_simp simp: code_sep continuing_sep memory_usage_sep pure_sep gas_pred_sep stack_sep stack_height_sep program_counter_sep)+
    apply(clarsimp split: option.splits)
-   apply(erule_tac P="restb \<and>* code (cfg_insts cfg) \<and>* rest" in back_subst)
-   apply(auto simp add: as_set_simps)[1
+   apply(rule conjI)
+		apply(clarsimp simp add: instruction_simps program_content_some)
+	 apply(clarsimp simp add: instruction_simps program_content_some)
+	 apply(rule conjI)
+    apply(erule_tac P="restb \<and>* rest" in back_subst)
+    apply(auto simp add: as_set_simps)[1]
+	 apply(simp add: instruction_result_as_set_def contexts_as_set_def)
+	 apply(auto simp add: as_set_simps)[1]
   apply(simp)+
 done
 
 lemma cfg_jump_sem_t:
 notes sep_fun_simps[simp del]
 shows
-"\<And>cfg n dest bi ti pre insts p g m h rest post.
-       cfg_edges cfg n = Some (dest, None) \<Longrightarrow>
+"\<And>cfg dest bi ti bbi pre insts p g m h rest post n.
        cfg_blocks cfg dest = Some (bi, ti) \<Longrightarrow>
+       bi = (dest, Pc JUMPDEST) # bbi \<Longrightarrow>
        triple_seq pre insts
         (program_counter p \<and>*
          gas_pred g \<and>*
          memory_usage m \<and>*
          stack_height (Suc h) \<and>*
          stack h (word_of_int dest) \<and>*
-         \<langle> h \<le> 1023 \<and> Gmid \<le> g \<and> 0 \<le> m \<rangle> \<and>* continuing \<and>* rest) \<Longrightarrow>
+         \<langle> h \<le> 1023 \<and> Gmid \<le> g \<and> 0 \<le> m \<rangle> \<and>*
+         continuing \<and>* rest) \<Longrightarrow>
        triple_cfg cfg
         (program_counter dest \<and>*
          gas_pred (g - Gmid) \<and>*
-         memory_usage m \<and>* stack_height h \<and>* continuing \<and>* rest)
+         memory_usage m \<and>*
+         stack_height h \<and>* continuing \<and>* rest)
         (dest, bi, ti) post \<Longrightarrow>
        triple_cfg_sem_t cfg
         (program_counter dest \<and>*
          gas_pred (g - Gmid) \<and>*
-         memory_usage m \<and>* stack_height h \<and>* continuing \<and>* rest)
+         memory_usage m \<and>*
+         stack_height h \<and>* continuing \<and>* rest)
         (dest, bi, ti) post \<Longrightarrow>
        triple_cfg_sem_t cfg pre (n, insts, Jump) post"
  apply(simp only: triple_cfg_sem_t_def; clarify)
@@ -965,8 +983,8 @@ shows
 	apply(drule_tac x=Jump in spec; simp)
  apply(drule triple_seq_soundness)
  apply(simp only: triple_seq_sem_def)
- apply(rename_tac cfg n dest bi ti pre insts p g m h restb post co_ctx presult rest
-       net stopper)
+ apply(rename_tac cfg dest bi ti bbi pre insts p g m h restb post n
+       co_ctx presult rest net stopper)
  apply(drule_tac x = "co_ctx" in spec)+
  apply(drule_tac x = "(program_sem stopper co_ctx (Suc (length insts)) net presult)" and y = "rest" in spec2)
  apply(drule_tac x = "presult" and y = "code (cfg_insts cfg - set insts) \<and>* rest" in spec2)
@@ -991,16 +1009,19 @@ lemma diff_set_commute:
 "A - {b} - {c} = A - {c} - {b}"
 by(auto)
 
+lemma diff_set_commute_code:
+"A - {CodeElm (pos, i) |pos i.
+        (pos, i) \<in> cfg_insts cfg} - {c} = A - {c} - {CodeElm (pos, i) |pos i.
+        (pos, i) \<in> cfg_insts cfg}"
+by(auto)
+
 lemma extract_info_jumpi:
-"       cfg_edges cfg n = Some (dest, Some j) \<Longrightarrow>
-       cfg_blocks cfg dest = Some (bi, ti) \<Longrightarrow>
+"      cfg_blocks cfg dest = Some (bi, ti) \<Longrightarrow>
        cfg_blocks cfg j = Some (bj, tj) \<Longrightarrow>
        wf_cfg cfg \<Longrightarrow>
        cfg_blocks cfg n = Some (insts, Jumpi) \<Longrightarrow>
 dest = uint (word_of_int dest::256 word) \<and>
-program_content (program_from_cfg cfg) (n + inst_size_list insts) = Some (Pc JUMPI) \<and>
-program_content (program_from_cfg cfg) dest = Some (Pc JUMPDEST) \<and>
-j =  n + inst_size_list insts + 1"
+program_content (program_from_cfg cfg) (n + inst_size_list insts) = Some (Pc JUMPI)"
  apply(rule conjI; simp add: wf_cfg_def)
  apply(drule spec2[where x=dest and y=bi])
  apply(drule conjunct1)
@@ -1042,9 +1063,9 @@ by(auto simp add: as_set_simps)
 lemma jumpi_sem_zero:
 notes sep_fun_simps[simp del]
 shows
-"      cfg_edges cfg n = Some (i, Some j) \<Longrightarrow>
-       cfg_blocks cfg i = Some (bi, ti) \<Longrightarrow>
+"      cfg_blocks cfg i = Some (bi, ti) \<Longrightarrow>
        cfg_blocks cfg j = Some (bj, tj) \<Longrightarrow>
+			 j = n + 1 + inst_size_list insts \<Longrightarrow>
        no_assertion co_ctx \<Longrightarrow>
        cctx_program co_ctx = program_from_cfg cfg \<Longrightarrow>
        wf_cfg cfg \<Longrightarrow>
@@ -1095,9 +1116,9 @@ done
 lemma jumpi_sem_non_zero:
 notes sep_fun_simps[simp del]
 shows
-"       cfg_edges cfg n = Some (dest, Some j) \<Longrightarrow>
-       cfg_blocks cfg dest = Some (bi, ti) \<Longrightarrow>
+"      cfg_blocks cfg dest = Some (bi, ti) \<Longrightarrow>
        cfg_blocks cfg j = Some (bj, tj) \<Longrightarrow>
+			 bi = (dest, Pc JUMPDEST) # bbi \<Longrightarrow>
        no_assertion co_ctx \<Longrightarrow>
        cctx_program co_ctx = program_from_cfg cfg \<Longrightarrow>
        wf_cfg cfg \<Longrightarrow>
@@ -1122,7 +1143,7 @@ shows
         rest)
         (instruction_result_as_set co_ctx
           (program_sem stopper co_ctx (Suc 0) net presult))"
- apply (sep_simp_asm simp: memory_usage_sep pure_sep gas_pred_sep stack_sep stack_height_sep program_counter_sep )
+ apply (sep_simp_asm simp: code_sep memory_usage_sep pure_sep gas_pred_sep stack_sep stack_height_sep program_counter_sep )
  apply(clarsimp)
  apply(insert extract_info_jumpi[where cfg=cfg and n=n and dest=dest and j=j and bi=bi and ti=ti and insts=insts and bj=bj and tj=tj])
  apply(clarsimp)
@@ -1131,15 +1152,24 @@ shows
  apply(rule conjI;clarsimp)
   apply(simp add:instruction_sem_simps inst_numbers_simps)
   apply(simp add: jumpi_def jump_def advance_simps instruction_sem_simps inst_size_simps)
+	apply(sep_simp simp: code_sep)
   apply (sep_simp simp: memory_usage_sep gas_pred_sep stack_sep stack_height_sep program_counter_sep)+
-  apply(simp add: instruction_sem_simps)
-  apply (erule_tac P="(continuing \<and>* restb \<and>* code (cfg_insts cfg) \<and>* rest)" in back_subst)
-  apply(subst diff_set_commute[where c="StackHeightElm _"])+
-  apply(subst set_change_stack[where cond=cond])
-  apply(subst diff_set_commute[where c="StackHeightElm _"])
-  apply(subst set_change_stack_2[where dest=dest])
-  apply(simp)
-  apply(auto simp add: as_set_simps)[1]
+  apply(simp add: instruction_sem_simps split: option.splits)
+	apply(rule conjI)
+	 apply(clarsimp simp add: instruction_simps)
+	 apply(simp add: continuing_sep program_content_some)
+	apply(clarsimp simp add: instruction_simps program_content_some)
+  apply(rule conjI)
+   apply (erule_tac P="(continuing \<and>* restb \<and>* rest)" in back_subst)
+   apply(subst diff_set_commute[where c="StackHeightElm _"])+
+   apply(subst diff_set_commute_code[where c="StackHeightElm _"])+
+   apply(subst set_change_stack[where cond=cond])
+   apply(subst diff_set_commute[where c="StackHeightElm _"])
+   apply(subst set_change_stack_2[where dest=dest])
+   apply(simp)
+   apply(auto simp add: as_set_simps)[1]
+	apply(simp add: instruction_result_as_set_def contexts_as_set_def)
+	apply(auto simp add: as_set_simps)[1]
  apply(rule conjI; clarsimp)
  apply(sep_simp simp:continuing_sep)
  apply(simp)
@@ -1148,9 +1178,11 @@ done
 lemma cfg_jumpi_sem_t:
 notes sep_fun_simps[simp del]
 shows
-"\<And>cfg n dest j bi ti bj tj pre insts h g m cond p rest r post.
-       cfg_edges cfg n = Some (dest, Some j) \<Longrightarrow>
+"\<And>j n insts cfg dest bi ti bbi bj tj pre h g m cond p
+       rest r post.
+       j = n + 1 + inst_size_list insts \<Longrightarrow>
        cfg_blocks cfg dest = Some (bi, ti) \<Longrightarrow>
+       bi = (dest, Pc JUMPDEST) # bbi \<Longrightarrow>
        cfg_blocks cfg j = Some (bj, tj) \<Longrightarrow>
        triple_seq pre insts
         (\<langle> h \<le> 1022 \<and> Ghigh \<le> g \<and> 0 \<le> m \<rangle> \<and>*
@@ -1165,16 +1197,17 @@ shows
         gas_pred (g - Ghigh) \<and>*
         continuing \<and>* memory_usage m \<and>* rest) \<Longrightarrow>
        (cond \<noteq> 0 \<Longrightarrow>
-        triple_cfg cfg (r \<and>* program_counter dest) (dest, bi, ti)
-         post) \<Longrightarrow>
+        triple_cfg cfg (r \<and>* program_counter dest)
+         (dest, bi, ti) post) \<Longrightarrow>
        (cond \<noteq> 0 \<Longrightarrow>
         triple_cfg_sem_t cfg (r \<and>* program_counter dest)
          (dest, bi, ti) post) \<Longrightarrow>
        (cond = 0 \<Longrightarrow>
-        triple_cfg cfg (r \<and>* program_counter j) (j, bj, tj) post) \<Longrightarrow>
+        triple_cfg cfg (r \<and>* program_counter j)
+         (j, bj, tj) post) \<Longrightarrow>
        (cond = 0 \<Longrightarrow>
-        triple_cfg_sem_t cfg (r \<and>* program_counter j) (j, bj, tj)
-         post) \<Longrightarrow>
+        triple_cfg_sem_t cfg (r \<and>* program_counter j)
+         (j, bj, tj) post) \<Longrightarrow>
        triple_cfg_sem_t cfg pre (n, insts, Jumpi) post"
  apply(simp only: triple_cfg_sem_t_def; clarify)
  apply(cut_tac m=p and n=n
@@ -1190,8 +1223,8 @@ shows
 	apply(drule_tac x=Jumpi in spec; simp)
   apply(drule triple_seq_soundness)
   apply(simp only: triple_seq_sem_def; clarify)
-  apply(rename_tac cfg n dest j bi ti bj tj pre insts h g m cond p restb r post co_ctx presult
-       rest net stopper)
+  apply(rename_tac j n insts cfg dest bi ti bbi bj tj pre h g m cond p
+       restb r post co_ctx presult rest net stopper)
   apply(drule_tac x = "co_ctx" and y=presult in spec2)
   apply(drule_tac x = "code (cfg_insts cfg - set insts) \<and>* rest" in spec)
   apply(drule_tac x = "stopper" and y=net in spec2)
@@ -1209,7 +1242,7 @@ shows
     apply (erule_tac P="post \<and>* code (cfg_insts cfg) \<and>* rest" in back_subst)
     apply(subst program_sem_t_alt_exec_continue; simp )
    apply(drule_tac presult="(program_sem stopper co_ctx (length insts) net presult)" and
-		cfg=cfg and j=j and bi=bi and ti=ti and bj=bj and tj=tj and h=h and g=g and net=net and
+		cfg=cfg and j="n + 1 + inst_size_list insts" and bi="(dest, Pc JUMPDEST) # bbi" and ti=ti and bj=bj and tj=tj and h=h and g=g and net=net and
 	  i=dest and restb=restb and co_ctx=co_ctx and rest=rest and stopper=stopper and m=m
   in jumpi_sem_zero; simp)
    apply(sep_simp simp:program_counter_sep)
@@ -1224,7 +1257,7 @@ shows
     apply (erule_tac P="post \<and>* code (cfg_insts cfg) \<and>* rest" in back_subst)
     apply(subst program_sem_t_alt_exec_continue; simp)
    apply(drule_tac co_ctx=co_ctx and stopper=stopper and insts=insts and
-		g=g and restb=restb and n=n and bi=bi and ti=ti and tj=tj and g=g and
+		g=g and restb=restb and n=n and bi="(dest, Pc JUMPDEST) # bbi" and ti=ti and tj=tj and g=g and
 		dest=dest and net=net and
     presult="(program_sem stopper co_ctx (length insts) net presult)" and h=h
   in jumpi_sem_non_zero; simp del:sep_lc)
@@ -1376,10 +1409,8 @@ shows
  apply(drule mp, assumption)
  apply(drule conjunct2, drule conjunct2, drule conjunct1)
  apply(drule spec)
- apply(drule conjunct2, drule spec)
  apply(drule conjunct2)+
  apply(drule mp, assumption)
- apply(drule conjunct2)
  apply(simp add: sep_code_code_sep)
  apply(subst execution_stop[where k="length insts" and stopper="\<lambda>x. ()"])
  apply(case_tac presult)
