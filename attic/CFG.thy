@@ -99,6 +99,7 @@ fun aux_basic_block :: "inst list \<Rightarrow> int \<Rightarrow> int \<Rightarr
   | Misc SUICIDE \<Rightarrow>(block_pt, rev ((pointer,i)#block), No) # ( aux_basic_block tl1 newpointer newpointer [])
   | Misc STOP \<Rightarrow>(block_pt, rev ((pointer,i)#block), No) # ( aux_basic_block tl1 newpointer newpointer [])
   | _ \<Rightarrow> aux_basic_block tl1 newpointer block_pt ((pointer,i)#block)))"
+declare aux_basic_block.simps[simp del]
 
 definition build_basic_blocks :: "inst list \<Rightarrow> vertices" where
 "build_basic_blocks prog == aux_basic_block prog 0 0 []"
@@ -121,7 +122,7 @@ fun reconstruct_bytecode :: "vertices \<Rightarrow> inst list" where
 
 lemma rev_basic_blocks: "reconstruct_bytecode (aux_basic_block i p bp b) = (map snd (rev b))@i"
 apply(induction i arbitrary: p bp b)
-apply(auto simp: Let_def split: inst.split misc_inst.split pc_inst.split)
+apply(auto simp: Let_def aux_basic_block.simps split: inst.split misc_inst.split pc_inst.split)
 done
 
 theorem reverse_basic_blocks: "reconstruct_bytecode (build_basic_blocks i) = i"
@@ -197,6 +198,9 @@ definition reg_vertex :: "vertex \<Rightarrow> bool" where
 No \<Rightarrow> reg_block (butlast (v_insts v))
 | _ \<Rightarrow> reg_block (v_insts v))"
 
+definition reg_vertices :: "vertices \<Rightarrow> bool" where
+"reg_vertices xs = list_all reg_vertex xs"
+
 fun seq_block :: "pos_inst list \<Rightarrow> bool" where 
 "seq_block [] = True"
 | "seq_block [x] = True"
@@ -207,19 +211,95 @@ definition last_no::"pos_inst list \<Rightarrow> bool" where
 
 definition wf_cfg:: "cfg \<Rightarrow> bool" where
 "wf_cfg c == 
-(\<forall>n insts ty i.
+(\<forall>n insts ty.
 (cfg_blocks c n = Some (insts, ty) \<longrightarrow>
 	n \<in> set (cfg_indexes c) \<and> reg_vertex (n, insts, ty) \<and>
-  insts \<noteq> [] \<and> (fst (hd insts) = n) \<and> seq_block insts \<and>
+  (insts \<noteq> [] \<longrightarrow> (fst (hd insts) = n)) \<and> seq_block insts \<and>
   0 < n \<and> n < 2 ^ 256) \<and>
+(cfg_blocks c n = Some (insts, Next) \<longrightarrow>
+	 insts \<noteq> []) \<and>
 (cfg_blocks c n = Some (insts, Jump) \<longrightarrow>
-	i = n + inst_size_list insts \<longrightarrow>
-	program_content (program_from_cfg c) i = Some (Pc JUMP)) \<and>
+	program_content (program_from_cfg c) (n + inst_size_list insts) = Some (Pc JUMP)) \<and>
 (cfg_blocks c n = Some (insts, Jumpi) \<longrightarrow>
-	i = n + inst_size_list insts \<longrightarrow>
-	program_content (program_from_cfg c) i = Some (Pc JUMPI)) \<and>
+	program_content (program_from_cfg c) (n + inst_size_list insts) = Some (Pc JUMPI)) \<and>
 (cfg_blocks c n = Some (insts, No) \<longrightarrow>
-   last_no insts)
+	 insts \<noteq> [] \<and> last_no insts)
 )"
+
+(* Proof that we build well formed CFGs *)
+
+lemma index_have_blocks:
+"c = build_cfg bytecode \<Longrightarrow>
+ \<not> cfg_blocks c n = None \<Longrightarrow>
+ n \<in> set (cfg_indexes c)"
+by(simp add: Let_def build_cfg_def extract_indexes_def map_of_eq_None_iff)
+
+
+(* Lemmas to show that build blocks are regular *)
+lemma list_all_in:
+"x \<in> set xs \<Longrightarrow> list_all P xs \<Longrightarrow> P x"
+ apply(induction xs)
+  apply(simp)
+ apply(case_tac "x=a"; simp)
+done
+
+lemma reg_block_butlast:
+"reg_block xs \<Longrightarrow> reg_block (butlast xs)"
+ apply(induction xs)
+  apply(simp)
+ apply(simp add: reg_block_def List.List.list.pred_map)
+done
+
+lemma reg_block_rev:
+"reg_block xs \<Longrightarrow> reg_block (rev xs)"
+ apply(induction xs)
+  apply(simp)
+ apply(simp add: reg_block_def)
+done
+
+lemmas reg_simps =
+reg_vertices_def reg_vertex_def reg_block_def
+
+lemma reg_aux_bb:
+"reg_block block \<Longrightarrow>
+ reg_vertices (aux_basic_block insts pointer block_pt block)"
+ apply(induction insts arbitrary: pointer block_pt block)
+  apply(simp add: reg_vertex_def reg_vertices_def reg_block_rev reg_block_butlast  aux_basic_block.simps)
+ apply(simp add:Let_def aux_basic_block.simps)
+ apply(simp split: inst.split pc_inst.split misc_inst.split)
+ apply(simp add:reg_simps)
+ apply(simp add: List.List.list.pred_map)
+done
+
+lemma reg_bb:
+"reg_vertices (build_basic_blocks insts)"
+ apply(subgoal_tac "reg_block []")
+  apply(simp add:build_basic_blocks_def reg_aux_bb)
+ apply(simp add: reg_simps)
+done
+
+
+(* Main theorem *)
+
+lemma wf_build_cfg:
+"wf_cfg (build_cfg bytecode)"
+ apply(simp add: wf_cfg_def)
+ apply(clarsimp)
+ apply(rule conjI)
+  apply(clarsimp; rule conjI)
+   apply(case_tac "\<not> cfg_blocks (build_cfg bytecode) n = None")
+    apply(simp add: index_have_blocks)
+   apply(simp)
+  apply(rule conjI)
+   apply(simp add: build_cfg_def Let_def)
+   apply(subgoal_tac "(n, insts, ty) \<in> set (build_basic_blocks bytecode)")
+    apply(subgoal_tac "reg_vertices (build_basic_blocks bytecode)")
+     apply(simp add: reg_vertices_def list_all_in)
+    apply(simp add: reg_bb)
+   apply(simp add: map_of_SomeD)
+  apply(rule conjI)
+   apply(simp add: build_cfg_def Let_def)
+   apply(clarify)
+sorry
 
 end
