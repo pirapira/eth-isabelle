@@ -80,29 +80,36 @@ definition stack_dup :: "stack_value list \<Rightarrow> nat \<Rightarrow> stack_
 
 value "stack_dup [Value 1, Value 2, Value 3, Value 4] 2"
 
+definition block_pt :: "pos_inst list \<Rightarrow> int \<Rightarrow> int" where
+ "block_pt bl pt = (case bl of
+   [] \<Rightarrow> pt
+  | _ \<Rightarrow> fst (hd bl))"
+
 (* Main functions *)
 
 (* The execution of a basic block must be sequential. *)
 (* We remove JUMP and JUMPI instructions and cut after them or a stopping instruction *)
 (* and before a Jump destination. *)
-fun aux_basic_block :: "inst list \<Rightarrow> int \<Rightarrow> int \<Rightarrow> pos_inst list \<Rightarrow> vertices" where
- "aux_basic_block [] pointer block_pt block = (if block = [] then [] else
-    [(block_pt, rev block, No)])"
-|"aux_basic_block ((i)#tl1) pointer block_pt block =
+fun aux_basic_block :: "inst list \<Rightarrow> int \<Rightarrow> pos_inst list \<Rightarrow> vertices" where
+ "aux_basic_block [] pointer block = (if block = [] then [] else
+    [(block_pt (rev block) pointer, rev block, No)])"
+|"aux_basic_block ((i)#tl1) pointer block =
   (let newpointer = pointer + (inst_size i) in
+	(let bl = rev block in
+	(let bl_pt = block_pt bl pointer in
   (case i of
-    Pc JUMPDEST \<Rightarrow> (if block = [] then (aux_basic_block tl1 newpointer pointer [(pointer,i)])
-    else (block_pt, rev block, Next) # (aux_basic_block tl1 newpointer pointer [(pointer,i)]))
-  | Pc JUMP \<Rightarrow>(block_pt, rev block, Jump) # ( aux_basic_block tl1 newpointer newpointer [])
-  | Pc JUMPI \<Rightarrow>(block_pt, rev block, Jumpi) # ( aux_basic_block tl1 newpointer newpointer [])
-  | Misc RETURN \<Rightarrow>(block_pt, rev ((pointer,i)#block), No) # ( aux_basic_block tl1 newpointer newpointer [])
-  | Misc SUICIDE \<Rightarrow>(block_pt, rev ((pointer,i)#block), No) # ( aux_basic_block tl1 newpointer newpointer [])
-  | Misc STOP \<Rightarrow>(block_pt, rev ((pointer,i)#block), No) # ( aux_basic_block tl1 newpointer newpointer [])
-  | _ \<Rightarrow> aux_basic_block tl1 newpointer block_pt ((pointer,i)#block)))"
+    Pc JUMPDEST \<Rightarrow> (if block = [] then (aux_basic_block tl1 newpointer [(pointer,i)])
+    else (bl_pt, bl, Next) # (aux_basic_block tl1 newpointer [(pointer,i)]))
+  | Pc JUMP \<Rightarrow>(bl_pt, bl, Jump) # ( aux_basic_block tl1 newpointer [])
+  | Pc JUMPI \<Rightarrow>(bl_pt, bl, Jumpi) # ( aux_basic_block tl1 newpointer [])
+  | Misc RETURN \<Rightarrow>(bl_pt, bl @ [(pointer,i)], No) # ( aux_basic_block tl1 newpointer [])
+  | Misc SUICIDE \<Rightarrow>(bl_pt, bl @ [(pointer,i)], No) # ( aux_basic_block tl1 newpointer [])
+  | Misc STOP \<Rightarrow>(bl_pt, bl @ [(pointer,i)], No) # ( aux_basic_block tl1 newpointer [])
+  | _ \<Rightarrow> aux_basic_block tl1 newpointer ((pointer,i)#block)))))"
 declare aux_basic_block.simps[simp del]
 
 definition build_basic_blocks :: "inst list \<Rightarrow> vertices" where
-"build_basic_blocks prog == aux_basic_block prog 0 0 []"
+"build_basic_blocks prog == aux_basic_block prog 0 []"
 
 definition build_cfg :: "inst list \<Rightarrow> cfg" where
 "build_cfg prog = (let blocks = build_basic_blocks prog in
@@ -120,8 +127,8 @@ fun reconstruct_bytecode :: "vertices \<Rightarrow> inst list" where
 | "reconstruct_bytecode ((n,b,Jumpi)#q) = (map snd b)@[Pc JUMPI] @ (reconstruct_bytecode q)"
 | "reconstruct_bytecode ((n,b,_)#q) = (map snd b) @ (reconstruct_bytecode q)"
 
-lemma rev_basic_blocks: "reconstruct_bytecode (aux_basic_block i p bp b) = (map snd (rev b))@i"
-apply(induction i arbitrary: p bp b)
+lemma rev_basic_blocks: "reconstruct_bytecode (aux_basic_block i p b) = (map snd (rev b))@i"
+apply(induction i arbitrary: p b)
 apply(auto simp: Let_def aux_basic_block.simps split: inst.split misc_inst.split pc_inst.split)
 done
 
@@ -234,6 +241,38 @@ lemma index_have_blocks:
  n \<in> set (cfg_indexes c)"
 by(simp add: Let_def build_cfg_def extract_indexes_def map_of_eq_None_iff)
 
+lemma index_block_eq:
+"(n, (j,i)#b, t)#xs = aux_basic_block insts m block \<Longrightarrow>
+j=n"
+apply(induction insts arbitrary: m block n j i t xs b)
+ apply(simp add: aux_basic_block.simps block_pt_def split:if_splits list.splits)
+ apply(clarsimp)
+apply(simp add: aux_basic_block.simps Let_def)
+apply(simp split: inst.splits add: inst_size_def inst_code.simps)
+ apply(clarsimp simp add: block_pt_def split: pc_inst.splits list.splits if_splits)
+apply(clarsimp simp add: block_pt_def split: misc_inst.splits list.splits)
+done
+
+lemma in_aux_bb_intermediate:
+"(n, b, t) \<in> set (aux_basic_block insts k block) \<Longrightarrow>
+\<exists>ys m bl xs. (n, b, t)#xs = aux_basic_block ys m bl"
+apply(induction insts arbitrary: k block)
+ apply(rule_tac x="[]" in exI)
+ apply(simp add: aux_basic_block.simps split: if_splits)
+ apply(rule_tac x=k in exI, rule_tac x=block in exI, simp)
+apply(subgoal_tac "(n, b, t) \<in> set
+			(aux_basic_block (a # insts) k block)")
+apply(drule subst[OF aux_basic_block.simps(2)])
+apply(simp add: Let_def)
+apply(clarsimp split: inst.splits simp add: inst_size_def inst_code.simps)
+ apply(simp split: pc_inst.splits if_splits add: inst_size_def inst_code.simps;
+				erule disjE, rule_tac x="Pc x9 # insts" in exI, rule_tac x=k in exI, rule_tac x=block in exI,
+				simp add: aux_basic_block.simps Let_def, fastforce)
+apply(simp split: misc_inst.splits if_splits add: inst_size_def inst_code.simps;
+				erule disjE, rule_tac x="Misc x13 # insts" in exI, rule_tac x=k in exI, rule_tac x=block in exI,
+				simp add: aux_basic_block.simps Let_def, fastforce)
+apply(assumption)
+done
 
 (* Lemmas to show that build blocks are regular *)
 lemma list_all_in:
@@ -262,8 +301,8 @@ reg_vertices_def reg_vertex_def reg_block_def
 
 lemma reg_aux_bb:
 "reg_block block \<Longrightarrow>
- reg_vertices (aux_basic_block insts pointer block_pt block)"
- apply(induction insts arbitrary: pointer block_pt block)
+ reg_vertices (aux_basic_block insts pointer block)"
+ apply(induction insts arbitrary: pointer  block)
   apply(simp add: reg_vertex_def reg_vertices_def reg_block_rev reg_block_butlast  aux_basic_block.simps)
  apply(simp add:Let_def aux_basic_block.simps)
  apply(simp split: inst.split pc_inst.split misc_inst.split)
@@ -277,7 +316,6 @@ lemma reg_bb:
   apply(simp add:build_basic_blocks_def reg_aux_bb)
  apply(simp add: reg_simps)
 done
-
 
 (* Main theorem *)
 
@@ -298,8 +336,11 @@ lemma wf_build_cfg:
     apply(simp add: reg_bb)
    apply(simp add: map_of_SomeD)
   apply(rule conjI)
-   apply(simp add: build_cfg_def Let_def)
-   apply(clarify)
+   apply(simp add: build_cfg_def Let_def; clarify)
+   apply(drule map_of_SomeD)
+	 apply(simp add: build_basic_blocks_def)
+	 apply(drule in_aux_bb_intermediate, clarify)
+	 apply(case_tac insts; clarsimp simp add: index_block_eq)
 sorry
 
 end
