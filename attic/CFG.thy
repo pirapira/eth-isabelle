@@ -211,7 +211,8 @@ definition reg_vertices :: "vertices \<Rightarrow> bool" where
 fun seq_block :: "pos_inst list \<Rightarrow> bool" where 
 "seq_block [] = True"
 | "seq_block [x] = True"
-| "seq_block (x#y#xs) = (fst y = fst x + inst_size (snd x) \<and> seq_block (y#xs))"
+| "seq_block (x#y#ys) = (fst y = fst x + inst_size (snd x) \<and> seq_block (y#ys))"
+declare seq_block.simps[simp del]
 
 definition last_no::"pos_inst list \<Rightarrow> bool" where
 "last_no insts == snd (last insts) \<in> {Misc STOP, Misc RETURN, Misc SUICIDE}"
@@ -253,6 +254,102 @@ apply(simp split: inst.splits add: inst_size_def inst_code.simps)
 apply(clarsimp simp add: block_pt_def split: misc_inst.splits list.splits)
 done
 
+lemma seq_block_compose:
+"seq_block bl \<Longrightarrow>
+ \<forall>i j. bl \<noteq> [] \<longrightarrow> last bl = (j, i) \<longrightarrow> m = j + inst_size i \<Longrightarrow>
+ seq_block (bl @ [(m, a)])"
+apply(induction bl)
+ apply(simp add: seq_block.simps)
+apply(case_tac bl; simp)
+ apply(simp add: seq_block.simps)
+apply(simp add: seq_block.simps)
+done
+
+lemma aux_rev_cond:
+"\<forall>i j. (\<exists>zs. bl = (j, i) # zs) \<longrightarrow> m = j + inst_size i \<Longrightarrow>
+    bl \<noteq> [] \<longrightarrow> (\<forall>i j. last (rev bl) = (j, i) \<longrightarrow> m = j + inst_size i)"
+apply(clarsimp)
+apply(drule_tac x=i and y=j in spec2)
+apply(simp add: last_rev)
+apply(case_tac bl; simp)
+done
+
+lemma seq_blocks:
+"seq_block (rev bl) \<Longrightarrow>
+\<forall>i j zs. bl = (j,i)#zs \<longrightarrow> m = j + inst_size i \<Longrightarrow>
+(n, insts, ty) # xs = aux_basic_block ys m bl \<Longrightarrow>
+seq_block insts"
+apply(induction ys arbitrary: m bl)
+ apply(simp add: aux_basic_block.simps block_pt_def split:if_splits list.splits)
+apply(drule subst[OF aux_basic_block.simps(2), where P="\<lambda>u. _ = u"])
+apply(simp add: Let_def)
+apply(case_tac "a \<in> {Misc STOP, Misc RETURN, Misc SUICIDE}")
+defer
+ apply(drule_tac x="m + inst_size a" and y="(m,a)#bl" in meta_spec2)
+ apply(drule meta_mp)
+  apply(simp, subst seq_block_compose; simp add: aux_rev_cond)
+ apply(simp split: inst.splits)
+ apply(simp split: pc_inst.splits if_splits)
+ apply(simp split: misc_inst.splits)
+apply(thin_tac "\<And>ma bla. _ bla \<Longrightarrow> _ bla ma \<Longrightarrow> _ bla ma \<Longrightarrow> seq_block _")
+apply(simp split: inst.splits misc_inst.splits; subst seq_block_compose; simp)
+apply(clarsimp simp add: last_rev; drule_tac x=i and y=j in spec2; case_tac bl; simp)+
+done
+
+lemma in_aux_seq_block:
+"(n, b, t) \<in> set (aux_basic_block insts k block) \<Longrightarrow>
+seq_block (rev block) \<Longrightarrow>
+(\<forall>i j zs. block = (j,i)#zs \<longrightarrow> k = j + inst_size i) \<Longrightarrow>
+\<exists>ys m bl xs. (n, b, t)#xs = aux_basic_block ys m bl \<and> seq_block (rev bl) \<and>
+(\<forall>i j zs. bl = (j,i)#zs \<longrightarrow> m = j + inst_size i)"
+apply(induction insts arbitrary: k block)
+ apply(rule_tac x="[]" in exI)
+ apply(simp add: aux_basic_block.simps split: if_splits)
+ apply(rule_tac x=k in exI, rule_tac x=block in exI, simp)
+apply(subgoal_tac "(n, b, t) \<in> set
+			(aux_basic_block (a # insts) k block)")
+apply(drule subst[OF aux_basic_block.simps(2)])
+apply(simp add: Let_def)
+apply(case_tac "reg_inst a \<and> a \<noteq> Pc JUMPDEST")
+  apply(drule_tac x="k + inst_size a" and y="(k, a) # block" in meta_spec2)
+  apply(drule meta_mp)
+   apply(clarsimp split: inst.splits pc_inst.splits misc_inst.splits)
+  apply(drule meta_mp; simp)
+  apply(subst seq_block_compose; simp add: aux_rev_cond)
+ apply(simp split: inst.splits pc_inst.splits)
+     apply(erule disjE)
+      apply(clarsimp)
+      apply(rule_tac x="Pc JUMP # insts" in exI, rule_tac x="k" in exI, rule_tac x="block" in exI,
+            simp add: aux_basic_block.simps Let_def)
+     apply(drule_tac x="k + inst_size a" and y="[]" in meta_spec2)
+     apply(drule meta_mp; simp add: seq_block.simps)
+    apply(erule disjE)
+     apply(clarsimp)
+     apply(rule_tac x="Pc JUMPI # insts" in exI, rule_tac x="k" in exI, rule_tac x="block" in exI,
+            simp add: aux_basic_block.simps Let_def)
+    apply(drule_tac x="k + inst_size a" and y="[]" in meta_spec2)
+    apply(drule meta_mp; simp add: seq_block.simps)
+   apply(case_tac block; simp)
+    apply(drule_tac x="k + inst_size (Pc JUMPDEST)" and y="[(k, Pc JUMPDEST)]" in meta_spec2)
+    apply(drule meta_mp; simp; simp add: seq_block.simps)
+   apply(erule disjE)
+    apply(rule_tac x="Pc JUMPDEST # insts" in exI, rule_tac x="k" in exI, rule_tac x="block" in exI, 
+            simp add: aux_basic_block.simps Let_def)
+   apply(drule_tac x="k + inst_size (Pc JUMPDEST)" and y="[(k, Pc JUMPDEST)]" in meta_spec2)
+   apply(drule meta_mp; simp; simp add: seq_block.simps)
+  apply(subgoal_tac "(n, b, t)
+       \<in> set ((block_pt (rev block) k, rev block @ [(k, a)], No) #
+                 aux_basic_block insts (k + inst_size a) [])")
+   apply(thin_tac "(n,b,t) \<in> set (case _ of STOP \<Rightarrow> _ | RETURN \<Rightarrow> _ | SUICIDE \<Rightarrow> _ |_ \<Rightarrow> _)")
+   apply(simp; erule disjE)
+    apply(rule_tac x="Misc x13 # insts" in exI, rule_tac x="k" in exI, rule_tac x="block" in exI)
+    apply(subst aux_basic_block.simps; simp add: Let_def split: misc_inst.splits; fastforce)
+   apply(drule_tac x="k + inst_size a" and y="[]" in meta_spec2)
+   apply(drule meta_mp; simp add: seq_block.simps)
+  apply(simp split: misc_inst.splits)
+ apply(assumption)
+done
+
 lemma in_aux_bb_intermediate:
 "(n, b, t) \<in> set (aux_basic_block insts k block) \<Longrightarrow>
 \<exists>ys m bl xs. (n, b, t)#xs = aux_basic_block ys m bl"
@@ -262,13 +359,13 @@ apply(induction insts arbitrary: k block)
  apply(rule_tac x=k in exI, rule_tac x=block in exI, simp)
 apply(subgoal_tac "(n, b, t) \<in> set
 			(aux_basic_block (a # insts) k block)")
-apply(drule subst[OF aux_basic_block.simps(2)])
-apply(simp add: Let_def)
-apply(clarsimp split: inst.splits simp add: inst_size_def inst_code.simps)
- apply(simp split: pc_inst.splits if_splits add: inst_size_def inst_code.simps;
+ apply(drule subst[OF aux_basic_block.simps(2)])
+ apply(simp add: Let_def)
+  apply(clarsimp split: inst.splits simp add: inst_size_def inst_code.simps)
+  apply(simp split: pc_inst.splits if_splits add: inst_size_def inst_code.simps;
 				erule disjE, rule_tac x="Pc x9 # insts" in exI, rule_tac x=k in exI, rule_tac x=block in exI,
 				simp add: aux_basic_block.simps Let_def, fastforce)
-apply(simp split: misc_inst.splits if_splits add: inst_size_def inst_code.simps;
+ apply(simp split: misc_inst.splits if_splits add: inst_size_def inst_code.simps;
 				erule disjE, rule_tac x="Misc x13 # insts" in exI, rule_tac x=k in exI, rule_tac x=block in exI,
 				simp add: aux_basic_block.simps Let_def, fastforce)
 apply(assumption)
@@ -312,8 +409,8 @@ done
 
 lemma reg_bb:
 "reg_vertices (build_basic_blocks insts)"
- apply(subgoal_tac "reg_block []")
-  apply(simp add:build_basic_blocks_def reg_aux_bb)
+ apply(simp add: build_basic_blocks_def)
+ apply(rule reg_aux_bb)
  apply(simp add: reg_simps)
 done
 
@@ -330,17 +427,23 @@ lemma wf_build_cfg:
    apply(simp)
   apply(rule conjI)
    apply(simp add: build_cfg_def Let_def)
-   apply(subgoal_tac "(n, insts, ty) \<in> set (build_basic_blocks bytecode)")
-    apply(subgoal_tac "reg_vertices (build_basic_blocks bytecode)")
+   apply(drule map_of_SomeD)
+    apply(cut_tac reg_bb[where insts=bytecode])
      apply(simp add: reg_vertices_def list_all_in)
-    apply(simp add: reg_bb)
-   apply(simp add: map_of_SomeD)
   apply(rule conjI)
    apply(simp add: build_cfg_def Let_def; clarify)
    apply(drule map_of_SomeD)
 	 apply(simp add: build_basic_blocks_def)
 	 apply(drule in_aux_bb_intermediate, clarify)
 	 apply(case_tac insts; clarsimp simp add: index_block_eq)
+  apply(rule conjI)
+   apply(simp add: build_cfg_def Let_def)
+   apply(drule map_of_SomeD)
+	 apply(simp add: build_basic_blocks_def)
+   apply(drule in_aux_seq_block)
+     apply(simp add: seq_block.simps)
+    apply(simp split: list.splits)
+   apply(clarsimp simp add: seq_blocks)
 sorry
 
 end

@@ -815,7 +815,7 @@ reg_block insts \<Longrightarrow>
     apply(simp)
     apply(case_tac xs; clarsimp)
      apply(drule triple_seq_empty_case'; clarsimp)
-     apply(simp add: reg_block_def)
+     apply(simp add: reg_block_def seq_block.simps)
      apply(drule_tac n=a and i=b and pre=pre and post=q in pc_after_inst; clarsimp)
       apply(fastforce)
      apply(thin_tac "uniq_stateelm s")
@@ -826,9 +826,10 @@ reg_block insts \<Longrightarrow>
     apply(simp add:reg_block_def)
     apply(erule conjE)+
     apply(drule_tac n=a and i=b in pc_after_inst)
-       apply(simp)+
+       apply(simp add: seq_block.simps)+
      apply(fastforce)
     apply(drule meta_mp; clarsimp)
+    apply(simp add: seq_block.simps; clarsimp)
    apply(clarsimp)
   apply(drule_tac x=n and y=post in meta_spec2)
   apply(drule meta_mp)
@@ -1498,7 +1499,8 @@ cctx_program co_ctx = program_from_cfg cfg \<Longrightarrow>
 	 apply(simp)
 	 apply(drule_tac x=x1 and y=list in meta_spec2)
 	 apply(subgoal_tac "vctx_pc x + int (length (inst_code i)) = vctx_pc x1")
-		apply(simp add: last_no_def reg_block_def reg_vertex_def)
+    apply(simp add: seq_block.simps inst_size_def; clarsimp)
+		apply(simp add: last_no_def reg_block_def reg_vertex_def; fastforce)
 	 apply(insert pc_advance_continue[where co_ctx=co_ctx])
    apply(drule_tac x=i and y=x in meta_spec2;
           drule_tac x=x2 and y=net in meta_spec2; drule_tac x=x1 in meta_spec)
