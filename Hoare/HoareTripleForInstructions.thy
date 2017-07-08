@@ -21,7 +21,7 @@ lemmas as_set_simps =
   variable_ctx_as_set_def
   contexts_as_set_def
 
-lemma continuing_not_context:
+lemma continuing_not_context[simp]:
   "ContinuingElm b \<notin> contexts_as_set x32 co_ctx"
   by (simp add:  as_set_simps)
 
@@ -298,7 +298,7 @@ lemma difficulty_c_means :
    (x24 = block_difficulty (vctx_block x1))"
   by (auto simp add: as_set_simps vctx_advance_pc_def)
     
-lemmas stateelm_means_simps = 
+lemmas stateelm_basic_means_simps = 
   stack_height_element_means
   stack_element_means
   stack_element_notin_means
@@ -557,7 +557,7 @@ lemma code_not_stack :
 apply(simp add: stack_as_set_def)
 done
 
-lemma action_not_context :
+lemma action_not_context[simp]:
   "ContractActionElm a \<notin> contexts_as_set x1 co_ctx"
 by (simp add: as_set_simps)
 
@@ -575,7 +575,7 @@ lemma stack_inc_element [simp] :
    "StackElm (length lst, elm) \<in> stack_as_set (elm # lst)"
 by (simp add: as_set_simps nth_append)
 
-lemma caller_elm_means_c[simp]:
+lemma caller_elm_means_c:
   "(CallerElm c \<in> contexts_as_set x1 co_ctx) = (vctx_caller x1 = c)"
 by (auto simp add: as_set_simps)
 
@@ -882,39 +882,42 @@ lemma gas_elm_i_means :
 apply(auto simp add: instruction_result_as_set_def as_set_simps)
 done
 
-lemma continuing_continuing :
+lemma continuing_continuing[simp]:
   "ContinuingElm True \<in> instruction_result_as_set co_ctx (InstructionContinue x1)"
 apply(simp add: instruction_result_as_set_def)
   done
 
-lemma not_stack_all:
+lemma stack_all:
  "P \<in> stack_as_set lst \<Longrightarrow> P \<in> range StackElm \<union> range StackHeightElm"
   by (induction lst ; auto simp add:as_set_simps)
 
+lemma not_stack_all:
+ "P \<notin> range StackElm \<union> range StackHeightElm \<Longrightarrow> P \<notin> stack_as_set lst"
+  by (induction lst ; auto simp add:as_set_simps)
 
 lemma origin_not_stack :
    "OriginElm x13 \<notin> stack_as_set lst"
-by (auto dest: not_stack_all)
+by (auto dest: stack_all)
 
 lemma sent_value_not_stack :
  "SentValueElm x14 \<notin> stack_as_set lst"
-by (auto dest: not_stack_all)
+by (auto dest: stack_all)
 
 lemma sent_data_length_not_stack :
   "SentDataLengthElm x15 \<notin> stack_as_set lst"
-by (auto dest: not_stack_all)
+by (auto dest: stack_all)
 
 lemma ext_program_not_stack:
   "ExtProgramElm a \<notin> stack_as_set lst"
-by (auto dest: not_stack_all)
+by (auto dest: stack_all)
 
 lemma sent_data_not_stack :
 "SentDataElm ab \<notin> stack_as_set lst"
-by (auto dest: not_stack_all)
+by (auto dest: stack_all)
 
 lemma contract_action_elm_not_stack :
  "ContractActionElm x19 \<notin> stack_as_set lst"
-by (auto dest: not_stack_all)
+by (auto dest: stack_all)
 
 lemma log_num_v_advance  :
   "LogNumElm x6 \<in> variable_ctx_as_set (vctx_advance_pc co_ctx x1) =
@@ -1138,22 +1141,22 @@ lemmas not_stack_simps =
 lemma advance_keeps_stack_elm:
   "StackElm x2 \<in> contexts_as_set (vctx_advance_pc co_ctx v) co_ctx =
   (StackElm x2 \<in> contexts_as_set v co_ctx)"
-  by (simp add: contexts_as_set_def stateelm_means_simps advance_pc_simps)
+  by (simp add: contexts_as_set_def stateelm_basic_means_simps advance_pc_simps)
 
 lemma advance_keeps_code_elm:
   "CodeElm x9 \<in> contexts_as_set (vctx_advance_pc co_ctx x1) co_ctx =
   (CodeElm x9 \<in> contexts_as_set x1 co_ctx)"
-  by (simp add: contexts_as_set_def  code_elm_not_variable stateelm_means_simps advance_pc_simps)
+  by (simp add: contexts_as_set_def  code_elm_not_variable stateelm_basic_means_simps advance_pc_simps)
 
 lemma storage_elm_means:
   "StorageElm ab \<in> contexts_as_set x1 co_ctx =
    (vctx_storage x1 (fst ab) = (snd ab))"
-  by (simp add: contexts_as_set_def stateelm_means_simps advance_pc_simps storage_elm_not_constant)
+  by (simp add: contexts_as_set_def stateelm_basic_means_simps advance_pc_simps storage_elm_not_constant)
 
 lemma memory_elm_means:
    "MemoryElm ab \<in> contexts_as_set x1 co_ctx =
     (vctx_memory x1 (fst ab) = (snd ab))"
-  apply(simp add: contexts_as_set_def stateelm_means_simps memory_elm_not_constant)
+  apply(simp add: contexts_as_set_def stateelm_basic_means_simps memory_elm_not_constant)
 done
 
 lemma log_not_constant :
@@ -1164,7 +1167,7 @@ done
 lemma log_elm_means :
   "LogElm ab \<in> contexts_as_set x1 co_ctx =
    (fst ab < length (vctx_logs x1) \<and> rev (vctx_logs x1) ! (fst ab) = (snd ab))"
-apply(auto simp add: contexts_as_set_def log_not_constant stateelm_means_simps )
+apply(auto simp add: contexts_as_set_def log_not_constant stateelm_basic_means_simps )
 done
 
 lemma this_account_means:
@@ -1175,7 +1178,7 @@ by (auto simp: as_set_simps)
 lemma balance_elm_c_means :
   "BalanceElm ab \<in> contexts_as_set x1 co_ctx =
    (vctx_balance x1 (fst ab) = (snd ab))"
-  apply(auto simp add: contexts_as_set_def balance_elm_means stateelm_means_simps balance_not_constant)
+  apply(auto simp add: contexts_as_set_def balance_elm_means stateelm_basic_means_simps balance_not_constant)
 done
 
 lemma origin_not_constant:
@@ -1186,7 +1189,7 @@ done
 lemma orogin_elm_c_means:
   "OriginElm x13 \<in> contexts_as_set x1 co_ctx =
    (vctx_origin x1 = x13)"
-  apply(auto simp add: advance_keeps_origin_elm constant_ctx_as_set_def program_as_set_def contexts_as_set_def stateelm_means_simps)
+  apply(auto simp add: advance_keeps_origin_elm constant_ctx_as_set_def program_as_set_def contexts_as_set_def stateelm_basic_means_simps)
   done
     
 lemma sent_value_not_constant:
@@ -1197,13 +1200,13 @@ done
 lemma sent_value_c_means :
   "SentValueElm x14 \<in> contexts_as_set x1 co_ctx
   = (vctx_value_sent x1 = x14)"
-  apply(auto simp add: contexts_as_set_def stateelm_means_simps sent_value_not_constant)
+  apply(auto simp add: contexts_as_set_def stateelm_basic_means_simps sent_value_not_constant)
 done
 
 lemma sent_data_length_c_means:
   "SentDataLengthElm x15 \<in> contexts_as_set x1 co_ctx =
   (length (vctx_data_sent x1) = x15)"
-  by(auto simp add: contexts_as_set_def  stateelm_means_simps  constant_ctx_as_set_def program_as_set_def)
+  by(auto simp add: contexts_as_set_def  stateelm_basic_means_simps  constant_ctx_as_set_def program_as_set_def)
 
 lemma sent_data_not_constant:
   "SentDataElm ab \<notin> constant_ctx_as_set co_ctx"
@@ -1213,7 +1216,7 @@ done
 lemma sent_data_elm_c_means :
   "SentDataElm ab \<in> contexts_as_set x1 co_ctx =
    (fst ab < length (vctx_data_sent x1) \<and> (vctx_data_sent x1) ! (fst ab) = snd ab)"
-by (auto simp add: contexts_as_set_def  sent_data_not_constant stateelm_means_simps )
+by (auto simp add: contexts_as_set_def  sent_data_not_constant stateelm_basic_means_simps )
    
 lemmas not_constant_simps =
   stack_elm_not_constant
@@ -1231,7 +1234,7 @@ lemma short_rev_append:
  "a < length t \<Longrightarrow> (rev t @ lst) ! a = rev t ! a"
 	by (simp add: nth_append)
 
-lemma memory_usage_not_constant [simp] :
+lemma memory_usage_not_constant:
 "MemoryUsageElm x8 \<notin> constant_ctx_as_set co_ctx"
 apply(simp add: constant_ctx_as_set_def program_as_set_def)
 done
@@ -1245,12 +1248,12 @@ done
 lemma memory_usage_elm_means:
   "MemoryUsageElm x8 \<in> contexts_as_set x1 co_ctx =
    (vctx_memory_usage x1 = x8)"
-by (auto simp add: contexts_as_set_def stateelm_means_simps)
+by (auto simp add: as_set_simps stateelm_basic_means_simps)
 
 lemma pc_update_v:
   "x \<in> variable_ctx_as_set (x1\<lparr>vctx_pc := p\<rparr>) =
   (x = PcElm p \<or> x \<in> variable_ctx_as_set x1 - {PcElm (vctx_pc x1)})"
-  by (auto simp add:  stateelm_means_simps advance_pc_simps
+  by (auto simp add:  stateelm_basic_means_simps advance_pc_simps
  as_set_simps)
 
 lemma pc_update :
@@ -1707,57 +1710,55 @@ lemma sep_memory_range_sep :
   apply (simp add: sep_conj_commute)
  done
 
-lemma continuging_not_memory_range [simp] :
+lemma continuging_not_memory_range:
   "\<forall> in_begin. ContinuingElm False \<notin> memory_range_elms in_begin input"
 apply(induction input; auto)
 done
 
-lemma contractaction_not_memory_range [simp] :
+lemma contractaction_not_memory_range :
   "\<forall> in_begin a. ContractActionElm a   \<notin> memory_range_elms in_begin input"
 apply(induction input; auto)
 done
 
-lemma pc_not_memory_range [simp] :
+lemma pc_not_memory_range :
   "\<forall> in_begin k. PcElm k \<notin> memory_range_elms in_begin input"
 apply(induction input; auto)
 done
 
-lemma this_account_not_memory_range [simp] :
+lemma this_account_not_memory_range  :
   "\<forall> this in_begin. ThisAccountElm this \<notin> memory_range_elms in_begin input"
 apply(induction input; auto)
 done
 
-lemma balance_not_memory_range [simp] :
+lemma balance_not_memory_range :
   "\<forall> in_begin. BalanceElm p \<notin> memory_range_elms in_begin input"
 apply(induction input; auto)
 done
 
-lemma code_not_memory_range [simp] :
+lemma code_not_memory_range:
   "\<forall> k in_begin. CodeElm pair \<notin> memory_range_elms in_begin input"
 apply(induction input; auto)
 done
 
-lemma continuing_not_memory_range [simp] :
+lemma continuing_not_memory_range :
   "\<forall> b in_begin. ContinuingElm b \<notin> memory_range_elms in_begin input"
 apply(induction input; auto)
 done
 
-lemma stack_not_memory_range [simp] :
+lemma stack_not_memory_range :
   "\<forall> in_begin. StackElm e \<notin> memory_range_elms in_begin input"
 apply(induction input; auto)
 done
 
-lemma stack_height_not_memory_range [simp] :
+lemma stack_height_not_memory_range:
   "\<forall> in_begin. StackHeightElm h \<notin> memory_range_elms in_begin input"
 apply(induction input; auto)
 done
 
-lemma gas_not_memory_range [simp] :
+lemma gas_not_memory_range :
   "\<forall> in_begin. GasElm g \<notin> memory_range_elms in_begin input"
 apply(induction input; auto)
 done
-
-declare memory_range_elms.simps [simp del]
 
 definition triple_alt ::
  "network \<Rightarrow> failure_reason set \<Rightarrow> (state_element set \<Rightarrow> bool) \<Rightarrow> (int * inst) set \<Rightarrow> (state_element set \<Rightarrow> bool) \<Rightarrow> bool"
@@ -1778,8 +1779,6 @@ fun stack_topmost_elms :: "nat \<Rightarrow> w256 list \<Rightarrow> state_eleme
 where
   "stack_topmost_elms h [] = { StackHeightElm h }"
 | "stack_topmost_elms h (f # rest) = { StackElm (h, f) } \<union> stack_topmost_elms (h + 1) rest"
-
-declare stack_topmost_elms.simps [simp del]
 
 definition stack_topmost :: "nat \<Rightarrow> w256 list \<Rightarrow> state_element set \<Rightarrow> bool"
 where
@@ -1810,69 +1809,72 @@ lemma fourth_stack_topmost :
 lemma this_account_not_stack_topmost :
   "\<forall> h. ThisAccountElm this
        \<notin> stack_topmost_elms h lst"
-apply(induction lst; simp add: stack_topmost_elms.simps)
+apply(induction lst; simp )
 done
 
 lemma gas_not_stack_topmost :
   "\<forall> h. GasElm g
        \<notin> stack_topmost_elms h lst"
-apply(induction lst; simp add: stack_topmost_elms.simps)
+apply(induction lst; simp)
 done
 
-lemma stack_topmost_empty[simp]:
+lemma stack_topmost_empty:
  "x \<in> stack_topmost_elms h [] = (x = StackHeightElm h)"
-apply(simp add: stack_topmost_elms.simps)
-done
+by simp
+
+lemma not_memory_range_elms_all:
+  "P \<notin> range MemoryElm \<Longrightarrow> P \<notin> memory_range_elms in_begin input"
+  by (induction input arbitrary: in_begin; auto)
+
+lemma memory_range_elms_all:
+  "P \<in> memory_range_elms in_begin input \<Longrightarrow> P \<in> range MemoryElm"
+  by (induction input arbitrary: in_begin; auto)
 
 lemma memory_range_elms_not_pc :
   "(memory_range_elms in_begin input \<subseteq> s - {PcElm k}) =
    (memory_range_elms in_begin input \<subseteq> s)"
-apply(auto)
-done
+by (auto dest: memory_range_elms_all)
 
 lemma account_ex_is_not_memory_range :
-  "\<forall> in_begin. AccountExistenceElm p \<notin> memory_range_elms in_begin input"
-apply(induction input ; simp)
-done
+  "AccountExistenceElm p \<notin> memory_range_elms in_begin input"
+by (auto dest: memory_range_elms_all)
 
 lemma lognum_not_memory :
   " LogNumElm n \<notin> memory_range_elms in_begin input"
-apply(induction input arbitrary:n in_begin ; simp)
-done
+by (auto dest: memory_range_elms_all)
 
 lemma account_existence_not_memory:
   "AccountExistenceElm x \<notin> memory_range_elms in_begin input"
-apply(induction input arbitrary: x in_begin; simp)
-  done
-    
+by (auto dest: memory_range_elms_all)
+  
 lemma log_not_memory_range :
-  "\<forall> in_begin. LogElm x5 \<notin> memory_range_elms in_begin input"
-apply(induction input; simp)
-done
+  "LogElm x5 \<notin> memory_range_elms in_begin input"
+by (auto dest: memory_range_elms_all)
+
 
 lemma caller_not_memory_range:
-  "\<forall> in_begin. CallerElm x5 \<notin> memory_range_elms in_begin input"
-apply(induction input; simp)
-done
+  "CallerElm x5 \<notin> memory_range_elms in_begin input"
+by (auto dest: memory_range_elms_all)
+
 
 lemma origin_not_memory_range:
-  "\<forall> in_begin. OriginElm x5 \<notin> memory_range_elms in_begin input"
-apply(induction input; simp)
-done
+  "OriginElm x5 \<notin> memory_range_elms in_begin input"
+by (auto dest: memory_range_elms_all)
+
 
 lemma sent_value_not_memory_range  :
-  "\<forall> in_begin. SentValueElm x5 \<notin> memory_range_elms in_begin input"
-apply(induction input; simp)
-done
+  "SentValueElm x5 \<notin> memory_range_elms in_begin input"
+by (auto dest: memory_range_elms_all)
+
 
 lemma sent_data_length_not_memory_range  :
-  "\<forall> in_begin. SentDataLengthElm x5 \<notin> memory_range_elms in_begin input"
-apply(induction input; simp)
-  done
+  "SentDataLengthElm x5 \<notin> memory_range_elms in_begin input"
+by (auto dest: memory_range_elms_all)
+
 
 lemma memory_usage_not_memory_range:
  "MemoryUsageElm x  \<notin> memory_range_elms in_begin  input"
- by (induction input arbitrary:in_begin; simp)
+ by (auto dest: memory_range_elms_all)
 
     
 lemmas not_memory_range_simps =
@@ -1895,11 +1897,6 @@ lemmas not_memory_range_simps =
   sent_data_length_not_memory_range   
   memory_usage_not_memory_range 
 
-lemma memory_range_elms_not_pc :
-  "(memory_range_elms in_begin input \<subseteq> s - {PcElm k}) =
-   (memory_range_elms in_begin input \<subseteq> s)"
-  by (auto dest: not_memory_range_all)
->>>>>>> HoareTripleForInstructions.thy checks.
 
 lemma memory_range_elms_not_account_existence :
   "(memory_range_elms in_begin input \<subseteq> s - {AccountExistenceElm p}) =
@@ -1911,7 +1908,7 @@ lemma memory_range_elms_not_code :
        \<subseteq> s - {CodeElm pair}) =
    (memory_range_elms in_begin input \<subseteq> s)
   "
-by auto
+  by (auto dest: memory_range_elms_all)
 
 lemma memory_not_stack_topmost:
   "MemoryElm p \<notin> stack_topmost_elms h lst"
@@ -1947,13 +1944,7 @@ lemma stack_topmost_not_code:
   "stack_topmost_elms h lst
        \<subseteq> s - {CodeElm (vctx_pc x1, Misc CALL)} =
      (stack_topmost_elms h lst \<subseteq> s)"
-by (induction lst arbitrary: h; auto simp add: stack_topmost_elms.simps)
-
-lemma memory_usage_not_in_memory_range [simp] :
-"MemoryUsageElm x8  \<notin> memory_range_elms in_begin  input"
-apply (induction input arbitrary:in_begin)
-apply (auto simp:memory_range_elms.simps)
-done
+by (induction lst arbitrary: h; auto)
 
 lemma stack_height_after_call:
        "vctx_balance x1 (cctx_this co_ctx) \<ge> vctx_stack x1 ! 2 \<Longrightarrow>
@@ -1962,7 +1953,7 @@ lemma stack_height_after_call:
         (StackHeightElm h
           \<in> instruction_result_as_set co_ctx (subtract_gas g memu (call net x1 co_ctx)))
         "
-  apply(simp add: call_def as_set_simps stateelm_means_simps)
+  apply(simp add: call_def as_set_simps stateelm_basic_means_simps)
   apply(auto simp add: instruction_result_as_set_def as_set_simps simp_for_triples split: list.splits)
 done
 
@@ -1974,9 +1965,8 @@ lemma topmost_elms_means:
      drop h (rev (vctx_stack x1)) = lst)
     "
 apply(induction lst; simp)
- apply(simp add: stack_topmost_elms.simps instruction_result_as_set_def as_set_simps)
+ apply(simp add: instruction_result_as_set_def as_set_simps)
  apply blast
-apply(simp add: stack_topmost_elms.simps)
 apply(rule allI)
   apply(rule allI)
   apply (simp (no_asm) add: instruction_result_as_set_def as_set_simps)
@@ -1997,51 +1987,44 @@ apply(rule allI)
   apply simp
 done
 
-lemma to_environment_not_continuing:
+lemma to_environment_not_continuing[simp]:
   "ContinuingElm True
        \<notin> instruction_result_as_set co_ctx (InstructionToEnvironment x31 x32 x33)"
 apply(simp add: instruction_result_as_set_def as_set_simps)
   done
     
-lemma not_topmost_all:
+lemma topmost_all:
  "P \<in> stack_topmost_elms h lst \<Longrightarrow> P \<in> range StackElm \<union> range StackHeightElm"
-  by (induction lst arbitrary:h ; auto simp add: stack_topmost_elms.simps)
+  by (induction lst arbitrary:h ; auto)
+
+lemma not_topmost_all:
+ "P \<notin> range StackElm \<union> range StackHeightElm \<Longrightarrow> P \<notin> stack_topmost_elms h lst"
+  by (induction lst arbitrary:h ; auto)
 
 lemma balance_not_topmost :
-  "\<forall> h. BalanceElm pair \<notin> stack_topmost_elms h lst"
-apply(induction lst; auto simp add: stack_topmost_elms.simps)
-done
+  "BalanceElm pair \<notin> stack_topmost_elms h lst"
+  by (auto dest: topmost_all)
 
 lemma this_not_topmost :
-  "\<forall> h. ThisAccountElm pair \<notin> stack_topmost_elms h lst"
-apply(induction lst; auto simp add: stack_topmost_elms.simps)
-done
+  "ThisAccountElm pair \<notin> stack_topmost_elms h lst"
+  by (auto dest: topmost_all)
 
 lemma continue_not_topmost :
-  "\<forall> len. ContinuingElm b
-       \<notin> stack_topmost_elms len lst"
-apply(induction lst; auto simp add: stack_topmost_elms.simps)
-done
+  "ContinuingElm b\<notin> stack_topmost_elms len lst"
+  by (auto dest: topmost_all)
 
 lemma this_account_i_means :
   "ThisAccountElm this \<in> instruction_result_as_set co_ctx (InstructionContinue x1) =
    (cctx_this co_ctx = this)"
   by (auto simp add: instruction_result_as_set_def as_set_simps)
 
-lemma memory_usage_not_in_memory_range:
- "MemoryUsageElm x  \<notin> memory_range_elms in_begin  input"
- by (induction input arbitrary:in_begin; simp add :memory_range_elms.simps)
-
 lemma memory_usage_not_topmost:
-  "\<forall> len. MemoryUsageElm u
-       \<notin> stack_topmost_elms len lst"
-apply(induction lst; auto simp add: stack_topmost_elms.simps)
-done
+  "MemoryUsageElm u  \<notin> stack_topmost_elms len lst"
+  by (auto dest: topmost_all)
 
 lemma gas_not_topmost:
-  "\<forall> h. GasElm pair \<notin> stack_topmost_elms h lst"
-apply(induction lst; auto simp add: stack_topmost_elms.simps)
-done
+  "GasElm pair \<notin> stack_topmost_elms h lst"
+  by (auto dest: topmost_all)
 
 
 lemma call_new_balance :
@@ -2077,7 +2060,8 @@ lemma memory_range_elms_not_continuing :
   = (memory_range_elms in_begin input
        \<subseteq> (contexts_as_set x1 co_ctx))
   "
-  by (auto dest: not_memory_range_all)
+by (auto dest: memory_range_elms_all)
+
 
 lemma suc_unat :
 "Suc n = unat (aa :: w256) \<Longrightarrow>
@@ -2095,7 +2079,7 @@ lemma memory_range_elms_cut_memory :
         memory_range_elms in_begin lst \<subseteq> variable_ctx_as_set x1 \<longrightarrow>
         cut_memory in_begin in_size (vctx_memory x1) = lst"
 apply(induction lst)
-   apply(simp add: unat_eq_0 cut_memory_zero)
+   apply(simp add: unat_eq_0 )
 apply(rule allI)
 apply(rule allI)
 apply(drule_tac x = "in_begin + 1" in spec)
@@ -2103,19 +2087,16 @@ apply(drule_tac x = "in_size - 1" in spec)
 apply(clarsimp)
 apply (erule impE)
  apply unat_arith
-  apply (simp add: cut_memory_cons)
   apply (rule conjI)
    apply auto[1]
- apply (simp add: as_set_simps)
+ apply (clarsimp simp add: as_set_simps)
 done
 
-lemma stack_height_in_topmost:
-   "\<forall> h. StackHeightElm x1a
-       \<in> stack_topmost_elms h lst =
-    (x1a = h + length lst)"
+lemma stack_height_in_topmost_means:
+   "\<forall> h. StackHeightElm x1a \<in> stack_topmost_elms h lst = (x1a = h + length lst)"
 apply(induction lst)
  apply(simp)
-apply(auto simp add: stack_topmost_elms.simps)
+apply(auto simp add: )
 done
 
 lemma code_elm_not_stack_topmost :
@@ -2123,7 +2104,6 @@ lemma code_elm_not_stack_topmost :
        \<notin> stack_topmost_elms len lst"
 apply(induction lst)
  apply(auto)
-apply(auto simp add: stack_topmost_elms.simps)
 done
 
 lemma stack_elm_c_means :
@@ -2139,7 +2119,7 @@ lemma stack_elm_in_topmost  :
        \<in> stack_topmost_elms len lst =
    (fst x2 \<ge> len \<and> fst x2 < len + length lst \<and> lst ! (fst x2 - len) = snd x2)"
 apply(induction lst)
- apply(simp add: stack_topmost_elms.simps)
+ apply(simp)
 apply(rule allI)
 apply(drule_tac x = "Suc len" in spec)
 apply(case_tac x2)
@@ -2159,39 +2139,39 @@ lemma code_elm_in_c :
     program_content (cctx_program co_ctx) (fst x9) = None \<and> snd x9 = Misc STOP)"
   by (case_tac x9, simp add: stateelm_equiv_simps)
 
+    
+    
 lemma storage_not_stack_topmost:
    "StorageElm x \<notin> stack_topmost_elms len lst"
- by (induction lst arbitrary: len ; simp add: stack_topmost_elms.simps)
+ by (auto dest: topmost_all)
 
 lemma log_not_topmost:
  "LogElm x \<notin> stack_topmost_elms len lst"
- by (induction lst arbitrary: len ; simp add: stack_topmost_elms.simps)
+ by (auto dest: topmost_all)
 
 lemma caller_not_topmost:
   "CallerElm x \<notin> stack_topmost_elms len lst"
- by (induction lst arbitrary: len ; simp add: stack_topmost_elms.simps)
+ by (auto dest: topmost_all)
 
 lemma origin_not_topmost :
-  "\<forall> len. OriginElm x13
-       \<notin> stack_topmost_elms len lst"
-apply(induction lst; simp add: stack_topmost_elms.simps)
-done
+  "OriginElm x13   \<notin> stack_topmost_elms len lst"
+ by (auto dest: topmost_all)
 
 lemma sent_value_not_topmost :
   "SentValueElm x \<notin> stack_topmost_elms len lst"
- by (induction lst arbitrary: len ; simp add: stack_topmost_elms.simps)
+ by (auto dest: topmost_all)
 
 lemma sent_data_length_not_topmost :
     "SentDataLengthElm x \<notin> stack_topmost_elms len lst"
- by (induction lst arbitrary: len ; simp add: stack_topmost_elms.simps)
+ by (auto dest: topmost_all)
 
 lemma sent_data_not_topmost:
  "SentDataElm x \<notin> stack_topmost_elms len lst"
- by (induction lst arbitrary: len ; simp add: stack_topmost_elms.simps)
+ by (auto dest: topmost_all)
 
 lemma ext_program_size_not_topmost :
    "ExtProgramSizeElm x \<notin> stack_topmost_elms len lst"
- by (induction lst arbitrary: len ; simp add: stack_topmost_elms.simps)
+ by (auto dest: topmost_all)
 
 
 lemma code_elm_c :
@@ -2201,33 +2181,33 @@ done
 
 lemma ext_program_not_topmost_elms :
   " ExtProgramElm x \<notin> stack_topmost_elms len lst"
- by (induction lst arbitrary: len ; simp add: stack_topmost_elms.simps)
+ by (auto dest: topmost_all)
 
 
 
 lemma block_hash_not_topmost:
   "BlockhashElm x \<notin> stack_topmost_elms len lst"
- by (induction lst arbitrary: len ; simp add: stack_topmost_elms.simps)
+ by (auto dest: topmost_all)
 
 
 lemma block_number_not_topmost :
  "BlockNumberElm x \<notin> stack_topmost_elms len lst"
- by (induction lst arbitrary: len ; simp add: stack_topmost_elms.simps)
+ by (auto dest: topmost_all)
 
 
 lemma coinbase_not_topmost:
   "CoinbaseElm x \<notin> stack_topmost_elms len lst"
- by (induction lst arbitrary: len ; simp add: stack_topmost_elms.simps)
+ by (auto dest: topmost_all)
 
 
 lemma timestamp_not_topmost :
   "TimestampElm x \<notin> stack_topmost_elms len lst"
- by (induction lst arbitrary: len ; simp add: stack_topmost_elms.simps)
+ by (auto dest: topmost_all)
 
 
 lemma difficulty_not_topmost:
   "DifficultyElm x \<notin> stack_topmost_elms len lst"
- by (induction lst arbitrary: len ; simp add: stack_topmost_elms.simps)
+ by (auto dest: topmost_all)
 
 
 lemma memory_range_gas_update :
@@ -2236,45 +2216,34 @@ lemma memory_range_gas_update :
                (x1
                 \<lparr>vctx_gas := g \<rparr>) =
    (x \<in> variable_ctx_as_set x1)"
-apply(auto simp add: variable_ctx_as_set_def)
-done
+   by (auto simp: as_set_simps dest: memory_range_elms_all)
 
-lemma lognum_not_memory :
-  " LogNumElm n \<notin> memory_range_elms in_begin input"
-apply(induction input arbitrary:n in_begin)
- apply(simp add: memory_range_elms.simps)
-apply(simp add: memory_range_elms.simps)
-done
-
-lemma account_existence_not_memory:
-  "AccountExistenceElm x \<notin> memory_range_elms in_begin input"
-by (auto simp add: as_set_simps dest: not_memory_range_all)
 
 lemma memory_range_stack :
 "      x \<in> memory_range_elms in_begin input \<Longrightarrow>
        x \<in> variable_ctx_as_set (x1\<lparr>vctx_stack := sta\<rparr>)
       = (x \<in> variable_ctx_as_set x1)"
-by (auto simp add: as_set_simps dest: not_memory_range_all)
+by (auto simp add: as_set_simps dest: memory_range_elms_all)
 
 lemma memory_range_memory_usage  :
 "      x \<in> memory_range_elms in_begin input \<Longrightarrow>
        x \<in> variable_ctx_as_set (x1\<lparr>vctx_memory_usage := u\<rparr>)
       = (x \<in> variable_ctx_as_set x1)"
-by (auto simp add: as_set_simps dest: not_memory_range_all)
+by (auto simp add: as_set_simps dest: memory_range_elms_all)
 
 
 lemma memory_range_balance :
 "      x \<in> memory_range_elms in_begin input \<Longrightarrow>
        x \<in> variable_ctx_as_set (x1\<lparr>vctx_balance := u\<rparr>)
       = (x \<in> variable_ctx_as_set x1)"
-by (auto simp add: as_set_simps dest: not_memory_range_all)
+by (auto simp add: as_set_simps dest: memory_range_elms_all)
 
 lemma memory_range_advance_pc :
 "      x \<in> memory_range_elms in_begin input \<Longrightarrow>
        x \<in> variable_ctx_as_set (vctx_advance_pc co_ctx x1)
      = (x \<in> variable_ctx_as_set x1)
 "
-by (auto simp add: as_set_simps advance_pc_simps dest: not_memory_range_all)
+by (auto simp add: as_set_simps advance_pc_simps dest: memory_range_elms_all)
 
 lemma memory_range_action :
       "x \<in> memory_range_elms in_begin input \<Longrightarrow>
@@ -2284,36 +2253,36 @@ lemma memory_range_action :
                v
                cont) =
        (x \<in> variable_ctx_as_set v)"
-by (auto simp add: instruction_result_as_set_def as_set_simps dest: not_memory_range_all)
+by (auto simp add: instruction_result_as_set_def as_set_simps dest: memory_range_elms_all)
 
 lemma storage_not_memory_range:
   "StorageElm x3 \<notin> memory_range_elms in_begin input"
-  by (fastforce dest: not_memory_range_all)
+  by (auto dest: memory_range_elms_all)
 
 lemma memory_range_insert_cont :
    "memory_range_elms in_begin input
          \<subseteq> insert (ContinuingElm True) s =
     (memory_range_elms in_begin input
          \<subseteq> s)"
-by (auto dest: not_memory_range_all)
+by (auto dest: memory_range_elms_all)
 
 lemma memory_range_constant_union :
   "memory_range_elms in_begin input \<subseteq> constant_ctx_as_set co_ctx \<union> s =
    (memory_range_elms in_begin input \<subseteq> s)"
-by (auto simp: as_set_simps dest: not_memory_range_all)
+by (auto simp: as_set_simps dest: memory_range_elms_all)
 
 lemma memory_range_elms_i :
       "memory_range_elms in_begin input
        \<subseteq> instruction_result_as_set co_ctx (InstructionContinue x1) =
        (memory_range_elms in_begin input \<subseteq>
         variable_ctx_as_set x1)"
-by (auto simp: instruction_result_as_set_def as_set_simps dest: not_memory_range_all)
+by (auto simp: instruction_result_as_set_def as_set_simps dest: memory_range_elms_all)
 
 lemma memory_range_continue:
 "      x \<in> memory_range_elms in_begin input \<Longrightarrow>
        x \<in> instruction_result_as_set co_ctx (InstructionContinue x1) =
        (x \<in> variable_ctx_as_set x1)"
-by (auto simp: instruction_result_as_set_def as_set_simps dest: not_memory_range_all)
+by (auto simp: instruction_result_as_set_def as_set_simps dest: memory_range_elms_all)
     
 lemmas memory_range_simps = 
   memory_range_constant_union
@@ -2339,12 +2308,12 @@ shows
          (subtract_gas (meter_gas (Misc CALL) x1 co_ctx net) memu (call net x1 co_ctx)) =
   (x \<in> instruction_result_as_set co_ctx (InstructionContinue x1))"
   apply (simp add: call_def)
-  apply (auto simp: instruction_result_as_set_def dest: not_memory_range_all split: list.splits)
-    apply ((auto simp: as_set_simps advance_pc_simps dest: not_memory_range_all)[1])+
+  apply (auto simp: instruction_result_as_set_def dest: not_memory_range_elms_all split: list.splits)
+    apply ((auto simp: as_set_simps advance_pc_simps dest: memory_range_elms_all)[1])+
 done
 
 
-lemma memory_call [simp] :
+lemma memory_call:
 notes simp_for_triples[simp]
 shows
   "x \<in> memory_range_elms in_begin input \<Longrightarrow>
@@ -2352,21 +2321,17 @@ shows
     (x \<in> instruction_result_as_set co_ctx (InstructionContinue x1))"
   apply(simp add: call_def)
   apply (auto split: list.splits simp: memory_range_simps)
-done
+  done
 
-lemma gas_limit_not_topmost [simp] :
-  "\<forall> len. GaslimitElm g
-       \<notin> stack_topmost_elms len lst"
-apply(induction lst; simp add: stack_topmost_elms.simps)
-done
+lemma gas_limit_not_topmost:
+  "GaslimitElm g  \<notin> stack_topmost_elms len lst"
+by (auto dest: topmost_all)
 
-lemma gas_price_not_topmost [simp] :
-" \<forall> len. GaspriceElm p
-       \<notin> stack_topmost_elms len lst"
-apply(induction lst; simp add: stack_topmost_elms.simps)
-done
+lemma gas_price_not_topmost :
+" GaspriceElm p \<notin> stack_topmost_elms len lst"
+by (auto dest: topmost_all)
 
-lemma fourth_last_pure [simp] :
+lemma fourth_last_pure :
 "(a ** b ** c ** \<langle> P \<rangle>) s =
  (P \<and> (a ** b ** c) s)"
 	by (metis get_pure sep_three)
@@ -2388,7 +2353,7 @@ proof -
     by simp
 qed
 
-lemma lookup_over_suc [simp] :
+lemma lookup_over_suc :
   "n \<ge> length lst \<Longrightarrow> (rev lst @ a # rest) ! Suc n = (rev lst @ rest) ! n"
 proof -
   assume "n \<ge> length lst"
@@ -2420,184 +2385,142 @@ proof -
 qed
   
 
-lemma lookup_over4 [simp]:
+lemma lookup_over4 :
   "(rev listf @ a # b # c # d # e # rest) ! Suc (Suc (Suc (Suc (length listf))))
    = e"
   by (simp add: lookup_over_suc rev_nth_simps )
 
-lemma lookup_over3 [simp] :
+lemma lookup_over3 :
   "(rev listf @ a # b # c # d # lst) ! Suc (Suc (Suc (length listf))) = d"
   by (simp add: lookup_over_suc rev_nth_simps)
 
 
-lemma memory_range_elms_in_minus_this [simp] :
+lemma memory_range_elms_in_minus_this:
   "memory_range_elms in_begin input
        \<subseteq> X - {ThisAccountElm t} =
    (memory_range_elms in_begin input \<subseteq> X)"
-  by  (auto dest: not_memory_range_all)
+  by  (auto dest: memory_range_elms_all)
 
-lemma memory_range_elms_in_minus_stackheight [simp] :
+lemma memory_range_elms_in_minus_stackheight :
   "memory_range_elms in_begin input
        \<subseteq> X - {StackHeightElm h} =
    (memory_range_elms in_begin input \<subseteq> X)"
-  by  (auto dest: not_memory_range_all)
+  by  (auto dest: memory_range_elms_all)
 
-lemma memory_range_elms_in_minus_continuing [simp] :
+lemma memory_range_elms_in_minus_continuing :
   "memory_range_elms in_begin input
        \<subseteq> X - {ContinuingElm b} =
    (memory_range_elms in_begin input \<subseteq> X)"
-  by  (auto dest: not_memory_range_all)
+  by  (auto dest: memory_range_elms_all)
 
-lemma memory_range_elms_in_minus_gas [simp] :
+lemma memory_range_elms_in_minus_gas  :
   "memory_range_elms in_begin input
        \<subseteq> X - {GasElm b} =
    (memory_range_elms in_begin input \<subseteq> X)"
-  by  (auto dest: not_memory_range_all)
+  by  (auto dest: memory_range_elms_all)
 
-lemma log_not_memory_range [simp] :
-  "\<forall> in_begin. LogElm x5 \<notin> memory_range_elms in_begin input"
-apply(induction input; auto simp add: memory_range_elms.simps)
-done
-
-lemma caller_not_memory_range [simp] :
-  "\<forall> in_begin. CallerElm x5 \<notin> memory_range_elms in_begin input"
-apply(induction input; auto simp add: memory_range_elms.simps)
-done
-
-lemma origin_not_memory_range [simp] :
-  "\<forall> in_begin. OriginElm x5 \<notin> memory_range_elms in_begin input"
-apply(induction input; auto simp add: memory_range_elms.simps)
-done
-
-lemma sent_value_not_memory_range [simp] :
-  "\<forall> in_begin. SentValueElm x5 \<notin> memory_range_elms in_begin input"
-apply(induction input; auto simp add: memory_range_elms.simps)
-done
-
-lemma sent_data_length_not_memory_range [simp] :
-  "\<forall> in_begin. SentDataLengthElm x5 \<notin> memory_range_elms in_begin input"
-apply(induction input; auto simp add: memory_range_elms.simps)
-done
-
-
-
-lemma memory_range_elms_in_insert_continuing [simp] :
+lemma memory_range_elms_in_insert_continuing  :
   "(memory_range_elms in_begin input
    \<subseteq> insert (ContinuingElm b) X) =
   (memory_range_elms in_begin input \<subseteq> X)"
-  by  (auto dest: not_memory_range_all)
+  by  (auto dest: memory_range_elms_all)
 
-
-lemma memory_range_elms_in_insert_contract_action [simp] :
+lemma memory_range_elms_in_insert_contract_action :
   "(memory_range_elms in_begin input
    \<subseteq> insert (ContractActionElm b) X) =
   (memory_range_elms in_begin input \<subseteq> X)"
-  by  (auto dest: not_memory_range_all)
+  by  (auto dest: memory_range_elms_all)
 
 
 
-lemma memory_range_elms_in_insert_gas [simp] :
+lemma memory_range_elms_in_insert_gas :
   "(memory_range_elms in_begin input
    \<subseteq> insert (GasElm b) X) =
   (memory_range_elms in_begin input \<subseteq> X)"
-  by  (auto dest: not_memory_range_all)
+  by  (auto dest: memory_range_elms_all)
 
-
-lemma memory_range_elms_in_minus_stack [simp]:
+lemma memory_range_elms_in_minus_stack:
   "memory_range_elms in_begin input
        \<subseteq> X -
           { StackElm pair } =
   (memory_range_elms in_begin input \<subseteq> X)"
-  by  (auto dest: not_memory_range_all)
+  by  (auto dest: memory_range_elms_all)
 
-
-lemma minus_h [simp] :
+lemma minus_h :
   "x - {a, b, c, d, e, f, g, h} = 
    x - {a} - {b} - {c} - {d} - {e} - {f} - {g} - {h}"
 apply auto
 done
 
-lemma stack_topmost_in_minus_balance [simp] :
+lemma stack_topmost_in_minus_balance :
   "stack_topmost_elms h lst \<subseteq> X - {BalanceElm b} =
    (stack_topmost_elms h lst \<subseteq> X)"
-apply auto
-done
+by (auto dest: topmost_all)
 
-lemma stack_topmost_in_minus_this [simp] :
+lemma stack_topmost_in_minus_this:
   "stack_topmost_elms h lst \<subseteq> X - {ThisAccountElm b} =
    (stack_topmost_elms h lst \<subseteq> X)"
-by (auto)
+by (auto dest: topmost_all)
 
 
-lemma stack_topmost_in_minus_pc [simp] :
+lemma stack_topmost_in_minus_pc :
   "stack_topmost_elms h lst \<subseteq> X - {PcElm b} =
    (stack_topmost_elms h lst \<subseteq> X)"
-apply auto
-done
+by (auto dest: topmost_all)
 
-lemma stack_topmost_in_minus_memoryusage [simp] :
+lemma stack_topmost_in_minus_memoryusage :
   "stack_topmost_elms h lst \<subseteq> X - {MemoryUsageElm b} =
    (stack_topmost_elms h lst \<subseteq> X)"
-apply auto
-done
+by (auto dest: topmost_all)
 
-lemma stack_topmost_in_minus_gas [simp] :
+lemma stack_topmost_in_minus_gas :
   "stack_topmost_elms h lst \<subseteq> X - {GasElm b} =
    (stack_topmost_elms h lst \<subseteq> X)"
-apply auto
-done
+by (auto dest: topmost_all)
 
-lemma stack_topmost_in_minus_continuing [simp] :
+lemma stack_topmost_in_minus_continuing :
   "stack_topmost_elms h lst \<subseteq> X - {ContinuingElm b} =
    (stack_topmost_elms h lst \<subseteq> X)"
-apply auto
-done
+by (auto dest: topmost_all)
 
-lemma stack_topmost_in_insert_cont [simp] :
+lemma stack_topmost_in_insert_cont :
   "stack_topmost_elms l lst \<subseteq> insert (ContinuingElm b) X =
    (stack_topmost_elms l lst \<subseteq> X)"
-apply auto
-done
+by (auto dest: topmost_all)
 
-lemma contract_action_not_stack_topmost [simp] :
-  "\<forall> l. ContractActionElm x19 \<notin> stack_topmost_elms l lst"
-apply(induction lst; auto simp add: stack_topmost_elms.simps)
-done
-
-lemma stack_topmost_in_insert_contractaction [simp] :
+lemma contract_action_not_stack_topmost :
+  "ContractActionElm x19 \<notin> stack_topmost_elms l lst"
+  by (auto dest: topmost_all)
+    
+lemma stack_topmost_in_insert_contractaction:
   "stack_topmost_elms l lst \<subseteq> insert (ContractActionElm a) X =
    (stack_topmost_elms l lst \<subseteq> X)"
-apply auto
-done
+  by (auto dest: topmost_all)
 
 lemma stack_topmost_in_insert_gas  :
   "stack_topmost_elms l lst \<subseteq> insert (GasElm a) X =
    (stack_topmost_elms l lst \<subseteq> X)"
-apply auto
-done
+by (auto dest: topmost_all)
 
-
-lemma lognum_not_program [simp] :
+lemma lognum_not_program:
  "LogNumElm x6 \<notin> program_as_set p"
 apply(simp add: program_as_set_def)
 done
 
-lemma lognum_not_constant [simp] :
+lemma lognum_not_constant:
   "LogNumElm x6 \<notin> constant_ctx_as_set c"
-apply(simp add: constant_ctx_as_set_def)
+apply(simp add: as_set_simps)
 done
 
-lemma stack_topmost_not_constant [simp]:
+lemma stack_topmost_not_constant:
   "elm \<in> stack_topmost_elms h lst \<Longrightarrow> elm \<notin> constant_ctx_as_set c"
-apply(case_tac elm; simp)
-done
+  by (auto dest!: topmost_all simp: as_set_simps )
 
-lemma stack_topmost_in_c [simp] :
+lemma stack_topmost_in_c :
   "stack_topmost_elms h lst
        \<subseteq> contexts_as_set v c =
    (stack_topmost_elms h lst \<subseteq> variable_ctx_as_set v)"
-apply (auto simp add: contexts_as_set_def)
-done 
+by  (auto  dest: topmost_all simp: as_set_simps)
 
 lemma ppq :
   "(P = (P \<and> Q)) = (P \<longrightarrow> Q)"
@@ -2615,6 +2538,9 @@ apply(clarify)
 apply(case_tac orig; auto)
 done
 
+lemma drop_suc :
+ "drop (Suc h) lst = drop 1 (drop h lst)"
+  by simp
 
 lemma drop_cons :
   "(drop h orig = a # lst) = 
@@ -2626,35 +2552,32 @@ apply(auto)
  using not_less apply fastforce
 by (simp add: drop_eq_cons_when)
 
-lemma topmost_elms_in_vctx_means [simp]:
+lemma topmost_elms_in_vctx_means:
   "\<forall> h v. stack_topmost_elms h lst
        \<subseteq> variable_ctx_as_set v =
   ((length (vctx_stack v) = h + length lst \<and> drop h (rev (vctx_stack v)) = lst))"
-apply(induction lst; simp)
- apply(simp add: stack_topmost_elms.simps ppq)
-apply(rule allI)
-apply(rule allI)
-apply(simp only: stack_topmost_elms.simps)
-apply(simp add: drop_cons)
+  apply(induction lst; simp add: as_set_simps)
+   apply fastforce
+apply(clarsimp simp add: drop_cons)
 apply blast
 done
-
-lemma memory_range_not_stack_topmost [simp]:
+  
+lemma memory_range_not_stack_topmost:
   "x \<in> memory_range_elms in_begin input \<Longrightarrow> x \<notin> stack_topmost_elms h lst"
-  by  (auto simp: as_set_simps dest: not_topmost_all not_memory_range_all)
+  by  (auto simp: as_set_simps dest: topmost_all memory_range_elms_all)
     
 lemma memory_range_elms_in_minus_statck_topmost  :
   "memory_range_elms in_begin input
        \<subseteq> X -
           stack_topmost_elms h lst =
    (memory_range_elms in_begin input \<subseteq> X)"
- by  (auto simp: as_set_simps dest: not_topmost_all not_memory_range_all)
+  by  (auto simp: as_set_simps dest: topmost_all memory_range_elms_all)
 
 lemma memory_range_elms_in_c :
   "memory_range_elms in_begin input
        \<subseteq> contexts_as_set v c =
   (memory_range_elms in_begin input \<subseteq> variable_ctx_as_set v)"
- by  (auto simp: as_set_simps dest: not_topmost_all not_memory_range_all)
+by (auto simp: as_set_simps dest: topmost_all memory_range_elms_all)
 
 lemma memory_usage_not_ext_program  :
   "MemoryUsageElm u \<notin> ext_program_as_set e"
@@ -2668,70 +2591,61 @@ done
 lemma variable_ctx_as_set_updte_mu:
   "variable_ctx_as_set (v\<lparr>vctx_memory_usage := u\<rparr>) =
    variable_ctx_as_set v - {MemoryUsageElm (vctx_memory_usage v)} \<union> {MemoryUsageElm u}"
-apply(auto simp add: variable_ctx_as_set_def)
-done
+by (auto simp: as_set_simps dest: topmost_all memory_range_elms_all)
+
 
 lemma memory_range_elms_in_mu :
   "memory_range_elms in_begin input \<subseteq> insert (MemoryUsageElm u) X =
    (memory_range_elms in_begin input \<subseteq> X)"
-apply(auto)
-done
+by (auto dest: memory_range_elms_all)
+
 
 lemma sent_data_not_in_mr :
- "\<forall> in_begin. SentDataElm x16 \<notin> memory_range_elms in_begin input"
-apply (induction input; simp add: memory_range_elms.simps)
-done
+ "SentDataElm x16 \<notin> memory_range_elms in_begin input"
+by (auto dest: memory_range_elms_all)
+
 
 lemma ext_program_not_in_mr :
-  "\<forall> in_begin. ExtProgramSizeElm x17 \<notin> memory_range_elms in_begin input"
-apply(induction input; simp add: memory_range_elms.simps)
-done
+  "ExtProgramSizeElm x17 \<notin> memory_range_elms in_begin input"
+by (auto dest: memory_range_elms_all)
+
 
 lemma ext_pr_not_in_mr :
-  "\<forall> in_begin. ExtProgramElm x18 \<notin> memory_range_elms in_begin input"
-apply(induction input; simp add: memory_range_elms.simps)
-done
+  "ExtProgramElm x18 \<notin> memory_range_elms in_begin input"
+by (auto dest: memory_range_elms_all)
 
 lemma blockhash_not_in_mr :
-  "\<forall> in_begin. BlockhashElm x21 \<notin> memory_range_elms in_begin input"
-apply(induction input; simp add: memory_range_elms.simps)
-done
+  "BlockhashElm x21 \<notin> memory_range_elms in_begin input"
+by (auto dest: memory_range_elms_all)
 
 lemma blocknumber_not_in_mr :
-  "\<forall> in_begin. BlockNumberElm x22 \<notin> memory_range_elms in_begin input"
-apply(induction input; simp add: memory_range_elms.simps)
-done
+  "BlockNumberElm x22 \<notin> memory_range_elms in_begin input"
+by (auto dest: memory_range_elms_all)
 
 lemma coinbase_not_in_mr :
-  "\<forall> in_begin. 
-     CoinbaseElm x23 \<notin> memory_range_elms in_begin input"
-apply(induction input; simp add: memory_range_elms.simps)
-done
+  "CoinbaseElm x23 \<notin> memory_range_elms in_begin input"
+by (auto dest: memory_range_elms_all)
 
 lemma timestamp_not_in_mr :
-  "\<forall> in_begin. TimestampElm x24 \<notin> memory_range_elms in_begin input"
-apply(induction input; simp add: memory_range_elms.simps)
-done
+  "TimestampElm x24 \<notin> memory_range_elms in_begin input"
+by (auto dest: memory_range_elms_all)
 
 lemma difficulty_not_in_mr :
-"\<forall> in_begin. DifficultyElm x25 \<notin> memory_range_elms in_begin input"
-apply(induction input; simp add: memory_range_elms.simps)
-done
+"DifficultyElm x25 \<notin> memory_range_elms in_begin input"
+by (auto dest: memory_range_elms_all)
 
 lemma gaslimit_not_in_mr :
-"\<forall> in_begin. GaslimitElm x26 \<notin> memory_range_elms in_begin input"
-apply(induction input; simp add: memory_range_elms.simps)
-done
+"GaslimitElm x26 \<notin> memory_range_elms in_begin input"
+by (auto dest: memory_range_elms_all)
 
 lemma gasprice_not_in_mr  :
-  "\<forall> in_begin. GaspriceElm x27 \<notin> memory_range_elms in_begin input"
-apply(induction input; simp add: memory_range_elms.simps)
-done
+  "GaspriceElm x27 \<notin> memory_range_elms in_begin input"
+by (auto dest: memory_range_elms_all)
 
 lemma memory_range_elms_in_minus_mu :
   "memory_range_elms in_begin input \<subseteq> X - {MemoryUsageElm u} =
   (memory_range_elms in_begin input \<subseteq> X)"
- by  (auto  dest: not_memory_range_all)
+ by  (auto  dest: memory_range_elms_all)
 
 
 lemma memory_range_elms_update_memory_usage  :
@@ -2739,57 +2653,57 @@ lemma memory_range_elms_update_memory_usage  :
     variable_ctx_as_set
            (v\<lparr>vctx_memory_usage := u\<rparr>) =
    (memory_range_elms in_begin input \<subseteq> variable_ctx_as_set v)"
- by  (auto simp: as_set_simps dest: not_memory_range_all)
+ by  (auto simp: as_set_simps dest: memory_range_elms_all)
 
 
 lemma memory_range_in_caller  :
   "memory_range_elms in_begin input
      \<subseteq> insert (CallerElm c) X =
    (memory_range_elms in_begin input \<subseteq> X)"
- by  (auto simp: as_set_simps dest: not_memory_range_all)
+ by  (auto simp: as_set_simps dest: memory_range_elms_all)
 
 lemma memory_range_in_sent_value  :
   "memory_range_elms in_begin input
      \<subseteq> insert (SentValueElm c) X =
    (memory_range_elms in_begin input \<subseteq> X)"
- by  (auto simp: as_set_simps dest: not_memory_range_all)
+ by (auto simp: as_set_simps dest: memory_range_elms_all)
 
 lemma memory_range_in_origin  :
   "memory_range_elms in_begin input
      \<subseteq> insert (OriginElm c) X =
    (memory_range_elms in_begin input \<subseteq> X)"
- by  (auto simp: as_set_simps dest: not_memory_range_all)
+ by  (auto simp: as_set_simps dest: memory_range_elms_all)
 
 lemma memory_range_in_pc  :
   "memory_range_elms in_begin input
      \<subseteq> insert (PcElm c) X =
    (memory_range_elms in_begin input \<subseteq> X)"
- by  (auto simp: as_set_simps dest: not_memory_range_all)
+ by  (auto simp: as_set_simps dest: memory_range_elms_all)
 
 lemma memory_range_in_sd  :
   "memory_range_elms in_begin input
      \<subseteq> insert (SentDataLengthElm c) X =
    (memory_range_elms in_begin input \<subseteq> X)"
- by  (auto simp: as_set_simps dest: not_memory_range_all)
+ by  (auto simp: as_set_simps dest: memory_range_elms_all)
 
 lemma memory_range_in_coinbase  :
   "memory_range_elms in_begin input
      \<subseteq> insert (CoinbaseElm c) X =
    (memory_range_elms in_begin input \<subseteq> X)"
- by  (auto simp: as_set_simps dest: not_memory_range_all)
+ by  (auto simp: as_set_simps dest: memory_range_elms_all)
 
 lemma vset_update_balance  :
   "variable_ctx_as_set
            (v\<lparr>vctx_balance := u\<rparr>) =
    variable_ctx_as_set v - balance_as_set (vctx_balance v) \<union> balance_as_set u"
- by  (auto simp: as_set_simps dest: not_memory_range_all)
+ by  (auto simp: as_set_simps dest: memory_range_elms_all)
 
 lemma memory_range_elms_update_balance  :
   "memory_range_elms in_begin input \<subseteq>
     variable_ctx_as_set
            (v\<lparr>vctx_balance := u\<rparr>) =
    (memory_range_elms in_begin input \<subseteq> variable_ctx_as_set v)"
- by  (auto simp: as_set_simps dest: not_memory_range_all)
+ by  (auto simp: as_set_simps dest: memory_range_elms_all)
 
 
 lemma small_min :
@@ -2815,7 +2729,7 @@ lemma storage_elm_kept_by_gas_update :
   \<in> instruction_result_as_set co_ctx (InstructionContinue
      (x1\<lparr>vctx_gas := g - Gverylow\<rparr>)) =
   (StorageElm x3 \<in> instruction_result_as_set co_ctx (InstructionContinue x1))"
-apply(simp add: simp_for_triples instruction_result_as_set_def)
+apply(simp add: simp_for_triples instruction_result_as_set_def as_set_simps)
 done
 
 lemma storage_elm_kept_by_stack_updaate :
@@ -2874,51 +2788,51 @@ lemma stack_topmost_in_insert_memory_usage :
   "stack_topmost_elms h lst
        \<subseteq> insert (MemoryUsageElm u) X =
   (stack_topmost_elms h lst \<subseteq> X)"
-by (auto dest: not_topmost_all)
+by (auto dest: topmost_all)
 
 lemma memory_gane_elms_in_stack_update  :
   "memory_range_elms in_begin input \<subseteq> variable_ctx_as_set (v\<lparr>vctx_stack := tf\<rparr>) =
   (memory_range_elms in_begin input \<subseteq> variable_ctx_as_set v)"
-by (auto simp add: as_set_simps dest: not_memory_range_all)
+by (auto simp add: as_set_simps dest: memory_range_elms_all)
 
 lemma stack_topmost_in_minus_balance_as  :
   "stack_topmost_elms h lst
        \<subseteq> X - balance_as_set b =
   (stack_topmost_elms h lst \<subseteq> X)"
-by (auto simp add: as_set_simps dest: not_topmost_all)
+by (auto simp add: as_set_simps dest: topmost_all)
 
 lemma stack_topmost_in_union_balance  :
   "stack_topmost_elms h lst
        \<subseteq> X \<union> balance_as_set b =
   (stack_topmost_elms h lst \<subseteq> X)"
-by (auto simp add: as_set_simps dest: not_topmost_all)
+by (auto simp add: as_set_simps dest: topmost_all)
 
 
 lemma memory_range_in_minus_balance_as  :
   "memory_range_elms h lst
        \<subseteq> X - balance_as_set b =
   (memory_range_elms h lst \<subseteq> X)"
-by (auto simp add: as_set_simps dest: not_memory_range_all)
+by (auto simp add: as_set_simps dest: memory_range_elms_all)
 
 
 lemma memory_range_in_union_balance  :
   "memory_range_elms h lst
        \<subseteq> X \<union> balance_as_set b =
   (memory_range_elms h lst \<subseteq> X)"
-by (auto simp add: as_set_simps dest: not_memory_range_all)
+by (auto simp add: as_set_simps dest: memory_range_elms_all)
 
 
 lemma memory_range_in_minus_balance  :
   "memory_range_elms h lst
     \<subseteq> X - {BalanceElm pair} =
    (memory_range_elms h lst \<subseteq> X)"
-by (auto simp add: as_set_simps dest: not_memory_range_all )
+by (auto simp add: as_set_simps dest: memory_range_elms_all )
 
 
 lemma memory_range_advance  :
   "memory_range_elms in_begin input \<subseteq> variable_ctx_as_set (vctx_advance_pc co_ctx x1) =
   (memory_range_elms in_begin input \<subseteq> variable_ctx_as_set x1)"
-by (auto simp add: as_set_simps advance_pc_simps dest: not_memory_range_all)
+by (auto simp add: as_set_simps advance_pc_simps dest: memory_range_elms_all)
 
 
 lemma update_balance_match  :
@@ -3057,12 +2971,12 @@ done
 
 lemma lognum_not_stack_topmost :
   "LogNumElm n \<notin> stack_topmost_elms h lst"
-by (auto dest: not_topmost_all)
+by (auto dest: topmost_all)
 
 lemma stack_topmost_minus_lognum  :
    "stack_topmost_elms h lst \<subseteq> X - {LogNumElm n} =
    (stack_topmost_elms h lst \<subseteq> X)"
-by (auto dest: not_topmost_all)
+by (auto dest: topmost_all)
 
 lemma vctx_pc_log_advance  :
   "program_content (cctx_program co_ctx) k = Some (Log LOGx) \<Longrightarrow>
@@ -3076,14 +2990,14 @@ done
 lemma memory_range_elms_in_x_minus_lognum  :
   "memory_range_elms in_begin data \<subseteq> X - {LogNumElm n} =
    (memory_range_elms in_begin data \<subseteq> X)"
-by (auto dest: not_memory_range_all)
+by (auto dest: memory_range_elms_all)
 
 lemma memory_range_elms_logs_update  :
   "memory_range_elms in_begin data
              \<subseteq> variable_ctx_as_set (x1\<lparr>vctx_logs := ls\<rparr>) =
   (memory_range_elms in_begin data
              \<subseteq> variable_ctx_as_set x1)"
-by (auto simp add: as_set_simps dest: not_memory_range_all)
+by (auto simp add: as_set_simps dest: memory_range_elms_all)
 
 
 lemma log0_create_logs  :
@@ -3234,8 +3148,12 @@ lemmas stateelm_dest =
   stateelm_program_all
   stateelm_not_program_all
   balance_all
-  not_memory_range_all
+  not_balance_all
+  memory_range_elms_all
+  not_memory_range_elms_all
+  stack_all
   not_stack_all
+  topmost_all
   not_topmost_all
   ext_all
   not_ext_all
@@ -3277,11 +3195,77 @@ lemmas extra_sep=
   block_number_pred_sep
   sep_block_number_pred_sep
 
+lemmas stateelm_means_simps =
+caller_elm_means
+gas_element_means
+memory_usage_element_means
+origin_element_means
+pc_element_means
+sent_value_means
+block_number_elm_in_v_means
+coinbase_elm_means
+difficulty_elm_means
+gaslimit_elm_means
+gasprice_elm_means
+log_num_in_v_means
+sent_data_length_means
+stack_height_element_means
+timestamp_elm_means
+caller_elm_means_c
+memory_usage_elm_means
+orogin_elm_c_means
+sent_value_c_means
+this_account_means
+block_number_elm_c_means
+coinbase_c_means
+difficulty_c_means
+gasprice_c_means
+log_num_elm_means
+sent_data_length_c_means
+timestamp_c_means
+gas_elm_i_means
+pc_elm_means
+this_account_i_means
+account_existence_elm_means
+account_existence_means_v
+balance_elm_means
+memory_element_means
+storage_element_means
+block_number_elm_means
+stack_heigh_elm_means
+blockhash_elm_means
+ext_program_size_elm_means
 
-find_theorems -name:dvance_pc_simp -name:advance_keeps "?X \<in> contexts_as_set (vctx_advance_pc ?co_ctx ?x1) ?co_ctx =
-  (?X \<in> contexts_as_set ?x1 ?co_ctx)"
+lemmas evm_sep =
+emp_sep
+true_sep
+pure_sep
+continuing_sep
+not_continuing_sep
+action_sep
+block_number_pred_sep
+caller_sep
+gas_pred_sep
+memory_usage_sep
+program_counter_sep
+stack_height_sep
+this_account_sep
+gas_any_sep
+stack_topmost_sep
+account_existence_sep
+balance_sep
+memory8_sep
+stack_sep
+storage_sep
+memory_range_sep
+code_sep
 
-
+lemmas constant_diff_simps =
+  constant_diff_gas
+  constant_diff_pc
+  constant_diff_stack
+  constant_diff_stack_height
+find_theorems " ?b \<notin> contexts_as_set ?x32.0 ?co_ctx"
 lemmas HoareTripleForInstructions_legacy_simps =
 continuing_not_context
 (* arith_inst_size_one *)
@@ -3417,7 +3401,6 @@ code_elm_means
 pc_elm_means
 block_number_pred_sep
 sep_block_number_pred_sep
-
 block_number_elm_not_constant
 block_number_elm_in_v_means
 block_number_elm_means
@@ -3472,6 +3455,7 @@ sent_data_not_constant
 sent_data_elm_c_means
 short_rev_append
 memory_usage_not_constant
+
 code_elms
 memory_usage_elm_means
 pc_update_v
@@ -3559,7 +3543,7 @@ call_new_balance
 advance_pc_call
 memory_range_elms_not_continuing
 memory_range_elms_cut_memory
-stack_height_in_topmost
+stack_height_in_topmost_means
 code_elm_not_stack_topmost
 stack_elm_c_means
 stack_elm_in_topmost

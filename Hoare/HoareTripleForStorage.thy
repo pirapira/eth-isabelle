@@ -43,6 +43,9 @@ apply(rename_tac smaller)
 apply(case_tac smaller; simp)
 done
 
+method hoare_sep uses sep simp dest =
+ ((sep_simp simp: sep)+, clarsimp simp: simp dest:dest)
+
 lemma sstore_gas_triple :
   "triple net {OutOfGas}
           (\<langle> h \<le> 1024\<rangle>
@@ -55,11 +58,23 @@ lemma sstore_gas_triple :
           (stack_height h
            ** program_counter (k + 1) ** storage idx new **
            gas_pred (g - Csstore old new) ** continuing)"
-  apply (clarsimp simp: triple_def simp_for_triples sep_crunch)
-apply(rule_tac x = 1 in exI)
-  apply(case_tac presult ; (solves \<open>clarsimp simp:Hoare_legacy_simps HoareTripleForInstructions_legacy_simps\<close>)?)
+  apply (clarsimp simp: triple_def)
+  apply(rule_tac x = 1 in exI)
+  apply (clarsimp simp add: program_sem.simps)
+  apply(case_tac presult ; (solves \<open>(hoare_sep sep: evm_sep simp: next_state_def  stateelm_means_simps dest: stateelm_dest)\<close>) ?)
+
+  apply clarsimp
+    apply (sep_simp simp: evm_sep )+
 (*  apply (rule disjCI) *)
-apply_trace (clarsimp simp add: simp_for_triples sep_crunch
+  apply (clarsimp simp:
+)
+apply_trace (clarsimp simp add:  
+       instruction_result_as_set_def  sstore_def
+       vctx_update_storage_def stateelm_means_simps stateelm_equiv_simps 
+       next_state_def check_resources_def instruction_sem_simps
+       )
+
+apply_trace (clarsimp simp add:  
        instruction_result_as_set_def  sstore_def
        vctx_update_storage_def Hoare_legacy_simps HoareTripleForInstructions_legacy_simps)
 apply (erule_tac P=rest in back_subst)

@@ -430,7 +430,7 @@ definition instruction_result_as_set :: "constant_ctx \<Rightarrow> instruction_
         | InstructionAnnotationFailure \<Rightarrow> {ContinuingElm False} (* need to assume no annotation failure somewhere *)
         )"
 
-lemma annotation_failure_as_set :
+lemma annotation_failure_as_set[simp] :
   "instruction_result_as_set c InstructionAnnotationFailure = {ContinuingElm False}"
 apply(simp add: instruction_result_as_set_def)
 done
