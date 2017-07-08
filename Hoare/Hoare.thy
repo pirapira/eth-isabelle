@@ -475,7 +475,7 @@ where
          ((post ** code insts ** rest) (instruction_result_as_set co_ctx (program_sem stopper co_ctx k net presult)))
          \<or> failed_for_reasons allowed_failures (program_sem stopper co_ctx k net presult))"
 
-lemma no_assertion_pass : "no_assertion co_ctx \<Longrightarrow> check_annotations v co_ctx"
+lemma no_assertion_pass[simp]: "no_assertion co_ctx \<Longrightarrow> check_annotations v co_ctx"
 apply(simp add: no_assertion_def check_annotations_def)
 done
 

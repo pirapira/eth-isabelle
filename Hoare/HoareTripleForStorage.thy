@@ -13,9 +13,7 @@ by (simp add: vctx_next_instruction_def
 
 
 lemma update_storage_preserves_pc [simp] :
-"vctx_pc
-  (vctx_update_storage idx new x1) =
- vctx_pc x1"
+"vctx_pc (vctx_update_storage idx new x1) = vctx_pc x1"
 by (simp add: vctx_update_storage_def)
 
 lemma update_storage_updates [simp] :
@@ -62,7 +60,7 @@ lemma sstore_gas_triple :
   apply(rule_tac x = 1 in exI)
   apply (clarsimp simp add: program_sem.simps)
   apply(case_tac presult ; (solves \<open>(hoare_sep sep: evm_sep simp: next_state_def  stateelm_means_simps dest: stateelm_dest)\<close>) ?)
-
+  
   apply clarsimp
     apply (sep_simp simp: evm_sep )+
 (*  apply (rule disjCI) *)
@@ -71,10 +69,10 @@ lemma sstore_gas_triple :
 apply_trace (clarsimp simp add:  
        instruction_result_as_set_def  sstore_def
        vctx_update_storage_def stateelm_means_simps stateelm_equiv_simps 
-       next_state_def check_resources_def instruction_sem_simps
+       next_state_def split: if_splits
        )
 
-apply_trace (clarsimp simp add:  
+apply_trace (clarsimp split: if_splits simp add:  
        instruction_result_as_set_def  sstore_def
        vctx_update_storage_def Hoare_legacy_simps HoareTripleForInstructions_legacy_simps)
 apply (erule_tac P=rest in back_subst)
@@ -89,7 +87,7 @@ apply (simp add: set_diff_eq)
 apply(case_tac elm; simp add: Hoare_legacy_simps HoareTripleForInstructions_legacy_simps)
  apply auto[1]
   apply_trace(split if_splits; simp add: Hoare_legacy_simps HoareTripleForInstructions_legacy_simps)
-  find_theorems  "ContinuingElm ?b \<notin> contexts_as_set ?x32.0 ?co_ctx"
+  find_theorems  " instruction_failure_result ?v ?reasons = InstructionToEnvironment (ContractFail ?reasons) ?v None"
 done
 
 (*
