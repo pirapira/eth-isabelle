@@ -46,8 +46,14 @@ lemma next_state_noop[simp]:
   "next_state stopper c net InstructionAnnotationFailure = InstructionAnnotationFailure" 
   by (simp add: next_state_def)+
 
-method hoare_sep uses sep simp dest =
- ((sep_simp simp: sep)+, clarsimp simp: simp dest:dest)
+lemmas hoare_simps = stateelm_means_simps stateelm_equiv_simps 
+       next_state_def rev_nth_simps instruction_sem_simps gas_value_simps
+      inst_numbers_simps instruction_failure_result_def 
+      advance_pc_simps
+      
+method hoare_sep uses sep simp dest split =
+ ((sep_simp simp: sep)+,
+  clarsimp simp: simp dest:dest split:split)
 
 lemma sstore_gas_triple :
   "triple net {OutOfGas}
@@ -65,25 +71,20 @@ lemma sstore_gas_triple :
   apply(rule_tac x = 1 in exI)
   apply (clarsimp simp add: program_sem.simps)
   apply(case_tac presult ; (solves \<open>(hoare_sep sep: evm_sep simp:   stateelm_means_simps dest: stateelm_dest)\<close>) ?)
-  
-  apply clarsimp
-    apply (sep_simp simp: evm_sep )+
- apply (clarsimp simp add:  
-       instruction_result_as_set_def  sstore_def
-       vctx_update_storage_def stateelm_means_simps stateelm_equiv_simps 
-       next_state_def list_ninja_kit instruction_sem_simps gas_value_simps
-      inst_numbers_simps instruction_failure_result_def 
-      advance_pc_simps split: if_splits)
-apply (erule_tac P=rest in back_subst)
-apply(rule Set.equalityI; clarify)
-apply(rename_tac elm)
-apply(simp add: vctx_update_storage_def) 
-   apply (case_tac elm; simp add: stateelm_means_simps stateelm_equiv_simps advance_pc_simps rev_nth_simps list_ninja_kit split:if_splits) 
-using some_list_gotcha apply blast
-apply(rename_tac elm)
-apply (simp add: set_diff_eq) 
-   apply (case_tac elm; simp add: stateelm_means_simps stateelm_equiv_simps advance_pc_simps rev_nth_simps list_ninja_kit split:if_splits) 
- apply auto
+  apply (hoare_sep sep: evm_sep 
+                   simp: instruction_result_as_set_def  sstore_def
+                         vctx_update_storage_def hoare_simps
+                  split:if_splits) 
+  apply (erule_tac P=rest in back_subst)
+  apply(rule Set.equalityI; clarify)
+  apply(rename_tac elm)
+  apply(simp add: vctx_update_storage_def) 
+  apply (case_tac elm; simp add: hoare_simps split:if_splits) 
+  using some_list_gotcha apply blast
+  apply(rename_tac elm)
+  apply (simp add: set_diff_eq) 
+  apply (case_tac elm; simp add: hoare_simps  split:if_splits) 
+  apply auto
 done
 
 (*
@@ -151,8 +152,6 @@ done
 *)
 
 lemma sload_gas_triple :
-  notes simp_for_triples[simp] sep_crunch[simp]
- shows
   "triple net {OutOfGas}
           (\<langle> h \<le> 1023 \<and> unat bn \<ge> 2463000 \<and> at_least_eip150 net\<rangle>
            ** block_number_pred bn ** stack_height (h + 1)
@@ -162,21 +161,26 @@ lemma sload_gas_triple :
           (block_number_pred bn ** stack_height (h + 1) ** stack h w
            ** program_counter (k + 1) ** storage idx w ** gas_pred (g - Gsload net) ** continuing )"
 apply(clarsimp simp add: triple_def )
-apply(rule_tac x = 1 in exI)
-apply(case_tac presult ; (solves \<open>clarsimp\<close>)?)
-apply(clarsimp simp add: instruction_result_as_set_def)
-apply(erule_tac P=rest in back_subst)
-apply(rule  Set.equalityI; clarify)
- apply(simp)
- apply(rename_tac elm)
- apply(case_tac elm; simp)
- apply(rename_tac pair)
- apply(case_tac pair; fastforce)
-apply(simp)
-apply(rename_tac elm)
-apply(case_tac elm; simp)
-apply(rename_tac pair)
-apply(case_tac pair; fastforce)
+  apply(rule_tac x = 1 in exI)
+  apply(clarsimp simp add: program_sem.simps)
+  apply(case_tac presult;  (solves \<open>(hoare_sep sep: evm_sep simp:   stateelm_means_simps dest: stateelm_dest)\<close>)?)
+  apply clarsimp
+  apply(hoare_sep sep: evm_sep 
+                   simp: instruction_result_as_set_def  sstore_def
+                         vctx_update_storage_def hoare_simps
+                  split:if_split_asm)
+  apply(erule_tac P=rest in back_subst)
+  apply(rule  Set.equalityI; clarify)
+  apply(simp)
+  apply(rename_tac elm)
+  apply(case_tac elm; simp add: hoare_simps split:if_splits)
+  apply(rename_tac pair)
+  apply(case_tac pair; fastforce)
+  apply(simp)
+  apply(rename_tac elm)
+  apply(case_tac elm; simp add: hoare_simps split:if_splits)
+  apply(rename_tac pair)
+  apply(case_tac pair; fastforce)
 done
 
 end

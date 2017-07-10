@@ -94,9 +94,9 @@ apply (simp add: nth_append)
 done
     
 lemmas rev_nth_simps =
-  lookup_over
-  lookup_over1
-  short_match
+(*   lookup_over
+  lookup_over1 
+  short_match*)
   rev_append
   rev_append_inv
   rev_rev_append
@@ -3073,36 +3073,38 @@ instruction_sem_def constant_mark_def
 stack_0_0_op_def stack_0_1_op_def stack_1_1_op_def
 stack_2_1_op_def stack_3_1_op_def
 subtract_gas.simps
+new_memory_consumption.simps
 check_resources_def
 meter_gas_def C_def Cmem_def
-new_memory_consumption.simps thirdComponentOfC_def
+thirdComponentOfC_def
 vctx_next_instruction_default_def vctx_next_instruction_def
 blockedInstructionContinue_def vctx_pop_stack_def
-blocked_jump_def strict_if_def
+blocked_jump_def strict_if_def 
 
 lemmas advance_simps =
 vctx_advance_pc_def vctx_next_instruction_def
 
-lemmas sep_crunch = caller_sep
-                    sep_caller
-                    sep_caller_sep
-                    balance_sep
-                    sep_balance
-                    sep_balance_sep
-                    not_continuing_sep
-                    sep_not_continuing_sep
-                    this_account_sep
-                    sep_this_account
-                    sep_this_account_sep
-                    action_sep
-                    sep_action
-                    sep_action_sep
-                    sep_stack_topmost
-                    sep_account_existence_sep
-                    sep_account_existence
-                    account_existence_sep
-                    sep_sep_account_existence_sep
-                    sep_conj_assoc
+lemmas sep_crunch =
+  caller_sep
+  sep_caller
+  sep_caller_sep
+  balance_sep
+  sep_balance
+  sep_balance_sep
+  not_continuing_sep
+  sep_not_continuing_sep
+  this_account_sep
+  sep_this_account
+  sep_this_account_sep
+  action_sep
+  sep_action
+  sep_action_sep
+  sep_stack_topmost
+  sep_account_existence_sep
+  sep_account_existence
+  account_existence_sep
+  sep_sep_account_existence_sep
+  sep_conj_assoc
 
 lemmas not_context_simps = 
    continuing_not_context
@@ -3159,16 +3161,6 @@ lemmas stateelm_dest =
   not_topmost_all
   ext_all
   not_ext_all
-
-lemmas list_ninja_kit=
-  rev_append
-rev_append_inv
-rev_rev_append
-over_one
-over_one_rev
-over_one_rev'
-over_two
-over_two_rev
 
 lemmas stateelm_subset_diff_elim =
   memory_range_in_minus_balance
