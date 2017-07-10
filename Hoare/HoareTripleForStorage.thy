@@ -39,7 +39,12 @@ apply(case_tac x2; auto)
 apply(case_tac "a - length ta"; simp)
 apply(rename_tac smaller)
 apply(case_tac smaller; simp)
-done
+  done
+    
+lemma next_state_noop[simp]:
+  "next_state stopper c net (InstructionToEnvironment x y z) = (InstructionToEnvironment x y z)" 
+  "next_state stopper c net InstructionAnnotationFailure = InstructionAnnotationFailure" 
+  by (simp add: next_state_def)+
 
 method hoare_sep uses sep simp dest =
  ((sep_simp simp: sep)+, clarsimp simp: simp dest:dest)
@@ -59,35 +64,26 @@ lemma sstore_gas_triple :
   apply (clarsimp simp: triple_def)
   apply(rule_tac x = 1 in exI)
   apply (clarsimp simp add: program_sem.simps)
-  apply(case_tac presult ; (solves \<open>(hoare_sep sep: evm_sep simp: next_state_def  stateelm_means_simps dest: stateelm_dest)\<close>) ?)
+  apply(case_tac presult ; (solves \<open>(hoare_sep sep: evm_sep simp:   stateelm_means_simps dest: stateelm_dest)\<close>) ?)
   
   apply clarsimp
     apply (sep_simp simp: evm_sep )+
-(*  apply (rule disjCI) *)
-  apply (clarsimp simp:
-)
-apply_trace (clarsimp simp add:  
+ apply (clarsimp simp add:  
        instruction_result_as_set_def  sstore_def
        vctx_update_storage_def stateelm_means_simps stateelm_equiv_simps 
-       next_state_def split: if_splits
-       )
-
-apply_trace (clarsimp split: if_splits simp add:  
-       instruction_result_as_set_def  sstore_def
-       vctx_update_storage_def Hoare_legacy_simps HoareTripleForInstructions_legacy_simps)
+       next_state_def list_ninja_kit instruction_sem_simps gas_value_simps
+      inst_numbers_simps instruction_failure_result_def 
+      advance_pc_simps split: if_splits)
 apply (erule_tac P=rest in back_subst)
 apply(rule Set.equalityI; clarify)
 apply(rename_tac elm)
 apply(simp add: vctx_update_storage_def) 
-apply(case_tac elm; simp add: Hoare_legacy_simps HoareTripleForInstructions_legacy_simps)
+   apply (case_tac elm; simp add: stateelm_means_simps stateelm_equiv_simps advance_pc_simps rev_nth_simps list_ninja_kit split:if_splits) 
 using some_list_gotcha apply blast
-apply(split if_splits; simp add: Hoare_legacy_simps HoareTripleForInstructions_legacy_simps)
 apply(rename_tac elm)
 apply (simp add: set_diff_eq) 
-apply(case_tac elm; simp add: Hoare_legacy_simps HoareTripleForInstructions_legacy_simps)
- apply auto[1]
-  apply_trace(split if_splits; simp add: Hoare_legacy_simps HoareTripleForInstructions_legacy_simps)
-  find_theorems  " instruction_failure_result ?v ?reasons = InstructionToEnvironment (ContractFail ?reasons) ?v None"
+   apply (case_tac elm; simp add: stateelm_means_simps stateelm_equiv_simps advance_pc_simps rev_nth_simps list_ninja_kit split:if_splits) 
+ apply auto
 done
 
 (*

@@ -84,6 +84,14 @@ lemma over_two_rev  :
 apply(simp add: nth_append)
 (* sledgehammer *)
 by (metis Suc_diff_Suc diff_self_eq_0 less_antisym linorder_neqE_nat nth_Cons_0 nth_Cons_Suc)
+
+
+lemma rev_append_look_up  :
+  "(rev ta @ lst) ! pos = val =
+   ((pos < length ta \<and> rev ta ! pos = val) \<or>
+    (length ta \<le> pos \<and> lst ! (pos - length ta) = val))"
+apply (simp add: nth_append)
+done
     
 lemmas rev_nth_simps =
   lookup_over
@@ -97,7 +105,7 @@ lemmas rev_nth_simps =
   over_one_rev'
   over_two
   over_two_rev
-
+  rev_append_look_up
 	  
 	  
 lemma advance_pc_advance:
@@ -994,7 +1002,7 @@ lemma advance_pc_no_inst:
  "vctx_pc (vctx_advance_pc co_ctx x1) = vctx_pc x1 \<Longrightarrow> program_content (cctx_program co_ctx) (vctx_pc x1) = None"
   by (simp add: vctx_advance_pc_def vctx_next_instruction_def split:option.splits)
 
-lemma swap_advance :
+lemma advance_pc_inc_but_stack :
  "program_content (cctx_program co_ctx) (vctx_pc x) = Some inst \<Longrightarrow> inst \<notin> range Stack\<Longrightarrow> 
   vctx_pc (vctx_advance_pc co_ctx x) = vctx_pc x + 1"
 by (case_tac inst; simp add: vctx_next_instruction_def vctx_advance_pc_def inst_size_def inst_code.simps)
@@ -1013,8 +1021,8 @@ lemmas advance_pc_simps =
   advance_pc_preserves_caller
   advance_pc_preserves_origin
   advance_pc_preserves_block
-  advance_pc_no_inst
-  swap_advance
+(*  advance_pc_no_inst *)
+(*   advance_pc_inc_but_stack *)
   log_num_v_advance
   log_num_advance
   advance_keeps_balance_elm
@@ -1037,6 +1045,7 @@ lemmas advance_pc_simps =
   advance_keeps_timestamp_elm
   account_existence_advance
   (*pop_advance *)
+  account_existence_advance_v
 
 
   
@@ -2174,7 +2183,7 @@ lemma ext_program_size_not_topmost :
  by (auto dest: topmost_all)
 
 
-lemma code_elm_c :
+lemma code_elm_c:
   "CodeElm x \<in> contexts_as_set y c = (CodeElm x \<in> constant_ctx_as_set c)"
 apply(simp add: as_set_simps)
 done
@@ -2859,14 +2868,7 @@ apply(auto simp add: update_balance_def)
 done
 
 
-lemma rev_append_look_up  :
-  "(rev ta @ lst) ! pos = val =
-   ((pos < length ta \<and> rev ta ! pos = val) \<or>
-    (length ta \<le> pos \<and> lst ! (pos - length ta) = val))"
-apply (simp add: nth_append)
-done
-
-lemma pair_snd_eq  : 
+lemma pair_snd_eq[simp]: 
  "x3 \<noteq> (idx, snd x3) =
   (fst x3 \<noteq> idx)"
 apply (case_tac x3; auto)
@@ -3009,13 +3011,13 @@ apply(auto simp add: create_log_entry_def vctx_returned_bytes_def memory_range_e
 done
 
 
-lemma default_zero  :
+lemma default_zero[simp]:
   "vctx_stack x1 = idx # ta \<Longrightarrow>
    vctx_stack_default 0 x1 = idx"
 apply(simp add: vctx_stack_default_def)
 done
 
-lemma default_one  :
+lemma default_one[simp]:
   "vctx_stack x1 = idx # y # ta \<Longrightarrow>
    vctx_stack_default 1 x1 = y"
 apply(simp add: vctx_stack_default_def)
@@ -3196,6 +3198,7 @@ lemmas extra_sep=
   sep_block_number_pred_sep
 
 lemmas stateelm_means_simps =
+pc_not_balance
 caller_elm_means
 gas_element_means
 memory_usage_element_means
@@ -3235,6 +3238,31 @@ block_number_elm_means
 stack_heigh_elm_means
 blockhash_elm_means
 ext_program_size_elm_means
+account_existence_elm_means_c
+balance_elm_c_means
+memory_elm_means
+storage_elm_means
+stack_height_in_topmost_means
+blockhash_c_means
+ext_program_size_c_means
+balance_elm_i_means
+ext_program_elm_means
+ext_program_c_means
+sent_data_means
+log_element_means
+stack_element_means
+sent_data_elm_c_means
+log_elm_means
+stack_elm_c_means
+stack_element_notin_means
+stack_elm_means
+topmost_elms_in_vctx_means
+topmost_elms_means
+code_element_means
+code_elm_means
+stack_as_set_cons_means
+gaslimit_elm_c
+code_elm_c
 
 lemmas evm_sep =
 emp_sep
@@ -3265,9 +3293,9 @@ lemmas constant_diff_simps =
   constant_diff_pc
   constant_diff_stack
   constant_diff_stack_height
-find_theorems " ?b \<notin> contexts_as_set ?x32.0 ?co_ctx"
+
 lemmas HoareTripleForInstructions_legacy_simps =
-continuing_not_context
+  continuing_not_context
 (* arith_inst_size_one *)
 data_sent_as_set_def
 caller_elm_means
@@ -3641,7 +3669,7 @@ vset_update_balance
 memory_range_elms_update_balance
 small_min
 sucsuc_minus_two
-swap_advance
+advance_pc_inc_but_stack
 minus_one_bigger
 storage_elm_kept_by_gas_update
 storage_elm_kept_by_stack_updaate
