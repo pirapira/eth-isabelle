@@ -172,7 +172,8 @@ lemma take_drop_nth [simp] :
 done
 
 lemma swap_gas_triple :
-notes simp_for_triples[simp] sep_crunch[simp]
+  notes simp_for_triples[simp] sep_crunch[simp]
+    Hoare_legacy_simps[simp] HoareTripleForInstructions_legacy_simps[simp]
 shows
    "triple net {OutOfGas} (\<langle> h \<le> 1024 \<and> Suc (unat n) < h \<rangle> **
                        stack_height h **
@@ -191,6 +192,51 @@ shows
                        gas_pred (g - Gverylow) **
                        continuing
                       )"
+  apply(simp add: triple_def)
+apply clarify
+apply(rule_tac x = 1 in exI)
+apply(case_tac presult)
+   defer
+   apply(simp add: instruction_result_as_set_def)
+  apply(simp add: instruction_result_as_set_def)
+ apply(simp add: instruction_result_as_set_def)
+apply(simp add: swap_def list_swap_usage swap_inst_numbers_def)
+apply(rule impI)
+apply(rule leibniz)
+ apply blast
+apply(rule  Set.equalityI)
+ apply(simp add: Set.subset_iff)
+ apply(rule allI)
+ apply(rename_tac elm)
+ apply(case_tac elm; simp add: instruction_result_as_set_def)
+
+ apply(rename_tac pair)
+ apply(case_tac pair; simp)
+ apply(case_tac "a = h - Suc 0"; simp)
+  apply blast
+ apply(case_tac "a < h - Suc (Suc (unat n))"; simp)
+
+ apply(case_tac "a = h - Suc (Suc (unat n))"; simp)
+  apply blast
+apply auto[1]
+apply(simp add: Set.subset_iff)
+apply(rule allI)
+apply(rename_tac elm)
+apply(case_tac elm; simp add: instruction_result_as_set_def)
+ apply(rename_tac pair; case_tac pair)
+ apply simp
+ apply(case_tac "a = h - Suc 0"; simp)
+  using rev_nth tmp002 apply auto[1]
+ apply(case_tac "a < h - Suc 0"; simp)
+  apply(case_tac "a = h - Suc (Suc (unat n))"; simp)
+   apply blast
+  apply(case_tac "a < h - Suc (Suc (unat n))"; simp)
+  apply(simp add: tmp000 tmp001 tmp002 List.rev_nth)
+  apply linarith
+done 
+   
+   
+   
 apply(simp add: triple_def)
 apply clarify
 apply(rule_tac x = 1 in exI)
@@ -208,19 +254,27 @@ apply(case_tac presult)
 HoareTripleForInstructions_legacy_simps)
   apply (rule conjI[rotated], unat_arith)
   apply (erule_tac P=rest in back_subst)
-apply(rule  Set.equalityI)
+  apply(rule  Set.equalityI)
+   apply (simp add: set_diff_eq)
+   apply clarsimp
  apply(simp add: Set.subset_iff)
  apply(rule allI)
- apply(rename_tac elm)
- apply(case_tac elm; simp add: instruction_result_as_set_def Hoare_legacy_simps HoareTripleForInstructions_legacy_simps)
-
+   apply(rename_tac elm)
+  apply (case_tac elm; simp add: hoare_simps split:if_splits) 
  apply(rename_tac pair)
- apply(case_tac pair; simp)
- apply(case_tac "a = h - Suc 0"; simp)
+   apply (case_tac pair; simp add: hoare_simps split:if_splits) 
+   apply (clarsimp)
+   apply (rule conjI)+
+    apply (simp add: rev_nth rev_nth_simps)
+    apply clarsimp
+    oops
+  apply (simp add: length_drop)
+  apply (simp add: )
+ apply(case_tac "aa = h - Suc 0"; simp add: Hoare_legacy_simps HoareTripleForInstructions_legacy_simps)
   apply blast
- apply(case_tac "a < h - Suc (Suc (unat n))"; simp)
-
- apply(case_tac "a = h - Suc (Suc (unat n))"; simp)
+ apply(case_tac "aa < h - Suc (Suc (unat n))";  simp add: Hoare_legacy_simps HoareTripleForInstructions_legacy_simps)
+find_theorems rev length nth
+ apply(case_tac "aa = h - Suc (Suc (unat n))";  simp add: Hoare_legacy_simps HoareTripleForInstructions_legacy_simps)
   apply blast
 apply auto[1]
 apply(simp add: Set.subset_iff)
