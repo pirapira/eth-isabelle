@@ -17,6 +17,7 @@
 theory "CFG"
 
 imports "../lem/Evm"
+"Apply_Trace_Cmd"
 
 begin
 (* Types definitions *)
@@ -80,36 +81,43 @@ definition stack_dup :: "stack_value list \<Rightarrow> nat \<Rightarrow> stack_
 
 value "stack_dup [Value 1, Value 2, Value 3, Value 4] 2"
 
-definition block_pt :: "pos_inst list \<Rightarrow> int \<Rightarrow> int" where
+definition block_pt :: "pos_inst list \<Rightarrow> pos_inst \<Rightarrow> int" where
  "block_pt bl pt = (case bl of
-   [] \<Rightarrow> pt
+   [] \<Rightarrow> fst pt
   | _ \<Rightarrow> fst (hd bl))"
 
 (* Main functions *)
 
+(* Add the address of each instruction *)
+
+fun add_address' :: "inst list \<Rightarrow> int \<Rightarrow> pos_inst list" where
+"add_address' [] n = []"
+| "add_address' (x#xs) n = (n,x)#(add_address' xs (n + inst_size x))"
+
+definition add_address :: "inst list \<Rightarrow> pos_inst list" where
+"add_address xs = add_address' xs 0"
+
 (* The execution of a basic block must be sequential. *)
 (* We remove JUMP and JUMPI instructions and cut after them or a stopping instruction *)
 (* and before a Jump destination. *)
-fun aux_basic_block :: "inst list \<Rightarrow> int \<Rightarrow> pos_inst list \<Rightarrow> vertices" where
- "aux_basic_block [] pointer block = (if block = [] then [] else
-    [(block_pt (rev block) pointer, rev block, No)])"
-|"aux_basic_block ((i)#tl1) pointer block =
-  (let newpointer = pointer + (inst_size i) in
-	(let bl = rev block in
-	(let bl_pt = block_pt bl pointer in
-  (case i of
-    Pc JUMPDEST \<Rightarrow> (if block = [] then (aux_basic_block tl1 newpointer [(pointer,i)])
-    else (bl_pt, bl, Next) # (aux_basic_block tl1 newpointer [(pointer,i)]))
-  | Pc JUMP \<Rightarrow>(bl_pt, bl, Jump) # ( aux_basic_block tl1 newpointer [])
-  | Pc JUMPI \<Rightarrow>(bl_pt, bl, Jumpi) # ( aux_basic_block tl1 newpointer [])
-  | Misc RETURN \<Rightarrow>(bl_pt, bl @ [(pointer,i)], No) # ( aux_basic_block tl1 newpointer [])
-  | Misc SUICIDE \<Rightarrow>(bl_pt, bl @ [(pointer,i)], No) # ( aux_basic_block tl1 newpointer [])
-  | Misc STOP \<Rightarrow>(bl_pt, bl @ [(pointer,i)], No) # ( aux_basic_block tl1 newpointer [])
-  | _ \<Rightarrow> aux_basic_block tl1 newpointer ((pointer,i)#block)))))"
+fun aux_basic_block :: "pos_inst list \<Rightarrow> pos_inst list \<Rightarrow> vertices" where
+ "aux_basic_block [] [] = []"
+|"aux_basic_block [] block = [(fst (hd block), block, Next)]"
+|"aux_basic_block ((i)#tl1) block =
+	(let bl_pt = block_pt block i in
+  (case snd i of
+    Pc JUMPDEST \<Rightarrow> (if block = [] then (aux_basic_block tl1 [i])
+    else (bl_pt, block, Next) # (aux_basic_block tl1 [i]))
+  | Pc JUMP \<Rightarrow>(bl_pt, block, Jump) # ( aux_basic_block tl1 [])
+  | Pc JUMPI \<Rightarrow>(bl_pt, block, Jumpi) # ( aux_basic_block tl1 [])
+  | Misc RETURN \<Rightarrow>(bl_pt, block @ [i], No) # ( aux_basic_block tl1 [])
+  | Misc SUICIDE \<Rightarrow>(bl_pt, block @ [i], No) # ( aux_basic_block tl1 [])
+  | Misc STOP \<Rightarrow>(bl_pt, block @ [i], No) # ( aux_basic_block tl1 [])
+  | _ \<Rightarrow> aux_basic_block tl1 (block@[i])))"
 declare aux_basic_block.simps[simp del]
 
 definition build_basic_blocks :: "inst list \<Rightarrow> vertices" where
-"build_basic_blocks prog == aux_basic_block prog 0 []"
+"build_basic_blocks prog == aux_basic_block (add_address prog) []"
 
 definition build_cfg :: "inst list \<Rightarrow> cfg" where
 "build_cfg prog = (let blocks = build_basic_blocks prog in
@@ -127,13 +135,18 @@ fun reconstruct_bytecode :: "vertices \<Rightarrow> inst list" where
 | "reconstruct_bytecode ((n,b,Jumpi)#q) = (map snd b)@[Pc JUMPI] @ (reconstruct_bytecode q)"
 | "reconstruct_bytecode ((n,b,_)#q) = (map snd b) @ (reconstruct_bytecode q)"
 
-lemma rev_basic_blocks: "reconstruct_bytecode (aux_basic_block i p b) = (map snd (rev b))@i"
-apply(induction i arbitrary: p b)
+lemma rev_basic_blocks: "reconstruct_bytecode (aux_basic_block i b) = (map snd b)@(map snd i)"
+apply(induction i arbitrary: b)
+apply(case_tac b)
 apply(auto simp: Let_def aux_basic_block.simps split: inst.split misc_inst.split pc_inst.split)
 done
 
+lemma remove_address:
+"map snd (add_address' i k) = i"
+by(induction i arbitrary: k; simp)
+
 theorem reverse_basic_blocks: "reconstruct_bytecode (build_basic_blocks i) = i"
-apply(simp add: rev_basic_blocks build_basic_blocks_def)
+apply(simp add: rev_basic_blocks build_basic_blocks_def add_address_def remove_address)
 done
 
 (* Define a 'program' from a CFG *)
@@ -151,19 +164,19 @@ fun inst_size_list::"pos_inst list \<Rightarrow> int" where
 "inst_size_list [] = 0"
 | "inst_size_list (x#xs) = inst_size (snd x) + inst_size_list xs"
 
-fun cfg_pos_insts :: "vert list \<Rightarrow> pos_inst list" where
+fun cfg_pos_insts :: "vertex list \<Rightarrow> pos_inst list" where
  "cfg_pos_insts [] = []"
-| "cfg_pos_insts ((b,Jump)#q) = (case last b of
+| "cfg_pos_insts ((j,b,Jump)#q) = (case last b of
   (n,i) \<Rightarrow> b@[(n + inst_size i, Pc JUMP)] @ (cfg_pos_insts q))"
-| "cfg_pos_insts ((b,Jumpi)#q) = (case last b of
+| "cfg_pos_insts ((j,b,Jumpi)#q) = (case last b of
   (n,i) \<Rightarrow> b@[(n + inst_size i, Pc JUMPI)] @ (cfg_pos_insts q))"
-| "cfg_pos_insts ((b,_)#q) = b@ (cfg_pos_insts q)"
+| "cfg_pos_insts ((j,b,_)#q) = b@ (cfg_pos_insts q)"
 
-fun cfg_vertices:: "cfg \<Rightarrow> int list \<Rightarrow> vert list" where
+fun cfg_vertices:: "cfg \<Rightarrow> int list \<Rightarrow> vertex list" where
 "cfg_vertices c [] = []"
 | "cfg_vertices c (x#xs) = (case cfg_blocks c x of
   None \<Rightarrow> cfg_vertices c xs
-  | Some b \<Rightarrow> b # (cfg_vertices c xs))"
+  | Some b \<Rightarrow> (x,b) # (cfg_vertices c xs))"
 
 definition cfg_content ::"cfg \<Rightarrow> int \<Rightarrow> inst option " where
 "cfg_content c i = (case find (\<lambda>u. fst u = i) (cfg_pos_insts (cfg_vertices c (cfg_indexes c))) of
@@ -223,7 +236,7 @@ definition wf_cfg:: "cfg \<Rightarrow> bool" where
 (cfg_blocks c n = Some (insts, ty) \<longrightarrow>
 	n \<in> set (cfg_indexes c) \<and> reg_vertex (n, insts, ty) \<and>
   (insts \<noteq> [] \<longrightarrow> (fst (hd insts) = n)) \<and> seq_block insts \<and>
-  0 < n \<and> n < 2 ^ 256) \<and>
+  0 \<le> n \<and> n < 2 ^ 256) \<and>
 (cfg_blocks c n = Some (insts, Next) \<longrightarrow>
 	 insts \<noteq> []) \<and>
 (cfg_blocks c n = Some (insts, Jump) \<longrightarrow>
@@ -243,9 +256,12 @@ lemma index_have_blocks:
 by(simp add: Let_def build_cfg_def extract_indexes_def map_of_eq_None_iff)
 
 lemma index_block_eq:
-"(n, (j,i)#b, t)#xs = aux_basic_block insts m block \<Longrightarrow>
+"(n, (j,i)#b, t)#xs = aux_basic_block insts block \<Longrightarrow>
 j=n"
-apply(induction insts arbitrary: m block n j i t xs b)
+apply(induction insts arbitrary: block n j i t xs b)
+ apply(case_tac block)
+  apply(simp add: aux_basic_block.simps block_pt_def split:if_splits list.splits)
+  apply(clarsimp)
  apply(simp add: aux_basic_block.simps block_pt_def split:if_splits list.splits)
  apply(clarsimp)
 apply(simp add: aux_basic_block.simps Let_def)
@@ -265,108 +281,24 @@ apply(case_tac bl; simp)
 apply(simp add: seq_block.simps)
 done
 
-lemma aux_rev_cond:
-"\<forall>i j. (\<exists>zs. bl = (j, i) # zs) \<longrightarrow> m = j + inst_size i \<Longrightarrow>
-    bl \<noteq> [] \<longrightarrow> (\<forall>i j. last (rev bl) = (j, i) \<longrightarrow> m = j + inst_size i)"
-apply(clarsimp)
-apply(drule_tac x=i and y=j in spec2)
-apply(simp add: last_rev)
-apply(case_tac bl; simp)
-done
-
-lemma seq_blocks:
-"seq_block (rev bl) \<Longrightarrow>
-\<forall>i j zs. bl = (j,i)#zs \<longrightarrow> m = j + inst_size i \<Longrightarrow>
-(n, insts, ty) # xs = aux_basic_block ys m bl \<Longrightarrow>
-seq_block insts"
-apply(induction ys arbitrary: m bl)
- apply(simp add: aux_basic_block.simps block_pt_def split:if_splits list.splits)
-apply(drule subst[OF aux_basic_block.simps(2), where P="\<lambda>u. _ = u"])
-apply(simp add: Let_def)
-apply(case_tac "a \<in> {Misc STOP, Misc RETURN, Misc SUICIDE}")
-defer
- apply(drule_tac x="m + inst_size a" and y="(m,a)#bl" in meta_spec2)
- apply(drule meta_mp)
-  apply(simp, subst seq_block_compose; simp add: aux_rev_cond)
- apply(simp split: inst.splits)
- apply(simp split: pc_inst.splits if_splits)
- apply(simp split: misc_inst.splits)
-apply(thin_tac "\<And>ma bla. _ bla \<Longrightarrow> _ bla ma \<Longrightarrow> _ bla ma \<Longrightarrow> seq_block _")
-apply(simp split: inst.splits misc_inst.splits; subst seq_block_compose; simp)
-apply(clarsimp simp add: last_rev; drule_tac x=i and y=j in spec2; case_tac bl; simp)+
-done
-
-lemma in_aux_seq_block:
-"(n, b, t) \<in> set (aux_basic_block insts k block) \<Longrightarrow>
-seq_block (rev block) \<Longrightarrow>
-(\<forall>i j zs. block = (j,i)#zs \<longrightarrow> k = j + inst_size i) \<Longrightarrow>
-\<exists>ys m bl xs. (n, b, t)#xs = aux_basic_block ys m bl \<and> seq_block (rev bl) \<and>
-(\<forall>i j zs. bl = (j,i)#zs \<longrightarrow> m = j + inst_size i)"
-apply(induction insts arbitrary: k block)
- apply(rule_tac x="[]" in exI)
- apply(simp add: aux_basic_block.simps split: if_splits)
- apply(rule_tac x=k in exI, rule_tac x=block in exI, simp)
-apply(subgoal_tac "(n, b, t) \<in> set
-			(aux_basic_block (a # insts) k block)")
-apply(drule subst[OF aux_basic_block.simps(2)])
-apply(simp add: Let_def)
-apply(case_tac "reg_inst a \<and> a \<noteq> Pc JUMPDEST")
-  apply(drule_tac x="k + inst_size a" and y="(k, a) # block" in meta_spec2)
-  apply(drule meta_mp)
-   apply(clarsimp split: inst.splits pc_inst.splits misc_inst.splits)
-  apply(drule meta_mp; simp)
-  apply(subst seq_block_compose; simp add: aux_rev_cond)
- apply(simp split: inst.splits pc_inst.splits)
-     apply(erule disjE)
-      apply(clarsimp)
-      apply(rule_tac x="Pc JUMP # insts" in exI, rule_tac x="k" in exI, rule_tac x="block" in exI,
-            simp add: aux_basic_block.simps Let_def)
-     apply(drule_tac x="k + inst_size a" and y="[]" in meta_spec2)
-     apply(drule meta_mp; simp add: seq_block.simps)
-    apply(erule disjE)
-     apply(clarsimp)
-     apply(rule_tac x="Pc JUMPI # insts" in exI, rule_tac x="k" in exI, rule_tac x="block" in exI,
-            simp add: aux_basic_block.simps Let_def)
-    apply(drule_tac x="k + inst_size a" and y="[]" in meta_spec2)
-    apply(drule meta_mp; simp add: seq_block.simps)
-   apply(case_tac block; simp)
-    apply(drule_tac x="k + inst_size (Pc JUMPDEST)" and y="[(k, Pc JUMPDEST)]" in meta_spec2)
-    apply(drule meta_mp; simp; simp add: seq_block.simps)
-   apply(erule disjE)
-    apply(rule_tac x="Pc JUMPDEST # insts" in exI, rule_tac x="k" in exI, rule_tac x="block" in exI, 
-            simp add: aux_basic_block.simps Let_def)
-   apply(drule_tac x="k + inst_size (Pc JUMPDEST)" and y="[(k, Pc JUMPDEST)]" in meta_spec2)
-   apply(drule meta_mp; simp; simp add: seq_block.simps)
-  apply(subgoal_tac "(n, b, t)
-       \<in> set ((block_pt (rev block) k, rev block @ [(k, a)], No) #
-                 aux_basic_block insts (k + inst_size a) [])")
-   apply(thin_tac "(n,b,t) \<in> set (case _ of STOP \<Rightarrow> _ | RETURN \<Rightarrow> _ | SUICIDE \<Rightarrow> _ |_ \<Rightarrow> _)")
-   apply(simp; erule disjE)
-    apply(rule_tac x="Misc x13 # insts" in exI, rule_tac x="k" in exI, rule_tac x="block" in exI)
-    apply(subst aux_basic_block.simps; simp add: Let_def split: misc_inst.splits; fastforce)
-   apply(drule_tac x="k + inst_size a" and y="[]" in meta_spec2)
-   apply(drule meta_mp; simp add: seq_block.simps)
-  apply(simp split: misc_inst.splits)
- apply(assumption)
-done
-
 lemma in_aux_bb_intermediate:
-"(n, b, t) \<in> set (aux_basic_block insts k block) \<Longrightarrow>
-\<exists>ys m bl xs. (n, b, t)#xs = aux_basic_block ys m bl"
-apply(induction insts arbitrary: k block)
+"(n, b, t) \<in> set (aux_basic_block insts block) \<Longrightarrow>
+\<exists>ys bl xs. (n, b, t)#xs = aux_basic_block ys bl"
+apply(induction insts arbitrary: block)
  apply(rule_tac x="[]" in exI)
- apply(simp add: aux_basic_block.simps split: if_splits)
- apply(rule_tac x=k in exI, rule_tac x=block in exI, simp)
+ apply(case_tac block)
+ apply(simp add: aux_basic_block.simps split: if_splits)+
+ apply(rule_tac x=block in exI, simp add: aux_basic_block.simps)
 apply(subgoal_tac "(n, b, t) \<in> set
-			(aux_basic_block (a # insts) k block)")
- apply(drule subst[OF aux_basic_block.simps(2)])
+			(aux_basic_block (a # insts) block)")
+ apply(drule subst[OF aux_basic_block.simps(3)])
  apply(simp add: Let_def)
   apply(clarsimp split: inst.splits simp add: inst_size_def inst_code.simps)
   apply(simp split: pc_inst.splits if_splits add: inst_size_def inst_code.simps;
-				erule disjE, rule_tac x="Pc x9 # insts" in exI, rule_tac x=k in exI, rule_tac x=block in exI,
+				erule disjE, rule_tac x="(a,Pc x9) # insts" in exI, rule_tac x=block in exI,
 				simp add: aux_basic_block.simps Let_def, fastforce)
  apply(simp split: misc_inst.splits if_splits add: inst_size_def inst_code.simps;
-				erule disjE, rule_tac x="Misc x13 # insts" in exI, rule_tac x=k in exI, rule_tac x=block in exI,
+				erule disjE, rule_tac x="(a,Misc x13) # insts" in exI, rule_tac x=block in exI,
 				simp add: aux_basic_block.simps Let_def, fastforce)
 apply(assumption)
 done
@@ -386,25 +318,22 @@ lemma reg_block_butlast:
  apply(simp add: reg_block_def List.List.list.pred_map)
 done
 
-lemma reg_block_rev:
-"reg_block xs \<Longrightarrow> reg_block (rev xs)"
- apply(induction xs)
-  apply(simp)
- apply(simp add: reg_block_def)
-done
-
 lemmas reg_simps =
 reg_vertices_def reg_vertex_def reg_block_def
 
 lemma reg_aux_bb:
 "reg_block block \<Longrightarrow>
- reg_vertices (aux_basic_block insts pointer block)"
- apply(induction insts arbitrary: pointer  block)
-  apply(simp add: reg_vertex_def reg_vertices_def reg_block_rev reg_block_butlast  aux_basic_block.simps)
+ reg_vertices (aux_basic_block insts block)"
+ apply(induction insts arbitrary: block)
+  apply(case_tac block)
+   apply(simp add: reg_simps aux_basic_block.simps)
+  apply(simp add: reg_vertices_def reg_vertex_def aux_basic_block.simps)
  apply(simp add:Let_def aux_basic_block.simps)
+ apply(case_tac block; clarsimp)
+  apply(simp split: inst.split pc_inst.split misc_inst.split)
+  apply(simp add:reg_simps)
  apply(simp split: inst.split pc_inst.split misc_inst.split)
  apply(simp add:reg_simps)
- apply(simp add: List.List.list.pred_map)
 done
 
 lemma reg_bb:
@@ -413,11 +342,128 @@ lemma reg_bb:
  apply(rule reg_aux_bb)
  apply(simp add: reg_simps)
 done
+value "sum_list (map inst_size [Pc JUMP, Pc PC])"
+
+lemma seq_block_tl:
+"seq_block (x#xs) \<Longrightarrow> seq_block xs"
+apply(case_tac xs)
+ apply(simp add: seq_block.simps)+
+done
+
+lemma seq_block_append:
+"seq_block bl \<Longrightarrow>
+bl \<noteq> [] \<longrightarrow> fst a = fst (last bl) + inst_size (snd (last bl))\<Longrightarrow>
+seq_block (bl@[a])"
+apply(induction bl; simp add: seq_block.simps)
+apply(simp add: seq_block_tl)
+apply(case_tac bl; simp add: seq_block.simps)
+done
+
+lemma inst_size_pos:
+"inst_size x > 0"
+apply(simp add: inst_size_def)
+apply(case_tac x; clarsimp simp add: inst_code.simps)
+apply(case_tac x10; clarsimp simp add: stack_inst_code.simps)
+apply(simp split: if_splits)
+done
+
+abbreviation bound where
+"bound mini maxi n == mini \<le> (fst n) \<and> (fst n) < maxi"
+
+lemma sequential_basic_blocks:
+"seq_block ys \<Longrightarrow>
+ seq_block bl \<Longrightarrow>
+ list_all (bound 0 m) ys \<Longrightarrow>
+ list_all (bound 0 m) bl \<Longrightarrow>
+ ys \<noteq> [] \<and> bl \<noteq> [] \<longrightarrow> fst (hd ys) = fst (last bl) + inst_size (snd (last bl))\<Longrightarrow>
+ (n, insts, ty) \<in> set (aux_basic_block ys bl) \<Longrightarrow>
+ seq_block insts \<and> 0 \<le> n \<and> n < m"
+apply(induction ys arbitrary: bl)
+ apply(case_tac bl; simp add: aux_basic_block.simps)
+apply(simp add: aux_basic_block.simps Let_def)
+ apply(case_tac "reg_inst (snd a) \<and> (snd a) \<noteq> Pc JUMPDEST")
+ apply(drule_tac x="bl@[a]" in meta_spec)
+ apply(simp add: seq_block_tl seq_block_append)
+ apply(drule meta_mp; clarsimp; case_tac ys; simp add: seq_block.simps;
+       simp split: inst.splits pc_inst.splits misc_inst.splits)
+apply(case_tac "(snd a) = Pc JUMPDEST")
+ apply(clarsimp)
+ apply(drule_tac x="[(a, Pc JUMPDEST)]" in meta_spec)
+ apply(simp add: seq_block_tl seq_block.simps)
+ apply(drule meta_mp; case_tac ys; simp add: seq_block.simps)
+  apply(case_tac "bl=[]"; simp split: if_splits)
+  apply(erule disjE; clarsimp simp add: block_pt_def split: list.splits)
+ apply(case_tac "bl=[]"; simp split: if_splits)
+ apply(erule disjE; clarsimp simp add: block_pt_def split: list.splits)
+apply(drule meta_spec[where x="[]"])
+apply(simp add: seq_block_tl seq_block_append seq_block.simps)
+apply(simp split: inst.splits pc_inst.splits misc_inst.splits)
+    apply(erule disjE; clarsimp simp add: block_pt_def seq_block_append split: list.splits)+
+done
+
+lemma seq_block_add_address:
+"seq_block (add_address' insts k)"
+apply(induction insts arbitrary:k)
+ apply(simp add: seq_block.simps)
+apply(simp)
+apply(case_tac insts; simp add: seq_block.simps)
+done
+
+lemma bound_add_address':
+"(x,y) \<in> set (add_address' xs k) \<Longrightarrow>
+k \<le> x \<and> x \<le> fst (last (add_address' xs k))"
+apply(induction xs arbitrary: k x y)
+ apply(simp)
+apply(simp)
+apply(erule disjE; simp)
+ apply(case_tac "add_address' xs (k + inst_size a)"; clarsimp)
+ apply(drule_tac x="k + inst_size a" in meta_spec; drule_tac x="aa" and y="b" in meta_spec2)
+ apply(simp split: list.splits if_splits)
+  apply(case_tac xs; simp)
+  apply(drule conjunct1; drule sym[where s="_ + _"]; simp add: inst_size_pos Orderings.order_class.order.strict_implies_order)
+ apply(erule conjE)
+ apply(subgoal_tac "k \<le> k + inst_size a"; simp)
+ apply(simp add: inst_size_pos Orderings.order_class.order.strict_implies_order)
+apply(drule_tac x="k + inst_size a" in meta_spec; drule_tac x="x" and y="y" in meta_spec2)
+apply(simp)
+apply(erule conjE)
+apply(rule conjI; clarsimp)
+apply(subgoal_tac "k \<le> k + inst_size a"; simp)
+apply(simp add: inst_size_pos Orderings.order_class.order.strict_implies_order)
+done
+
+lemma non_empty_block_next:
+"(n, [], Next) # xs = aux_basic_block ys bl \<Longrightarrow> False"
+apply(induction ys arbitrary:bl)
+ apply(case_tac bl; simp add: aux_basic_block.simps)
+apply(simp add: aux_basic_block.simps Let_def)
+apply(simp split: inst.splits pc_inst.splits misc_inst.splits if_splits; fastforce)
+done
+
+lemma block_no:
+"(n, insts, No) \<in> set (aux_basic_block ys bl) \<Longrightarrow>
+ reg_block bl \<Longrightarrow>
+ insts \<noteq> [] \<and> last_no insts"
+apply(induction ys arbitrary:bl)
+ apply(case_tac bl; simp add: aux_basic_block.simps last_no_def)
+apply(simp add: aux_basic_block.simps Let_def)
+apply(case_tac "reg_inst (snd a) \<and> snd a \<noteq> Pc JUMPDEST")
+ apply(drule_tac x="bl @ [a]" in meta_spec; simp add: reg_block_def)
+ apply(simp split: inst.splits pc_inst.splits misc_inst.splits if_splits)
+apply(case_tac "snd a = Pc JUMPDEST")
+ apply(simp; case_tac bl; simp split: if_splits)
+  apply(drule_tac x="[a]" in meta_spec; simp add: reg_block_def)
+ apply(drule_tac x="[a]" in meta_spec; simp add: reg_block_def)
+apply(drule_tac x="[]" in meta_spec; simp add: reg_block_def)
+apply(simp split: inst.splits pc_inst.splits misc_inst.splits if_splits)
+  apply(erule disjE; simp add: last_no_def)+
+done
 
 (* Main theorem *)
 
 lemma wf_build_cfg:
-"wf_cfg (build_cfg bytecode)"
+"fst (last (add_address bytecode)) < 2^256 \<Longrightarrow>
+wf_cfg (build_cfg bytecode)"
  apply(simp add: wf_cfg_def)
  apply(clarsimp)
  apply(rule conjI)
@@ -425,25 +471,38 @@ lemma wf_build_cfg:
    apply(case_tac "\<not> cfg_blocks (build_cfg bytecode) n = None")
     apply(simp add: index_have_blocks)
    apply(simp)
+  apply(simp add: build_cfg_def Let_def)
+  apply(drule map_of_SomeD)
   apply(rule conjI)
-   apply(simp add: build_cfg_def Let_def)
-   apply(drule map_of_SomeD)
     apply(cut_tac reg_bb[where insts=bytecode])
      apply(simp add: reg_vertices_def list_all_in)
   apply(rule conjI)
-   apply(simp add: build_cfg_def Let_def; clarify)
-   apply(drule map_of_SomeD)
 	 apply(simp add: build_basic_blocks_def)
 	 apply(drule in_aux_bb_intermediate, clarify)
 	 apply(case_tac insts; clarsimp simp add: index_block_eq)
-  apply(rule conjI)
-   apply(simp add: build_cfg_def Let_def)
-   apply(drule map_of_SomeD)
-	 apply(simp add: build_basic_blocks_def)
-   apply(drule in_aux_seq_block)
-     apply(simp add: seq_block.simps)
-    apply(simp split: list.splits)
-   apply(clarsimp simp add: seq_blocks)
+	apply(simp add: build_basic_blocks_def)
+  apply(rule_tac ty=ty in sequential_basic_blocks[where ys="add_address bytecode" and bl="[]"])
+       apply(simp add: seq_block_add_address add_address_def)
+      apply(simp add: seq_block.simps)
+     apply(clarsimp simp add: list_all_def add_address_def)
+     apply(cut_tac x=a and y=b in bound_add_address'[where xs=bytecode and k=0]; simp)
+    apply(simp)+
+ apply(thin_tac "_ < _")
+ apply(simp add: build_cfg_def Let_def build_basic_blocks_def)
+ apply(rule conjI)
+  apply(rule impI)
+  apply(drule map_of_SomeD)
+  apply(drule in_aux_bb_intermediate, clarify)
+  apply(drule non_empty_block_next; simp)
+ apply(rule conjI)
+  apply(rule impI)
+  defer
+ apply(rule conjI)
+  apply(rule impI)
+  defer
+ apply(rule impI)
+ apply(drule map_of_SomeD)
+ apply(drule block_no; simp add: reg_block_def)
 sorry
 
 end
