@@ -2849,7 +2849,7 @@ lemma update_balance_match  :
 apply(simp add: update_balance_def)
 done 
 
-lemma lookup_o :
+lemma lookup_o[simp] :
   "a \<ge> length tf \<Longrightarrow>
    (rev tf @ lst) ! a
    = lst ! (a - length tf)"

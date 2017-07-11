@@ -192,66 +192,91 @@ shows
                        gas_pred (g - Gverylow) **
                        continuing
                       )"
-  apply(simp add: triple_def)
-apply clarify
-apply(rule_tac x = 1 in exI)
-apply(case_tac presult)
+  apply_trace\<open>name:Hoare\<close>(simp add: triple_def)
+apply_trace\<open>name:Hoare\<close> clarify
+apply_trace\<open>name:Hoare\<close>(rule_tac x = 1 in exI)
+apply_trace\<open>name:Hoare\<close>(case_tac presult)
    defer
-   apply(simp add: instruction_result_as_set_def)
-  apply(simp add: instruction_result_as_set_def)
- apply(simp add: instruction_result_as_set_def)
-apply(simp add: swap_def list_swap_usage swap_inst_numbers_def)
-apply(rule impI)
-apply(rule leibniz)
- apply blast
-apply(rule  Set.equalityI)
- apply(simp add: Set.subset_iff)
- apply(rule allI)
- apply(rename_tac elm)
- apply(case_tac elm; simp add: instruction_result_as_set_def)
+   apply_trace\<open>name:Hoare\<close>(simp add: instruction_result_as_set_def)
+  apply_trace\<open>name:Hoare\<close>(simp add: instruction_result_as_set_def)
+ apply_trace\<open>name:Hoare\<close>(simp add: instruction_result_as_set_def)
+apply_trace\<open>name:Hoare\<close>(simp add: swap_def list_swap_usage swap_inst_numbers_def)
+apply_trace\<open>name:Hoare\<close>(rule impI)
+apply_trace\<open>name:Hoare\<close>(erule_tac P=rest in back_subst)
+apply_trace\<open>name:Hoare\<close>(rule  Set.equalityI)
+ apply_trace\<open>name:Hoare\<close>(simp add: Set.subset_iff)
+ apply_trace\<open>name:Hoare\<close>(rule allI)
+ apply_trace\<open>name:Hoare\<close>(rename_tac elm)
+ apply_trace\<open>name:Hoare\<close>(case_tac elm; simp add: instruction_result_as_set_def)
 
- apply(rename_tac pair)
- apply(case_tac pair; simp)
- apply(case_tac "a = h - Suc 0"; simp)
-  apply blast
- apply(case_tac "a < h - Suc (Suc (unat n))"; simp)
+ apply_trace\<open>name:Hoare\<close>(rename_tac pair)
+ apply_trace\<open>name:Hoare\<close>(case_tac pair; simp)
+ apply_trace\<open>name:Hoare\<close>(case_tac "a = h - Suc 0"; simp)
+  apply_trace\<open>name:Hoare\<close> blast
+ apply_trace\<open>name:Hoare\<close>(case_tac "a < h - Suc (Suc (unat n))"; simp)
 
- apply(case_tac "a = h - Suc (Suc (unat n))"; simp)
-  apply blast
-apply auto[1]
-apply(simp add: Set.subset_iff)
-apply(rule allI)
-apply(rename_tac elm)
-apply(case_tac elm; simp add: instruction_result_as_set_def)
- apply(rename_tac pair; case_tac pair)
- apply simp
- apply(case_tac "a = h - Suc 0"; simp)
-  using rev_nth tmp002 apply auto[1]
- apply(case_tac "a < h - Suc 0"; simp)
-  apply(case_tac "a = h - Suc (Suc (unat n))"; simp)
-   apply blast
-  apply(case_tac "a < h - Suc (Suc (unat n))"; simp)
-  apply(simp add: tmp000 tmp001 tmp002 List.rev_nth)
-  apply linarith
+ apply_trace\<open>name:Hoare\<close>(case_tac "a = h - Suc (Suc (unat n))"; simp)
+  apply_trace\<open>name:Hoare\<close> blast
+apply_trace\<open>name:Hoare\<close> auto[1]
+apply_trace\<open>name:Hoare\<close>(simp add: Set.subset_iff)
+apply_trace\<open>name:Hoare\<close>(rule allI)
+apply_trace\<open>name:Hoare\<close>(rename_tac elm)
+apply_trace\<open>name:Hoare\<close>(case_tac elm; simp add: instruction_result_as_set_def)
+ apply_trace\<open>name:Hoare\<close>(rename_tac pair; case_tac pair)
+ apply_trace\<open>name:Hoare\<close> simp
+ apply_trace\<open>name:Hoare\<close>(case_tac "a = h - Suc 0"; simp)
+  using rev_nth tmp002 apply_trace\<open>name:Hoare\<close> auto[1]
+ apply_trace\<open>name:Hoare\<close>(case_tac "a < h - Suc 0"; simp)
+  apply_trace\<open>name:Hoare\<close>(case_tac "a = h - Suc (Suc (unat n))"; simp)
+   apply_trace\<open>name:Hoare\<close> blast
+  apply_trace\<open>name:Hoare\<close>(case_tac "a < h - Suc (Suc (unat n))"; simp)
+  apply_trace\<open>name:Hoare\<close>(simp add: tmp000 tmp001 tmp002 List.rev_nth)
+  apply_trace\<open>name:Hoare\<close> linarith
 done 
    
    
-   
-apply(simp add: triple_def)
-apply clarify
-apply(rule_tac x = 1 in exI)
+lemma swap_gas_triple1 :
+shows
+   "triple net {OutOfGas} (\<langle> h \<le> 1024 \<and> Suc (unat n) < h \<rangle> **
+                       stack_height h **
+                       stack (h - 1) w **
+                       stack (h - (unat n) - 2) v **
+                       program_counter k **
+                       gas_pred g **
+                       continuing
+                      )
+
+                      {(k, Swap n)}
+                      (stack_height h **
+                       stack (h - 1) v **
+                       stack (h - (unat n) - 2) w **
+                       program_counter (k + 1) **
+                       gas_pred (g - Gverylow) **
+                       continuing
+                      )"   
+  apply(simp add: triple_def)
+  apply clarify
+  apply(rule_tac x = 1 in exI)
+  apply clarsimp
+  apply(hoare_sep sep:evm_sep)
 apply(case_tac presult)
     defer
     apply (hoare_sep sep: evm_sep)
     apply (hoare_sep sep: evm_sep)
-  apply clarsimp
-  apply (hoare_sep sep: evm_sep
-                   simp: hoare_simps instruction_result_as_set_def
-                          swap_inst_numbers_def
+  apply (clarsimp simp: next_state_def )
+  apply (clarsimp simp add: program_sem.simps)
+  apply ( simp add: hoare_simps instruction_result_as_set_def
+                    swap_inst_numbers_def swap_def
+                     suc_minus_two min_absorb1 min_absorb2 saying_zero
+                     list_swap_usage
                    split: if_split_asm)
- apply(simp add: Hoare_legacy_simps HoareTripleForInstructions_legacy_simps)
-  apply(simp add: swap_def list_swap_usage swap_inst_numbers_def Hoare_legacy_simps 
-HoareTripleForInstructions_legacy_simps)
+  apply (subst advance_pc_inc_but_stack)
+    apply clarsimp
+  apply (rule refl)
+   apply fastforce
+  apply (simp add: )
+
+  (* here *)
   apply (rule conjI[rotated], unat_arith)
   apply (erule_tac P=rest in back_subst)
   apply(rule  Set.equalityI)
