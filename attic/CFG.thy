@@ -548,35 +548,243 @@ lemma cfg_vert_rebuild:
   (map fst zs) = zs"
 by(simp add: cfg_vert_rebuild_subset)
 
+lemma add_address_greater:
+"(n,m) \<in> set (add_address' xs k) \<Longrightarrow>
+n \<ge> k"
+apply(induction xs arbitrary: k)
+ apply(simp)
+apply(simp; erule disjE)
+ apply(simp)
+apply(drule_tac x="k + inst_size a" in meta_spec)
+apply(simp add: inst_size_pos)
+apply(subgoal_tac "k + inst_size a \<ge> k")
+ apply(simp)
+apply(simp add: inst_size_pos Orderings.order_class.order.strict_implies_order)
+done
+
+lemma remdups_id_add_address:
+"remdups (add_address' xs n) = (add_address' xs n)"
+apply(induction xs arbitrary: n)
+ apply(simp)
+apply(clarsimp)
+apply(drule add_address_greater; simp)
+apply(drule linorder_class.leD; simp add: inst_size_pos)
+done
+
 lemma distinct_add_address:
 "distinct (map fst (add_address' xs n))"
-sorry
+apply(simp add: distinct_map)
+apply(rule conjI)
+ apply(insert remdups_id_add_address[where xs=xs and n=n]; simp)
+apply(clarsimp simp add: inj_on_def)
+apply(induction xs arbitrary: n)
+ apply(simp)
+apply(simp)
+apply(erule disjE; erule disjE)
+   apply(fastforce)
+  apply(drule add_address_greater; simp)
+  apply(drule linorder_class.leD; simp add: inst_size_pos)
+ apply(drule add_address_greater; simp)
+ apply(drule linorder_class.leD; simp add: inst_size_pos)
+apply(fastforce)
+done
 
-lemma index_subset_add_address:
-"(map v_ind (aux_basic_block (add_address xs) [])) \<in> set (sublists (map fst (add_address' xs n)))"
-sorry
+lemma hd_inst_in_aux_bb:
+"(n,(n,x)#zs,t) \<in> set (aux_basic_block xs ys) \<Longrightarrow>
+(n, x) \<in> set ys \<or> (n, x) \<in> set xs"
+apply(induction xs arbitrary: ys)
+ apply(case_tac ys; clarsimp simp add: aux_basic_block.simps)
+apply(simp add: aux_basic_block.simps Let_def)
+apply(case_tac "reg_inst (snd a) \<and> (snd a) \<noteq> Pc JUMPDEST")
+ apply(simp split: reg_inst_splits; fastforce)
+apply(case_tac "snd a = Pc JUMPDEST")
+ apply(simp split: reg_inst_splits if_splits)
+  apply(fastforce)
+ apply(erule disjE)
+  apply(drule conjunct2; rule disjI1; clarsimp)
+ apply(fastforce)
+apply(drule meta_spec[where x="[]"])
+apply(simp split: reg_inst_splits if_splits)
+    apply(erule disjE; clarsimp; case_tac ys; clarsimp)+
+done
 
+lemma inst_size_list_pos:
+"inst_size_list xs \<ge> 0"
+apply(induction xs; simp)
+apply(insert inst_size_pos)
+apply(drule_tac x="snd a" in meta_spec)
+apply(fastforce)
+done
 
-lemma distinct_indexes:
-"distinct (map fst xs) \<Longrightarrow> distinct (map v_ind (aux_basic_block xs ys))"
+lemma seq_block_smaller:
+"seq_block (a # list @ (m, j) # xs) \<Longrightarrow>
+fst a < m "
+ apply(case_tac a; clarsimp)
+ apply(drule seq_block_sumC)
+ apply(drule sym[where s="_+_"]; simp)
+ apply(subgoal_tac "inst_size b + inst_size_list list \<ge> inst_size b")
+  apply(drule Orderings.order_class.dual_order.strict_trans1[where c=0])
+   apply(simp add: inst_size_pos)
+  apply(assumption)
+ apply(simp add: inst_size_list_pos)
+done
+
+lemma seq_block_smaller_all:
+"seq_block (a # list @ (m, j) # xs) \<Longrightarrow>
+fst a < m \<and> (\<forall>x \<in> set xs. fst a < fst x)"
+apply(rule conjI)
+ apply(simp add: seq_block_smaller)
+apply(clarsimp)
+apply(subgoal_tac "\<exists>ys zs. xs = ys @ (aa, b) # zs")
+ apply(clarify)
+ apply(simp add: seq_block_smaller[where list="list @ (m,j)#_"])
+apply(thin_tac "seq_block _")
+apply(induction xs; simp)
+apply(erule disjE)
+ apply(fastforce)
+apply(drule_tac x="aa" and y=b in meta_spec2; clarsimp)
+apply(rule_tac x="(a, b) # ys" in exI; simp)
+done
+
+lemma seq_block_smaller_all':
+"seq_block (a # xs) \<Longrightarrow>
+(\<forall>x \<in> set xs. fst a < fst x)"
+apply(clarsimp)
+apply(subgoal_tac "\<exists>ys zs. xs = ys @ (aa, b) # zs")
+ apply(clarify)
+ apply(simp add: seq_block_smaller)
+apply(thin_tac "seq_block _")
+apply(induction xs; simp)
+apply(erule disjE)
+ apply(fastforce)
+apply(drule_tac x="aa" and y=b in meta_spec2; clarsimp)
+apply(rule_tac x="(a, b) # ys" in exI; simp)
+done
+
+lemma ind_in_para_aux_bb:
+"(n,js,t) \<in> set (aux_basic_block xs ys) \<Longrightarrow>
+\<exists>x\<in>set(ys@xs). fst x = n"
 apply(induction xs arbitrary: ys)
  apply(case_tac ys; simp add: aux_basic_block.simps)
 apply(simp add: aux_basic_block.simps Let_def)
-apply(case_tac ys; clarsimp)
- apply(case_tac "reg_inst b")
-  apply(drule_tac x="[(a,b)]" in meta_spec)
-  apply(case_tac b; simp; rename_tac x; case_tac x; simp)
-  apply(drule_tac x="[]" in meta_spec)
-  apply(case_tac b; simp; rename_tac x; case_tac x; simp add: block_pt_def)
-sorry
+apply(clarsimp; rename_tac nx ni xs ys)
+apply(case_tac "reg_inst ni \<and> ni \<noteq> Pc JUMPDEST")
+ apply(simp split: reg_inst_splits; fastforce)
+apply(case_tac "ni = Pc JUMPDEST")
+ apply(simp split: reg_inst_splits; case_tac ys; simp add: block_pt_def)
+  apply(fastforce)
+ apply(drule_tac x="[(nx, Pc JUMPDEST)]" in meta_spec; simp)
+apply(drule meta_spec[where x="[]"])
+apply(case_tac ys; simp add: block_pt_def split: reg_inst_splits)
+apply(erule disjE; simp)+
+done
+
+lemma remdups_id_aux_bb:
+"distinct (map fst (ys@xs)) \<Longrightarrow>
+remdups (aux_basic_block xs ys) = (aux_basic_block xs ys)"
+apply(induction xs arbitrary: ys)
+ apply(case_tac ys; simp add: aux_basic_block.simps)
+apply(case_tac ys; simp add: aux_basic_block.simps Let_def)
+ apply(erule conjE)+
+ apply(case_tac "reg_inst (snd a)")
+  apply(simp split: reg_inst_splits; fastforce)
+ apply(cut_tac x="fst a" and xys=xs in map_of_eq_None_iff, drule sym, simp)
+ apply(case_tac "snd a"; simp split: reg_inst_splits;
+			rename_tac x; case_tac x; simp add: block_pt_def; rule notI)
+      apply(drule_tac ys="[]" and xs="xs" and n="fst a" and js="[]" in ind_in_para_aux_bb; clarsimp)+
+     apply(drule_tac ys="[]" and xs="xs" and n="fst a" and js="[a]" in ind_in_para_aux_bb; clarsimp)+
+apply(erule conjE)+
+apply(clarsimp)
+apply(rename_tac n i xs ny iy yss)
+apply(case_tac "reg_inst i \<and> i \<noteq> Pc JUMPDEST")
+ apply(simp split: reg_inst_splits; fastforce)
+apply(case_tac "i = Pc JUMPDEST")
+ apply(clarsimp split: reg_inst_splits if_splits)
+ apply(simp add: block_pt_def)
+ apply(cut_tac x="ny" and xys=xs in map_of_eq_None_iff, drule sym, simp)
+ apply(drule ind_in_para_aux_bb; clarsimp)
+apply(cut_tac x="ny" and xys=xs in map_of_eq_None_iff, drule sym, simp)
+apply(case_tac i; simp split: reg_inst_splits;
+			rename_tac x; case_tac x; simp add: block_pt_def; rule notI)
+     apply(drule_tac ys="[]" and xs="xs" and n="ny" and js="(ny, iy) # yss" in ind_in_para_aux_bb; clarsimp)+
+   apply(cut_tac ys="[]" and xs="xs" and n="ny" and js="(ny, iy) # yss @ [(n, i)]" and t=No in ind_in_para_aux_bb; clarsimp)+
+done
+
+lemma distinct_fst_aux_bb:
+"distinct (map fst (ys@xs)) \<Longrightarrow>
+ seq_block (ys@xs) \<Longrightarrow>
+ distinct (map v_ind (aux_basic_block xs ys))"
+apply(subst distinct_map)
+apply(rule conjI)
+ apply(insert remdups_id_aux_bb[where xs=xs and ys=ys]; simp)
+apply(clarsimp simp add: inj_on_def)
+apply(induction xs arbitrary: ys)
+ apply(case_tac ys; simp add: aux_basic_block.simps)
+apply(clarsimp)
+apply(rename_tac m i xs is1 t1 n is2 t2 ys)
+apply(simp add: aux_basic_block.simps Let_def)
+apply(case_tac "reg_inst i \<and> i \<noteq> Pc JUMPDEST")
+ apply(drule_tac x=is1 and y=t1 in meta_spec2; drule_tac x=n in meta_spec)
+ apply(drule_tac x=is2 and y=t2 in meta_spec2; drule_tac x="ys @ [(m, i)]" in meta_spec)
+ apply(simp split: reg_inst_splits)
+apply(case_tac "i = Pc JUMPDEST")
+ apply(clarsimp split: reg_inst_splits if_splits)
+  apply(drule_tac x=is1 and y=t1 in meta_spec2; drule_tac x=n in meta_spec)
+  apply(drule_tac x=is2 and y=t2 in meta_spec2; drule_tac x="[(m, Pc JUMPDEST)]" in meta_spec)
+  apply(simp)
+ apply(erule disjE; erule disjE)
+		apply(simp)
+	 apply(erule conjE)+
+	 apply(case_tac ys; simp add: block_pt_def)
+	 apply(drule ind_in_para_aux_bb; drule seq_block_smaller_all)
+	 apply(fastforce)
+	apply(erule conjE)+
+	apply(case_tac ys; simp add: block_pt_def)
+	apply(drule ind_in_para_aux_bb; drule seq_block_smaller_all)
+	apply(fastforce)
+ apply(drule_tac x=is1 and y=t1 in meta_spec2; drule_tac x=n in meta_spec)
+ apply(drule_tac x=is2 and y=t2 in meta_spec2; drule_tac x="[(m, Pc JUMPDEST)]" in meta_spec)
+ apply(simp add: seq_block_tl')
+apply(subgoal_tac "\<exists>t zs. (n, is1, t1) \<in> set ((block_pt ys (m, i), ys @zs, t) #
+                 aux_basic_block xs []) \<and>
+								 (n, is2, t2) \<in> set ((block_pt ys (m, i), ys@zs, t) #
+                 aux_basic_block xs [])")
+  defer
+  apply(clarsimp split: reg_inst_splits; fastforce)
+apply(thin_tac "(_,_,_)\<in>set (_)")
+apply(thin_tac "(_,_,_)\<in>set (_)")
+apply(clarsimp)
+ apply(erule disjE; erule disjE)
+		apply(clarsimp)
+	 apply(erule conjE)+
+	 apply(case_tac ys; simp add: block_pt_def)
+	  apply(drule ind_in_para_aux_bb; drule seq_block_smaller_all')
+	  apply(fastforce)
+	 apply(drule ind_in_para_aux_bb; drule seq_block_smaller_all'; clarsimp)
+	 apply(subgoal_tac "\<forall>x\<in>set xs. a < fst x")
+		apply(fastforce)
+	 apply(simp)
+	apply(erule conjE)+
+	apply(case_tac ys; simp add: block_pt_def)
+	  apply(drule ind_in_para_aux_bb; drule seq_block_smaller_all')
+	  apply(fastforce)
+	 apply(drule ind_in_para_aux_bb; drule seq_block_smaller_all'; clarsimp)
+	 apply(subgoal_tac "\<forall>x\<in>set xs. a < fst x")
+		apply(fastforce)
+	 apply(simp)
+ apply(drule_tac x=is1 and y=t1 in meta_spec2; drule_tac x=n in meta_spec)
+ apply(drule_tac x=is2 and y=t2 in meta_spec2; drule_tac x="[]" in meta_spec; simp)
+ apply(simp add: seq_block_tl'[where xs="_@[_]"])
+done
 
 lemma re_build_bb:
 "cfg_vertices (build_cfg xs) (cfg_indexes (build_cfg xs)) = build_basic_blocks xs"
 apply(simp add: build_cfg_def Let_def extract_indexes_def)
 apply(rule cfg_vert_rebuild)
-apply(simp add: build_basic_blocks_def)
-apply(insert distinct_add_address[where xs=xs and n=0] index_subset_add_address[where xs=xs and n=0])
-apply(simp add: sublists_distinctD)
+apply(simp add: build_basic_blocks_def add_address_def)
+apply(rule distinct_fst_aux_bb)
+ apply(simp add: distinct_add_address)
+apply(simp add: seq_block_add_address)
 done
 
 lemma re_build_address:
@@ -585,9 +793,11 @@ apply(simp add: re_build_bb)
 apply(simp add: build_basic_blocks_def reverse_basic_blocks_add)
 done
 
-lemma jump_ends_block:
-"(n, insts, Jump) \<in> set (aux_basic_block xs ys) \<Longrightarrow>
- (n + inst_size_list insts, Pc JUMP) \<in> set xs"
+lemma jump_i_ends_block:
+"seq_block (ys@xs) \<Longrightarrow>
+ (t=Jump \<and> i=JUMP) \<or> (t=Jumpi \<and> i=JUMPI) \<Longrightarrow>
+ (n, insts, t) \<in> set (aux_basic_block xs ys) \<Longrightarrow>
+ (n + inst_size_list insts, Pc i) \<in> set xs"
  apply(induction xs arbitrary: ys)
   apply(case_tac ys; simp add: aux_basic_block.simps)
  apply(clarsimp simp add: aux_basic_block.simps Let_def)
@@ -595,19 +805,21 @@ lemma jump_ends_block:
   apply(drule_tac x="ys @ [(a, b)]" in meta_spec)
   apply(simp split: reg_inst_splits)
  apply(case_tac "b=Pc JUMPDEST")
-  apply(clarsimp split: if_splits)
+  apply(case_tac ys)
+	 apply(simp; drule_tac x="[(a, b)]" in meta_spec; simp)
+  apply(simp; drule_tac x="[(a, b)]" in meta_spec; simp add: seq_block_tl'[where xs="_#_"])
+  apply(erule disjE; simp)
  apply(drule_tac x="[]" in meta_spec)
- apply(simp split: reg_inst_splits)
+ apply(drule meta_mp)
+  apply(subgoal_tac "seq_block ((a, b) # xs)")
+	 apply(simp add: seq_block_tl)
+  apply(simp add: seq_block_tl')
+ apply(simp split: reg_inst_splits; erule disjE; simp)
+  apply(erule disjE; simp)
+  apply(case_tac ys; simp add: block_pt_def seq_block_sumC)
  apply(erule disjE; simp)
- apply(case_tac ys)
- apply(simp add: block_pt_def)
-sorry
-
-lemma jumpi_ends_block:
-"(n, insts, Jumpi) \<in> set (aux_basic_block xs ys) \<Longrightarrow>
- map_of xs (n + inst_size_list insts) = Some (Pc JUMPI)"
-find_theorems map_of Some
-sorry
+ apply(case_tac ys; simp add: block_pt_def seq_block_sumC)
+done
 
 lemma jumps_end_block:
 "(t=Jump \<and> i=JUMP) \<or> (t=Jumpi \<and> i=JUMPI) \<Longrightarrow>
@@ -622,11 +834,11 @@ lemma jumps_end_block:
  apply(insert map_of_eq_Some_iff[where xys="add_address bytecode" and x="n + inst_size_list insts"
  and y="Pc i"])
  apply(drule meta_mp)
- defer
-apply(simp)
- apply(drule map_of_SomeD; erule disjE)
-  apply(simp add: jump_ends_block)
- apply(simp add: jumpi_ends_block)
+  apply(simp add: add_address_def distinct_add_address)
+ apply(simp add: add_address_def)
+ apply(drule map_of_SomeD)
+	apply(subst jump_i_ends_block[where ys="[]"]; simp)
+  apply(simp add: seq_block_add_address)
 done
 
 (* Main theorem *)
