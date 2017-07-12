@@ -169,7 +169,7 @@ lemma take_drop_nth [simp] :
    a < h \<Longrightarrow>
    rev (take (unat n) (drop (Suc 0) (vctx_stack x1))) ! (Suc (a + unat n) - h) = rev (vctx_stack x1) ! a"
   apply(simp add: tmp000 tmp001 tmp002 List.rev_nth min_absorb2)
-done
+  done
 
 lemma swap_gas_triple :
   notes simp_for_triples[simp] sep_crunch[simp]
@@ -234,7 +234,10 @@ apply_trace\<open>name:Hoare\<close>(case_tac elm; simp add: instruction_result_
   apply_trace\<open>name:Hoare\<close> linarith
 done 
    
-   
+lemma imp_neq_sym:
+  "(P \<longrightarrow> A \<noteq> B) \<Longrightarrow> (P \<longrightarrow> B \<noteq> A)"
+  by blast
+
 lemma swap_gas_triple1 :
 shows
    "triple net {OutOfGas} (\<langle> h \<le> 1024 \<and> Suc (unat n) < h \<rangle> **
@@ -267,8 +270,8 @@ apply(case_tac presult)
   apply (clarsimp simp add: program_sem.simps)
   apply ( simp add: hoare_simps instruction_result_as_set_def
                     swap_inst_numbers_def swap_def
-                     suc_minus_two min_absorb1 min_absorb2 saying_zero
-                     list_swap_usage
+                     suc_minus_two  min_absorb2 saying_zero
+                     list_swap_usage imp_neq_sym
                    split: if_split_asm)
   apply (subst advance_pc_inc_but_stack)
     apply clarsimp
@@ -277,21 +280,19 @@ apply(case_tac presult)
   apply (simp add: )
 
   (* here *)
-  apply (rule conjI[rotated], unat_arith)
   apply (erule_tac P=rest in back_subst)
   apply(rule  Set.equalityI)
-   apply (simp add: set_diff_eq)
-   apply clarsimp
- apply(simp add: Set.subset_iff)
- apply(rule allI)
-   apply(rename_tac elm)
-  apply (case_tac elm; simp add: hoare_simps split:if_splits) 
+  apply (simp add: set_diff_eq)
+  apply clarsimp
+  apply(rename_tac elm)
+  apply (case_tac elm; simp add: hoare_simps rev_nth_simps suc_minus_two  min_absorb2 saying_zero split:if_splits) 
  apply(rename_tac pair)
-   apply (case_tac pair; simp add: hoare_simps split:if_splits) 
+   apply (case_tac pair; simp add: hoare_simps rev_nth_simps suc_minus_two  min_absorb2 saying_zero split:if_splits) 
    apply (clarsimp)
    apply (rule conjI)+
-    apply (simp add: rev_nth rev_nth_simps)
-    apply clarsimp
+  apply (clarsimp simp add: hoare_simps rev_nth_simps suc_minus_two  min_absorb2 saying_zero)
+    apply (case_tac "length (vctx_stack x1) - Suc (Suc (unat n)) \<le> aa"; case_tac "unat n = 0"; clarsimp)
+    apply (clarsimp simp: rev_drop)
     oops
   apply (simp add: length_drop)
   apply (simp add: )
