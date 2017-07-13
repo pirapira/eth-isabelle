@@ -3050,7 +3050,7 @@ code_sep sep_code sep_sep_code sep_code_sep
 lemmas inst_numbers_simps =
 dup_inst_numbers_def storage_inst_numbers.simps stack_inst_numbers.simps
 pc_inst_numbers.simps info_inst_numbers.simps inst_stack_numbers.simps
-arith_inst_numbers.simps
+arith_inst_numbers.simps misc_inst_numbers.simps
 
 lemmas inst_size_simps =
 inst_size_def inst_code.simps stack_inst_code.simps

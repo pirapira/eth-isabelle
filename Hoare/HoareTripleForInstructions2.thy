@@ -237,7 +237,7 @@ done
 lemma imp_neq_sym:
   "(P \<longrightarrow> A \<noteq> B) \<Longrightarrow> (P \<longrightarrow> B \<noteq> A)"
   by blast
-
+    
 lemma swap_gas_triple1 :
 shows
    "triple net {OutOfGas} (\<langle> h \<le> 1024 \<and> Suc (unat n) < h \<rangle> **
@@ -261,18 +261,69 @@ shows
   apply clarify
   apply(rule_tac x = 1 in exI)
   apply clarsimp
-  apply(hoare_sep sep:evm_sep)
+    apply ( simp add: hoare_simps instruction_result_as_set_def
+                    swap_inst_numbers_def swap_def
+                     suc_minus_two  min_absorb2 saying_zero
+                     list_swap_usage imp_neq_sym
+                   split: if_split_asm)
 apply(case_tac presult)
     defer
     apply (hoare_sep sep: evm_sep)
-    apply (hoare_sep sep: evm_sep)
-  apply (clarsimp simp: next_state_def )
+   apply (hoare_sep sep: evm_sep)
+  apply (subst (asm) program_sem.simps)+
+  apply (clarsimp simp: next_state_def instruction_sem_simps
+            gas_value_simps
+      inst_numbers_simps split_def
+      )
+  apply (split option.split_asm)+
+   apply (clarsimp simp: hoare_simps)    
+   apply (clarsimp simp: hoare_simps)
+  apply (clarsimp simp: program_sem.simps next_state_def vctx_next_instruction_def split: option.splits split del:if_split)
+   apply (hoare_sep sep: evm_sep simp: stateelm_means_simps stateelm_equiv_simps)
+  
+
+  apply ( simp add: hoare_simps instruction_result_as_set_def
+                    swap_inst_numbers_def swap_def
+                    suc_minus_two  min_absorb2 saying_zero
+                    list_swap_usage imp_neq_sym
+                   )  
+    
+    
+  apply (clarsimp split: instruction_result.split split del: if_split)
+  apply (split if_split; rule conjI)
+  apply clarsimp
+  
+    oops
+   apply (hoare_sep sep: evm_sep simp: stateelm_means_simps stateelm_equiv_simps)
+      apply (clarsimp simp: next_state_def instruction_sem_simps
+            gas_value_simps
+      inst_numbers_simps split_def program_sem.simps stop_def
+      failed_for_reasons_def
+      split:option.splits if_split_asm split del:if_split)
+  apply (split option.split_asm)+
+   apply (clarsimp simp: hoare_simps)
+   apply (split if_split_asm)
+   apply clarsimp
+      apply (clarsimp simp: next_state_def instruction_sem_simps
+            gas_value_simps
+      inst_numbers_simps split_def program_sem.simps stop_def
+      split:option.splits)
+   apply (hoare_sep sep: evm_sep simp: stateelm_means_simps stateelm_equiv_simps)
+      apply (clarsimp simp: next_state_def instruction_sem_simps
+            gas_value_simps
+      inst_numbers_simps split_def program_sem.simps stop_def
+      failed_for_reasons_def
+      split:option.splits if_split_asm split del:if_split)
+   apply (hoare_sep sep: evm_sep simp: stateelm_means_simps stateelm_equiv_simps)
+find_theorems "program_content _ _ = None"      
+
+    oops
   apply (clarsimp simp add: program_sem.simps)
   apply ( simp add: hoare_simps instruction_result_as_set_def
                     swap_inst_numbers_def swap_def
                      suc_minus_two  min_absorb2 saying_zero
                      list_swap_usage imp_neq_sym
-                   split: if_split_asm)
+                   split: if_split_asm)  
   apply (subst advance_pc_inc_but_stack)
     apply clarsimp
   apply (rule refl)
