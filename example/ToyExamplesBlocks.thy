@@ -1,6 +1,6 @@
-theory "CFGExamples"
+theory "ToyExamplesBlocks"
 
-imports "../Hoare/HoareCFG"
+imports "../Hoare/HoareBasicBlocks"
 begin
 
 lemmas evm_fun_simps = 

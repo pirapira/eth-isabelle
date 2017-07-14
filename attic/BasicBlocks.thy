@@ -14,7 +14,7 @@
    limitations under the License.
 *)
 
-theory "CFG"
+theory "BasicBlocks"
 
 imports "../lem/Evm"
 "Apply_Trace_Cmd"

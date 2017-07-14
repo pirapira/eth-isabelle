@@ -14,10 +14,10 @@
    limitations under the License.
 *)
 
-theory "HoareCFG"
+theory "HoareBasicBlocks"
 
 imports "HoareTripleForInstructions"
-"../attic/CFG"
+"../attic/BasicBlocks"
 "../EvmFacts"
 
 begin
