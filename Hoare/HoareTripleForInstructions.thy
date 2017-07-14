@@ -1482,34 +1482,34 @@ lemma cut_memory_memory_range[rule_format] :
 
 (****** specifying each instruction *******)
 
-lemmas simp_for_triples =
-        vctx_next_instruction_default_def
-        stack_2_1_op_def
-        stack_1_1_op_def
-        stack_0_0_op_def
-        vctx_next_instruction_def
-        instruction_sem_def
-        check_resources_def
-        pop_def
-        jump_def
-        jumpi_def
-        instruction_failure_result_def
-        strict_if_def
-        blocked_jump_def
-        blockedInstructionContinue_def
-        vctx_pop_stack_def
-        stack_0_1_op_def
-        general_dup_def
-        dup_inst_numbers_def
-        new_memory_consumption.simps
-        inst_stack_numbers.simps
-        arith_inst_numbers.simps
-        program_sem.simps
-        info_inst_numbers.simps
-        stack_inst_numbers.simps
-        pc_inst_numbers.simps
-        storage_inst_numbers.simps
-        subtract_gas.simps
+bundle simp_for_triples_bundle =
+        vctx_next_instruction_default_def[simp]
+        stack_2_1_op_def[simp]
+        stack_1_1_op_def[simp]
+        stack_0_0_op_def[simp]
+        vctx_next_instruction_def[simp]
+        instruction_sem_def[simp]
+        check_resources_def[simp]
+        pop_def[simp]
+        jump_def[simp]
+        jumpi_def[simp]
+        instruction_failure_result_def[simp]
+        strict_if_def[simp]
+        blocked_jump_def[simp]
+        blockedInstructionContinue_def[simp]
+        vctx_pop_stack_def[simp]
+        stack_0_1_op_def[simp]
+        general_dup_def[simp]
+        dup_inst_numbers_def[simp]
+        new_memory_consumption.simps[simp]
+        inst_stack_numbers.simps[simp]
+        arith_inst_numbers.simps[simp]
+        program_sem.simps[simp]
+        info_inst_numbers.simps[simp]
+        stack_inst_numbers.simps[simp]
+        pc_inst_numbers.simps[simp]
+        storage_inst_numbers.simps[simp]
+        subtract_gas.simps[simp]
 
 lemmas removed_from_sft =
         meter_gas_def
@@ -1956,6 +1956,8 @@ lemma stack_topmost_not_code:
 by (induction lst arbitrary: h; auto)
 
 lemma stack_height_after_call:
+  includes simp_for_triples_bundle
+  shows
        "vctx_balance x1 (cctx_this co_ctx) \<ge> vctx_stack x1 ! 2 \<Longrightarrow>
         (StackHeightElm (h + 7) \<in>
           instruction_result_as_set co_ctx (InstructionContinue x1)) \<Longrightarrow>
@@ -1963,7 +1965,7 @@ lemma stack_height_after_call:
           \<in> instruction_result_as_set co_ctx (subtract_gas g memu (call net x1 co_ctx)))
         "
   apply(simp add: call_def as_set_simps stateelm_basic_means_simps)
-  apply(auto simp add: instruction_result_as_set_def as_set_simps simp_for_triples split: list.splits)
+  apply(auto simp add: instruction_result_as_set_def as_set_simps split: list.splits)
 done
 
 lemma topmost_elms_means:
@@ -2055,12 +2057,13 @@ done
 
 
 lemma advance_pc_call:
+ includes simp_for_triples_bundle
+  shows
+
       "program_content (cctx_program co_ctx) (vctx_pc x1) = Some (Misc CALL) \<Longrightarrow>
        k = vctx_pc x1 \<Longrightarrow>
        vctx_pc (vctx_advance_pc co_ctx x1) = vctx_pc x1 + 1"
-  apply(simp add: vctx_advance_pc_def inst_size_def inst_code.simps
-                 simp_for_triples)
-done
+  by (simp add: vctx_advance_pc_def inst_size_def inst_code.simps)
 
 
 lemma memory_range_elms_not_continuing :
@@ -2310,8 +2313,8 @@ lemmas memory_range_simps =
   memory_range_action
 
 lemma call_memory_no_change:
-  notes simp_for_triples[simp]
-shows
+  includes simp_for_triples_bundle
+  shows
   "x \<in> memory_range_elms in_begin input \<Longrightarrow>
    x \<in> instruction_result_as_set co_ctx
          (subtract_gas (meter_gas (Misc CALL) x1 co_ctx net) memu (call net x1 co_ctx)) =
@@ -2323,8 +2326,8 @@ done
 
 
 lemma memory_call:
-notes simp_for_triples[simp]
-shows
+  includes simp_for_triples_bundle
+  shows
   "x \<in> memory_range_elms in_begin input \<Longrightarrow>
     x \<in> instruction_result_as_set co_ctx (call net x1 co_ctx) =
     (x \<in> instruction_result_as_set co_ctx (InstructionContinue x1))"
@@ -2734,11 +2737,13 @@ apply auto
 done
 
 lemma storage_elm_kept_by_gas_update :
+  includes simp_for_triples_bundle
+  shows
  "StorageElm x3
   \<in> instruction_result_as_set co_ctx (InstructionContinue
      (x1\<lparr>vctx_gas := g - Gverylow\<rparr>)) =
   (StorageElm x3 \<in> instruction_result_as_set co_ctx (InstructionContinue x1))"
-apply(simp add: simp_for_triples instruction_result_as_set_def as_set_simps)
+apply(simp add: instruction_result_as_set_def as_set_simps)
 done
 
 lemma storage_elm_kept_by_stack_updaate :
@@ -2981,13 +2986,14 @@ lemma stack_topmost_minus_lognum  :
 by (auto dest: topmost_all)
 
 lemma vctx_pc_log_advance  :
+  includes simp_for_triples_bundle
+  shows
   "program_content (cctx_program co_ctx) k = Some (Log LOGx) \<Longrightarrow>
    vctx_pc v = k \<Longrightarrow>
    vctx_pc
      (vctx_advance_pc co_ctx v) =
    vctx_pc v + 1"
-apply(simp add: simp_for_triples vctx_advance_pc_def inst_size_def inst_code.simps)
-done
+by (simp add: vctx_advance_pc_def inst_size_def inst_code.simps)
 
 lemma memory_range_elms_in_x_minus_lognum  :
   "memory_range_elms in_begin data \<subseteq> X - {LogNumElm n} =
@@ -3084,27 +3090,27 @@ blocked_jump_def strict_if_def
 lemmas advance_simps =
 vctx_advance_pc_def vctx_next_instruction_def
 
-lemmas sep_crunch =
-  caller_sep
-  sep_caller
-  sep_caller_sep
-  balance_sep
-  sep_balance
-  sep_balance_sep
-  not_continuing_sep
-  sep_not_continuing_sep
-  this_account_sep
-  sep_this_account
-  sep_this_account_sep
-  action_sep
-  sep_action
-  sep_action_sep
-  sep_stack_topmost
-  sep_account_existence_sep
-  sep_account_existence
-  account_existence_sep
-  sep_sep_account_existence_sep
-  sep_conj_assoc
+bundle sep_crunch_bundle =
+  caller_sep[simp]
+  sep_caller[simp]
+  sep_caller_sep[simp]
+  balance_sep[simp]
+  sep_balance[simp]
+  sep_balance_sep[simp]
+  not_continuing_sep[simp]
+  sep_not_continuing_sep[simp]
+  this_account_sep[simp]
+  sep_this_account[simp]
+  sep_this_account_sep[simp]
+  action_sep[simp]
+  sep_action[simp]
+  sep_action_sep[simp]
+  sep_stack_topmost[simp]
+  sep_account_existence_sep[simp]
+  sep_account_existence[simp]
+  account_existence_sep[simp]
+  sep_sep_account_existence_sep[simp]
+  sep_conj_assoc[simp]
 
 lemmas not_context_simps = 
    continuing_not_context
@@ -3286,447 +3292,443 @@ lemmas constant_diff_simps =
   constant_diff_stack
   constant_diff_stack_height
 
-lemmas HoareTripleForInstructions_legacy_simps =
-  continuing_not_context
-(* arith_inst_size_one *)
-data_sent_as_set_def
-caller_elm_means
-advance_pc_advance
-advance_pc_no_gas_change
-constant_diff_stack_height
-constant_diff_stack
-constant_diff_pc
-constant_diff_gas
-stack_height_element_means
-stack_element_means
-stack_element_notin_means
-storage_element_means
-memory_element_means
-pc_not_balance
-pc_element_means
-gas_element_means
-log_element_means
-memory_usage_element_means
-code_element_means
-origin_element_means
-sent_value_means
-sent_data_means
-sent_data_length_means
-inst_size_nonzero
-advance_pc_different
-stack_elm_not_program
-stack_elm_not_constant
-storage_elm_not_constant
-stack_height_elm_not_constant
-memory_elm_not_constant
-pc_elm_not_constant
-gas_elm_not_constant
-code_elm_not_variable
-this_account_elm_not_variable
-(* fst_pair *)
-rev_append
-rev_append_inv
-rev_rev_append
-over_one
-over_one_rev
-over_one_rev'
-over_two
-over_two_rev
-advance_pc_preserves_storage
-advance_pc_preserves_memory
-advance_pc_preserves_logs
-advance_pc_preserves_memory_usage
-advance_pc_preserves_balance
-advance_pc_preserves_caller
-advance_pc_preserves_value_sent
-advance_pc_preserves_origin
-advance_pc_preserves_block
-balance_elm_means
-advance_pc_keeps_stack
-advance_pc_change
-sep_caller_sep
-Gverylow_positive
-saying_zero
-inst_size_pop
-pop_advance
-advance_pc_as_set
-gas_change_as_set
-stack_change_as_set
-stack_height_in
-pc_not_stack
-code_not_stack
-action_not_context
-failed_is_failed
-stack_height_increment
-stack_inc_element
-caller_elm_means_c
-continue_not_failed
-info_single_advance
-caller_not_stack
-advance_keeps_storage_elm
-advance_keeps_memory_elm
-advance_keeps_log_elm
-advance_keeps_memory_usage_elm
-advance_keeps_this_account_elm
-advance_keeps_balance_elm
-advance_keeps_origin_elm
-advance_keeps_sent_value_elm
-sent_data_length_not_constant
-data_sent_advance_pc
-advance_keeps_sent_data_length_elm
-advance_keeps_sent_data_elm
-ext_program_size_not_constant
-ext_program_size_elm_means
-ext_program_size_c_means
-ext_program_advance_pc
-advance_keeps_ext_program_size_elm
-ext_program_elm_not_constant
-ext_program_elm_means
-ext_program_c_means
-advance_keeps_ext_program_elm
-blockhash_not_constant
-blockhash_elm_means
-blockhash_c_means
-advance_keeps_blockhash_elm
-coinbase_elm_not_constant
-coinbase_elm_means
-coinbase_c_means
-advance_keeps_conbase_elm
-timestamp_not_constant
-timestamp_elm_means
-timestamp_c_means
-advance_keeps_timestamp_elm
-difficulty_not_constant
-difficulty_elm_means
-difficulty_c_means
-advance_keeps_difficulty_elm
-gaslimit_not_constant
-gaslimit_elm_means
-gaslimit_elm_c
-advance_keeps_gaslimit_elm
-gasprice_not_constant
-gasprice_elm_means
-gasprice_c_means
-advance_keeps_gasprice_elm
-stackheight_different
-stack_element_in_stack
-storage_not_stack
-memory_not_stack
-log_not_stack
-gas_not_stack
-memory_usage_not_stack
-this_account_not_stack
-balance_not_stack
-code_elm_means
-pc_elm_means
-block_number_pred_sep
-sep_block_number_pred_sep
-block_number_elm_not_constant
-block_number_elm_in_v_means
-block_number_elm_means
-stack_heigh_elm_means
-stack_elm_means
-balance_not_constant
-balance_elm_i_means
-gas_elm_i_means
-continuing_continuing
-origin_not_stack
-sent_value_not_stack
-sent_data_length_not_stack
-ext_program_not_stack
-sent_data_not_stack
-contract_action_elm_not_stack
-block_number_elm_c_means
-log_num_v_advance
-log_num_advance
-account_existence_not_in_constant
-account_existence_not_in_stack
-account_existence_not_in_balance
-account_existence_not_ext
-account_existence_elm_means
-account_existence_elm_means_c
-account_existence_advance
-account_existence_advance_v
-balance0
-ext_program_size_elm_not_stack
-continuing_not_stack
-block_hash_not_stack
-block_number_not_stack
-coinbase_not_stack
-timestamp_not_stack
-difficulty_not_stack
-gaslimit_not_stack
-gasprice_not_stack
-ext_program_size_not_stack
-advance_keeps_stack_elm
-advance_keeps_code_elm
-storage_elm_means
-memory_elm_means
-log_not_constant
-log_elm_means
-this_account_means
-balance_elm_c_means
-origin_not_constant
-orogin_elm_c_means
-sent_value_not_constant
-sent_value_c_means
-sent_data_length_c_means
-sent_data_not_constant
-sent_data_elm_c_means
-short_rev_append
-memory_usage_not_constant
-
-code_elms
-memory_usage_elm_means
-pc_update_v
-pc_update
-stack_as_set_cons_means
-cut_memory_zero
-cut_memory_aux_cons
-cut_memory_cons
-Hoare.memory8_sep
-(* sep_memory8_sep *)
-meter_gas_def
-C_def
-Cmem_def
-Gmemory_def
-new_memory_consumption.simps
-thirdComponentOfC_def
-subtract_gas.simps
-vctx_next_instruction_default_def
-stack_2_1_op_def
-stack_1_1_op_def
-stack_0_0_op_def
-inst_stack_numbers.simps
-arith_inst_numbers.simps
-program_sem.simps
-vctx_next_instruction_def
-instruction_sem_def
-check_resources_def
-info_inst_numbers.simps
-Gbalance_def
-stack_inst_numbers.simps
-pc_inst_numbers.simps
-pop_def
-jump_def
-jumpi_def
-instruction_failure_result_def
-strict_if_def
-blocked_jump_def
-blockedInstructionContinue_def
-vctx_pop_stack_def
-stack_0_1_op_def
-general_dup_def
-dup_inst_numbers_def
-storage_inst_numbers.simps
-Gbase_def
-Gsreset_def
-emp_sep
-no_overwrap
-continuing_not_memory_range
-contractaction_not_memory_range
-pc_not_memory_range
-this_account_not_memory_range
-balance_not_memory_range
-code_not_memory_range
-continuing_not_memory_range
-stack_not_memory_range
-stack_height_not_memory_range
-gas_not_memory_range
-misc_inst_numbers.simps
-stack_topmost_sep
-fourth_stack_topmost
-this_account_not_stack_topmost
-gas_not_stack_topmost
-stack_topmost_empty
-memory_range_elms_not_pc
-account_ex_is_not_memory_range
-memory_range_elms_not_account_existence
-memory_range_elms_not_code
-memory_not_stack_topmost
-stack_topmost_not_memory
-pc_not_stack_topmost
-stack_topmost_not_pc
-ae_not_stack_topmost
-stack_topmost_not_account_existence
-stack_topmost_not_code
-memory_usage_not_memory_range
-stack_height_after_call
-topmost_elms_means
-to_environment_not_continuing
-balance_not_topmost
-continue_not_topmost
-this_account_i_means
-memory_usage_not_memory_range
-memory_usage_not_topmost
-call_new_balance
-advance_pc_call
-memory_range_elms_not_continuing
-memory_range_elms_cut_memory
-stack_height_in_topmost_means
-code_elm_not_stack_topmost
-stack_elm_c_means
-stack_elm_in_topmost
-storage_not_stack_topmost
-log_not_topmost
-caller_not_topmost
-origin_not_topmost
-sent_value_not_topmost
-sent_data_length_not_topmost
-sent_data_not_topmost
-ext_program_size_not_topmost
-code_elm_c
-ext_program_not_topmost_elms
-block_hash_not_topmost
-block_number_not_topmost
-coinbase_not_topmost
-timestamp_not_topmost
-difficulty_not_topmost
-memory_range_gas_update
-lognum_not_memory
-account_existence_not_memory
-memory_range_stack
-memory_range_memory_usage
-memory_range_balance
-memory_range_advance_pc
-memory_range_action
-storage_not_memory_range
-memory_range_insert_cont
-memory_range_constant_union
-memory_range_elms_i
-memory_range_continue
-call_memory_no_change
-memory_call
-gas_limit_not_topmost
-gas_price_not_topmost
-fourth_last_pure
-lookup_over_suc
-lookup_over4
-lookup_over3
-memory_range_elms_in_minus_this
-memory_range_elms_in_minus_stackheight
-memory_range_elms_in_minus_continuing
-memory_range_elms_in_minus_gas
-log_not_memory_range
-caller_not_memory_range
-origin_not_memory_range
-sent_value_not_memory_range
-sent_data_length_not_memory_range
-memory_range_elms_in_insert_continuing
-memory_range_elms_in_insert_contract_action
-memory_range_elms_in_insert_gas
-memory_range_elms_in_minus_stack
-minus_h
-stack_topmost_in_minus_balance
-stack_topmost_in_minus_this
-stack_topmost_in_minus_pc
-stack_topmost_in_minus_memoryusage
-stack_topmost_in_minus_gas
-stack_topmost_in_minus_continuing
-stack_topmost_in_insert_cont
-contract_action_not_stack_topmost
-stack_topmost_in_insert_contractaction
-stack_topmost_in_insert_gas
-lognum_not_program
-lognum_not_constant
-stack_topmost_not_constant
-stack_topmost_in_c
-topmost_elms_in_vctx_means
-memory_range_not_stack_topmost
-memory_range_elms_in_minus_statck_topmost
-memory_range_elms_in_c
-memory_usage_not_ext_program
-memory_usage_not_balance
-variable_ctx_as_set_updte_mu
-memory_range_elms_in_mu
-sent_data_not_in_mr
-ext_program_not_in_mr
-ext_pr_not_in_mr
-blockhash_not_in_mr
-blocknumber_not_in_mr
-coinbase_not_in_mr
-timestamp_not_in_mr
-difficulty_not_in_mr
-gaslimit_not_in_mr
-gasprice_not_in_mr
-memory_range_elms_in_minus_mu
-memory_range_elms_update_memory_usage
-memory_range_in_caller
-memory_range_in_sent_value
-memory_range_in_origin
-memory_range_in_pc
-memory_range_in_sd
-memory_range_in_coinbase
-vset_update_balance
-memory_range_elms_update_balance
-small_min
-sucsuc_minus_two
-advance_pc_inc_but_stack
-minus_one_bigger
-storage_elm_kept_by_gas_update
-storage_elm_kept_by_stack_updaate
-advance_pc_keeps_storage_elm
-rev_drop
-less_than_minus_two
-suc_minus_two
-minus_one_two
-minus_two_or_less
-min_right
-rev_take_nth
-stack_topmost_in_insert_memory_usage
-memory_gane_elms_in_stack_update
-stack_topmost_in_minus_balance_as
-stack_topmost_in_union_balance
-memory_range_in_minus_balance_as
-memory_range_in_union_balance
-memory_range_in_minus_balance
-memory_range_advance
-update_balance_match
-lookup_o
-update_balance_no_change
-update_balance_changed
-rev_append_look_up
-pair_snd_eq
-log_num_memory_usage
-log_num_not_balance
-log_num_balance_update
-log_num_not_stack_topmost
-log_num_not_stack
-contract_action_not_vctx
-continuing_not_vctx
-log_num_not_ext_program
-log_num_elm_means
-log_num_in_v_means
-account_existence_means_v
-account_existence_not_stack
-vctx_gas_changed
-lognum_not_stack_topmost
-stack_topmost_minus_lognum
-vctx_pc_log_advance
-memory_range_elms_in_x_minus_lognum
-memory_range_elms_logs_update
-log0_create_logs
-default_zero
-default_one
-caller_sep
-sep_caller
-sep_caller_sep
-balance_sep
-sep_balance
-sep_balance_sep
-not_continuing_sep
-sep_not_continuing_sep
-this_account_sep
-sep_this_account
-sep_this_account_sep
-action_sep
-sep_action
-sep_action_sep
-sep_stack_topmost
-sep_account_existence_sep
-sep_account_existence
-account_existence_sep
-sep_sep_account_existence_sep
+bundle hoare_inst_bundle =
+continuing_not_context[simp]
+data_sent_as_set_def[simp]
+caller_elm_means[simp]
+advance_pc_advance[simp]
+advance_pc_no_gas_change[simp]
+constant_diff_stack_height[simp]
+constant_diff_stack[simp]
+constant_diff_pc[simp]
+constant_diff_gas[simp]
+stack_height_element_means[simp]
+stack_element_means[simp]
+stack_element_notin_means[simp]
+storage_element_means[simp]
+memory_element_means[simp]
+pc_not_balance[simp]
+pc_element_means[simp]
+gas_element_means[simp]
+log_element_means[simp]
+memory_usage_element_means[simp]
+code_element_means[simp]
+origin_element_means[simp]
+sent_value_means[simp]
+sent_data_means[simp]
+sent_data_length_means[simp]
+inst_size_nonzero[simp]
+advance_pc_different[simp]
+stack_elm_not_program[simp]
+stack_elm_not_constant[simp]
+storage_elm_not_constant[simp]
+stack_height_elm_not_constant[simp]
+memory_elm_not_constant[simp]
+pc_elm_not_constant[simp]
+gas_elm_not_constant[simp]
+code_elm_not_variable[simp]
+this_account_elm_not_variable[simp]
+rev_append[simp]
+rev_append_inv[simp]
+rev_rev_append[simp]
+over_one[simp]
+over_one_rev[simp]
+over_one_rev'[simp]
+over_two[simp]
+over_two_rev[simp]
+advance_pc_preserves_storage[simp]
+advance_pc_preserves_memory[simp]
+advance_pc_preserves_logs[simp]
+advance_pc_preserves_memory_usage[simp]
+advance_pc_preserves_balance[simp]
+advance_pc_preserves_caller[simp]
+advance_pc_preserves_value_sent[simp]
+advance_pc_preserves_origin[simp]
+advance_pc_preserves_block[simp]
+balance_elm_means[simp]
+advance_pc_keeps_stack[simp]
+advance_pc_change[simp]
+sep_caller_sep[simp]
+Gverylow_positive[simp]
+saying_zero[simp]
+inst_size_pop[simp]
+pop_advance[simp]
+advance_pc_as_set[simp]
+gas_change_as_set[simp]
+stack_change_as_set[simp]
+stack_height_in[simp]
+pc_not_stack[simp]
+code_not_stack[simp]
+action_not_context[simp]
+failed_is_failed[simp]
+stack_height_increment[simp]
+stack_inc_element[simp]
+caller_elm_means_c[simp]
+continue_not_failed[simp]
+info_single_advance[simp]
+caller_not_stack[simp]
+advance_keeps_storage_elm[simp]
+advance_keeps_memory_elm[simp]
+advance_keeps_log_elm[simp]
+advance_keeps_memory_usage_elm[simp]
+advance_keeps_this_account_elm[simp]
+advance_keeps_balance_elm[simp]
+advance_keeps_origin_elm[simp]
+advance_keeps_sent_value_elm[simp]
+sent_data_length_not_constant[simp]
+data_sent_advance_pc[simp]
+advance_keeps_sent_data_length_elm[simp]
+advance_keeps_sent_data_elm[simp]
+ext_program_size_not_constant[simp]
+ext_program_size_elm_means[simp]
+ext_program_size_c_means[simp]
+ext_program_advance_pc[simp]
+advance_keeps_ext_program_size_elm[simp]
+ext_program_elm_not_constant[simp]
+ext_program_elm_means[simp]
+ext_program_c_means[simp]
+advance_keeps_ext_program_elm[simp]
+blockhash_not_constant[simp]
+blockhash_elm_means[simp]
+blockhash_c_means[simp]
+advance_keeps_blockhash_elm[simp]
+coinbase_elm_not_constant[simp]
+coinbase_elm_means[simp]
+coinbase_c_means[simp]
+advance_keeps_conbase_elm[simp]
+timestamp_not_constant[simp]
+timestamp_elm_means[simp]
+timestamp_c_means[simp]
+advance_keeps_timestamp_elm[simp]
+difficulty_not_constant[simp]
+difficulty_elm_means[simp]
+difficulty_c_means[simp]
+advance_keeps_difficulty_elm[simp]
+gaslimit_not_constant[simp]
+gaslimit_elm_means[simp]
+gaslimit_elm_c[simp]
+advance_keeps_gaslimit_elm[simp]
+gasprice_not_constant[simp]
+gasprice_elm_means[simp]
+gasprice_c_means[simp]
+advance_keeps_gasprice_elm[simp]
+stackheight_different[simp]
+stack_element_in_stack[simp]
+storage_not_stack[simp]
+memory_not_stack[simp]
+log_not_stack[simp]
+gas_not_stack[simp]
+memory_usage_not_stack[simp]
+this_account_not_stack[simp]
+balance_not_stack[simp]
+code_elm_means[simp]
+pc_elm_means[simp]
+block_number_pred_sep[simp]
+sep_block_number_pred_sep[simp]
+block_number_elm_not_constant[simp]
+block_number_elm_in_v_means[simp]
+block_number_elm_means[simp]
+stack_heigh_elm_means[simp]
+stack_elm_means[simp]
+balance_not_constant[simp]
+balance_elm_i_means[simp]
+gas_elm_i_means[simp]
+continuing_continuing[simp]
+origin_not_stack[simp]
+sent_value_not_stack[simp]
+sent_data_length_not_stack[simp]
+ext_program_not_stack[simp]
+sent_data_not_stack[simp]
+contract_action_elm_not_stack[simp]
+block_number_elm_c_means[simp]
+log_num_v_advance[simp]
+log_num_advance[simp]
+account_existence_not_in_constant[simp]
+account_existence_not_in_stack[simp]
+account_existence_not_in_balance[simp]
+account_existence_not_ext[simp]
+account_existence_elm_means[simp]
+account_existence_elm_means_c[simp]
+account_existence_advance[simp]
+account_existence_advance_v[simp]
+balance0[simp]
+ext_program_size_elm_not_stack[simp]
+continuing_not_stack[simp]
+block_hash_not_stack[simp]
+block_number_not_stack[simp]
+coinbase_not_stack[simp]
+timestamp_not_stack[simp]
+difficulty_not_stack[simp]
+gaslimit_not_stack[simp]
+gasprice_not_stack[simp]
+ext_program_size_not_stack[simp]
+advance_keeps_stack_elm[simp]
+advance_keeps_code_elm[simp]
+storage_elm_means[simp]
+memory_elm_means[simp]
+log_not_constant[simp]
+log_elm_means[simp]
+this_account_means[simp]
+balance_elm_c_means[simp]
+origin_not_constant[simp]
+orogin_elm_c_means[simp]
+sent_value_not_constant[simp]
+sent_value_c_means[simp]
+sent_data_length_c_means[simp]
+sent_data_not_constant[simp]
+sent_data_elm_c_means[simp]
+short_rev_append[simp]
+memory_usage_not_constant[simp]
+code_elms[simp]
+memory_usage_elm_means[simp]
+pc_update_v[simp]
+pc_update[simp]
+stack_as_set_cons_means[simp]
+cut_memory_zero[simp]
+cut_memory_aux_cons[simp]
+cut_memory_cons[simp]
+Hoare.memory8_sep[simp]
+meter_gas_def[simp]
+C_def[simp]
+Cmem_def[simp]
+Gmemory_def[simp]
+new_memory_consumption.simps[simp]
+thirdComponentOfC_def[simp]
+subtract_gas.simps[simp]
+vctx_next_instruction_default_def[simp]
+stack_2_1_op_def[simp]
+stack_1_1_op_def[simp]
+stack_0_0_op_def[simp]
+inst_stack_numbers.simps[simp]
+arith_inst_numbers.simps[simp]
+program_sem.simps[simp]
+vctx_next_instruction_def[simp]
+instruction_sem_def[simp]
+check_resources_def[simp]
+info_inst_numbers.simps[simp]
+Gbalance_def[simp]
+stack_inst_numbers.simps[simp]
+pc_inst_numbers.simps[simp]
+pop_def[simp]
+jump_def[simp]
+jumpi_def[simp]
+instruction_failure_result_def[simp]
+strict_if_def[simp]
+blocked_jump_def[simp]
+blockedInstructionContinue_def[simp]
+vctx_pop_stack_def[simp]
+stack_0_1_op_def[simp]
+general_dup_def[simp]
+dup_inst_numbers_def[simp]
+storage_inst_numbers.simps[simp]
+Gbase_def[simp]
+Gsreset_def[simp]
+emp_sep[simp]
+no_overwrap[simp]
+continuing_not_memory_range[simp]
+contractaction_not_memory_range[simp]
+pc_not_memory_range[simp]
+this_account_not_memory_range[simp]
+balance_not_memory_range[simp]
+code_not_memory_range[simp]
+continuing_not_memory_range[simp]
+stack_not_memory_range[simp]
+stack_height_not_memory_range[simp]
+gas_not_memory_range[simp]
+misc_inst_numbers.simps[simp]
+stack_topmost_sep[simp]
+fourth_stack_topmost[simp]
+this_account_not_stack_topmost[simp]
+gas_not_stack_topmost[simp]
+stack_topmost_empty[simp]
+memory_range_elms_not_pc[simp]
+account_ex_is_not_memory_range[simp]
+memory_range_elms_not_account_existence[simp]
+memory_range_elms_not_code[simp]
+memory_not_stack_topmost[simp]
+stack_topmost_not_memory[simp]
+pc_not_stack_topmost[simp]
+stack_topmost_not_pc[simp]
+ae_not_stack_topmost[simp]
+stack_topmost_not_account_existence[simp]
+stack_topmost_not_code[simp]
+memory_usage_not_memory_range[simp]
+stack_height_after_call[simp]
+topmost_elms_means[simp]
+to_environment_not_continuing[simp]
+balance_not_topmost[simp]
+continue_not_topmost[simp]
+this_account_i_means[simp]
+memory_usage_not_memory_range[simp]
+memory_usage_not_topmost[simp]
+call_new_balance[simp]
+advance_pc_call[simp]
+memory_range_elms_not_continuing[simp]
+memory_range_elms_cut_memory[simp]
+stack_height_in_topmost_means[simp]
+code_elm_not_stack_topmost[simp]
+stack_elm_c_means[simp]
+stack_elm_in_topmost[simp]
+storage_not_stack_topmost[simp]
+log_not_topmost[simp]
+caller_not_topmost[simp]
+origin_not_topmost[simp]
+sent_value_not_topmost[simp]
+sent_data_length_not_topmost[simp]
+sent_data_not_topmost[simp]
+ext_program_size_not_topmost[simp]
+code_elm_c[simp]
+ext_program_not_topmost_elms[simp]
+block_hash_not_topmost[simp]
+block_number_not_topmost[simp]
+coinbase_not_topmost[simp]
+timestamp_not_topmost[simp]
+difficulty_not_topmost[simp]
+memory_range_gas_update[simp]
+lognum_not_memory[simp]
+account_existence_not_memory[simp]
+memory_range_stack[simp]
+memory_range_memory_usage[simp]
+memory_range_balance[simp]
+memory_range_advance_pc[simp]
+memory_range_action[simp]
+storage_not_memory_range[simp]
+memory_range_insert_cont[simp]
+memory_range_constant_union[simp]
+memory_range_elms_i[simp]
+memory_range_continue[simp]
+call_memory_no_change[simp]
+memory_call[simp]
+gas_limit_not_topmost[simp]
+gas_price_not_topmost[simp]
+fourth_last_pure[simp]
+lookup_over_suc[simp]
+lookup_over4[simp]
+lookup_over3[simp]
+memory_range_elms_in_minus_this[simp]
+memory_range_elms_in_minus_stackheight[simp]
+memory_range_elms_in_minus_continuing[simp]
+memory_range_elms_in_minus_gas[simp]
+log_not_memory_range[simp]
+caller_not_memory_range[simp]
+origin_not_memory_range[simp]
+sent_value_not_memory_range[simp]
+sent_data_length_not_memory_range[simp]
+memory_range_elms_in_insert_continuing[simp]
+memory_range_elms_in_insert_contract_action[simp]
+memory_range_elms_in_insert_gas[simp]
+memory_range_elms_in_minus_stack[simp]
+minus_h[simp]
+stack_topmost_in_minus_balance[simp]
+stack_topmost_in_minus_this[simp]
+stack_topmost_in_minus_pc[simp]
+stack_topmost_in_minus_memoryusage[simp]
+stack_topmost_in_minus_gas[simp]
+stack_topmost_in_minus_continuing[simp]
+stack_topmost_in_insert_cont[simp]
+contract_action_not_stack_topmost[simp]
+stack_topmost_in_insert_contractaction[simp]
+stack_topmost_in_insert_gas[simp]
+lognum_not_program[simp]
+lognum_not_constant[simp]
+stack_topmost_not_constant[simp]
+stack_topmost_in_c[simp]
+topmost_elms_in_vctx_means[simp]
+memory_range_not_stack_topmost[simp]
+memory_range_elms_in_minus_statck_topmost[simp]
+memory_range_elms_in_c[simp]
+memory_usage_not_ext_program[simp]
+memory_usage_not_balance[simp]
+variable_ctx_as_set_updte_mu[simp]
+memory_range_elms_in_mu[simp]
+sent_data_not_in_mr[simp]
+ext_program_not_in_mr[simp]
+ext_pr_not_in_mr[simp]
+blockhash_not_in_mr[simp]
+blocknumber_not_in_mr[simp]
+coinbase_not_in_mr[simp]
+timestamp_not_in_mr[simp]
+difficulty_not_in_mr[simp]
+gaslimit_not_in_mr[simp]
+gasprice_not_in_mr[simp]
+memory_range_elms_in_minus_mu[simp]
+memory_range_elms_update_memory_usage[simp]
+memory_range_in_caller[simp]
+memory_range_in_sent_value[simp]
+memory_range_in_origin[simp]
+memory_range_in_pc[simp]
+memory_range_in_sd[simp]
+memory_range_in_coinbase[simp]
+vset_update_balance[simp]
+memory_range_elms_update_balance[simp]
+small_min[simp]
+sucsuc_minus_two[simp]
+advance_pc_inc_but_stack[simp]
+minus_one_bigger[simp]
+storage_elm_kept_by_gas_update[simp]
+storage_elm_kept_by_stack_updaate[simp]
+advance_pc_keeps_storage_elm[simp]
+rev_drop[simp]
+less_than_minus_two[simp]
+suc_minus_two[simp]
+minus_one_two[simp]
+minus_two_or_less[simp]
+min_right[simp]
+rev_take_nth[simp]
+stack_topmost_in_insert_memory_usage[simp]
+memory_gane_elms_in_stack_update[simp]
+stack_topmost_in_minus_balance_as[simp]
+stack_topmost_in_union_balance[simp]
+memory_range_in_minus_balance_as[simp]
+memory_range_in_union_balance[simp]
+memory_range_in_minus_balance[simp]
+memory_range_advance[simp]
+update_balance_match[simp]
+lookup_o[simp]
+update_balance_no_change[simp]
+update_balance_changed[simp]
+rev_append_look_up[simp]
+pair_snd_eq[simp]
+log_num_memory_usage[simp]
+log_num_not_balance[simp]
+log_num_balance_update[simp]
+log_num_not_stack_topmost[simp]
+log_num_not_stack[simp]
+contract_action_not_vctx[simp]
+continuing_not_vctx[simp]
+log_num_not_ext_program[simp]
+log_num_elm_means[simp]
+log_num_in_v_means[simp]
+account_existence_means_v[simp]
+account_existence_not_stack[simp]
+vctx_gas_changed[simp]
+lognum_not_stack_topmost[simp]
+stack_topmost_minus_lognum[simp]
+vctx_pc_log_advance[simp]
+memory_range_elms_in_x_minus_lognum[simp]
+memory_range_elms_logs_update[simp]
+log0_create_logs[simp]
+default_zero[simp]
+default_one[simp]
+caller_sep[simp]
+sep_caller[simp]
+sep_caller_sep[simp]
+balance_sep[simp]
+sep_balance[simp]
+sep_balance_sep[simp]
+not_continuing_sep[simp]
+sep_not_continuing_sep[simp]
+this_account_sep[simp]
+sep_this_account[simp]
+sep_this_account_sep[simp]
+action_sep[simp]
+sep_action[simp]
+sep_action_sep[simp]
+sep_stack_topmost[simp]
+sep_account_existence_sep[simp]
+sep_account_existence[simp]
+account_existence_sep[simp]
+sep_sep_account_existence_sep[simp]
 
 end
 

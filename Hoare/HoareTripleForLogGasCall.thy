@@ -5,19 +5,23 @@ imports Main "HoareTripleForInstructions"
 begin
 
 context
-  includes sep_crunch simp_for_triples
+  includes hoare_bundle hoare_inst_bundle
+           sep_crunch_bundle simp_for_triples_bundle
 
 begin
 
 lemma account_existence_not_stack_top [simp] :
   "\<forall> len. AccountExistenceElm x29 \<notin> stack_topmost_elms len ss"
-apply(induction ss; auto simp add: stack_topmost_elms.simps)
-done
+ by (induction ss; auto)
 
 lemma logged_sep [simp]:
   "(logged n l ** a) s =
    (LogElm (n, l) \<in> s \<and> a (s - {LogElm (n, l)}))"
   by (solve_sep_iff simp: logged_def)
+    
+lemma set_diff_expand:
+  "x - {a,b,c} = x - {a} - {b} - {c}"
+  by blast
 
 lemma log0_gas_triple :
   "triple net {OutOfGas}
@@ -47,11 +51,10 @@ apply (rule_tac x = 1 in exI)
 apply(case_tac presult; simp add: log_inst_numbers.simps sep_memory_range
       sep_memory_range_sep log_def memory_range_sep
         instruction_result_as_set_def
-vctx_stack_default_def)
+vctx_stack_default_def )
 apply clarify
-apply auto
-apply (rule leibniz)
-apply blast
+  apply (auto simp: set_diff_expand)
+  apply (erule_tac P=rest in  back_subst)
 apply(rule Set.equalityI)
  apply clarify
  apply simp
@@ -59,6 +62,8 @@ apply(rule Set.equalityI)
  apply(case_tac "fst x2 < length ta"; simp)
 apply clarify
 apply simp
+apply (case_tac "a = length ta"; clarsimp)
+apply auto
 apply(rename_tac elm; case_tac elm; simp)
 apply(case_tac "length (vctx_logs x1) \<le> fst x5"; auto)
 
@@ -94,10 +99,9 @@ apply(case_tac presult; simp add: log_inst_numbers.simps sep_memory_range sep_me
         instruction_result_as_set_def  memory_range_sep
 vctx_stack_default_def)
 apply clarify
-apply auto
+apply (auto simp: set_diff_expand)
 apply (simp add: create_log_entry_def vctx_returned_bytes_def)
-apply (rule leibniz)
- apply blast
+apply (erule_tac x=P in back_subst)
 apply(rule Set.equalityI)
  apply clarify
  apply simp
@@ -321,7 +325,7 @@ end
 
 
 context
-  includes sep_crunch simp_for_triples
+  includes sep_crunch_bundle simp_for_triples_bundle
   notes stack_height_sep [simp]
   notes stack_sep [simp]
   notes program_counter_sep [simp]
