@@ -23,7 +23,7 @@ imports "HoareTripleForInstructions"
 begin
 type_synonym pred = "(state_element set \<Rightarrow> bool)"
 
-(* We define here the program logic for CFGs *)
+(* We define here the program logic for BLOCKSs *)
 (* We start with Hoare triples valid for the execution of one instruction *)
 
 (* We have add more instructions here *)
@@ -76,18 +76,18 @@ inductive triple_seq :: "pred \<Rightarrow> pos_inst list \<Rightarrow> pred \<R
 | seq_false_pre:
   "triple_seq \<langle>False\<rangle> xs post"
 
-inductive triple_cfg :: "cfg \<Rightarrow> pred \<Rightarrow> vertex \<Rightarrow> pred \<Rightarrow> bool" where
-  cfg_no :
+inductive triple_blocks :: "basic_blocks \<Rightarrow> pred \<Rightarrow> vertex \<Rightarrow> pred \<Rightarrow> bool" where
+  blocks_no :
   "triple_seq pre insts post \<Longrightarrow>
-   triple_cfg cfg pre (n, insts, No) post"
-| cfg_next :
+   triple_blocks blocks pre (n, insts, No) post"
+| blocks_next :
   "\<lbrakk>i = n + inst_size_list insts;
-    cfg_blocks cfg i = Some (bi, ti);
+    blocks_list blocks i = Some (bi, ti);
     triple_seq pre insts (program_counter i \<and>* q);
-    triple_cfg cfg (program_counter i \<and>* q) (i, bi, ti) post\<rbrakk> \<Longrightarrow>
-   triple_cfg cfg pre (n, insts, Next) post"
-| cfg_jump :
-  "\<lbrakk>cfg_blocks cfg dest = Some (bi, ti);
+    triple_blocks blocks (program_counter i \<and>* q) (i, bi, ti) post\<rbrakk> \<Longrightarrow>
+   triple_blocks blocks pre (n, insts, Next) post"
+| blocks_jump :
+  "\<lbrakk>blocks_list blocks dest = Some (bi, ti);
     bi = (dest, Pc JUMPDEST) # bbi;
     triple_seq pre insts
       (program_counter (n + inst_size_list insts) \<and>* gas_pred g \<and>*
@@ -95,17 +95,17 @@ inductive triple_cfg :: "cfg \<Rightarrow> pred \<Rightarrow> vertex \<Rightarro
        stack h (word_of_int dest::256 word) \<and>*
        \<langle> h \<le> 1023 \<and> Gmid \<le> g \<and> m \<ge> 0\<rangle> \<and>*
        continuing \<and>* rest);
-    triple_cfg cfg
+    triple_blocks blocks
       (program_counter dest \<and>* gas_pred (g - Gmid) \<and>*
        memory_usage m \<and>* stack_height h \<and>*
        continuing \<and>* rest)
       (dest, bi, ti) post\<rbrakk> \<Longrightarrow>
-   triple_cfg cfg pre (n, insts, Jump) post"
-| cfg_jumpi :
+   triple_blocks blocks pre (n, insts, Jump) post"
+| blocks_jumpi :
   "\<lbrakk>j = n + 1 + inst_size_list insts;
-    cfg_blocks cfg dest = Some (bi, ti);
+    blocks_list blocks dest = Some (bi, ti);
     bi = (dest, Pc JUMPDEST) # bbi;
-    cfg_blocks cfg j = Some (bj, tj);
+    blocks_list blocks j = Some (bj, tj);
     triple_seq pre insts
       ((\<langle> h \<le> 1022  \<and> Ghigh \<le> g \<and> m \<ge> 0\<rangle> \<and>*
        stack_height (Suc (Suc h)) \<and>*
@@ -115,11 +115,11 @@ inductive triple_cfg :: "cfg \<Rightarrow> pred \<Rightarrow> vertex \<Rightarro
        program_counter (n + inst_size_list insts) \<and>* rest));
     r = (stack_height h \<and>* gas_pred (g - Ghigh) \<and>*
          continuing \<and>* memory_usage m \<and>* rest);
-    (cond \<noteq> 0 \<Longrightarrow> triple_cfg cfg (r \<and>* program_counter dest) (dest, bi, ti) post);
-    (cond = 0 \<Longrightarrow> triple_cfg cfg (r \<and>* program_counter j) (j, bj, tj) post)\<rbrakk> \<Longrightarrow>
-   triple_cfg cfg pre (n, insts, Jumpi) post"
-| cfg_false_pre:
-  "triple_cfg cfg \<langle>False\<rangle> i post"
+    (cond \<noteq> 0 \<Longrightarrow> triple_blocks blocks (r \<and>* program_counter dest) (dest, bi, ti) post);
+    (cond = 0 \<Longrightarrow> triple_blocks blocks (r \<and>* program_counter j) (j, bj, tj) post)\<rbrakk> \<Longrightarrow>
+   triple_blocks blocks pre (n, insts, Jumpi) post"
+| blocks_false_pre:
+  "triple_blocks blocks \<langle>False\<rangle> i post"
 
 (* Group lemmas *)
 lemmas as_set_simps =
@@ -499,36 +499,36 @@ shows
  apply(simp add:program_sem_t_alt_exec_continue_1)
 done
 
-(* Define the semantic of triple_cfg using program_sem_t and prove it sound *)
+(* Define the semantic of triple_blocks using program_sem_t and prove it sound *)
 
-definition triple_cfg_sem_t :: "cfg \<Rightarrow> pred \<Rightarrow> vertex \<Rightarrow> pred \<Rightarrow> bool" where
-"triple_cfg_sem_t c pre v post ==
+definition triple_blocks_sem_t :: "basic_blocks \<Rightarrow> pred \<Rightarrow> vertex \<Rightarrow> pred \<Rightarrow> bool" where
+"triple_blocks_sem_t c pre v post ==
     \<forall> co_ctx presult rest net (stopper::instruction_result \<Rightarrow> unit).
 				no_assertion co_ctx \<longrightarrow>
-        (cctx_program co_ctx = program_from_cfg c) \<longrightarrow>
-        wf_cfg c \<longrightarrow>
-        cfg_blocks c (v_ind v) = Some (snd v) \<longrightarrow>
-       (pre ** code (cfg_insts c) ** rest) (instruction_result_as_set co_ctx presult) \<longrightarrow>
-       ((post ** code (cfg_insts c) ** rest) (instruction_result_as_set co_ctx
+        (cctx_program co_ctx = program_from_blocks c) \<longrightarrow>
+        wf_blocks c \<longrightarrow>
+        blocks_list c (v_ind v) = Some (snd v) \<longrightarrow>
+       (pre ** code (blocks_insts c) ** rest) (instruction_result_as_set co_ctx presult) \<longrightarrow>
+       ((post ** code (blocks_insts c) ** rest) (instruction_result_as_set co_ctx
             (program_sem_t_alt co_ctx net presult)))"
 
 (* Lemmas to group code elements *)
 lemma block_in_insts_:
 "n \<in> set xs \<Longrightarrow>
-cfg_blocks c n = Some (b, t) \<Longrightarrow>
-set b \<subseteq> set (cfg_insts_aux c xs)"
+blocks_list c n = Some (b, t) \<Longrightarrow>
+set b \<subseteq> set (blocks_insts_aux c xs)"
 apply(induction xs)
  apply(simp)
 apply(case_tac "n \<in> set xs")
- apply(case_tac "cfg_blocks c a = None")
+ apply(case_tac "blocks_list c a = None")
 	apply(auto)
 done
 
 lemma block_in_insts:
-"wf_cfg c \<Longrightarrow>
-cfg_blocks c n = Some (b, t) \<Longrightarrow>
-set b \<subseteq> cfg_insts c"
-apply(simp add: wf_cfg_def cfg_insts_def)
+"wf_blocks c \<Longrightarrow>
+blocks_list c n = Some (b, t) \<Longrightarrow>
+set b \<subseteq> blocks_insts c"
+apply(simp add: wf_blocks_def blocks_insts_def)
 apply(drule_tac x = n in spec)+
 apply(drule_tac x=b in spec)
 apply(erule conjE)
@@ -579,20 +579,20 @@ lemma code_code_sep_:
 done
 
 lemma code_code_sep:
-"wf_cfg cfg \<Longrightarrow>
-cfg_blocks cfg n = Some (insts, ty) \<Longrightarrow>
-(code (set insts) \<and>* code (cfg_insts cfg - set insts) \<and>* r) s =
-(code (cfg_insts cfg) \<and>* r) s"
- apply(subgoal_tac "set insts \<subseteq> cfg_insts cfg")
+"wf_blocks blocks \<Longrightarrow>
+blocks_list blocks n = Some (insts, ty) \<Longrightarrow>
+(code (set insts) \<and>* code (blocks_insts blocks - set insts) \<and>* r) s =
+(code (blocks_insts blocks) \<and>* r) s"
+ apply(subgoal_tac "set insts \<subseteq> blocks_insts blocks")
 	apply(simp only: code_code_sep_)
  apply(simp add: block_in_insts)
 done
 
 lemma sep_code_code_sep:
-"wf_cfg cfg \<Longrightarrow>
-cfg_blocks cfg n = Some (insts, ty) \<Longrightarrow>
-(p \<and>* code (set insts) \<and>* code (cfg_insts cfg - set insts) \<and>* r) s =
-(p \<and>* code (cfg_insts cfg) \<and>* r) s"
+"wf_blocks blocks \<Longrightarrow>
+blocks_list blocks n = Some (insts, ty) \<Longrightarrow>
+(p \<and>* code (set insts) \<and>* code (blocks_insts blocks - set insts) \<and>* r) s =
+(p \<and>* code (blocks_insts blocks) \<and>* r) s"
  apply(rule iffI)
   apply(sep_select_asm 3)
 	apply(sep_select_asm 3)
@@ -605,10 +605,10 @@ cfg_blocks cfg n = Some (insts, ty) \<Longrightarrow>
 done
 
 lemma sep_sep_sep_code_code:
-"wf_cfg cfg \<Longrightarrow>
-cfg_blocks cfg n = Some (insts, ty) \<Longrightarrow>
-(p \<and>* q \<and>* r \<and>* code (set insts) \<and>* code (cfg_insts cfg - set insts)) s =
-(p \<and>* q \<and>* r \<and>* code (cfg_insts cfg)) s"
+"wf_blocks blocks \<Longrightarrow>
+blocks_list blocks n = Some (insts, ty) \<Longrightarrow>
+(p \<and>* q \<and>* r \<and>* code (set insts) \<and>* code (blocks_insts blocks - set insts)) s =
+(p \<and>* q \<and>* r \<and>* code (blocks_insts blocks)) s"
  apply(rule iffI)
   apply(sep_select_asm 5)
 	apply(sep_select_asm 5)
@@ -622,17 +622,17 @@ done
 
 (*NEXT case *)
 
-lemma cfg_next_sem_t:
+lemma blocks_next_sem_t:
 notes sep_fun_simps[simp del]
 shows
-"\<And>cfg n i ii bi ti pre insts q post.
+"\<And>blocks n i ii bi ti pre insts q post.
        i = n + inst_size_list insts \<Longrightarrow>
-       cfg_blocks cfg i = Some (bi, ti) \<Longrightarrow>
+       blocks_list blocks i = Some (bi, ti) \<Longrightarrow>
        triple_seq pre insts (program_counter i \<and>* q) \<Longrightarrow>
-       triple_cfg_sem_t cfg (program_counter i \<and>* q) (i, bi, ti) post \<Longrightarrow>
-       triple_cfg_sem_t cfg pre (n, insts, Next) post"
+       triple_blocks_sem_t blocks (program_counter i \<and>* q) (i, bi, ti) post \<Longrightarrow>
+       triple_blocks_sem_t blocks pre (n, insts, Next) post"
  apply(drule triple_seq_soundness)
- apply(simp only: triple_seq_sem_def triple_cfg_sem_t_def)
+ apply(simp only: triple_seq_sem_def triple_blocks_sem_t_def)
  apply(rule allI)+
  apply(clarify)
  apply(rename_tac co_ctx presult rest net stopper)
@@ -640,13 +640,13 @@ shows
  apply(drule_tac x = "(program_sem stopper co_ctx (length insts) net presult)" in spec)
  apply(drule_tac x = "rest" in spec)
  apply(drule_tac x = presult in spec)
- apply(drule_tac x = "code (cfg_insts cfg - set insts) \<and>* rest" in spec)
+ apply(drule_tac x = "code (blocks_insts blocks - set insts) \<and>* rest" in spec)
  apply(simp add: sep_code_code_sep)
  apply(drule_tac x = "stopper" in spec)
  apply(drule_tac x = "net" in spec)
  apply(simp add: code_code_sep)
  apply(drule_tac x = "net" in spec)
- apply (erule_tac P="(post \<and>* code (cfg_insts cfg) \<and>* rest)" in back_subst)
+ apply (erule_tac P="(post \<and>* code (blocks_insts blocks) \<and>* rest)" in back_subst)
  apply(subst program_sem_t_alt_exec_continue )
  apply(simp)
 done
@@ -708,7 +708,7 @@ uniq_gaselm_plus uniq_pcelm_plus uniq_stackheightelm_plus
 stack_max_elm_plus
 
 lemma inst_res_as_set_uniq_stateelm:
-"(pre \<and>* code (cfg_insts cfg) \<and>* resta)
+"(pre \<and>* code (blocks_insts blocks) \<and>* resta)
         (instruction_result_as_set co_ctx
           presult) \<Longrightarrow>
        \<exists>s. pre s \<and> uniq_stateelm s"
@@ -841,10 +841,10 @@ reg_block insts \<Longrightarrow>
 done
 
 lemma
-"cfg_blocks cfg n = Some (bi, ti) \<Longrightarrow>
+"blocks_list blocks n = Some (bi, ti) \<Longrightarrow>
 b \<in> set bi \<Longrightarrow>
 n \<in> set xs \<Longrightarrow>
-b \<in> set (cfg_pos_insts (cfg_vertices cfg xs))"
+b \<in> set (blocks_pos_insts (blocks_vertices blocks xs))"
  apply(induction xs; simp)
  apply(case_tac "n=a";simp)
   apply(case_tac ti)
@@ -857,32 +857,32 @@ b \<in> set (cfg_pos_insts (cfg_vertices cfg xs))"
 oops
 
 lemma
-"cfg_blocks cfg n = Some (bi, ti) \<Longrightarrow>
+"blocks_list blocks n = Some (bi, ti) \<Longrightarrow>
  bi = (n, i) # bbi \<Longrightarrow>
- wf_cfg cfg \<Longrightarrow>
- program_content (program_from_cfg cfg) n = Some i"
- apply(simp add: program_from_cfg_def cfg_content_def)
- apply(induction "cfg_indexes cfg")
-  apply(simp add: wf_cfg_def)
+ wf_blocks blocks \<Longrightarrow>
+ program_content (program_from_blocks blocks) n = Some i"
+ apply(simp add: program_from_blocks_def blocks_content_def)
+ apply(induction "blocks_indexes blocks")
+  apply(simp add: wf_blocks_def)
  apply(simp)
 oops
 
 (* JUMP case *)
 lemma extract_info_jump:
-"cfg_blocks cfg dest = Some (bi, ti) \<Longrightarrow>
- wf_cfg cfg \<Longrightarrow>
- cfg_blocks cfg n = Some (insts, Jump) \<Longrightarrow>
+"blocks_list blocks dest = Some (bi, ti) \<Longrightarrow>
+ wf_blocks blocks \<Longrightarrow>
+ blocks_list blocks n = Some (insts, Jump) \<Longrightarrow>
 uint (word_of_int dest::w256) = dest \<and>
-program_content (program_from_cfg cfg) (n + inst_size_list insts) = Some (Pc JUMP)"
+program_content (program_from_blocks blocks) (n + inst_size_list insts) = Some (Pc JUMP)"
  apply(rule conjI)
-  apply(subst (asm) wf_cfg_def)
+  apply(subst (asm) wf_blocks_def)
   apply(drule spec2[where x="dest" and y="bi"])
   apply(drule spec[where x="ti"])
   apply(drule conjunct1)
   apply(drule mp, assumption)
   apply(erule conjE)+
   apply(simp add: uint_word_reverse)
- apply(subst (asm) wf_cfg_def)
+ apply(subst (asm) wf_blocks_def)
  apply(drule spec2[where x=n and y=insts])
  apply(drule spec[where x=Jump])
  apply(drule conjunct2, drule conjunct2)
@@ -891,24 +891,24 @@ program_content (program_from_cfg cfg) (n + inst_size_list insts) = Some (Pc JUM
 done
 
 lemma program_content_some:
-"cfg_blocks cfg dest = Some ((dest, Pc JUMPDEST) # bbi, ti) \<Longrightarrow>
- {CodeElm (pos, i) |pos i. (pos, i) \<in> cfg_insts cfg}
+"blocks_list blocks dest = Some ((dest, Pc JUMPDEST) # bbi, ti) \<Longrightarrow>
+ {CodeElm (pos, i) |pos i. (pos, i) \<in> blocks_insts blocks}
        \<subseteq> instruction_result_as_set co_ctx
            (InstructionContinue x1) \<Longrightarrow>
- program_content (program_from_cfg cfg) dest = Some (Pc JUMPDEST)"
+ program_content (program_from_blocks blocks) dest = Some (Pc JUMPDEST)"
 sorry
 
 
 lemma jump_sem:
 notes sep_fun_simps[simp del]
 shows
-"cfg_blocks cfg dest = Some (bi, ti) \<Longrightarrow>
+"blocks_list blocks dest = Some (bi, ti) \<Longrightarrow>
  bi = (dest, Pc JUMPDEST) # bbi \<Longrightarrow>
  no_assertion co_ctx \<Longrightarrow>
- cctx_program co_ctx = program_from_cfg cfg \<Longrightarrow>
- wf_cfg cfg \<Longrightarrow>
- cfg_blocks cfg n = Some (insts, Jump) \<Longrightarrow>
-       (code (cfg_insts cfg) \<and>*
+ cctx_program co_ctx = program_from_blocks blocks \<Longrightarrow>
+ wf_blocks blocks \<Longrightarrow>
+ blocks_list blocks n = Some (insts, Jump) \<Longrightarrow>
+       (code (blocks_insts blocks) \<and>*
         (continuing \<and>*
          gas_pred g \<and>*
          program_counter (n + inst_size_list insts) \<and>*
@@ -919,7 +919,7 @@ shows
          restb) \<and>*
         rest)
         (instruction_result_as_set co_ctx presult) \<Longrightarrow>
-       (code (cfg_insts cfg) \<and>*
+       (code (blocks_insts blocks) \<and>*
         (continuing \<and>*
          program_counter dest \<and>*
          stack_height h \<and>*
@@ -931,7 +931,7 @@ shows
             presult))"
  apply (sep_simp_asm simp: code_sep continuing_sep memory_usage_sep pure_sep gas_pred_sep stack_sep stack_height_sep program_counter_sep )
  apply(clarsimp)
- apply(insert extract_info_jump[where cfg=cfg and n=n and dest=dest and bi=bi and ti=ti and insts=insts]; clarsimp)
+ apply(insert extract_info_jump[where blocks=blocks and n=n and dest=dest and bi=bi and ti=ti and insts=insts]; clarsimp)
  apply(case_tac presult)
    apply(simp add: program_sem.simps instruction_sem_simps inst_numbers_simps)
    apply(clarsimp)
@@ -949,11 +949,11 @@ shows
   apply(simp)+
 done
 
-lemma cfg_jump_sem_t:
+lemma blocks_jump_sem_t:
 notes sep_fun_simps[simp del]
 shows
-"\<And>cfg dest bi ti bbi pre insts p g m h rest post n.
-       cfg_blocks cfg dest = Some (bi, ti) \<Longrightarrow>
+"\<And>blocks dest bi ti bbi pre insts p g m h rest post n.
+       blocks_list blocks dest = Some (bi, ti) \<Longrightarrow>
        bi = (dest, Pc JUMPDEST) # bbi \<Longrightarrow>
        triple_seq pre insts
         (program_counter (n + inst_size_list insts) \<and>*
@@ -963,20 +963,20 @@ shows
          stack h (word_of_int dest) \<and>*
          \<langle> h \<le> 1023 \<and> Gmid \<le> g \<and> 0 \<le> m \<rangle> \<and>*
          continuing \<and>* rest) \<Longrightarrow>
-       triple_cfg cfg
+       triple_blocks blocks
         (program_counter dest \<and>*
          gas_pred (g - Gmid) \<and>*
          memory_usage m \<and>*
          stack_height h \<and>* continuing \<and>* rest)
         (dest, bi, ti) post \<Longrightarrow>
-       triple_cfg_sem_t cfg
+       triple_blocks_sem_t blocks
         (program_counter dest \<and>*
          gas_pred (g - Gmid) \<and>*
          memory_usage m \<and>*
          stack_height h \<and>* continuing \<and>* rest)
         (dest, bi, ti) post \<Longrightarrow>
-       triple_cfg_sem_t cfg pre (n, insts, Jump) post"
- apply(simp only: triple_cfg_sem_t_def; clarify)
+       triple_blocks_sem_t blocks pre (n, insts, Jump) post"
+ apply(simp only: triple_blocks_sem_t_def; clarify)
  apply(drule_tac x=co_ctx and y="(program_sem stopper co_ctx (Suc (length insts)) net presult)" in spec2)
  apply(drule_tac x=resta and y=net in spec2)
  apply(drule_tac x=stopper in spec)
@@ -1006,29 +1006,29 @@ shows
 			 in pc_after_seq)
         apply(assumption)
 			 apply(simp add: inst_res_as_set_uniq_stateelm)
-		  apply(simp add: wf_cfg_def)
-     apply(simp add: wf_cfg_def)
+		  apply(simp add: wf_blocks_def)
+     apply(simp add: wf_blocks_def)
      apply(drule_tac x=n and y=insts in spec2; drule conjunct1)
 	   apply(drule_tac x=Jump in spec; simp)
     apply(fastforce)
-   apply(simp add: wf_cfg_def)
-  apply(simp add: wf_cfg_def)
+   apply(simp add: wf_blocks_def)
+  apply(simp add: wf_blocks_def)
 	apply(simp add: reg_vertex_def)
 	apply(drule_tac x=n and y=insts in spec2; drule conjunct1)
 	apply(drule_tac x=Jump in spec; simp)
  apply(thin_tac "_ = _ # _")
  apply(drule triple_seq_soundness)
  apply(simp only: triple_seq_sem_def)
- apply(rename_tac cfg dest bi ti bbi pre insts p g m h restb post n
+ apply(rename_tac blocks dest bi ti bbi pre insts p g m h restb post n
        co_ctx presult rest net stopper a list)
  apply(drule_tac x = "co_ctx" in spec)
- apply(drule_tac x = "presult" and y = "code (cfg_insts cfg - set insts) \<and>* rest" in spec2)
+ apply(drule_tac x = "presult" and y = "code (blocks_insts blocks - set insts) \<and>* rest" in spec2)
  apply(clarsimp)
  apply(simp add: sep_code_code_sep )
  apply(drule_tac x = "stopper" and y= net in spec2)
  apply (erule impE)
   prefer 2
-  apply (erule_tac P="post \<and>* code (cfg_insts cfg) \<and>* rest" in back_subst)
+  apply (erule_tac P="post \<and>* code (blocks_insts blocks) \<and>* rest" in back_subst)
   apply(subst program_sem_t_alt_exec_continue; simp )
   apply(simp add: code_code_sep)
   apply(drule_tac co_ctx=co_ctx and stopper=stopper and insts=insts and net=net and
@@ -1045,18 +1045,18 @@ by(auto)
 
 lemma diff_set_commute_code:
 "A - {CodeElm (pos, i) |pos i.
-        (pos, i) \<in> cfg_insts cfg} - {c} = A - {c} - {CodeElm (pos, i) |pos i.
-        (pos, i) \<in> cfg_insts cfg}"
+        (pos, i) \<in> blocks_insts blocks} - {c} = A - {c} - {CodeElm (pos, i) |pos i.
+        (pos, i) \<in> blocks_insts blocks}"
 by(auto)
 
 lemma extract_info_jumpi:
-"      cfg_blocks cfg dest = Some (bi, ti) \<Longrightarrow>
-       cfg_blocks cfg j = Some (bj, tj) \<Longrightarrow>
-       wf_cfg cfg \<Longrightarrow>
-       cfg_blocks cfg n = Some (insts, Jumpi) \<Longrightarrow>
+"      blocks_list blocks dest = Some (bi, ti) \<Longrightarrow>
+       blocks_list blocks j = Some (bj, tj) \<Longrightarrow>
+       wf_blocks blocks \<Longrightarrow>
+       blocks_list blocks n = Some (insts, Jumpi) \<Longrightarrow>
 dest = uint (word_of_int dest::256 word) \<and>
-program_content (program_from_cfg cfg) (n + inst_size_list insts) = Some (Pc JUMPI)"
- apply(rule conjI; simp add: wf_cfg_def)
+program_content (program_from_blocks blocks) (n + inst_size_list insts) = Some (Pc JUMPI)"
+ apply(rule conjI; simp add: wf_blocks_def)
  apply(drule spec2[where x=dest and y=bi])
  apply(drule conjunct1)
  apply(drule spec[where x=ti])
@@ -1097,14 +1097,14 @@ by(auto simp add: as_set_simps)
 lemma jumpi_sem_zero:
 notes sep_fun_simps[simp del]
 shows
-"      cfg_blocks cfg i = Some (bi, ti) \<Longrightarrow>
-       cfg_blocks cfg j = Some (bj, tj) \<Longrightarrow>
+"      blocks_list blocks i = Some (bi, ti) \<Longrightarrow>
+       blocks_list blocks j = Some (bj, tj) \<Longrightarrow>
 			 j = n + 1 + inst_size_list insts \<Longrightarrow>
        no_assertion co_ctx \<Longrightarrow>
-       cctx_program co_ctx = program_from_cfg cfg \<Longrightarrow>
-       wf_cfg cfg \<Longrightarrow>
-       cfg_blocks cfg n = Some (insts, Jumpi) \<Longrightarrow>
-       (code (cfg_insts cfg) \<and>*
+       cctx_program co_ctx = program_from_blocks blocks \<Longrightarrow>
+       wf_blocks blocks \<Longrightarrow>
+       blocks_list blocks n = Some (insts, Jumpi) \<Longrightarrow>
+       (code (blocks_insts blocks) \<and>*
         (continuing \<and>*
          gas_pred g \<and>*
          memory_usage m \<and>*
@@ -1115,7 +1115,7 @@ shows
          \<langle> h \<le> 1022 \<and> Ghigh \<le> g \<and> 0 \<le> m \<rangle> \<and>* restb) \<and>*
         rest)
         (instruction_result_as_set co_ctx presult) \<Longrightarrow>
-       (code (cfg_insts cfg) \<and>*
+       (code (blocks_insts blocks) \<and>*
         ((continuing \<and>*
           stack_height h \<and>*
           gas_pred (g - Ghigh) \<and>*
@@ -1127,7 +1127,7 @@ shows
             presult))"
  apply (sep_simp_asm simp: stack_sep stack_height_sep memory_usage_sep pure_sep gas_pred_sep program_counter_sep )
  apply(clarsimp)
- apply(insert extract_info_jumpi[where cfg=cfg and n=n and dest=i and j=j and bi=bi and ti=ti and insts=insts and bj=bj and tj=tj])
+ apply(insert extract_info_jumpi[where blocks=blocks and n=n and dest=i and j=j and bi=bi and ti=ti and insts=insts and bj=bj and tj=tj])
  apply(clarsimp)
  apply(simp add: program_sem.simps instruction_sem_simps)
  apply(split instruction_result.splits)
@@ -1135,7 +1135,7 @@ shows
   apply(simp add:instruction_sem_simps inst_numbers_simps)
   apply(simp add: jumpi_def advance_simps instruction_sem_simps inst_size_simps)
   apply (sep_subst simp: stack_sep memory_usage_sep gas_pred_sep  stack_height_sep program_counter_sep, simp)+
-  apply (erule_tac P="(continuing \<and>* restb \<and>* code (cfg_insts cfg) \<and>* rest)" in back_subst)
+  apply (erule_tac P="(continuing \<and>* restb \<and>* code (blocks_insts blocks) \<and>* rest)" in back_subst)
   apply(subst diff_set_commute[where c="StackHeightElm _"])+
   apply(subst set_change_stack[where cond=0])
   apply(subst diff_set_commute[where c="StackHeightElm _"])
@@ -1150,14 +1150,14 @@ done
 lemma jumpi_sem_non_zero:
 notes sep_fun_simps[simp del]
 shows
-"      cfg_blocks cfg dest = Some (bi, ti) \<Longrightarrow>
-       cfg_blocks cfg j = Some (bj, tj) \<Longrightarrow>
+"      blocks_list blocks dest = Some (bi, ti) \<Longrightarrow>
+       blocks_list blocks j = Some (bj, tj) \<Longrightarrow>
 			 bi = (dest, Pc JUMPDEST) # bbi \<Longrightarrow>
        no_assertion co_ctx \<Longrightarrow>
-       cctx_program co_ctx = program_from_cfg cfg \<Longrightarrow>
-       wf_cfg cfg \<Longrightarrow>
-       cfg_blocks cfg n = Some (insts, Jumpi) \<Longrightarrow>
-       (code (cfg_insts cfg) \<and>*
+       cctx_program co_ctx = program_from_blocks blocks \<Longrightarrow>
+       wf_blocks blocks \<Longrightarrow>
+       blocks_list blocks n = Some (insts, Jumpi) \<Longrightarrow>
+       (code (blocks_insts blocks) \<and>*
         (continuing \<and>*
          gas_pred g \<and>*
          memory_usage m \<and>*
@@ -1169,7 +1169,7 @@ shows
         rest)
         (instruction_result_as_set co_ctx presult) \<Longrightarrow>
        cond \<noteq> 0 \<Longrightarrow>
-       (code (cfg_insts cfg) \<and>*
+       (code (blocks_insts blocks) \<and>*
         ((continuing \<and>*
           memory_usage m \<and>*
           stack_height h \<and>* gas_pred (g - Ghigh) \<and>* restb) \<and>*
@@ -1179,7 +1179,7 @@ shows
           (program_sem stopper co_ctx (Suc 0) net presult))"
  apply (sep_simp_asm simp: code_sep memory_usage_sep pure_sep gas_pred_sep stack_sep stack_height_sep program_counter_sep )
  apply(clarsimp)
- apply(insert extract_info_jumpi[where cfg=cfg and n=n and dest=dest and j=j and bi=bi and ti=ti and insts=insts and bj=bj and tj=tj])
+ apply(insert extract_info_jumpi[where blocks=blocks and n=n and dest=dest and j=j and bi=bi and ti=ti and insts=insts and bj=bj and tj=tj])
  apply(clarsimp)
  apply(simp add: program_sem.simps instruction_sem_simps)
  apply(split instruction_result.splits)
@@ -1209,15 +1209,15 @@ shows
  apply(simp)
 done
 
-lemma cfg_jumpi_sem_t:
+lemma blocks_jumpi_sem_t:
 notes sep_fun_simps[simp del]
 shows
-"\<And>j n insts cfg dest bi ti bbi bj tj pre h g m cond p
+"\<And>j n insts blocks dest bi ti bbi bj tj pre h g m cond p
        rest r post.
        j = n + 1 + inst_size_list insts \<Longrightarrow>
-       cfg_blocks cfg dest = Some (bi, ti) \<Longrightarrow>
+       blocks_list blocks dest = Some (bi, ti) \<Longrightarrow>
        bi = (dest, Pc JUMPDEST) # bbi \<Longrightarrow>
-       cfg_blocks cfg j = Some (bj, tj) \<Longrightarrow>
+       blocks_list blocks j = Some (bj, tj) \<Longrightarrow>
        triple_seq pre insts
         (\<langle> h \<le> 1022 \<and> Ghigh \<le> g \<and> 0 \<le> m \<rangle> \<and>*
          stack_height (Suc (Suc h)) \<and>*
@@ -1231,19 +1231,19 @@ shows
         gas_pred (g - Ghigh) \<and>*
         continuing \<and>* memory_usage m \<and>* rest) \<Longrightarrow>
        (cond \<noteq> 0 \<Longrightarrow>
-        triple_cfg cfg (r \<and>* program_counter dest)
+        triple_blocks blocks (r \<and>* program_counter dest)
          (dest, bi, ti) post) \<Longrightarrow>
        (cond \<noteq> 0 \<Longrightarrow>
-        triple_cfg_sem_t cfg (r \<and>* program_counter dest)
+        triple_blocks_sem_t blocks (r \<and>* program_counter dest)
          (dest, bi, ti) post) \<Longrightarrow>
        (cond = 0 \<Longrightarrow>
-        triple_cfg cfg (r \<and>* program_counter j)
+        triple_blocks blocks (r \<and>* program_counter j)
          (j, bj, tj) post) \<Longrightarrow>
        (cond = 0 \<Longrightarrow>
-        triple_cfg_sem_t cfg (r \<and>* program_counter j)
+        triple_blocks_sem_t blocks (r \<and>* program_counter j)
          (j, bj, tj) post) \<Longrightarrow>
-       triple_cfg_sem_t cfg pre (n, insts, Jumpi) post"
- apply(simp only: triple_cfg_sem_t_def; clarify)
+       triple_blocks_sem_t blocks pre (n, insts, Jumpi) post"
+ apply(simp only: triple_blocks_sem_t_def; clarify)
  apply(case_tac "insts")
   apply(case_tac "cond = 0"; clarify)
    apply(thin_tac "0 \<noteq> 0 \<Longrightarrow> _")+
@@ -1296,23 +1296,23 @@ shows
 			 in pc_after_seq)
         apply(assumption)
 			 apply(simp add: inst_res_as_set_uniq_stateelm)
-		  apply(simp add: wf_cfg_def)
-     apply(simp add: wf_cfg_def)
+		  apply(simp add: wf_blocks_def)
+     apply(simp add: wf_blocks_def)
      apply(drule_tac x=n and y=insts in spec2; drule conjunct1)
 	   apply(drule_tac x=Jumpi in spec; simp)
     apply(fastforce)
-   apply(simp add: wf_cfg_def)
-  apply(simp add: wf_cfg_def)
+   apply(simp add: wf_blocks_def)
+  apply(simp add: wf_blocks_def)
 	apply(simp add: reg_vertex_def)
 	apply(drule_tac x=n and y=insts in spec2; drule conjunct1)
 	apply(drule_tac x=Jumpi in spec; simp)
 (* <<<<<<< HEAD
   apply(drule triple_seq_soundness)
   apply(simp only: triple_seq_sem_def; clarify)
-  apply(rename_tac j n insts cfg dest bi ti bbi bj tj pre h g m cond p
+  apply(rename_tac j n insts blocks dest bi ti bbi bj tj pre h g m cond p
        restb r post co_ctx presult rest net stopper)
   apply(drule_tac x = "co_ctx" and y=presult in spec2)
-  apply(drule_tac x = "code (cfg_insts cfg - set insts) \<and>* rest" in spec)
+  apply(drule_tac x = "code (blocks_insts blocks - set insts) \<and>* rest" in spec)
   apply(drule_tac x = "stopper" and y=net in spec2)
   apply(clarsimp)
   apply(simp add: sep_code_code_sep )
@@ -1325,10 +1325,10 @@ shows
    apply (erule impE)
     prefer 2
     apply(drule_tac x = "net" in spec)
-    apply (erule_tac P="post \<and>* code (cfg_insts cfg) \<and>* rest" in back_subst)
+    apply (erule_tac P="post \<and>* code (blocks_insts blocks) \<and>* rest" in back_subst)
     apply(subst program_sem_t_alt_exec_continue; simp )
    apply(drule_tac presult="(program_sem stopper co_ctx (length insts) net presult)" and
-		cfg=cfg and j="n + 1 + inst_size_list insts" and bi="(dest, Pc JUMPDEST) # bbi" and ti=ti and bj=bj and tj=tj and h=h and g=g and net=net and
+		blocks=blocks and j="n + 1 + inst_size_list insts" and bi="(dest, Pc JUMPDEST) # bbi" and ti=ti and bj=bj and tj=tj and h=h and g=g and net=net and
 	  i=dest and restb=restb and co_ctx=co_ctx and rest=rest and stopper=stopper and m=m
   in jumpi_sem_zero; simp)
    apply(sep_simp simp:program_counter_sep)
@@ -1340,7 +1340,7 @@ shows
    apply (erule impE)
     prefer 2
     apply(drule_tac x = "net" in spec)
-    apply (erule_tac P="post \<and>* code (cfg_insts cfg) \<and>* rest" in back_subst)
+    apply (erule_tac P="post \<and>* code (blocks_insts blocks) \<and>* rest" in back_subst)
     apply(subst program_sem_t_alt_exec_continue; simp)
    apply(drule_tac co_ctx=co_ctx and stopper=stopper and insts=insts and
 		g=g and restb=restb and n=n and bi="(dest, Pc JUMPDEST) # bbi" and ti=ti and tj=tj and g=g and
@@ -1348,11 +1348,11 @@ shows
  apply(thin_tac "_ = _ # _")
  apply(drule triple_seq_soundness)
  apply(simp only: triple_seq_sem_def; clarify)
- apply(rename_tac j n insts cfg dest bi ti bbi bj tj pre h g m cond p
+ apply(rename_tac j n insts blocks dest bi ti bbi bj tj pre h g m cond p
        restb r post co_ctx presult rest net stopper a b
        list)
  apply(drule_tac x = "co_ctx" and y=presult in spec2)
- apply(drule_tac x = "code (cfg_insts cfg - set insts) \<and>* rest" in spec)
+ apply(drule_tac x = "code (blocks_insts blocks - set insts) \<and>* rest" in spec)
  apply(drule_tac x = "stopper" and y=net in spec2)
  apply(clarsimp)
  apply(simp add: sep_code_code_sep )
@@ -1365,10 +1365,10 @@ shows
   apply (erule impE)
    prefer 2
    apply(drule_tac x = "net" in spec)
-   apply (erule_tac P="post \<and>* code (cfg_insts cfg) \<and>* rest" in back_subst)
+   apply (erule_tac P="post \<and>* code (blocks_insts blocks) \<and>* rest" in back_subst)
    apply(subst program_sem_t_alt_exec_continue; simp )
   apply(drule_tac presult="(program_sem stopper co_ctx (length insts) net presult)" and
-		cfg=cfg and j="n + 1 + inst_size_list insts" and bi="(dest, Pc JUMPDEST) # bbi" and ti=ti and bj=bj and tj=tj and h=h and g=g and net=net and
+		blocks=blocks and j="n + 1 + inst_size_list insts" and bi="(dest, Pc JUMPDEST) # bbi" and ti=ti and bj=bj and tj=tj and h=h and g=g and net=net and
 	  i=dest and restb=restb and co_ctx=co_ctx and rest=rest and stopper=stopper and m=m
   in jumpi_sem_zero; simp)
   apply(sep_simp simp:program_counter_sep)
@@ -1380,11 +1380,11 @@ shows
  apply (erule impE)
   prefer 2
   apply(drule_tac x = "net" in spec)
-  apply (erule_tac P="post \<and>* code (cfg_insts cfg) \<and>* rest" in back_subst)
+  apply (erule_tac P="post \<and>* code (blocks_insts blocks) \<and>* rest" in back_subst)
   apply(subst program_sem_t_alt_exec_continue; simp)
  apply(drule_tac co_ctx=co_ctx and stopper=stopper and insts=insts and
 		g=g and restb=restb and n=n and bi="(dest, Pc JUMPDEST) # bbi" and ti=ti and tj=tj and g=g and
-(* >>>>>>> [CFG] Remove 'insts not empty' in wf_cfg for Jump and Jumpi blocks *)
+(* >>>>>>> [BLOCKS] Remove 'insts not empty' in wf_blocks for Jump and Jumpi blocks *)
 		dest=dest and net=net and
     presult="(program_sem stopper co_ctx (length insts) net presult)" and h=h
   in jumpi_sem_non_zero; simp del:sep_lc)
@@ -1469,7 +1469,7 @@ reg_vertex (m, insts, No) \<Longrightarrow>
 \<forall>a b. (a,b)\<in> (set insts) \<longrightarrow>
    (program_content (cctx_program co_ctx) a = Some b \<or>
    program_content (cctx_program co_ctx) a = None \<and> b = Misc STOP) \<Longrightarrow>
-cctx_program co_ctx = program_from_cfg cfg \<Longrightarrow>
+cctx_program co_ctx = program_from_blocks blocks \<Longrightarrow>
 \<forall>v. program_sem stopper co_ctx (length insts) net (InstructionContinue x) \<noteq>
 		InstructionContinue v"
  apply(induction insts arbitrary: i x xs)
@@ -1482,7 +1482,7 @@ cctx_program co_ctx = program_from_cfg cfg \<Longrightarrow>
 	apply(case_tac i; simp)
 	apply(case_tac x13; simp)
 		apply(simp add: program_sem.simps instruction_simps stop_def split: if_splits)
-    apply(case_tac "program_content (program_from_cfg cfg) (vctx_pc x)";
+    apply(case_tac "program_content (program_from_blocks blocks) (vctx_pc x)";
           simp add: program_sem.simps instruction_simps stop_def split: option.splits if_splits)
 	 apply(simp add: program_sem.simps instruction_simps ret_def split: if_splits list.splits)
 	apply(simp add: program_sem.simps instruction_simps suicide_def split: if_splits list.splits)
@@ -1511,25 +1511,25 @@ cctx_program co_ctx = program_from_cfg cfg \<Longrightarrow>
  apply(simp add: program_sem_to_environment)
 done
 
-lemma cfg_no_sem_t:
+lemma blocks_no_sem_t:
 notes sep_fun_simps[simp del]
 shows
 " triple_seq pre insts post \<Longrightarrow>
-  triple_cfg_sem_t cfg pre (n, insts, No) post"
- apply(simp add: triple_cfg_sem_t_def; clarsimp)
+  triple_blocks_sem_t blocks pre (n, insts, No) post"
+ apply(simp add: triple_blocks_sem_t_def; clarsimp)
  apply(insert pc_before_seq[where n=n and pre=pre and insts=insts and post=post]; simp)
  apply(drule triple_seq_soundness)
  apply(simp add: triple_seq_sem_def)
  apply(rename_tac co_ctx presult rest net)
  apply(drule_tac x = co_ctx in spec)
  apply(clarify)
- apply(drule_tac x = presult and y = "code (cfg_insts cfg - set insts) \<and>* rest" in spec2)
+ apply(drule_tac x = presult and y = "code (blocks_insts blocks - set insts) \<and>* rest" in spec2)
  apply(drule mp)
  apply(simp add: sep_code_code_sep)
  apply(drule_tac x="\<lambda>x. ()" and y=net in spec2)
- apply(subgoal_tac "wf_cfg cfg")
+ apply(subgoal_tac "wf_blocks blocks")
   prefer 2 apply(assumption)
- apply(subst (asm) wf_cfg_def)
+ apply(subst (asm) wf_blocks_def)
  apply(simp)
  apply(drule spec2[where x=n and y=insts])
  apply(erule conjE)
@@ -1544,9 +1544,9 @@ shows
      apply(clarsimp)
     apply(subgoal_tac "a = (vctx_pc x1, snd a)")
      apply(cut_tac x=x1 and i="snd a" and xs=list and m=n and co_ctx=co_ctx and net=net
-      in stop_after_no_continue[where insts=insts and stopper="\<lambda>x. ()" and cfg=cfg]; simp)
-       (* apply(simp add: wf_cfg_def) *)
-      apply(simp add: wf_cfg_def)
+      in stop_after_no_continue[where insts=insts and stopper="\<lambda>x. ()" and blocks=blocks]; simp)
+       (* apply(simp add: wf_blocks_def) *)
+      apply(simp add: wf_blocks_def)
      apply(drule_tac r=rest and s="instruction_result_as_set co_ctx (InstructionContinue x1)"
         in sep_code_code_sep[where p=pre]; simp)
      apply(sep_simp simp: code_sep[where rest="pre \<and>* _" and pairs="set _"])
@@ -1570,7 +1570,7 @@ shows
     apply(subgoal_tac "PcElm n \<in> instruction_result_as_set co_ctx (InstructionContinue x1)")
      apply(thin_tac "instruction_result_as_set _ _ = _")
      apply(drule subst[OF instruction_result_as_set_def, where P="\<lambda>u. PcElm n \<in> u"], simp)
-		 apply(simp add: wf_cfg_def)
+		 apply(simp add: wf_blocks_def)
 		 apply(drule_tac x=n and y="(a, b) # list" in spec2, simp)
     apply(simp add: plus_set_def)
    apply(simp add: program_sem_failure)
@@ -1579,16 +1579,16 @@ shows
 done
 
 
-lemma triple_cfg_soundness_t :
+lemma triple_blocks_soundness_t :
 notes sep_fun_simps[simp del]
 shows
-"triple_cfg c pre v post \<Longrightarrow> triple_cfg_sem_t c pre v post"
- apply(induction rule: triple_cfg.induct)
-     apply(simp add: cfg_no_sem_t)
-    apply(simp add: cfg_next_sem_t)
-   apply(simp add: cfg_jump_sem_t)
-  apply(simp add: cfg_jumpi_sem_t)
- apply(simp add: triple_cfg_sem_t_def)
+"triple_blocks c pre v post \<Longrightarrow> triple_blocks_sem_t c pre v post"
+ apply(induction rule: triple_blocks.induct)
+     apply(simp add: blocks_no_sem_t)
+    apply(simp add: blocks_next_sem_t)
+   apply(simp add: blocks_jump_sem_t)
+  apply(simp add: blocks_jumpi_sem_t)
+ apply(simp add: triple_blocks_sem_t_def)
 done
 
 end

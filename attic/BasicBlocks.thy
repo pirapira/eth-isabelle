@@ -32,9 +32,9 @@ type_synonym vertices = "vertex list"
 
 type_synonym stack_value = "w256 option"
 
-record cfg =
-cfg_indexes :: "int list"
-cfg_blocks :: "int \<Rightarrow> vert option"
+record basic_blocks =
+blocks_indexes :: "int list"
+blocks_list :: "int \<Rightarrow> vert option"
 
 (* Auxiliary functions *)
 
@@ -69,9 +69,9 @@ fun extract_blocks :: "vertices \<Rightarrow> int \<Rightarrow> vert option" whe
 "extract_blocks [] = Map.empty"
 |"extract_blocks (x#xs) = (extract_blocks xs)(fst x:= Some (snd x))"
 
-fun rebuild_basic_blocks :: "int list \<Rightarrow> (int \<Rightarrow> vert option) \<Rightarrow> vertices" where
-"rebuild_basic_blocks [] m = []"
-|"rebuild_basic_blocks (x#xs) m = (x,the (m x)) # (rebuild_basic_blocks xs m)"
+fun rebuild_vertices :: "int list \<Rightarrow> (int \<Rightarrow> vert option) \<Rightarrow> vertices" where
+"rebuild_vertices [] m = []"
+|"rebuild_vertices (x#xs) m = (x,the (m x)) # (rebuild_vertices xs m)"
 
 (* Stack manipulations *)
 
@@ -124,14 +124,14 @@ fun aux_basic_block :: "pos_inst list \<Rightarrow> pos_inst list \<Rightarrow> 
   | _ \<Rightarrow> aux_basic_block tl1 (block@[i])))"
 declare aux_basic_block.simps[simp del]
 
-definition build_basic_blocks :: "inst list \<Rightarrow> vertices" where
-"build_basic_blocks prog == aux_basic_block (add_address prog) []"
+definition build_vertices :: "inst list \<Rightarrow> vertices" where
+"build_vertices prog == aux_basic_block (add_address prog) []"
 
-definition build_cfg :: "inst list \<Rightarrow> cfg" where
-"build_cfg prog = (let blocks = build_basic_blocks prog in
+definition build_blocks :: "inst list \<Rightarrow> basic_blocks" where
+"build_blocks prog = (let blocks = build_vertices prog in
 (let ind = (extract_indexes blocks) in
-(|cfg_indexes = ind,
-  cfg_blocks = map_of blocks|)
+(|blocks_indexes = ind,
+  blocks_list = map_of blocks|)
 ))"
 
 (* Verification *)
@@ -154,11 +154,11 @@ lemma remove_address:
 "map snd (add_address' i k) = i"
 by(induction i arbitrary: k; simp)
 
-theorem reverse_basic_blocks: "reconstruct_bytecode (build_basic_blocks i) = i"
-apply(simp add: rev_basic_blocks build_basic_blocks_def add_address_def remove_address)
+theorem reverse_basic_blocks: "reconstruct_bytecode (build_vertices i) = i"
+apply(simp add: rev_basic_blocks build_vertices_def add_address_def remove_address)
 done
 
-(* Define how CFGs should be for the program logic to be sound *)
+(* Define how BLOCKSs should be for the program logic to be sound *)
 
 fun reg_inst :: "inst \<Rightarrow> bool" where
  "reg_inst (Pc JUMP) = False"
@@ -190,75 +190,75 @@ declare seq_block.simps[simp del]
 definition last_no::"pos_inst list \<Rightarrow> bool" where
 "last_no insts == snd (last insts) \<in> {Misc STOP, Misc RETURN, Misc SUICIDE}"
 
-(* Define a 'program' from a CFG *)
+(* Define a 'program' from a BLOCKS *)
 
-fun cfg_insts_aux :: "cfg \<Rightarrow> int list \<Rightarrow> pos_inst list" where
-  "cfg_insts_aux c [] = []"
-| "cfg_insts_aux c (x#xs) = (case cfg_blocks c x of
-    None \<Rightarrow> cfg_insts_aux c xs
-  | Some (b,_) \<Rightarrow> b @ (cfg_insts_aux c xs))"
+fun blocks_insts_aux :: "basic_blocks \<Rightarrow> int list \<Rightarrow> pos_inst list" where
+  "blocks_insts_aux c [] = []"
+| "blocks_insts_aux c (x#xs) = (case blocks_list c x of
+    None \<Rightarrow> blocks_insts_aux c xs
+  | Some (b,_) \<Rightarrow> b @ (blocks_insts_aux c xs))"
 
-definition cfg_insts :: "cfg \<Rightarrow> pos_inst set" where
-"cfg_insts c = set (cfg_insts_aux c (cfg_indexes c))"
+definition blocks_insts :: "basic_blocks \<Rightarrow> pos_inst set" where
+"blocks_insts c = set (blocks_insts_aux c (blocks_indexes c))"
 
 fun inst_size_list::"pos_inst list \<Rightarrow> int" where
 "inst_size_list [] = 0"
 | "inst_size_list (x#xs) = inst_size (snd x) + inst_size_list xs"
 
-fun cfg_pos_insts :: "vertices \<Rightarrow> pos_inst list" where
- "cfg_pos_insts [] = []"
-| "cfg_pos_insts ((n,b,Jump)#q) = b@[(n+inst_size_list b,Pc JUMP)] @ (cfg_pos_insts q)"
-| "cfg_pos_insts ((n,b,Jumpi)#q) = b@[(n+inst_size_list b,Pc JUMPI)] @ (cfg_pos_insts q)"
-| "cfg_pos_insts ((n,b,_)#q) = b @ (cfg_pos_insts q)"
+fun blocks_pos_insts :: "vertices \<Rightarrow> pos_inst list" where
+ "blocks_pos_insts [] = []"
+| "blocks_pos_insts ((n,b,Jump)#q) = b@[(n+inst_size_list b,Pc JUMP)] @ (blocks_pos_insts q)"
+| "blocks_pos_insts ((n,b,Jumpi)#q) = b@[(n+inst_size_list b,Pc JUMPI)] @ (blocks_pos_insts q)"
+| "blocks_pos_insts ((n,b,_)#q) = b @ (blocks_pos_insts q)"
 
-fun cfg_vertices:: "cfg \<Rightarrow> int list \<Rightarrow> vertex list" where
-"cfg_vertices c [] = []"
-| "cfg_vertices c (x#xs) = (case cfg_blocks c x of
-  None \<Rightarrow> cfg_vertices c xs
-  | Some b \<Rightarrow> (x,b) # (cfg_vertices c xs))"
+fun blocks_vertices:: "basic_blocks \<Rightarrow> int list \<Rightarrow> vertex list" where
+"blocks_vertices c [] = []"
+| "blocks_vertices c (x#xs) = (case blocks_list c x of
+  None \<Rightarrow> blocks_vertices c xs
+  | Some b \<Rightarrow> (x,b) # (blocks_vertices c xs))"
 
-definition cfg_content ::"cfg \<Rightarrow> int \<Rightarrow> inst option " where
-"cfg_content c  = map_of (cfg_pos_insts (cfg_vertices c (cfg_indexes c)))"
+definition blocks_content ::"basic_blocks \<Rightarrow> int \<Rightarrow> inst option " where
+"blocks_content c  = map_of (blocks_pos_insts (blocks_vertices c (blocks_indexes c)))"
 
-definition cfg_length :: "cfg \<Rightarrow> int " where
-"cfg_length c =
-  (case cfg_blocks c (last (cfg_indexes c)) of
+definition blocks_length :: "basic_blocks \<Rightarrow> int " where
+"blocks_length c =
+  (case blocks_list c (last (blocks_indexes c)) of
     None \<Rightarrow> 0 (*Should not happen*)
   | Some (i,Jump) \<Rightarrow> fst (last i) +  inst_size (snd (last i))
   | Some (i,Jumpi) \<Rightarrow> fst (last i) + inst_size (snd (last i))
   | Some (i,_) \<Rightarrow> fst (last i))"
 
-definition program_from_cfg:: "cfg \<Rightarrow> program" where
-"program_from_cfg c = ( (|
-  program_content = cfg_content c,
-  program_length = cfg_length c,
+definition program_from_blocks:: "basic_blocks \<Rightarrow> program" where
+"program_from_blocks c = ( (|
+  program_content = blocks_content c,
+  program_length = blocks_length c,
   program_annotation = (\<lambda> _ .  [])
 |) )"
 
-definition wf_cfg:: "cfg \<Rightarrow> bool" where
-"wf_cfg c == 
+definition wf_blocks:: "basic_blocks \<Rightarrow> bool" where
+"wf_blocks c == 
 (\<forall>n insts ty.
-(cfg_blocks c n = Some (insts, ty) \<longrightarrow>
-	n \<in> set (cfg_indexes c) \<and> reg_vertex (n, insts, ty) \<and>
+(blocks_list c n = Some (insts, ty) \<longrightarrow>
+	n \<in> set (blocks_indexes c) \<and> reg_vertex (n, insts, ty) \<and>
   (insts \<noteq> [] \<longrightarrow> (fst (hd insts) = n)) \<and> seq_block insts \<and>
   0 \<le> n \<and> n < 2 ^ 256) \<and>
-(cfg_blocks c n = Some (insts, Next) \<longrightarrow>
+(blocks_list c n = Some (insts, Next) \<longrightarrow>
 	 insts \<noteq> []) \<and>
-(cfg_blocks c n = Some (insts, Jump) \<longrightarrow>
-	program_content (program_from_cfg c) (n + inst_size_list insts) = Some (Pc JUMP)) \<and>
-(cfg_blocks c n = Some (insts, Jumpi) \<longrightarrow>
-	program_content (program_from_cfg c) (n + inst_size_list insts) = Some (Pc JUMPI)) \<and>
-(cfg_blocks c n = Some (insts, No) \<longrightarrow>
+(blocks_list c n = Some (insts, Jump) \<longrightarrow>
+	program_content (program_from_blocks c) (n + inst_size_list insts) = Some (Pc JUMP)) \<and>
+(blocks_list c n = Some (insts, Jumpi) \<longrightarrow>
+	program_content (program_from_blocks c) (n + inst_size_list insts) = Some (Pc JUMPI)) \<and>
+(blocks_list c n = Some (insts, No) \<longrightarrow>
 	 insts \<noteq> [] \<and> last_no insts)
 )"
 
-(* Proof that we build well formed CFGs *)
+(* Proof that we build well formed BLOCKSs *)
 
 lemma index_have_blocks:
-"c = build_cfg bytecode \<Longrightarrow>
- \<not> cfg_blocks c n = None \<Longrightarrow>
- n \<in> set (cfg_indexes c)"
-by(simp add: Let_def build_cfg_def extract_indexes_def map_of_eq_None_iff)
+"c = build_blocks bytecode \<Longrightarrow>
+ \<not> blocks_list c n = None \<Longrightarrow>
+ n \<in> set (blocks_indexes c)"
+by(simp add: Let_def build_blocks_def extract_indexes_def map_of_eq_None_iff)
 
 lemma index_block_eq:
 "(n, (j,i)#b, t)#xs = aux_basic_block insts block \<Longrightarrow>
@@ -342,8 +342,8 @@ lemma reg_aux_bb:
 done
 
 lemma reg_bb:
-"reg_vertices (build_basic_blocks insts)"
- apply(simp add: build_basic_blocks_def)
+"reg_vertices (build_vertices insts)"
+ apply(simp add: build_vertices_def)
  apply(rule reg_aux_bb)
  apply(simp add: reg_simps)
 done
@@ -482,7 +482,7 @@ done
 
 lemma rev_basic_blocks_add:
 "seq_block (b@i) \<Longrightarrow> 
-cfg_pos_insts (aux_basic_block i b) = b@i"
+blocks_pos_insts (aux_basic_block i b) = b@i"
 apply(induction i arbitrary: b)
  apply(case_tac b)
   apply(simp add: aux_basic_block.simps)
@@ -509,7 +509,7 @@ apply(simp add: seq_block_tl'[where xs="_ # _"])
 done
 
 lemma reverse_basic_blocks_add: 
- "cfg_pos_insts (aux_basic_block (add_address i) []) = (add_address i)"
+ "blocks_pos_insts (aux_basic_block (add_address i) []) = (add_address i)"
 apply(subst rev_basic_blocks_add)
  apply(simp add: seq_block_add_address add_address_def)
 apply(simp)
@@ -517,19 +517,19 @@ done
 
 (* Draft Jump *)
 
-lemma cfg_vert_rebuild_one:
+lemma blocks_vert_rebuild_one:
 "distinct (map fst zs) \<Longrightarrow>
 (n,i) \<in> set zs \<Longrightarrow>
- cfg_vertices
-  \<lparr>cfg_indexes = (map fst zs), cfg_blocks = map_of zs\<rparr>
+ blocks_vertices
+  \<lparr>blocks_indexes = (map fst zs), blocks_list = map_of zs\<rparr>
   [n] = [(n,i)]"
 by simp
 
-lemma cfg_vert_rebuild_subset:
+lemma blocks_vert_rebuild_subset:
 "distinct (map fst zs) \<Longrightarrow>
  set xs \<subseteq> set zs \<Longrightarrow>
- cfg_vertices
-  \<lparr>cfg_indexes = (map fst zs), cfg_blocks = map_of zs\<rparr>
+ blocks_vertices
+  \<lparr>blocks_indexes = (map fst zs), blocks_list = map_of zs\<rparr>
   (map fst xs) = xs"
 apply(induction xs; simp)
 apply(erule conjE)
@@ -541,12 +541,12 @@ apply(simp add: distinct_map inj_on_def)
 apply(fastforce)
 done
 
-lemma cfg_vert_rebuild:
+lemma blocks_vert_rebuild:
 "distinct (map fst zs) \<Longrightarrow>
- cfg_vertices
-  \<lparr>cfg_indexes = (map fst zs), cfg_blocks = map_of zs\<rparr>
+ blocks_vertices
+  \<lparr>blocks_indexes = (map fst zs), blocks_list = map_of zs\<rparr>
   (map fst zs) = zs"
-by(simp add: cfg_vert_rebuild_subset)
+by(simp add: blocks_vert_rebuild_subset)
 
 lemma add_address_greater:
 "(n,m) \<in> set (add_address' xs k) \<Longrightarrow>
@@ -778,19 +778,19 @@ apply(clarsimp)
 done
 
 lemma re_build_bb:
-"cfg_vertices (build_cfg xs) (cfg_indexes (build_cfg xs)) = build_basic_blocks xs"
-apply(simp add: build_cfg_def Let_def extract_indexes_def)
-apply(rule cfg_vert_rebuild)
-apply(simp add: build_basic_blocks_def add_address_def)
+"blocks_vertices (build_blocks xs) (blocks_indexes (build_blocks xs)) = build_vertices xs"
+apply(simp add: build_blocks_def Let_def extract_indexes_def)
+apply(rule blocks_vert_rebuild)
+apply(simp add: build_vertices_def add_address_def)
 apply(rule distinct_fst_aux_bb)
  apply(simp add: distinct_add_address)
 apply(simp add: seq_block_add_address)
 done
 
 lemma re_build_address:
-"cfg_pos_insts (cfg_vertices (build_cfg xs) (cfg_indexes (build_cfg xs))) = add_address xs"
+"blocks_pos_insts (blocks_vertices (build_blocks xs) (blocks_indexes (build_blocks xs))) = add_address xs"
 apply(simp add: re_build_bb)
-apply(simp add: build_basic_blocks_def reverse_basic_blocks_add)
+apply(simp add: build_vertices_def reverse_basic_blocks_add)
 done
 
 lemma jump_i_ends_block:
@@ -823,14 +823,14 @@ done
 
 lemma jumps_end_block:
 "(t=Jump \<and> i=JUMP) \<or> (t=Jumpi \<and> i=JUMPI) \<Longrightarrow>
- cfg_blocks (build_cfg bytecode) n = Some (insts, t) \<Longrightarrow>
- program_content (program_from_cfg (build_cfg bytecode))
+ blocks_list (build_blocks bytecode) n = Some (insts, t) \<Longrightarrow>
+ program_content (program_from_blocks (build_blocks bytecode))
   (n + inst_size_list insts) =
  Some (Pc i)"
- apply(simp add: program_from_cfg_def cfg_content_def)
+ apply(simp add: program_from_blocks_def blocks_content_def)
  apply(simp add: re_build_address)
- apply(simp add: build_cfg_def Let_def)
- apply(simp add: build_basic_blocks_def)
+ apply(simp add: build_blocks_def Let_def)
+ apply(simp add: build_vertices_def)
  apply(insert map_of_eq_Some_iff[where xys="add_address bytecode" and x="n + inst_size_list insts"
  and y="Pc i"])
  apply(drule meta_mp)
@@ -843,26 +843,26 @@ done
 
 (* Main theorem *)
 
-lemma wf_build_cfg:
+lemma wf_build_blocks:
 "fst (last (add_address bytecode)) < 2^256 \<Longrightarrow>
-wf_cfg (build_cfg bytecode)"
- apply(simp add: wf_cfg_def)
+wf_blocks (build_blocks bytecode)"
+ apply(simp add: wf_blocks_def)
  apply(clarsimp)
  apply(rule conjI)
   apply(clarsimp; rule conjI)
-   apply(case_tac "\<not> cfg_blocks (build_cfg bytecode) n = None")
+   apply(case_tac "\<not> blocks_list (build_blocks bytecode) n = None")
     apply(simp add: index_have_blocks)
    apply(simp)
-  apply(simp add: build_cfg_def Let_def)
+  apply(simp add: build_blocks_def Let_def)
   apply(drule map_of_SomeD)
   apply(rule conjI)
     apply(cut_tac reg_bb[where insts=bytecode])
      apply(simp add: reg_vertices_def list_all_in)
   apply(rule conjI)
-	 apply(simp add: build_basic_blocks_def)
+	 apply(simp add: build_vertices_def)
 	 apply(drule in_aux_bb_intermediate, clarify)
 	 apply(case_tac insts; clarsimp simp add: index_block_eq)
-	apply(simp add: build_basic_blocks_def)
+	apply(simp add: build_vertices_def)
   apply(rule_tac ty=ty in sequential_basic_blocks[where ys="add_address bytecode" and bl="[]"])
        apply(simp add: seq_block_add_address add_address_def)
       apply(simp add: seq_block.simps)
@@ -872,13 +872,13 @@ wf_cfg (build_cfg bytecode)"
  apply(thin_tac "_ < _")
  apply(simp add: jumps_end_block)
  apply(rule conjI)
-  apply(simp add: build_cfg_def Let_def build_basic_blocks_def)
+  apply(simp add: build_blocks_def Let_def build_vertices_def)
   apply(rule impI)
   apply(drule map_of_SomeD)
   apply(drule in_aux_bb_intermediate, clarify)
   apply(drule non_empty_block_next; simp)
  apply(rule impI)
- apply(simp add: build_cfg_def Let_def build_basic_blocks_def)
+ apply(simp add: build_blocks_def Let_def build_vertices_def)
  apply(drule map_of_SomeD)
  apply(drule block_no; simp add: reg_block_def)
 done
