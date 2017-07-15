@@ -21,7 +21,10 @@ lemma logged_sep [simp]:
     
 lemma set_diff_expand:
   "x - {a,b,c} = x - {a} - {b} - {c}"
-  by blast
+  "x - {a,b,c,d} = x - {a} - {b} - {c} - {d}"
+  "x - {a,b,c,d,e} = x - {a} - {b} - {c} - {d} - {e}"
+  "x - {a,b,c,d,e,f,g} = x - {a} - {b} - {c} - {d} - {e} - {f} - {g}"
+  by blast+
 
 lemma log0_gas_triple :
   "triple net {OutOfGas}
@@ -101,16 +104,19 @@ vctx_stack_default_def)
 apply clarify
 apply (auto simp: set_diff_expand)
 apply (simp add: create_log_entry_def vctx_returned_bytes_def)
-apply (erule_tac x=P in back_subst)
+apply (erule_tac P=rest in back_subst)
 apply(rule Set.equalityI)
  apply clarify
  apply simp
  apply(rename_tac elm; case_tac elm; simp)
- apply(case_tac "rev tb ! fst x2 = snd x2"; simp)
+   apply(case_tac "rev tb ! fst x2 = snd x2"; clarsimp)
+   apply (case_tac "a = Suc (length tb)" ; clarsimp)
+   apply (case_tac "a = (length tb)" ; clarsimp)
+
 apply clarify
 apply simp
-apply(rename_tac elm; case_tac elm; simp)
-apply(case_tac "length (vctx_logs x1) \<le> fst x5"; auto)
+apply(rename_tac elm; case_tac elm; clarsimp)
+apply (case_tac "a < length (vctx_logs x1)" ; clarsimp)
 apply (simp add: create_log_entry_def vctx_returned_bytes_def)
 done
 
@@ -143,11 +149,16 @@ apply (rule_tac x = 1 in exI)
 apply(case_tac presult; simp add: log_inst_numbers.simps sep_memory_range sep_memory_range_sep log_def
         instruction_result_as_set_def vctx_stack_default_def
 memory_range_sep)
-apply clarify
-apply auto
-apply (simp add: create_log_entry_def vctx_returned_bytes_def)
-apply (rule leibniz)
- apply blast
+  apply clarify
+  apply (clarsimp simp only: set_diff_expand stateelm_means_simps stateelm_equiv_simps)
+  apply (rule conjI)
+      apply auto[1]
+  apply (rule conjI)
+   apply (clarsimp simp: set_diff_eq)
+  apply (rule conjI)
+   apply (simp add: create_log_entry_def vctx_returned_bytes_def )
+    
+apply (erule_tac P=rest in back_subst)
 apply(rule Set.equalityI)
  apply clarify
  apply simp
@@ -155,10 +166,15 @@ apply(rule Set.equalityI)
  apply(case_tac "fst x2 < length tc"; simp)
 apply clarify
 apply simp
-apply(rename_tac elm; case_tac elm; simp)
+   apply(rename_tac elm; case_tac elm; simp)
+       apply (case_tac "ad = Suc (length tc)" ; clarsimp)
+   apply (case_tac "ad = (length tc)" ; clarsimp)
+    apply (case_tac "ad = Suc (Suc (Suc (length tc)))" ; clarsimp)
+  apply (simp add:  create_log_entry_def vctx_returned_bytes_def)
+  apply auto
+    apply(rename_tac elm; case_tac elm; simp)
 apply(case_tac "length (vctx_logs x1) \<le> fst x5"; auto)
-apply (simp add: create_log_entry_def vctx_returned_bytes_def)
-done
+  done
 
 
 lemma log3_gas_triple :
@@ -190,11 +206,11 @@ apply(case_tac presult; simp add: log_inst_numbers.simps sep_memory_range sep_me
         instruction_result_as_set_def vctx_stack_default_def
 memory_range_sep)
 apply clarify
-apply auto
+  apply (auto simp: set_diff_expand)
+    
 (* apply(rule_tac x = " vctx_gas x1 - meter_gas (Log LOG3) x1 co_ctx" in exI) *)
 apply (simp add: create_log_entry_def vctx_returned_bytes_def)
-apply (rule leibniz)
- apply blast
+apply (erule_tac P=rest in back_subst)
 apply(rule Set.equalityI)
  apply clarify
  apply simp
@@ -237,11 +253,10 @@ apply(case_tac presult; simp add: log_inst_numbers.simps sep_memory_range sep_me
         instruction_result_as_set_def vctx_stack_default_def
 memory_range_sep)
 apply clarify
-apply auto
+apply (auto simp: set_diff_expand)
 (* apply(rule_tac x = " vctx_gas x1 - meter_gas (Log LOG4) x1 co_ctx" in exI) *)
 apply (simp add: create_log_entry_def vctx_returned_bytes_def)
-apply (rule leibniz)
- apply blast
+apply (erule_tac P=rest in back_subst)
 apply(rule Set.equalityI)
  apply clarify
  apply simp
@@ -254,14 +269,10 @@ apply(case_tac "length (vctx_logs x1) \<le> fst x5"; auto)
 apply (simp add: create_log_entry_def vctx_returned_bytes_def)
 done
 
-end
-
-context
-  includes sep_crunch simp_for_triples
-  notes meter_gas_def [simp del]
-begin
 
 lemma call_gas_triple:
+  notes meter_gas_def [simp del]
+  shows
   "triple net {OutOfGas}
           (\<langle> h \<le> 1017 \<and> fund \<ge> v \<and> length input = unat in_size \<and> at_least_eip150 net \<rangle> ** 
            program_counter k ** memory_range in_begin input **
