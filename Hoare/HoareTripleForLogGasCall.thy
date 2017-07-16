@@ -23,6 +23,7 @@ lemma set_diff_expand:
   "x - {a,b,c} = x - {a} - {b} - {c}"
   "x - {a,b,c,d} = x - {a} - {b} - {c} - {d}"
   "x - {a,b,c,d,e} = x - {a} - {b} - {c} - {d} - {e}"
+  "x - {a,b,c,d,e,f} = x - {a} - {b} - {c} - {d} - {e}- {f} "
   "x - {a,b,c,d,e,f,g} = x - {a} - {b} - {c} - {d} - {e} - {f} - {g}"
   by blast+
 
@@ -215,11 +216,11 @@ apply(rule Set.equalityI)
  apply clarify
  apply simp
  apply(rename_tac elm; case_tac elm; simp)
- apply(case_tac "fst x2 < length td"; simp)
+ apply(case_tac "fst x2 < length td"; clarsimp)
 apply clarify
-apply simp
-apply(rename_tac elm; case_tac elm; simp)
-apply(case_tac "length (vctx_logs x1) \<le> fst x5"; auto)
+apply (simp add: set_diff_expand set_diff_eq)
+apply(rename_tac elm; case_tac elm; clarsimp)
+apply(case_tac "a < length (vctx_logs x1)"; auto)
 apply (simp add: create_log_entry_def vctx_returned_bytes_def)
 done
 
@@ -263,13 +264,18 @@ apply(rule Set.equalityI)
  apply(rename_tac elm; case_tac elm; simp)
  apply(case_tac "fst x2 < length te"; simp)
 apply clarify
-apply simp
-apply(rename_tac elm; case_tac elm; simp)
+   apply (simp add: set_diff_expand set_diff_eq)
+   apply (case_tac "a = Suc (Suc (Suc (Suc (Suc (length te)))))"; clarsimp)
+   apply (auto simp: set_diff_eq)
+  apply(rename_tac elm; case_tac elm; simp)
 apply(case_tac "length (vctx_logs x1) \<le> fst x5"; auto)
 apply (simp add: create_log_entry_def vctx_returned_bytes_def)
 done
 
-
+lemma set_diff_expand':
+ "x - {a,b,c,d,e,f,g,h} = x - {a} - {b} - {c} - {d} - {e} - {f} - {g} - {h}"
+ "x - {a,b,c,d,e,f,g,h,i} = x - {a} - {b} - {c} - {d} - {e} - {f} - {g} - {h} - {i}"
+ by blast+
 lemma call_gas_triple:
   notes meter_gas_def [simp del]
   shows
@@ -303,19 +309,19 @@ lemma call_gas_triple:
              , callarg_data = input
              , callarg_output_begin = out_begin
              , callarg_output_size = out_size \<rparr>))"
-apply(simp only: triple_triple_alt)
-apply(auto simp add: triple_alt_def)
+  apply(simp only: triple_triple_alt)
+
+apply(auto simp add: triple_alt_def set_diff_expand')
 apply(rule_tac x = 1 in exI)
-apply(case_tac presult; simp)
+  apply(case_tac presult; simp)
 apply(clarify)
 apply(simp add: call_def)
-
+(* here *)
 apply(rule_tac x = "vctx_gas x1 - meter_gas (Misc CALL) x1 co_ctx net" in exI)
 apply(simp add: instruction_result_as_set_def)
 apply(simp add: sep_memory_range_sep sep_memory_range memory_range_sep failed_for_reasons_def)
 apply(simp add: vctx_stack_default_def)
-apply(rule leibniz)
- apply blast
+apply(erule_tac P=rest in back_subst)
 apply(rule Set.equalityI)
  apply(clarify)
  apply simp
