@@ -25,6 +25,9 @@ lemma set_diff_expand:
   "x - {a,b,c,d,e} = x - {a} - {b} - {c} - {d} - {e}"
   "x - {a,b,c,d,e,f} = x - {a} - {b} - {c} - {d} - {e}- {f} "
   "x - {a,b,c,d,e,f,g} = x - {a} - {b} - {c} - {d} - {e} - {f} - {g}"
+  "x - {a,b,c,d,e,f,g,h} = x - {a} - {b} - {c} - {d} - {e} - {f} - {g} - {h}"
+  "x - {a,b,c,d,e,f,g,h,i} = x - {a} - {b} - {c} - {d} - {e} - {f} - {g} - {h} - {i}"
+  "x - {a,b,c,d,e,f,g,h,i,j} = x - {a} - {b} - {c} - {d} - {e} - {f} - {g} - {h} - {i} - {j}"
   by blast+
 
 lemma log0_gas_triple :
@@ -270,12 +273,8 @@ apply clarify
   apply(rename_tac elm; case_tac elm; simp)
 apply(case_tac "length (vctx_logs x1) \<le> fst x5"; auto)
 apply (simp add: create_log_entry_def vctx_returned_bytes_def)
-done
-
-lemma set_diff_expand':
- "x - {a,b,c,d,e,f,g,h} = x - {a} - {b} - {c} - {d} - {e} - {f} - {g} - {h}"
- "x - {a,b,c,d,e,f,g,h,i} = x - {a} - {b} - {c} - {d} - {e} - {f} - {g} - {h} - {i}"
- by blast+
+  done
+    
 lemma call_gas_triple:
   notes meter_gas_def [simp del]
   shows
@@ -311,7 +310,7 @@ lemma call_gas_triple:
              , callarg_output_size = out_size \<rparr>))"
   apply(simp only: triple_triple_alt)
 
-apply(auto simp add: triple_alt_def set_diff_expand')
+apply(auto simp add: triple_alt_def set_diff_expand)
 apply(rule_tac x = 1 in exI)
   apply(case_tac presult; simp)
 apply(clarify)
