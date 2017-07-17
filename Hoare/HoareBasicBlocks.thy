@@ -891,13 +891,22 @@ program_content (program_from_blocks blocks) (n + inst_size_list insts) = Some (
 done
 
 lemma program_content_some:
-"blocks_list blocks dest = Some ((dest, Pc JUMPDEST) # bbi, ti) \<Longrightarrow>
+notes code_elm_means[simp del]
+shows
+"wf_blocks blocks \<Longrightarrow>
+ blocks_list blocks dest = Some ((dest, i) # bbi, ti) \<Longrightarrow>
+ i \<noteq> Misc STOP \<Longrightarrow>
  {CodeElm (pos, i) |pos i. (pos, i) \<in> blocks_insts blocks}
        \<subseteq> instruction_result_as_set co_ctx
            (InstructionContinue x1) \<Longrightarrow>
- program_content (program_from_blocks blocks) dest = Some (Pc JUMPDEST)"
-sorry
-
+ cctx_program co_ctx  = program_from_blocks blocks \<Longrightarrow>
+ program_content (program_from_blocks blocks) dest = Some i"
+apply(drule block_in_insts, assumption)
+apply(clarsimp)
+ apply(subgoal_tac "CodeElm (dest,i) \<in> instruction_result_as_set co_ctx (InstructionContinue x1)")
+  apply(simp add: code_elm_means)
+ apply(fastforce)
+done
 
 lemma jump_sem:
 notes sep_fun_simps[simp del]
@@ -938,8 +947,6 @@ shows
    apply(simp add: instruction_sem_simps jump_def inst_numbers_simps)
    apply (sep_simp simp: code_sep continuing_sep memory_usage_sep pure_sep gas_pred_sep stack_sep stack_height_sep program_counter_sep)+
    apply(clarsimp split: option.splits)
-   apply(rule conjI)
-		apply(clarsimp simp add: instruction_simps program_content_some)
 	 apply(clarsimp simp add: instruction_simps program_content_some)
 	 apply(rule conjI)
     apply(erule_tac P="restb \<and>* rest" in back_subst)
