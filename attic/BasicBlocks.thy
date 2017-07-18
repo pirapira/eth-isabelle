@@ -35,6 +35,7 @@ type_synonym stack_value = "w256 option"
 record basic_blocks =
 blocks_indexes :: "int list"
 blocks_list :: "int \<Rightarrow> vert option"
+all_blocks :: "vertices"
 
 (* Auxiliary functions *)
 
@@ -131,32 +132,12 @@ definition build_blocks :: "inst list \<Rightarrow> basic_blocks" where
 "build_blocks prog = (let blocks = build_vertices prog in
 (let ind = (extract_indexes blocks) in
 (|blocks_indexes = ind,
-  blocks_list = map_of blocks|)
+  blocks_list = map_of blocks,
+  all_blocks = blocks|)
 ))"
 
 (* Verification *)
 lemmas reg_inst_splits = inst.splits misc_inst.splits pc_inst.splits
-
-(* Check that we can rebuild the initial list of instructions from basic blocks *)
-fun reconstruct_bytecode :: "vertices \<Rightarrow> inst list" where
- "reconstruct_bytecode [] = []"
-| "reconstruct_bytecode ((n,b,Jump)#q) = (map snd b)@[Pc JUMP] @ (reconstruct_bytecode q)"
-| "reconstruct_bytecode ((n,b,Jumpi)#q) = (map snd b)@[Pc JUMPI] @ (reconstruct_bytecode q)"
-| "reconstruct_bytecode ((n,b,_)#q) = (map snd b) @ (reconstruct_bytecode q)"
-
-lemma rev_basic_blocks: "reconstruct_bytecode (aux_basic_block i b) = (map snd b)@(map snd i)"
-apply(induction i arbitrary: b)
-apply(case_tac b)
-apply(auto simp: Let_def aux_basic_block.simps split: reg_inst_splits)
-done
-
-lemma remove_address:
-"map snd (add_address' i k) = i"
-by(induction i arbitrary: k; simp)
-
-theorem reverse_basic_blocks: "reconstruct_bytecode (build_vertices i) = i"
-apply(simp add: rev_basic_blocks build_vertices_def add_address_def remove_address)
-done
 
 (* Define how BLOCKSs should be for the program logic to be sound *)
 
@@ -190,8 +171,9 @@ declare seq_block.simps[simp del]
 definition last_no::"pos_inst list \<Rightarrow> bool" where
 "last_no insts == snd (last insts) \<in> {Misc STOP, Misc RETURN, Misc SUICIDE}"
 
-(* Define a 'program' from a BLOCKS *)
 
+(* Define a 'program' from a BLOCKS *)
+(* 
 fun blocks_insts_aux :: "basic_blocks \<Rightarrow> int list \<Rightarrow> pos_inst list" where
   "blocks_insts_aux c [] = []"
 | "blocks_insts_aux c (x#xs) = (case blocks_list c x of
@@ -201,9 +183,6 @@ fun blocks_insts_aux :: "basic_blocks \<Rightarrow> int list \<Rightarrow> pos_i
 definition blocks_insts :: "basic_blocks \<Rightarrow> pos_inst set" where
 "blocks_insts c = set (blocks_insts_aux c (blocks_indexes c))"
 
-fun inst_size_list::"pos_inst list \<Rightarrow> int" where
-"inst_size_list [] = 0"
-| "inst_size_list (x#xs) = inst_size (snd x) + inst_size_list xs"
 
 fun blocks_pos_insts :: "vertices \<Rightarrow> pos_inst list" where
  "blocks_pos_insts [] = []"
@@ -234,7 +213,7 @@ definition program_from_blocks:: "basic_blocks \<Rightarrow> program" where
   program_length = blocks_length c,
   program_annotation = (\<lambda> _ .  [])
 |) )"
-
+ *)
 definition wf_blocks:: "basic_blocks \<Rightarrow> bool" where
 "wf_blocks c == 
 (\<forall>n insts ty.
@@ -244,13 +223,11 @@ definition wf_blocks:: "basic_blocks \<Rightarrow> bool" where
   0 \<le> n \<and> n < 2 ^ 256) \<and>
 (blocks_list c n = Some (insts, Next) \<longrightarrow>
 	 insts \<noteq> []) \<and>
-(blocks_list c n = Some (insts, Jump) \<longrightarrow>
-	program_content (program_from_blocks c) (n + inst_size_list insts) = Some (Pc JUMP)) \<and>
-(blocks_list c n = Some (insts, Jumpi) \<longrightarrow>
-	program_content (program_from_blocks c) (n + inst_size_list insts) = Some (Pc JUMPI)) \<and>
 (blocks_list c n = Some (insts, No) \<longrightarrow>
 	 insts \<noteq> [] \<and> last_no insts)
-)"
+) \<and>
+blocks_list c = map_of (all_blocks c) \<and>
+blocks_indexes c = extract_indexes (all_blocks c)"
 
 (* Proof that we build well formed BLOCKSs *)
 
@@ -470,15 +447,7 @@ apply(simp split: reg_inst_splits if_splits)
   apply(erule disjE; simp add: last_no_def)+
 done
 
-(*Draft*)
-lemma seq_block_sumC:
-"seq_block ((i,j) # list @ (a, b) # xs) \<Longrightarrow>
- i + (inst_size j + inst_size_list list) = a"
-apply(induction list arbitrary: i j; clarsimp)
- apply(simp add: seq_block.simps)
-apply(simp add: seq_block.simps)
-apply(fastforce)
-done
+(* (*Draft*)
 
 lemma rev_basic_blocks_add:
 "seq_block (b@i) \<Longrightarrow> 
@@ -792,7 +761,7 @@ lemma re_build_address:
 apply(simp add: re_build_bb)
 apply(simp add: build_vertices_def reverse_basic_blocks_add)
 done
-
+*)
 lemma jump_i_ends_block:
 "seq_block (ys@xs) \<Longrightarrow>
  (t=Jump \<and> i=JUMP) \<or> (t=Jumpi \<and> i=JUMPI) \<Longrightarrow>
@@ -820,7 +789,7 @@ lemma jump_i_ends_block:
  apply(erule disjE; simp)
  apply(case_tac ys; simp add: block_pt_def seq_block_sumC)
 done
-
+(*
 lemma jumps_end_block:
 "(t=Jump \<and> i=JUMP) \<or> (t=Jumpi \<and> i=JUMPI) \<Longrightarrow>
  blocks_list (build_blocks bytecode) n = Some (insts, t) \<Longrightarrow>
@@ -840,13 +809,16 @@ lemma jumps_end_block:
 	apply(subst jump_i_ends_block[where ys="[]"]; simp)
   apply(simp add: seq_block_add_address)
 done
-
+ *)
 (* Main theorem *)
 
 lemma wf_build_blocks:
 "fst (last (add_address bytecode)) < 2^256 \<Longrightarrow>
 wf_blocks (build_blocks bytecode)"
  apply(simp add: wf_blocks_def)
+ apply(rule conjI)
+  prefer 2
+  apply(simp add: build_blocks_def Let_def)
  apply(clarsimp)
  apply(rule conjI)
   apply(clarsimp; rule conjI)
@@ -870,7 +842,6 @@ wf_blocks (build_blocks bytecode)"
      apply(cut_tac x=a and y=b in bound_add_address'[where xs=bytecode and k=0]; simp)
     apply(simp)+
  apply(thin_tac "_ < _")
- apply(simp add: jumps_end_block)
  apply(rule conjI)
   apply(simp add: build_blocks_def Let_def build_vertices_def)
   apply(rule impI)
@@ -882,5 +853,82 @@ wf_blocks (build_blocks bytecode)"
  apply(drule map_of_SomeD)
  apply(drule block_no; simp add: reg_block_def)
 done
+
+(* Check that we can rebuild the initial list of instructions from basic blocks *)
+fun inst_size_list::"pos_inst list \<Rightarrow> int" where
+"inst_size_list [] = 0"
+| "inst_size_list (x#xs) = inst_size (snd x) + inst_size_list xs"
+
+lemma seq_block_sumC:
+"seq_block ((i,j) # list @ (a, b) # xs) \<Longrightarrow>
+ i + (inst_size j + inst_size_list list) = a"
+apply(induction list arbitrary: i j; clarsimp)
+ apply(simp add: seq_block.simps)
+apply(simp add: seq_block.simps)
+apply(fastforce)
+done
+
+fun rebuild_with_add :: "vertices \<Rightarrow> pos_inst list" where
+ "rebuild_with_add [] = []"
+| "rebuild_with_add ((n,b,Jump)#q) = b@[(n+inst_size_list b,Pc JUMP)] @ (rebuild_with_add q)"
+| "rebuild_with_add ((n,b,Jumpi)#q) = b@[(n+inst_size_list b,Pc JUMPI)] @ (rebuild_with_add q)"
+| "rebuild_with_add ((n,b,_)#q) = b @ (rebuild_with_add q)"
+
+lemma rev_rebuild_with_add_aux:
+notes if_split[split del]
+shows
+"seq_block (b@c) \<Longrightarrow>
+rebuild_with_add (aux_basic_block c b) =
+    b@c"
+apply(induction c arbitrary: b)
+  apply(case_tac b; simp add: aux_basic_block.simps)
+apply(simp add: aux_basic_block.simps Let_def)
+apply(case_tac "reg_inst (snd a) \<and> snd a \<noteq> Pc JUMPDEST")
+ apply(simp split: reg_inst_splits)
+ apply(drule conjunct1; rule conjI; rule allI; clarify; rule conjI)
+  apply(clarsimp)+
+ apply(rule conjI; clarsimp)
+apply(case_tac "snd a = Pc JUMPDEST"; clarsimp)
+ apply(simp split: if_splits)
+ apply(drule_tac x="[(a, Pc JUMPDEST)]" in meta_spec)
+ apply(simp add: seq_block_tl')
+apply(drule_tac x="[]" in meta_spec)
+apply(drule meta_mp)
+apply(simp add: seq_block_tl'[where xs="_ @ [(_,_)]"])
+apply(case_tac b; simp)
+ apply(rename_tac x; case_tac x; simp add: block_pt_def; case_tac ba; simp add: seq_block_sumC)+
+done
+  
+lemma rev_rebuild_with_add:
+"rebuild_with_add (all_blocks (build_blocks c)) = add_address c"
+apply(simp add: build_blocks_def Let_def)
+apply(simp add: build_vertices_def)
+apply(subst rev_rebuild_with_add_aux)
+ apply(simp add: seq_block_add_address add_address_def)
+apply(simp)
+done
+
+fun reconstruct_bytecode :: "vertices \<Rightarrow> inst list" where
+ "reconstruct_bytecode [] = []"
+| "reconstruct_bytecode ((n,b,Jump)#q) = (map snd b)@[Pc JUMP] @ (reconstruct_bytecode q)"
+| "reconstruct_bytecode ((n,b,Jumpi)#q) = (map snd b)@[Pc JUMPI] @ (reconstruct_bytecode q)"
+| "reconstruct_bytecode ((n,b,_)#q) = (map snd b) @ (reconstruct_bytecode q)"
+
+lemma rev_basic_blocks: "reconstruct_bytecode (aux_basic_block i b) = (map snd b)@(map snd i)"
+apply(induction i arbitrary: b)
+apply(case_tac b)
+apply(auto simp: Let_def aux_basic_block.simps split: reg_inst_splits)
+done
+
+lemma remove_address:
+"map snd (add_address' i k) = i"
+by(induction i arbitrary: k; simp)
+
+theorem reverse_basic_blocks: "reconstruct_bytecode (build_vertices i) = i"
+apply(simp add: rev_basic_blocks build_vertices_def add_address_def remove_address)
+done
+
+definition blocks_insts :: "basic_blocks \<Rightarrow> pos_inst set" where
+"blocks_insts b = set (rebuild_with_add (all_blocks b))"
 
 end

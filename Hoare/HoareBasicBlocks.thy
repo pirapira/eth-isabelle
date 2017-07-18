@@ -538,7 +538,6 @@ definition triple_blocks_sem_t :: "basic_blocks \<Rightarrow> pred \<Rightarrow>
 "triple_blocks_sem_t c pre v post ==
     \<forall> co_ctx presult rest net (stopper::instruction_result \<Rightarrow> unit).
 				no_assertion co_ctx \<longrightarrow>
-        (cctx_program co_ctx = program_from_blocks c) \<longrightarrow>
         wf_blocks c \<longrightarrow>
         blocks_list c (v_ind v) = Some (snd v) \<longrightarrow>
        (pre ** code (blocks_insts c) ** rest) (instruction_result_as_set co_ctx presult) \<longrightarrow>
@@ -547,26 +546,26 @@ definition triple_blocks_sem_t :: "basic_blocks \<Rightarrow> pred \<Rightarrow>
 
 (* Lemmas to group code elements *)
 lemma block_in_insts_:
-"n \<in> set xs \<Longrightarrow>
-blocks_list c n = Some (b, t) \<Longrightarrow>
-set b \<subseteq> set (blocks_insts_aux c xs)"
-apply(induction xs)
+"(n, b, t) \<in> set c \<Longrightarrow>
+    set b \<subseteq> set (rebuild_with_add c)"
+apply(induction c)
  apply(simp)
-apply(case_tac "n \<in> set xs")
- apply(case_tac "blocks_list c a = None")
-	apply(auto)
+apply(simp)
+apply(erule disjE)
+ apply(clarsimp)
+ apply(case_tac t; simp)
+apply(case_tac a)
+apply(case_tac ca; simp)
+apply(auto)
 done
 
 lemma block_in_insts:
-"wf_blocks c \<Longrightarrow>
+"blocks_list c = map_of (all_blocks c) \<Longrightarrow>
 blocks_list c n = Some (b, t) \<Longrightarrow>
 set b \<subseteq> blocks_insts c"
-apply(simp add: wf_blocks_def blocks_insts_def)
-apply(drule_tac x = n in spec)+
-apply(drule_tac x=b in spec)
-apply(erule conjE)
-apply(drule_tac x = t in spec)
-apply(erule conjE, simp add: block_in_insts_)+
+apply(simp add: blocks_insts_def)
+apply(drule map_of_SomeD)
+apply(simp add: block_in_insts_)
 done
 
 lemma decomp_set:
@@ -610,7 +609,7 @@ lemma code_code_sep_:
 done
 
 lemma code_code_sep:
-"wf_blocks blocks \<Longrightarrow>
+"blocks_list blocks = map_of (all_blocks blocks) \<Longrightarrow>
 blocks_list blocks n = Some (insts, ty) \<Longrightarrow>
 (code (set insts) \<and>* code (blocks_insts blocks - set insts) \<and>* r) s =
 (code (blocks_insts blocks) \<and>* r) s"
@@ -620,7 +619,7 @@ blocks_list blocks n = Some (insts, ty) \<Longrightarrow>
 done
 
 lemma sep_code_code_sep:
-"wf_blocks blocks \<Longrightarrow>
+"blocks_list blocks = map_of (all_blocks blocks) \<Longrightarrow>
 blocks_list blocks n = Some (insts, ty) \<Longrightarrow>
 (p \<and>* code (set insts) \<and>* code (blocks_insts blocks - set insts) \<and>* r) s =
 (p \<and>* code (blocks_insts blocks) \<and>* r) s"
@@ -636,7 +635,7 @@ blocks_list blocks n = Some (insts, ty) \<Longrightarrow>
 done
 
 lemma sep_sep_sep_code_code:
-"wf_blocks blocks \<Longrightarrow>
+"blocks_list blocks = map_of (all_blocks blocks) \<Longrightarrow>
 blocks_list blocks n = Some (insts, ty) \<Longrightarrow>
 (p \<and>* q \<and>* r \<and>* code (set insts) \<and>* code (blocks_insts blocks - set insts)) s =
 (p \<and>* q \<and>* r \<and>* code (blocks_insts blocks)) s"
@@ -670,6 +669,7 @@ lemma blocks_next_sem_t:
  apply(drule_tac x = "rest" in spec)
  apply(drule_tac x = presult in spec)
  apply(drule_tac x = "code (blocks_insts blocks - set insts) \<and>* rest" in spec)
+ apply(simp add: wf_blocks_def)
  apply(simp add: sep_code_code_sep)
  apply(drule_tac x = "stopper" in spec)
  apply(drule_tac x = "net" in spec)
@@ -917,57 +917,62 @@ reg_block insts \<Longrightarrow>
  apply (fastforce simp: pure_def)
 done
 
-lemma
-"blocks_list blocks n = Some (bi, ti) \<Longrightarrow>
-b \<in> set bi \<Longrightarrow>
-n \<in> set xs \<Longrightarrow>
-b \<in> set (blocks_pos_insts (blocks_vertices blocks xs))"
- apply(induction xs; simp)
- apply(case_tac "n=a";simp)
-  apply(case_tac ti)
-     apply(simp)
-    apply(clarsimp)
-    apply(induction bi)
-     apply(simp)
-    apply(simp)
-    apply(case_tac bi; clarsimp)
-oops
+lemma jump_i_ends_block:
+"seq_block (ys@xs) \<Longrightarrow>
+ (t=Jump \<and> i=JUMP) \<or> (t=Jumpi \<and> i=JUMPI) \<Longrightarrow>
+ (n, insts, t) \<in> set (aux_basic_block xs ys) \<Longrightarrow>
+ (n + inst_size_list insts, Pc i) \<in> set xs"
+ apply(induction xs arbitrary: ys)
+  apply(case_tac ys; simp add: aux_basic_block.simps)
+ apply(clarsimp simp add: aux_basic_block.simps Let_def)
+ apply(case_tac "reg_inst b \<and> b \<noteq> Pc JUMPDEST")
+  apply(drule_tac x="ys @ [(a, b)]" in meta_spec)
+  apply(simp split: reg_inst_splits)
+ apply(case_tac "b=Pc JUMPDEST")
+  apply(case_tac ys)
+	 apply(simp; drule_tac x="[(a, b)]" in meta_spec; simp)
+  apply(simp; drule_tac x="[(a, b)]" in meta_spec; simp add: seq_block_tl'[where xs="_#_"])
+  apply(erule disjE; simp)
+ apply(drule_tac x="[]" in meta_spec)
+ apply(drule meta_mp)
+  apply(subgoal_tac "seq_block ((a, b) # xs)")
+	 apply(simp add: seq_block_tl)
+  apply(simp add: seq_block_tl')
+ apply(simp split: reg_inst_splits; erule disjE; simp)
+  apply(erule disjE; simp)
+  apply(case_tac ys; simp add: block_pt_def seq_block_sumC)
+ apply(erule disjE; simp)
+ apply(case_tac ys; simp add: block_pt_def seq_block_sumC)
+done
 
-lemma
-"blocks_list blocks n = Some (bi, ti) \<Longrightarrow>
- bi = (n, i) # bbi \<Longrightarrow>
- wf_blocks blocks \<Longrightarrow>
- program_content (program_from_blocks blocks) n = Some i"
- apply(simp add: program_from_blocks_def blocks_content_def)
- apply(induction "blocks_indexes blocks")
-  apply(simp add: wf_blocks_def)
+lemma jump_i_in_blocks_insts:
+"wf_blocks blocks \<Longrightarrow>
+blocks = build_blocks bytecode \<Longrightarrow>
+ (t=Jump \<and> i=JUMP) \<or> (t=Jumpi \<and> i=JUMPI) \<Longrightarrow>
+blocks_list blocks n = Some (xs, t) \<Longrightarrow>
+(n+inst_size_list xs, Pc i) \<in> blocks_insts blocks"
+apply(simp add: blocks_insts_def)
+apply(simp add: rev_rebuild_with_add)
+apply(simp add: build_blocks_def Let_def)
+apply(simp add: build_vertices_def)
+apply(rule jump_i_ends_block[where ys="[]" and i=i and t=t])
+  apply(simp add: seq_block_add_address add_address_def)
  apply(simp)
-oops
+apply(rule map_of_SomeD, assumption)
+done
+
 
 (* JUMP case *)
 lemma extract_info_jump:
 "blocks_list blocks dest = Some (bi, ti) \<Longrightarrow>
  wf_blocks blocks \<Longrightarrow>
  blocks_list blocks n = Some (insts, Jump) \<Longrightarrow>
-uint (word_of_int dest::w256) = dest \<and>
-program_content (program_from_blocks blocks) (n + inst_size_list insts) = Some (Pc JUMP)"
- apply(rule conjI)
-  apply(subst (asm) wf_blocks_def)
-  apply(drule spec2[where x="dest" and y="bi"])
-  apply(drule spec[where x="ti"])
-  apply(drule conjunct1)
-  apply(drule mp, assumption)
-  apply(erule conjE)+
-  apply(simp add: uint_word_reverse)
- apply(subst (asm) wf_blocks_def)
- apply(drule spec2[where x=n and y=insts])
- apply(drule spec[where x=Jump])
- apply(drule conjunct2, drule conjunct2)
- apply(drule conjunct1)
- apply(simp)
+uint (word_of_int dest::w256) = dest"
+apply(subst (asm) wf_blocks_def)
+apply(simp add: uint_word_reverse)
 done
 
-lemma program_content_some:
+lemma program_content_some_fst:
 notes code_elm_means[simp del]
 shows
 "wf_blocks blocks \<Longrightarrow>
@@ -977,7 +982,7 @@ shows
        \<subseteq> instruction_result_as_set co_ctx
            (InstructionContinue x1) \<Longrightarrow>
  cctx_program co_ctx  = program_from_blocks blocks \<Longrightarrow>
- program_content (program_from_blocks blocks) dest = Some i"
+ program_content (cctx_program co_ctx) dest = Some i"
 apply(drule block_in_insts, assumption)
 apply(clarsimp)
  apply(subgoal_tac "CodeElm (dest,i) \<in> instruction_result_as_set co_ctx (InstructionContinue x1)")
@@ -986,11 +991,13 @@ apply(clarsimp)
 done
 
 lemma jump_sem:
+notes code_elm_means[simp del]
+shows
 "blocks_list blocks dest = Some (bi, ti) \<Longrightarrow>
  bi = (dest, Pc JUMPDEST) # bbi \<Longrightarrow>
  no_assertion co_ctx \<Longrightarrow>
- cctx_program co_ctx = program_from_blocks blocks \<Longrightarrow>
  wf_blocks blocks \<Longrightarrow>
+ blocks = build_blocks bytecode \<Longrightarrow>
  blocks_list blocks n = Some (insts, Jump) \<Longrightarrow>
        (code (blocks_insts blocks) \<and>*
         (continuing \<and>*
@@ -1019,10 +1026,16 @@ lemma jump_sem:
  apply(case_tac presult)
    apply(simp add: program_sem.simps instruction_simps)
    apply(clarsimp)
+   apply(insert jump_i_in_blocks_insts[where blocks=blocks and t=Jump and i=JUMP and n=n and xs=insts and bytecode=bytecode], simp)
+   apply(insert code_elm_means[where xy="(n+ inst_size_list insts,Pc JUMP)" and c=co_ctx])
+   apply(drule_tac x=x1 in meta_spec)
+   apply(drule iffD1)
+    apply(auto)[1]
+   apply(simp)
    apply(simp add: instruction_simps jump_def)
    apply (sep_simp simp: code_sep continuing_sep memory_usage_sep pure_sep gas_pred_sep stack_sep stack_height_sep program_counter_sep)+
    apply(clarsimp split: option.splits)
-	 apply(clarsimp simp add: instruction_simps program_content_some)
+	 apply(clarsimp simp add: instruction_simps program_content_some_fst)
 	 apply(rule conjI)
     apply(erule_tac P="restb \<and>* rest" in back_subst)
     apply(auto simp add: as_set_simps)[1]
@@ -1032,9 +1045,10 @@ lemma jump_sem:
 done
 
 lemma blocks_jump_sem_t:
-"\<And>blocks dest bi ti bbi pre insts p g m h rest post n.
+"\<And>dest bi ti bbi pre insts p g m h rest post n.
        blocks_list blocks dest = Some (bi, ti) \<Longrightarrow>
        bi = (dest, Pc JUMPDEST) # bbi \<Longrightarrow>
+       blocks = build_blocks bytecode \<Longrightarrow>
        triple_seq pre insts
         (program_counter (n + inst_size_list insts) \<and>*
          gas_pred g \<and>*
@@ -1076,7 +1090,7 @@ lemma blocks_jump_sem_t:
    apply(clarsimp)
    apply(drule_tac P=pre in sep_conj_imp, assumption)
    apply(drule_tac bi="(dest, Pc JUMPDEST) # bbi" and ti=ti and g=g and h=h and presult=presult and
-         m=m and restb=rest and rest=resta
+         m=m and restb=rest and rest=resta and bytecode=bytecode
          in jump_sem; simp)
    apply(simp)
   apply(simp add: program_sem_t_alt_exec_continue)
@@ -1087,27 +1101,30 @@ lemma blocks_jump_sem_t:
         apply(assumption)
 			 apply(simp add: inst_res_as_set_uniq_stateelm)
 		  apply(simp add: wf_blocks_def)
-     apply(simp add: wf_blocks_def)
+     apply(simp add: wf_blocks_def; erule conjE; erule conjE)
      apply(drule_tac x=n and y=insts in spec2; drule conjunct1)
 	   apply(drule_tac x=Jump in spec; simp)
     apply(fastforce)
    apply(simp add: wf_blocks_def)
-  apply(simp add: wf_blocks_def)
+  apply(simp add: wf_blocks_def; drule conjunct1)
 	apply(simp add: reg_vertex_def)
 	apply(drule_tac x=n and y=insts in spec2; drule conjunct1)
 	apply(drule_tac x=Jump in spec; simp)
  apply(thin_tac "_ = _ # _")
  apply(drule triple_seq_soundness)
  apply(simp only: triple_seq_sem_def)
- apply(rename_tac blocks dest bi ti bbi pre insts p g m h restb post n
+ apply(rename_tac dest ti bbi pre insts g m h restb post n
        co_ctx presult rest net stopper a list)
  apply(drule_tac x = "co_ctx" in spec)
- apply(drule_tac x = "presult" and y = "code (blocks_insts blocks - set insts) \<and>* rest" in spec2)
- apply(clarsimp)
- apply(simp add: sep_code_code_sep )
+ apply(drule_tac x = "presult" and y = "code (blocks_insts blocks - set (a # list)) \<and>* rest" in spec2)
+ (* apply(clarsimp) *)
  apply(drule_tac x = "stopper" and y= net in spec2)
+ apply(cut_tac p=pre and n=n and insts="a#list" and ty=Jump and r=rest and s="instruction_result_as_set co_ctx presult"
+        in sep_code_code_sep[where blocks=blocks]; simp)
+
  apply (erule impE)
   prefer 2
+  apply(simp)
   apply (erule_tac P="post \<and>* code (blocks_insts blocks) \<and>* rest" in back_subst)
   apply(subst program_sem_t_alt_exec_continue; simp )
   apply(simp add: code_code_sep)
@@ -1266,8 +1283,8 @@ lemma jumpi_sem_non_zero:
   apply(simp add: instruction_sem_simps split: option.splits)
 	apply(rule conjI)
 	 apply(clarsimp simp add: instruction_simps)
-	 apply(simp add: continuing_sep program_content_some)
-	apply(clarsimp simp add: instruction_simps program_content_some)
+	 apply(simp add: continuing_sep program_content_some_fst)
+	apply(clarsimp simp add: instruction_simps program_content_some_fst)
   apply(rule conjI)
    apply (erule_tac P="(continuing \<and>* restb \<and>* rest)" in back_subst)
    apply(subst diff_set_commute[where c="StackHeightElm _"])+
@@ -1623,6 +1640,26 @@ lemma triple_blocks_soundness_t :
   apply(simp add: blocks_jumpi_sem_t)
  apply(simp add: triple_blocks_sem_t_def)
 done
+
+definition triple_sem_t :: "pred \<Rightarrow> pos_inst set \<Rightarrow> pred \<Rightarrow> bool" where
+"triple_sem_t  pre insts post ==
+    \<forall> co_ctx presult rest net (stopper::instruction_result \<Rightarrow> unit).
+				no_assertion co_ctx \<longrightarrow>
+       (pre ** code insts ** rest) (instruction_result_as_set co_ctx presult) \<longrightarrow>
+       ((post ** code insts ** rest) (instruction_result_as_set co_ctx
+            (program_sem_t_alt co_ctx net presult))) "
+
+definition first_block :: "basic_blocks \<Rightarrow> vertex" where
+"first_block blocks = (0, the (blocks_list blocks 0))"
+
+definition triple :: "pred \<Rightarrow> basic_blocks \<Rightarrow> pred \<Rightarrow> bool" where
+"triple pre blocks post = triple_blocks blocks pre (first_block blocks) post"
+
+theorem triple_soundness:      
+"triple pre (build_blocks bytecode) post \<Longrightarrow>
+triple_sem_t pre (set (add_address bytecode)) post"
+ apply(simp add: triple_def)
+oops
 
 end
 
