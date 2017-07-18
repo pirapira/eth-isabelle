@@ -21,6 +21,12 @@ lemma pure_false_simps:
 "(R \<and>* \<langle> False \<rangle>) = \<langle> False \<rangle>"
 by (rule ext, simp add: pure_def sep_conj_def emp_def )+
 
+context
+notes if_split[ split del ] sep_fun_simps[simp del]
+gas_value_simps[simp add] pure_emp_simps[simp add]
+evm_fun_simps[simp add]
+begin
+
 (* Example with a Jumpi and a No block *)
 
 definition c where
@@ -28,16 +34,9 @@ definition c where
 
 schematic_goal c_val:
  " c = ?p"
- by(simp add: c_def  word_rcat_simps Let_def evm_fun_simps dropWhile.simps  blocks_simps next_i_def
+ by(simp add: c_def  word_rcat_simps Let_def dropWhile.simps  blocks_simps next_i_def
   split:if_splits nat.splits option.splits )
 
-context
-notes if_split[ split del ] sep_fun_simps[simp del]
-gas_value_simps[simp add] pure_emp_simps[simp add]
-evm_fun_simps[simp add]
-begin
-
-(* Should not apply any auto. Otherwise, auto simplify with "cond=0" even when it is wrong *)
 (* For a jumpif that can be solved statically, it works *)
 lemma
  "\<exists>rest. triple_blocks c
