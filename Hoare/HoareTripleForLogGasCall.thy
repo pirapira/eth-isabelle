@@ -281,14 +281,12 @@ apply clarify
 apply(clarsimp simp add: log_inst_numbers.simps sep_memory_range sep_memory_range_sep log_def
         instruction_result_as_set_def vctx_stack_default_def set_diff_eq set_diff_expand
 memory_range_sep insert_minus_set)
-  apply clarify
-  apply (simp add: set_diff_expand)
-      apply (auto simp: move_neq_first create_log_entry_def vctx_returned_bytes_def
+      apply (auto simp: move_neq_first create_log_entry_def vctx_returned_bytes_def 
               elim!: set_mp dest!: memory_range_elms_conjD memory_range_elms_disjD)
-
-apply (auto simp: set_diff_expand)
+ apply (auto simp add: as_set_simps)[1]
+   defer
+    apply (auto split: if_split_asm simp: log_inst_numbers.simps)[1]
 (* apply(rule_tac x = " vctx_gas x1 - meter_gas (Log LOG4) x1 co_ctx" in exI) *)
-apply (simp add: create_log_entry_def vctx_returned_bytes_def)
 apply (erule_tac P=rest in back_subst)
 apply(rule Set.equalityI)
  apply clarify
@@ -300,8 +298,7 @@ apply clarify
    apply (case_tac "a = Suc (Suc (Suc (Suc (Suc (length te)))))"; clarsimp)
    apply (auto simp: set_diff_eq)
   apply(rename_tac elm; case_tac elm; simp)
-apply(case_tac "length (vctx_logs x1) \<le> fst x5"; auto)
-apply (simp add: create_log_entry_def vctx_returned_bytes_def)
+  apply(case_tac "length (vctx_logs x1) \<le> fst x5"; auto)
   done
     
 lemma call_gas_triple:
@@ -339,22 +336,24 @@ lemma call_gas_triple:
              , callarg_output_size = out_size \<rparr>))"
   apply(simp only: triple_triple_alt)
 
-apply(auto simp add: triple_alt_def set_diff_expand)
+  apply(auto simp add: triple_alt_def set_diff_expand set_diff_eq memory_range_sep[rule_format])
 apply(rule_tac x = 1 in exI)
   apply(case_tac presult; simp)
 apply(clarify)
 apply(simp add: call_def)
-(* here *)
-apply(rule_tac x = "vctx_gas x1 - meter_gas (Misc CALL) x1 co_ctx net" in exI)
 apply(simp add: instruction_result_as_set_def)
 apply(simp add: sep_memory_range_sep sep_memory_range memory_range_sep failed_for_reasons_def)
-apply(simp add: vctx_stack_default_def)
+    apply(simp add: vctx_stack_default_def)
+        apply (rule conjI, (auto simp: move_neq_first 
+                        elim!: set_mp dest!: memory_range_elms_conjD memory_range_elms_disjD)[1])+
+      
+      
 apply(erule_tac P=rest in back_subst)
 apply(rule Set.equalityI)
  apply(clarify)
  apply simp
  apply(rename_tac elm; case_tac elm; simp)
-  apply(case_tac "length tf \<le> fst x2"; simp)
+  apply(case_tac "length tf \<le> fst x2"; clarsimp)
  apply(clarsimp)
  apply(subgoal_tac "a = cctx_this co_ctx")
   apply(simp)
@@ -362,8 +361,9 @@ apply(rule Set.equalityI)
   apply(simp)
  apply(simp)
 apply(clarsimp)
-apply(rename_tac elm; case_tac elm; simp)
-apply(auto)
+    apply(rename_tac elm; case_tac elm; clarsimp)
+    apply (case_tac "vctx_balance x1 a = update_balance (cctx_this co_ctx) (\<lambda>orig. orig - v) (vctx_balance x1) a"; clarsimp)
+   apply (auto simp: move_neq_first elim!: set_mp dest!: memory_range_elms_conjD memory_range_elms_disjD)
 done
 
 end
@@ -384,8 +384,10 @@ lemma gas_gas_triple :
           (stack_height (h + 1) ** stack h (word_of_int (g - 2))
            ** program_counter (k + 1) ** gas_pred (g - 2) ** continuing )"
 apply(auto simp add: triple_def)
-apply(rule_tac x = 1 in exI)
-apply(case_tac presult; auto simp add: instruction_result_as_set_def)
+  apply(rule_tac x = 1 in exI)
+   
+  apply(case_tac presult; simp add:set_diff_expand set_diff_eq memory_range_sep[rule_format])
+   apply (sep_simp simp: evm_sep ; clarsimp)+
  apply(simp add: Word.wi_hom_syms(2))
 apply(rule leibniz)
  apply blast
