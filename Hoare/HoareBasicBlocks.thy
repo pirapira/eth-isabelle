@@ -16,7 +16,7 @@
 
 theory "HoareBasicBlocks"
 
-imports "HoareTripleForInstructions"
+imports "HoareTripleForInstructions3"
 "../attic/BasicBlocks"
 "../EvmFacts"
 
@@ -25,41 +25,6 @@ type_synonym pred = "(state_element set \<Rightarrow> bool)"
 
 (* We define here the program logic for BLOCKSs *)
 (* We start with Hoare triples valid for the execution of one instruction *)
-
-(* We have add more instructions here *)
-inductive triple_inst :: "pred \<Rightarrow> pos_inst \<Rightarrow> pred \<Rightarrow> bool" where
-  inst_push_n :
-    "triple_inst
-      (\<langle> h \<le> 1023 \<and> length lst > 0 \<and> 32 \<ge> length lst \<and> Gverylow \<le> g \<and> m \<ge> 0\<rangle> \<and>*
-       continuing \<and>* program_counter n \<and>*
-       memory_usage m \<and>* stack_height h \<and>*
-       gas_pred g \<and>* rest)
-      (n, Stack (PUSH_N lst))
-      (continuing \<and>* memory_usage m \<and>*
-       program_counter (n + 1 + int (length lst)) \<and>*
-       stack_height (Suc h) \<and>* gas_pred (g - Gverylow) \<and>*
-       stack h (word_rcat lst) \<and>* rest)"
-| inst_stop :
-    "triple_inst
-      (\<langle> h \<le> 1024 \<and> 0 \<le> g \<and> m \<ge> 0\<rangle> \<and>* continuing \<and>* memory_usage m \<and>*
-       program_counter n \<and>* stack_height h \<and>* gas_pred g \<and>* rest)
-      (n, Misc STOP)
-      (stack_height h \<and>* not_continuing \<and>* memory_usage m \<and>*
-       program_counter n \<and>* action (ContractReturn []) \<and>*
-       gas_pred g \<and>* rest)"
-| inst_jumpdest :
-    "triple_inst
-      (\<langle> h \<le> 1024 \<and> Gjumpdest \<le> g \<and> m \<ge> 0\<rangle> \<and>*
-       continuing \<and>* memory_usage m \<and>* program_counter n \<and>*
-       stack_height h \<and>* gas_pred g \<and>* rest)
-      (n, Pc JUMPDEST)
-      (continuing \<and>* program_counter (n + 1) \<and>*
-       memory_usage m \<and>* stack_height h \<and>*
-       gas_pred (g - Gjumpdest) \<and>* rest)"
-| inst_strengthen_pre:
-    "triple_inst p i q \<Longrightarrow> (\<And>s. r s \<longrightarrow> p s) \<Longrightarrow> triple_inst r i q"
-| inst_false_pre:
-    "triple_inst \<langle>False\<rangle> i post"
 
 inductive triple_seq :: "pred \<Rightarrow> pos_inst list \<Rightarrow> pred \<Rightarrow> bool" where
   seq_inst :
@@ -259,17 +224,22 @@ lemma inst_stop_sem:
                None \<Rightarrow> Some (Misc STOP) | Some i \<Rightarrow> Some i) =
               Some (Misc STOP)")
   apply(clarsimp)
+  apply(sep_simp simp: program_counter_sep stack_height_sep pure_sep memory_usage_sep; simp)
   apply(rule conjI; rule impI; rule conjI; clarsimp;
-  simp add: instruction_sem_simps stop_def gas_value_simps inst_numbers_simps)
-  apply(simp add: sep_not_continuing_sep sep_action_sep del:sep_program_counter_sep)
-  apply(sep_select 2; simp only:sep_fun_simps;simp)
+  simp add: instruction_simps stop_def)
+   apply(simp add: sep_fun_simps)
+   apply(erule conjE)+
+   apply(erule_tac P="(resta \<and>* rest)" in back_subst)
+   apply(auto simp add: as_set_simps)[1]
+   apply(simp add: sep_fun_simps)
+ apply(sep_simp simp: code_sep)
  apply(simp split: option.splits)
  apply(rule allI; rule impI; simp)
 done
 
 lemma inst_push_sem:
 "triple_inst_sem
-  (\<langle> h \<le> 1023 \<and> length lst > 0 \<and> 32 \<ge> length lst \<and> Gverylow \<le> g \<and> m \<ge> 0\<rangle> \<and>*
+  (\<langle> h \<le> 1023 \<and> lst \<noteq> [] \<and> 32 \<ge> length lst \<and> Gverylow \<le> g \<and> m \<ge> 0\<rangle> \<and>*
    continuing \<and>* program_counter n \<and>*
    memory_usage m \<and>* stack_height h \<and>*
    gas_pred g \<and>* rest)
@@ -321,11 +291,14 @@ notes
 shows
   "triple_inst p i q \<Longrightarrow> triple_inst_sem p i q"
   apply(induction rule:triple_inst.induct)
-      apply(simp only: inst_push_sem)
+     apply(erule triple_inst_misc.cases; clarsimp)
      apply(simp only: inst_stop_sem)
+    apply(erule triple_inst_pc.cases; clarsimp)
     apply(simp only: inst_jumpdest_sem)
-   apply(simp add: inst_strengthen_pre_sem)
-  apply(simp add: inst_false_pre_sem)
+   apply(erule triple_inst_stack.cases; clarsimp)
+   apply(simp only: inst_push_sem)
+  apply(simp add: inst_strengthen_pre_sem)
+ apply(simp add: inst_false_pre_sem)
 done
 
 (* Define the semantic of triple_seq and prove it sound *)
@@ -745,6 +718,23 @@ lemma pc_after_inst:
 \<exists>q. post = (program_counter (n + inst_size i) ** q) \<and>
     (\<exists>s0. (program_counter (n + inst_size i) ** q) s0 \<and> uniq_stateelm s0)"
  apply(induct rule: triple_inst.induct; clarsimp)
+     apply(erule triple_inst_misc.cases; clarsimp)
+    apply(erule triple_inst_pc.cases; clarsimp)
+    apply(sep_simp simp: program_counter_sep continuing_sep code_sep stack_height_sep gas_pred_sep pure_sep memory_usage_sep; simp)
+    apply(rule_tac x="continuing \<and>*
+              memory_usage m \<and>*
+              stack_height h \<and>*
+              gas_pred (g - Gjumpdest) \<and>* rest" in exI)
+    apply(rule conjI)
+     apply(simp add: inst_size_simps)
+    apply(rule_tac x="(s - {GasElm g} - {PcElm n}) \<union> {GasElm (g - Gjumpdest)} \<union>
+          {PcElm (n + inst_size (Pc JUMPDEST))}" in exI)
+    apply(clarsimp simp add: gas_value_simps sep_fun_simps)
+    apply(rule conjI)
+     apply(erule_tac P=rest in back_subst)
+     apply(auto simp add: uniq_stateelm_def)[1]
+    apply (auto simp add: uniq_stateelm_def)[1]
+   apply(erule triple_inst_stack.cases; clarsimp)
    apply(rule_tac x="(continuing \<and>*
             memory_usage m \<and>*
             stack_height (Suc h) \<and>*
@@ -765,24 +755,11 @@ lemma pc_after_inst:
    apply(rule_tac x="(s - {GasElm g} - {PcElm n} -
          {StackHeightElm h}) \<union> {GasElm (g - Gverylow)} \<union> {StackElm (h, word_rcat lst)} \<union>
 { StackHeightElm (Suc h)} \<union> {PcElm (n + inst_size (Stack (PUSH_N lst)))}" in exI)
-   apply(clarsimp simp add: gas_value_simps)
+   apply(clarsimp simp add: gas_value_simps sep_fun_simps)
    apply(rule conjI)
     apply(erule_tac P=rest in back_subst)
     apply(auto simp add: uniq_stateelm_def)[1]
    apply (auto simp add: uniq_stateelm_def)[1]
-  apply(rule_tac x="continuing \<and>*
-            memory_usage m \<and>*
-            stack_height h \<and>*
-            gas_pred (g - Gjumpdest) \<and>* rest" in exI)
-  apply(rule conjI)
-   apply(simp add: inst_size_simps)
-  apply(rule_tac x="(s - {GasElm g} - {PcElm n}) \<union> {GasElm (g - Gjumpdest)} \<union>
-				{PcElm (n + inst_size (Pc JUMPDEST))}" in exI)
-  apply(clarsimp simp add: gas_value_simps)
-  apply(rule conjI)
-   apply(erule_tac P=rest in back_subst)
-   apply(auto simp add: uniq_stateelm_def)[1]
-  apply (auto simp add: uniq_stateelm_def)[1]
  apply(drule meta_mp)
  apply(rule_tac x=s in exI; rule conjI; simp)
  apply(assumption)
@@ -1365,6 +1342,9 @@ x = (n, i) \<Longrightarrow>
 pre s \<and> uniq_stateelm s \<Longrightarrow>
 PcElm n \<in> s"
  apply(induct rule: triple_inst.induct; clarsimp)
+    apply(erule triple_inst_misc.cases; clarsimp; sep_simp simp: pure_sep sep_fun_simps; simp)
+   apply(erule triple_inst_pc.cases; clarsimp; sep_simp simp: pure_sep sep_fun_simps; simp)
+  apply(erule triple_inst_stack.cases; clarsimp; sep_simp simp: pure_sep sep_fun_simps; simp)
  apply(simp add: pure_def)
 done
 
