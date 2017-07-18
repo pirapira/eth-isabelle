@@ -27,6 +27,21 @@ type_synonym pred = "(state_element set \<Rightarrow> bool)"
 (* We start with Hoare triples valid for the execution of one instruction *)
 
 (* We have to add more instructions here *)
+definition iszero_stack :: "w256 \<Rightarrow> w256" where
+"iszero_stack w = (if w = 0 then (word_of_int 1) else (word_of_int 0))"
+
+inductive triple_inst_arith :: "pred \<Rightarrow> pos_inst \<Rightarrow> pred \<Rightarrow> bool" where
+  inst_iszero :
+    "triple_inst_arith 
+      (\<langle> h \<le> 1023 \<and> Gverylow \<le> g \<and> m \<ge> 0\<rangle> **
+       continuing \<and>* memory_usage m \<and>* program_counter n \<and>*
+       stack_height (Suc h) \<and>* stack h w \<and>* gas_pred g \<and>* rest)
+      (n, Arith ISZERO)
+      (continuing \<and>* program_counter (n + 1) \<and>*
+       memory_usage m \<and>* stack_height (Suc h) \<and>*
+       stack h (iszero_stack w) \<and>*
+       gas_pred (g - Gverylow) \<and>* rest)"
+
 inductive triple_inst_pc :: "pred \<Rightarrow> pos_inst \<Rightarrow> pred \<Rightarrow> bool" where
   inst_jumpdest :
     "triple_inst_pc
@@ -37,6 +52,16 @@ inductive triple_inst_pc :: "pred \<Rightarrow> pos_inst \<Rightarrow> pred \<Ri
       (continuing \<and>* program_counter (n + 1) \<and>*
        memory_usage m \<and>* stack_height h \<and>*
        gas_pred (g - Gjumpdest) \<and>* rest)"
+| inst_pc :
+    "triple_inst_pc
+      (\<langle> h \<le> 1023 \<and> Gbase \<le> g \<and> m \<ge> 0\<rangle> **
+       continuing \<and>* memory_usage m \<and>* program_counter n \<and>*
+       stack_height h \<and>* gas_pred g \<and>* rest)
+      (n, Pc PC)
+      (continuing \<and>* program_counter (n + 1) \<and>*
+       memory_usage m \<and>* stack_height (Suc h) \<and>*
+       stack h (word_of_int n) \<and>*
+       gas_pred (g - Gbase) \<and>* rest)"
 
 inductive triple_inst_stack :: "pred \<Rightarrow> pos_inst \<Rightarrow> pred \<Rightarrow> bool" where
   inst_push_n :
@@ -61,9 +86,10 @@ inductive triple_inst_misc :: "pred \<Rightarrow> pos_inst \<Rightarrow> pred \<
        program_counter n \<and>* action (ContractReturn []) \<and>*
        gas_pred g \<and>* rest)"
 
-
 inductive triple_inst :: "pred \<Rightarrow> pos_inst \<Rightarrow> pred \<Rightarrow> bool" where
-  inst_misc :
+  inst_arith :
+    "triple_inst_arith p (n, Arith i) q \<Longrightarrow> triple_inst p (n, Arith i) q"
+| inst_misc :
     "triple_inst_misc p (n, Misc i) q \<Longrightarrow> triple_inst p (n, Misc i) q"
 | inst_pc :
     "triple_inst_pc p (n, Pc i) q \<Longrightarrow> triple_inst p (n, Pc i) q"

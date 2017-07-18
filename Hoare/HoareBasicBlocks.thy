@@ -284,17 +284,70 @@ lemma inst_jumpdest_sem:
  apply(auto simp add: as_set_simps)
 done
 
+lemma inst_pc_sem:
+"triple_inst_sem
+  (\<langle> h \<le> 1023 \<and> Gbase \<le> g \<and> 0 \<le> m \<rangle> \<and>*
+   continuing \<and>* memory_usage m \<and>*
+   program_counter na \<and>* stack_height h \<and>* gas_pred g \<and>* rest)
+  (na, Pc PC)
+  (continuing \<and>* program_counter (na + 1) \<and>*
+   memory_usage m \<and>* stack_height (Suc h) \<and>*
+   stack h (word_of_int na) \<and>* gas_pred (g - Gbase) \<and>* rest)"
+ apply(simp add: triple_inst_sem_def program_sem.simps as_set_simps sep_conj_ac)
+ apply(clarify)
+ apply(sep_simp simp: program_counter_sep continuing_sep code_sep stack_height_sep gas_pred_sep pure_sep memory_usage_sep; simp)
+ apply(simp split: instruction_result.splits)
+ apply(simp add: vctx_next_instruction_def)
+ apply(simp add: sep_conj_commute[where P="rest"] sep_conj_assoc)
+ apply(simp add: instruction_simps pc_def)
+ apply(clarify)
+ apply(rename_tac rest0 vctx)
+ apply(simp add: sep_fun_simps)
+ apply (erule_tac P="(rest0 \<and>* rest)" in back_subst)
+ apply(auto simp add: as_set_simps)
+done
+
+lemma inst_iszero_sem:
+notes
+  if_split[split del]
+shows
+    "triple_inst_sem 
+      (\<langle> h \<le> 1023 \<and> Gverylow \<le> g \<and> m \<ge> 0\<rangle> **
+       continuing \<and>* memory_usage m \<and>* program_counter n \<and>*
+       stack_height (Suc h) \<and>* stack h w \<and>* gas_pred g \<and>* rest)
+      (n, Arith ISZERO)
+      (continuing \<and>* program_counter (n + 1) \<and>*
+       memory_usage m \<and>* stack_height (Suc h) \<and>*
+       stack h (iszero_stack w) \<and>*
+       gas_pred (g - Gverylow) \<and>* rest)"
+ apply(simp add: triple_inst_sem_def program_sem.simps as_set_simps sep_conj_ac)
+ apply(clarify)
+ apply(sep_simp simp: program_counter_sep continuing_sep stack_sep code_sep stack_height_sep gas_pred_sep pure_sep memory_usage_sep; simp)
+ apply(simp split: instruction_result.splits)
+ apply(simp add: vctx_next_instruction_def)
+ apply(simp add: sep_conj_commute[where P="rest"] sep_conj_assoc)
+ apply(clarsimp simp add: instruction_simps pc_def)
+ apply(rename_tac rest0 vctx t)
+ apply(simp add: sep_fun_simps iszero_stack_def)
+ apply (erule_tac P="(rest0 \<and>* rest)" in back_subst)
+ apply(auto simp add: as_set_simps)
+done
+
 lemma triple_inst_soundness:
 notes
   sep_lc[simp del]
   pure_sep[simp del]
+  if_split[split del]
 shows
   "triple_inst p i q \<Longrightarrow> triple_inst_sem p i q"
   apply(induction rule:triple_inst.induct)
+      apply(erule triple_inst_arith.cases; clarsimp)
+      apply(simp only: inst_iszero_sem)
      apply(erule triple_inst_misc.cases; clarsimp)
      apply(simp only: inst_stop_sem)
     apply(erule triple_inst_pc.cases; clarsimp)
-    apply(simp only: inst_jumpdest_sem)
+     apply(simp only: inst_jumpdest_sem)
+    apply(simp only: inst_pc_sem)
    apply(erule triple_inst_stack.cases; clarsimp)
    apply(simp only: inst_push_sem)
   apply(simp add: inst_strengthen_pre_sem)
@@ -490,7 +543,7 @@ definition triple_blocks_sem_t :: "basic_blocks \<Rightarrow> pred \<Rightarrow>
         blocks_list c (v_ind v) = Some (snd v) \<longrightarrow>
        (pre ** code (blocks_insts c) ** rest) (instruction_result_as_set co_ctx presult) \<longrightarrow>
        ((post ** code (blocks_insts c) ** rest) (instruction_result_as_set co_ctx
-            (program_sem_t_alt co_ctx net presult)))"
+            (program_sem_t_alt co_ctx net presult))) "
 
 (* Lemmas to group code elements *)
 lemma block_in_insts_:
@@ -636,6 +689,7 @@ where
 (\<forall>v. PcElm v \<in> s \<longrightarrow> (\<forall>x. PcElm x \<in> s \<longrightarrow> x = v)) \<and>
 (\<forall>v. GasElm v \<in> s \<longrightarrow> (\<forall>x. GasElm x \<in> s \<longrightarrow> x = v)) \<and>
 (\<forall>v. StackHeightElm v \<in> s \<longrightarrow> (\<forall>v'. StackHeightElm v' \<in> s \<longrightarrow> v' = v)) \<and>
+(\<forall>h v. StackElm (h, v) \<in> s \<longrightarrow> (\<forall>v'. StackElm (h, v') \<in> s \<longrightarrow> v' = v)) \<and>
 (\<forall>v. StackHeightElm v \<in> s \<longrightarrow> (\<forall>h u. h \<ge> v \<longrightarrow> StackElm (h,u) \<notin> s))"
 
 lemma uniq_gaselm:
@@ -668,6 +722,16 @@ lemma uniq_stackheightelm_plus[rule_format]:
 (\<forall>v. StackHeightElm v \<in> x \<longrightarrow> (\<forall>v'. StackHeightElm v' \<in> x \<longrightarrow> v' = v))"
 by (drule sym, drule uniq_stackheightelm, simp add: plus_set_def)
 
+lemma uniq_stackelm:
+"x = instruction_result_as_set co_ctx presult \<Longrightarrow>
+(\<forall>h v. StackElm (h, v) \<in> x \<longrightarrow> (\<forall>v'. StackElm (h, v') \<in> x \<longrightarrow> v' = v))"
+by (simp add:instruction_result_as_set_def split:instruction_result.splits)
+
+lemma uniq_stackelm_plus[rule_format]:
+"instruction_result_as_set co_ctx presult = x + y \<Longrightarrow>
+(\<forall>h v. StackElm (h, v) \<in> x \<longrightarrow> (\<forall>v'. StackElm (h, v') \<in> x \<longrightarrow> v' = v))"
+by (drule sym, drule uniq_stackelm, simp add: plus_set_def)
+
 lemma stack_max_elm:
 "s = instruction_result_as_set co_ctx presult \<Longrightarrow>
 (\<forall>v. StackHeightElm v \<in> s \<longrightarrow> (\<forall>h u. h \<ge> v \<longrightarrow> StackElm (h,u) \<notin> s))"
@@ -681,7 +745,7 @@ by (drule sym, drule stack_max_elm, simp add: plus_set_def)
 lemmas uniq_stateelm_simps=
 uniq_stateelm_def
 uniq_gaselm_plus uniq_pcelm_plus uniq_stackheightelm_plus
-stack_max_elm_plus
+stack_max_elm_plus uniq_stackelm_plus
 
 lemma inst_res_as_set_uniq_stateelm:
 "(pre \<and>* code (blocks_insts blocks) \<and>* resta)
@@ -713,22 +777,56 @@ apply(fastforce)
 done
 
 lemma pc_after_inst:
+notes
+  if_split[split del]
+shows
 "triple_inst pre x post \<Longrightarrow> x = (n, i) \<Longrightarrow> reg_inst i \<Longrightarrow>
 \<exists>s. pre s \<and> uniq_stateelm s \<Longrightarrow>
 \<exists>q. post = (program_counter (n + inst_size i) ** q) \<and>
     (\<exists>s0. (program_counter (n + inst_size i) ** q) s0 \<and> uniq_stateelm s0)"
  apply(induct rule: triple_inst.induct; clarsimp)
+      apply(erule triple_inst_arith.cases; clarsimp)
+      apply(sep_simp simp: program_counter_sep stack_sep continuing_sep code_sep stack_height_sep gas_pred_sep pure_sep memory_usage_sep; simp)
+      apply(rule_tac x="continuing \<and>*
+              memory_usage m \<and>*
+              stack_height (Suc h) \<and>*
+              gas_pred (g - Gverylow) \<and>* stack h (iszero_stack w) \<and>* rest" in exI)
+      apply(rule conjI)
+       apply(simp add: inst_size_simps)
+      apply(rule_tac x="(s - {GasElm g} - {PcElm n} - {StackElm (h, w)}) \<union> 
+          {PcElm (n + inst_size (Arith ISZERO))} \<union>
+          {StackElm (h, iszero_stack w)} \<union> {GasElm (g - Gverylow)} " in exI)
+      apply(clarsimp simp add: gas_value_simps sep_fun_simps)
+      apply(rule conjI)
+       apply(erule_tac P=rest in back_subst)
+       apply(auto simp add: uniq_stateelm_def)[1]
+      apply (auto simp add: uniq_stateelm_def)[1]
      apply(erule triple_inst_misc.cases; clarsimp)
     apply(erule triple_inst_pc.cases; clarsimp)
-    apply(sep_simp simp: program_counter_sep continuing_sep code_sep stack_height_sep gas_pred_sep pure_sep memory_usage_sep; simp)
-    apply(rule_tac x="continuing \<and>*
+     apply(sep_simp simp: program_counter_sep continuing_sep code_sep stack_height_sep gas_pred_sep pure_sep memory_usage_sep; simp)
+     apply(rule_tac x="continuing \<and>*
               memory_usage m \<and>*
               stack_height h \<and>*
               gas_pred (g - Gjumpdest) \<and>* rest" in exI)
+     apply(rule conjI)
+      apply(simp add: inst_size_simps)
+     apply(rule_tac x="(s - {GasElm g} - {PcElm n}) \<union> {GasElm (g - Gjumpdest)} \<union>
+          {PcElm (n + inst_size (Pc JUMPDEST))}" in exI)
+     apply(clarsimp simp add: gas_value_simps sep_fun_simps)
+     apply(rule conjI)
+      apply(erule_tac P=rest in back_subst)
+      apply(auto simp add: uniq_stateelm_def)[1]
+     apply (auto simp add: uniq_stateelm_def)[1]
+    apply(sep_simp simp: program_counter_sep continuing_sep code_sep stack_height_sep gas_pred_sep pure_sep memory_usage_sep; simp)
+    apply(rule_tac x="continuing \<and>*
+              memory_usage m \<and>*
+              stack_height (Suc h) \<and>*
+              gas_pred (g - Gbase) \<and>* stack h (word_of_int n) \<and>* rest" in exI)
     apply(rule conjI)
      apply(simp add: inst_size_simps)
-    apply(rule_tac x="(s - {GasElm g} - {PcElm n}) \<union> {GasElm (g - Gjumpdest)} \<union>
-          {PcElm (n + inst_size (Pc JUMPDEST))}" in exI)
+    apply(rule_tac x="(s - {GasElm g} - {PcElm n} - {StackHeightElm h}) \<union>
+          {StackHeightElm (Suc h)} \<union> {GasElm (g - Gbase)} \<union> {StackElm (h, word_of_int n)} \<union>
+          {PcElm (n + inst_size (Pc PC))}" in exI)
     apply(clarsimp simp add: gas_value_simps sep_fun_simps)
     apply(rule conjI)
      apply(erule_tac P=rest in back_subst)
@@ -1342,6 +1440,7 @@ x = (n, i) \<Longrightarrow>
 pre s \<and> uniq_stateelm s \<Longrightarrow>
 PcElm n \<in> s"
  apply(induct rule: triple_inst.induct; clarsimp)
+     apply(erule triple_inst_arith.cases; clarsimp; sep_simp simp: pure_sep sep_fun_simps; simp)
     apply(erule triple_inst_misc.cases; clarsimp; sep_simp simp: pure_sep sep_fun_simps; simp)
    apply(erule triple_inst_pc.cases; clarsimp; sep_simp simp: pure_sep sep_fun_simps; simp)
   apply(erule triple_inst_stack.cases; clarsimp; sep_simp simp: pure_sep sep_fun_simps; simp)
