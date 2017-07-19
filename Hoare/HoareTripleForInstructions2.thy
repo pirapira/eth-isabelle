@@ -173,11 +173,10 @@ lemma take_drop_nth [simp] :
     
 context
   includes hoare_bundle hoare_inst_bundle
+           simp_for_triples_bundle sep_crunch_bundle
 begin
   
 lemma swap_gas_triple :
-  notes simp_for_triples[simp] sep_crunch[simp]
-shows
    "triple net {OutOfGas} (\<langle> h \<le> 1024 \<and> Suc (unat n) < h \<rangle> **
                        stack_height h **
                        stack (h - 1) w **
@@ -339,7 +338,7 @@ lemma dup_advance [simp] :
        k = vctx_pc x1 \<Longrightarrow>
        vctx_pc (vctx_advance_pc co_ctx x1) = vctx_pc x1 + 1
 "
-apply(simp add: simp_for_triples vctx_advance_pc_def inst_size_def inst_code.simps)
+apply(simp add: vctx_advance_pc_def inst_size_def inst_code.simps)
 done
 
 lemma dup_gas_triple :
@@ -458,9 +457,9 @@ lemma jumpi_false_gas_triple :
 apply(auto simp add: triple_def)
 apply(rule_tac x = 1 in exI)
 apply(simp add: instruction_result_as_set_def)
-apply(case_tac presult; auto simp add: instruction_result_as_set_def vctx_advance_pc_def)
+apply(case_tac presult; simp)
+apply(clarsimp simp add: insert_minus_set vctx_advance_pc_def set_diff_eq)
 apply(erule_tac P=rest in back_subst)
-apply(auto)
 apply(auto simp add: stack_as_set_def)
 done
 
@@ -481,10 +480,9 @@ lemma jumpi_true_gas_triple :
                       )"
 apply(auto simp add: triple_def)
 apply(rule_tac x = 1 in exI)
-apply(simp add: instruction_result_as_set_def)
-apply(case_tac presult; auto simp add: instruction_result_as_set_def)
+apply(case_tac presult; simp )
+apply(auto simp add: set_diff_eq instruction_result_as_set_def)
 apply(erule_tac P=rest in back_subst)
-apply(auto)
 apply(auto simp add: stack_as_set_def)
 done
 
@@ -505,9 +503,9 @@ lemma jump_gas_triple :
                       )"
 apply(auto simp add: triple_def)
 apply(rule_tac x = 1 in exI)
-apply(case_tac presult; auto simp add: instruction_result_as_set_def)
+apply(case_tac presult; simp )
+apply(auto simp add: set_diff_eq instruction_result_as_set_def)
 apply(erule_tac P=rest in back_subst)
-apply(auto)
 apply(auto simp add: stack_as_set_def)
 done
 
@@ -575,18 +573,18 @@ lemma invalid_jumpi_gas_triple :
                        action (ContractFail [InvalidJumpDestination])
                       )"
 apply(auto simp add: triple_def)
-apply(rule_tac x = 1 in exI)
-apply(case_tac presult; auto simp add: instruction_result_as_set_def)
+  apply(rule_tac x = 1 in exI)
+ apply(case_tac presult; simp )
+apply (auto simp add: set_diff_eq instruction_result_as_set_def)
 apply(erule_tac P=rest in back_subst)
- apply(auto)
- apply(auto simp add: stack_as_set_def)
+ apply(auto simp add: stack_as_set_def)[1]
 apply(erule_tac P=rest in back_subst)
 apply(rule Set.equalityI)
  apply(clarify)
  apply(simp)
  apply(rename_tac elm; case_tac elm; simp)
  apply(rename_tac pair; case_tac pair; simp)
- apply(auto)
+ apply(auto simp add: stack_as_set_def)
 done
 
 
@@ -608,7 +606,8 @@ lemma invalid_jump_gas_triple :
                       )"
 apply(auto simp add: triple_def)
 apply(rule_tac x = 1 in exI)
-apply(case_tac presult; auto simp add: instruction_result_as_set_def)
+  apply(case_tac presult; simp)
+ apply (auto simp add: set_diff_eq instruction_result_as_set_def)
 apply(erule_tac P=rest in back_subst)
  apply(auto)
 apply(erule_tac P=rest in back_subst)
@@ -772,13 +771,15 @@ lemma eq_gas_triple :
 apply(auto simp add: triple_def)
  apply(rule_tac x = 1 in exI)
  apply(simp add: instruction_result_as_set_def)
- apply(case_tac presult; auto simp add: failed_for_reasons_def
+  apply(case_tac presult; simp)
+  apply (auto simp add: failed_for_reasons_def set_diff_eq
        instruction_result_as_set_def)
   apply(erule_tac P=rest in back_subst)
   apply(rule Set.equalityI)
   apply(clarsimp)
   apply(rename_tac elm; case_tac elm; simp)
   apply(case_tac "fst x2 < length ta"; simp)
+   apply (case_tac x2; clarsimp)
   apply (metis (no_types, hide_lams) HoareTripleForInstructions.pair_snd_eq One_nat_def diff_diff_left diff_is_0_eq' length_Cons less_SucE less_Suc_eq_le list.size(4) nth_Cons_0 nth_non_equal_first_eq)
  apply(clarsimp)
  apply(rename_tac elm; case_tac elm; simp)
@@ -792,7 +793,8 @@ apply(case_tac presult; auto simp add: failed_for_reasons_def
   apply(rule Set.equalityI)
  apply(clarsimp)
  apply(rename_tac elm; case_tac elm; simp)
- apply(case_tac "fst x2 < length ta"; simp)
+  apply(case_tac "fst x2 < length ta"; simp)
+  apply (case_tac x2; clarsimp)
   apply (metis (no_types, hide_lams) HoareTripleForInstructions.pair_snd_eq One_nat_def diff_diff_left diff_is_0_eq le_neq_implies_less length_Cons less_SucE list.size(4) not_less nth_Cons')
 
 apply(clarsimp)
@@ -847,7 +849,8 @@ lemma add_triple :
 apply(simp add: triple_def)
 apply(clarify)
 apply(rule_tac x = "1" in exI)
-apply(case_tac presult; auto simp add: instruction_result_as_set_def)
+  apply(case_tac presult; simp)
+ apply (auto simp add: instruction_result_as_set_def set_diff_eq)
 apply(erule_tac P=rest in back_subst)
 apply(rule Set.equalityI)
  apply(clarsimp)
@@ -856,12 +859,8 @@ apply(rule Set.equalityI)
  apply(case_tac "fst x2 = length ta"; simp)
  apply(case_tac "fst x2 = Suc (length ta)"; simp)
 apply(clarsimp)
-apply(rename_tac elm; case_tac elm; simp)
- apply(case_tac "fst x2 < length ta"; simp)
-
-apply auto[1]
-  apply (metis cancel_comm_monoid_add_class.diff_cancel fst_conv le_neq_implies_less less_Suc_eq_le nth_Cons_0 old.prod.exhaust snd_conv)
-
+  apply(rename_tac elm; case_tac elm; clarsimp)
+  apply (auto simp: as_set_simps)
 done
 
 
@@ -1086,7 +1085,7 @@ lemma caller_gas_triple :
            ** program_counter (k + 1) ** caller c ** gas_pred (g - Gbase) ** continuing )"
 apply(auto simp add: triple_def)
 apply(rule_tac x = 1 in exI)
-apply(case_tac presult; auto simp add: instruction_result_as_set_def)
+apply(case_tac presult; auto simp add: instruction_result_as_set_def set_diff_eq)
  apply(erule_tac P=rest in back_subst)
   apply(auto)
   apply(rename_tac elm; case_tac elm; auto simp add: stack_as_set_def)

@@ -5,7 +5,8 @@ imports "../Hoare/HoareTripleForInstructions2" "../Hoare/HoareTripleForLogGasCal
 begin
 
 context
- includes sep_crunch simp_for_triples
+  includes hoare_bundle hoare_inst_bundle
+           sep_crunch_bundle simp_for_triples_bundle    
 begin
 
 (*
@@ -53,8 +54,7 @@ lemma push0_triple :
 apply(rule weaken_post)
  apply(rule strengthen_pre)
   apply(rule_tac k = k and h = h and g = g in push_gas_triple)
- apply(simp)
-apply(auto simp add: word_rcat_def bin_rcat_def)
+apply(auto simp add: word_rcat_def bin_rcat_def continuing_def)
 done
 
 lemma add_comm_pc:
@@ -67,7 +67,7 @@ lemma seventh_pure [simp] :
   (P \<and> (rest ** a ** b ** c ** d ** e) s)"
 proof -
   have "(rest ** a ** b ** c ** d ** e ** \<langle> P \<rangle>) s = (\<langle> P \<rangle> ** rest ** a ** b ** c ** d ** e) s"
-    by simp
+    by (simp add: sep_conj_ac)
   moreover have "(\<langle> P \<rangle> ** rest ** a ** b ** c ** d ** e) s = (P \<and> (rest ** a ** b ** c ** d ** e) s)"
     by (simp only: pure_sep)
   ultimately show ?thesis
@@ -79,7 +79,7 @@ lemma eighth_pure [simp] :
   (P \<and> (rest ** a ** b ** c ** d ** e ** f) s)"
 proof -
   have "(rest ** a ** b ** c ** d ** e ** f ** \<langle> P \<rangle>) s = (\<langle> P \<rangle> ** rest ** a ** b ** c ** d ** e ** f) s"
-    by simp
+    by (simp add: sep_conj_ac)
   moreover have "(\<langle> P \<rangle> ** rest ** a ** b ** c ** d ** e ** f) s = (P \<and> (rest ** a ** b ** c ** d ** e ** f) s)"
     by (simp only: pure_sep)
   ultimately show ?thesis
@@ -91,7 +91,7 @@ lemma ninth_pure [simp] :
   (P \<and> (rest ** a ** b ** c ** d ** e ** f ** g) s)"
 proof -
   have "(rest ** a ** b ** c ** d ** e ** f ** g ** \<langle> P \<rangle>) s = (\<langle> P \<rangle> ** rest ** a ** b ** c ** d ** e ** f ** g) s"
-    by simp
+    by (simp add: sep_conj_ac)
   moreover have "(\<langle> P \<rangle> ** rest ** a ** b ** c ** d ** e ** f ** g) s = (P \<and> (rest ** a ** b ** c ** d ** e ** f ** g) s)"
     by (simp only: pure_sep)
   ultimately show ?thesis
@@ -103,7 +103,7 @@ lemma tenth_pure [simp] :
   (P \<and> (rest ** a ** b ** c ** d ** e ** f ** g ** h) s)"
 proof -
   have "(rest ** a ** b ** c ** d ** e ** f ** g ** h ** \<langle> P \<rangle>) s = (\<langle> P \<rangle> ** rest ** a ** b ** c ** d ** e ** f ** g ** h) s"
-    by simp
+    by (simp add: sep_conj_ac)
   moreover have "(\<langle> P \<rangle> ** rest ** a ** b ** c ** d ** e ** f ** g ** h) s = (P \<and> (rest ** a ** b ** c ** d ** e ** f ** g ** h) s)"
     by (simp only: pure_sep)
   ultimately show ?thesis
@@ -114,26 +114,30 @@ qed
 lemma pre_fifth_pure [simp]:
   "triple net failures (a ** b ** c ** d ** \<langle> P \<rangle>) cod post =
    (P \<longrightarrow> triple net failures (a ** b ** c ** d) cod post)"
-apply(auto simp add: triple_def)
+  apply(auto simp add: triple_def)
+    apply (sep_simp simp: pure_sep)+
 done
 
 
 lemma pre_sixth_pure [simp]:
   "triple net failures (a ** b ** c ** d ** e ** \<langle> P \<rangle>) cod post =
    (P \<longrightarrow> triple net failures (a ** b ** c ** d ** e) cod post)"
-apply(auto simp add: triple_def)
+  apply(auto simp add: triple_def)
+    apply (sep_simp simp: pure_sep)+
 done
 
 lemma pre_seventh_pure [simp]:
   "triple net failures (a ** b ** c ** d ** e ** f ** \<langle> P \<rangle>) cod post =
    (P \<longrightarrow> triple net failures (a ** b ** c ** d ** e ** f) cod post)"
-apply(auto simp add: triple_def)
+  apply(auto simp add: triple_def)
+   apply (sep_simp simp: pure_sep)+
 done
 
 lemma pre_eigth_pure [simp]:
   "triple net failures (a ** b ** c ** d ** e ** f ** g ** \<langle> P \<rangle>) cod post =
    (P \<longrightarrow> triple net failures (a ** b ** c ** d ** e ** f ** g) cod post)"
-apply(auto simp add: triple_def)
+  apply(auto simp add: triple_def)
+    apply (sep_simp simp: pure_sep)+
 done
 
 lemma pc_add [simp]:
@@ -168,7 +172,7 @@ apply(rule_tac cL = "{(k, Stack (PUSH_N [0]))}"
 apply(rule strengthen_pre)
  apply(rule weaken_post)
   apply(rule_tac h = "(Suc h)" and g = "g - Gverylow" and w = "word_rcat [0]" in dup_gas_triple)
- apply(auto simp add: word_rcat_def bin_rcat_def)
+  apply(auto simp add: word_rcat_def bin_rcat_def elim: back_subst[where P=continuing])
 done
 
 lemma true_is_emp [simp] :
@@ -202,7 +206,7 @@ apply(rule_tac cL = "{(k, Dup 0)}" and cR = "{(k + 1, Dup 0)}" in composition)
  apply(auto)
 apply(rule_tac R = "stack h w" in frame_backward)
  apply(rule_tac h = "Suc (Suc h)" and w = w and g = "g - Gverylow" in dup_gas_triple)
- apply(auto)
+ apply(auto simp: sep_conj_ac)
 done
 
 lemma triple_code_eq :
@@ -210,9 +214,9 @@ lemma triple_code_eq :
 apply(simp)
 done
 
-lemma sep_functional :
+(* lemma sep_functional :
   "a = b \<Longrightarrow> c = d \<Longrightarrow> a ** c = b ** d"
-apply(simp)
+apply(simp add: sep_conj_ac)
 done
 
 lemma rotate4 :
@@ -233,7 +237,7 @@ qed
 lemma pick_thirdL:
  "a ** b ** rest = R \<Longrightarrow> a ** b ** c ** rest = c ** R"
   by (simp add: pick_third_L)
-
+ *)
 lemma pddd_triple :
 "triple net {OutOfGas} (\<langle> h \<le> 1020\<rangle> **
                        stack_height h **
@@ -265,20 +269,24 @@ apply(rule_tac cL = "{(k, Stack (PUSH_N [0])), (k + 2, Dup 0)}"
 apply(rule_tac R = "stack h (word_rcat [0])" in frame_backward)
   apply(rule triple_code_eq)
   apply(rule_tac k = "3 + k" and h = "Suc h" and w = "word_rcat [0]" and g = "g - 2 * Gverylow" in dup1dup1_triple)
-  apply(auto)
- apply(rule sep_functional)
-  apply(simp)
- apply(rule sep_functional)
-  apply(simp)
-apply(rule pick_third_L)
-apply(rule sep_functional)
-  apply (metis Suc3_eq_add_3 Suc_eq_plus1_left add.commute add_numeral_left numeral_One semiring_norm(2) semiring_norm(8))
-apply (simp add: word_rcat_def bin_rcat_def)
+  apply(auto simp: )[1]
+  apply simp
+  apply (simp only: sep_conj_ac)
+  apply (rule ext)
+  apply (simp add: word_rcat_def bin_rcat_def sep_conj_ac continuing_def set_diff_eq)    
+  apply (rule iffI)
+  apply (clarsimp simp add: word_rcat_def bin_rcat_def)
+  apply (rule conjI)
+   apply (subgoal_tac "h + 4 = (Suc (Suc (Suc (Suc h))))"; simp)
+  apply (erule back_subst[where P="\<lambda>v. v = {ContinuingElm True}"])
+   apply (auto)[1]
+  apply (clarsimp simp add: word_rcat_def bin_rcat_def)
+  apply (rule conjI)
+   apply (subgoal_tac "h + 4 = (Suc (Suc (Suc (Suc h))))"; simp only:)
+apply (erule back_subst[where P="\<lambda>v. v = {ContinuingElm True}"])
+apply (auto)[1]
 done
 
-lemma abcbca :
-  "a ** b ** c = b ** c ** a"
-  using sep_assoc sep_commute by auto
 
 lemma uu_addr [simp] :
   "(ucast (ucast (a :: address) :: w256) :: address) = a"
@@ -300,15 +308,10 @@ apply(rule_tac cL = "{(k, Info ADDRESS)}" and cR = "{(k + 1, Info BALANCE)}" in 
   apply(auto)
  apply(rule_tac R = "balance t b ** block_number_pred bn" in frame_backward)
    apply(rule_tac h = h and g = g and t = t in address_gas_triple)
-  using sep_assoc sep_commute apply auto
+   apply (auto simp: sep_conj_ac)
 apply(rule_tac R = "this_account t" in frame_backward)
  apply(rule_tac h = h and g = "g - 2" and bn = bn and a = "ucast t" and b = b in balance_gas_triple)
- apply(auto)
-done
-
-lemma cons_eq :
-  "a = b \<Longrightarrow> c ** a = c ** b"
-apply(simp)
+ apply(auto simp: sep_conj_ac)
 done
 
 lemma caller_gas :
@@ -327,7 +330,7 @@ apply(rule_tac cL = "{(k, Info CALLER)}" and cR = "{(k + 1, Stack (PUSH_N [8, 0]
  apply(auto)
 apply(rule_tac R = "stack h (ucast c) ** caller c" in frame_backward)
   apply(rule_tac h = "Suc h" and g = "g - 2" in push_gas_triple)
- apply(auto)
+ apply(auto simp: sep_conj_ac)
 done
 
 lemma program_counter_comm :
@@ -358,39 +361,16 @@ apply(rule_tac cL = "{(k, Info ADDRESS), (k + 1, Info BALANCE)}"
  apply(rule_tac R = "caller c" in frame_backward)
    apply(rule_tac h = h and bn = bn and g = g and t = t and b = b in this_balance)
   apply(auto)
- using sep_assoc sep_commute apply auto
+ apply (auto simp: sep_conj_ac)
 apply(rule_tac R = "balance t b ** stack h b ** block_number_pred bn ** this_account t" in frame_backward)
   apply(rule triple_code_eq)
   apply(rule_tac k = "k + 2" and h = "Suc h" and c = c and g = "g - Gbase - 400" in caller_gas)
    apply simp
    apply auto[1]
- apply auto
- apply(rule sep_functional)
-  apply(simp)
- apply(rule sep_functional)
-  apply(simp)
- apply(rule sep_functional)
-  apply(simp)
- apply(rule sep_functional)
-  apply(simp)
- apply(rule sep_functional)
-  apply(simp)
- apply(rule sep_functional)
-  apply(simp)
- apply(rule sep_functional)
-  apply(simp)
- apply(rule sep_functional)
-  apply (simp add: Suc3_eq_add_3 add.commute)
-apply(rule sep_functional)
- apply(simp)
-apply(rule sep_functional)
- apply(simp)
-apply(simp)
+  apply (auto simp: sep_conj_ac)[1]
+  apply (clarsimp simp: sep_conj_ac)
+   apply (subgoal_tac "(Suc (Suc (Suc h))) = h + 3"; simp only: sep_conj_ac)
 done
-
-lemma first_two:
- "b ** a ** rest = R \<Longrightarrow> a ** b ** rest = R"
-  by (simp add: abcbca sep_commute)
 
 lemma five_plus:
  "5 + h = Suc (Suc (Suc (Suc (Suc h))))"
@@ -450,7 +430,8 @@ apply(auto)
   apply(auto)
  apply(rule_tac R = "block_number_pred bn **
       caller c ** this_account t ** balance t b" in frame_backward)
-   apply(rule_tac h = h and g = g in pddd_triple)
+  apply(rule_tac h = h and g = g in pddd_triple)
+  (* HERE*)
   using sep_assoc sep_commute apply auto
 apply(rule_tac R = "
       stack h (word_rcat [0]) **
