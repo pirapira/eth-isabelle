@@ -96,24 +96,31 @@ program_as_set_def variable_ctx_as_set_def ext_program_as_set_def
 lemmas sep_tools_simps =
 emp_sep sep_true pure_sepD pure_sep sep_lc sep_three imp_sepL sep_impL
 
+lemmas fun_sep_simps =
+caller_sep  balance_sep not_continuing_sep this_account_sep
+action_sep memory8_sep memory_usage_sep pure_sep code_sep gas_pred_sep
+memory_range_sep continuing_sep gas_any_sep program_counter_sep
+stack_height_sep stack_sep block_number_pred_sep storage_sep
+
 lemmas sep_fun_simps =
-caller_sep  sep_caller sep_caller_sep
-balance_sep sep_balance sep_balance_sep
-not_continuing_sep sep_not_continuing_sep
-this_account_sep sep_this_account sep_this_account_sep
-action_sep sep_action sep_action_sep
-memory8_sepD memory8_sepI memory8_sep_h_cancelD sep_memory8 sep_memory8_sep memory8_sep
-memory_usage_sep sep_memory_usage sep_memory_usage_sep
-memory_range_sep sep_memory_range
-continuing_sep sep_continuing_sep
-gas_any_sep sep_gas_any_sep sep_gas_pred_sep sep_gas_pred gas_pred_sep
-program_counter_sep sep_program_counter sep_program_counter_sep
-stack_height_sep sep_stack_height sep_stack_height_sep
-stack_sep sep_stack sep_stack_sep
-block_number_pred_sep sep_block_number_pred_sep
+fun_sep_simps
+sep_caller sep_caller_sep
+sep_balance sep_balance_sep
+sep_not_continuing_sep
+sep_this_account sep_this_account_sep
+sep_action sep_action_sep
+memory8_sepD memory8_sepI memory8_sep_h_cancelD sep_memory8 sep_memory8_sep
+sep_memory_usage sep_memory_usage_sep
+sep_memory_range
+sep_continuing_sep
+sep_gas_any_sep sep_gas_pred_sep sep_gas_pred
+sep_program_counter sep_program_counter_sep
+sep_stack_height sep_stack_height_sep
+sep_stack sep_stack_sep
+sep_block_number_pred_sep
 sep_log_number_sep sep_logged
-storage_sep sep_storage
-code_sep sep_code sep_sep_code sep_code_sep
+sep_storage
+sep_code sep_sep_code sep_code_sep
 
 lemmas inst_numbers_simps =
 dup_inst_numbers_def storage_inst_numbers.simps stack_inst_numbers.simps
@@ -203,6 +210,18 @@ lemma inst_false_pre_sem:
   "triple_inst_sem \<langle>False\<rangle> i q"
 by(simp add: triple_inst_sem_def sep_basic_simps pure_def)
 
+method inst_sound_basic uses simp =
+ simp add: triple_inst_sem_def program_sem.simps as_set_simps sep_conj_ac,
+ clarify,
+ sep_simp simp: fun_sep_simps; simp,
+ simp split: instruction_result.splits,
+ simp add: vctx_next_instruction_def,
+ clarsimp simp add: instruction_simps simp,
+ (sep_simp simp: fun_sep_simps)+,
+ simp,
+ erule_tac P="(_ \<and>* _)" in back_subst,
+ auto simp add: as_set_simps
+
 lemma inst_stop_sem:
 "triple_inst_sem
   (\<langle> h \<le> 1024 \<and> 0 \<le> g \<and> m \<ge> 0\<rangle> \<and>* continuing \<and>* memory_usage m  \<and>* program_counter n \<and>* stack_height h \<and>* gas_pred g \<and>* rest)
@@ -237,102 +256,6 @@ lemma inst_stop_sem:
  apply(rule allI; rule impI; simp)
 done
 
-lemma inst_push_sem:
-"triple_inst_sem
-  (\<langle> h \<le> 1023 \<and> lst \<noteq> [] \<and> 32 \<ge> length lst \<and> Gverylow \<le> g \<and> m \<ge> 0\<rangle> \<and>*
-   continuing \<and>* program_counter n \<and>*
-   memory_usage m \<and>* stack_height h \<and>*
-   gas_pred g \<and>* rest)
-  (n, Stack (PUSH_N lst))
-  (continuing \<and>* memory_usage m \<and>*
-   program_counter (n + 1 + int (length lst)) \<and>*
-   stack_height (Suc h) \<and>* gas_pred (g - Gverylow) \<and>*
-   stack h (word_rcat lst) \<and>* rest)"
- apply(simp add: triple_inst_sem_def program_sem.simps as_set_simps sep_conj_ac)
- apply(clarify)
- apply(sep_simp simp: program_counter_sep continuing_sep code_sep stack_height_sep gas_pred_sep pure_sep memory_usage_sep; simp)
- apply(simp split: instruction_result.splits)
- apply(simp add: vctx_next_instruction_def)
- apply(simp add: sep_conj_commute[where P="rest"] sep_conj_assoc)
- apply(simp add: instruction_simps)
- apply clarsimp
- apply(rename_tac rest0 vctx)
- apply(simp add: sep_fun_simps)
- apply (erule_tac P="(rest0 \<and>* rest)" in back_subst)
- apply(auto simp add: as_set_simps)
-done
-
-lemma inst_jumpdest_sem:
-"triple_inst_sem
-  (\<langle> h \<le> 1024 \<and> Gjumpdest \<le> g \<and> 0 \<le> m \<rangle> \<and>*
-   continuing \<and>* memory_usage m \<and>*
-   program_counter n \<and>* stack_height h \<and>* gas_pred g \<and>* rest)
-  (n, Pc JUMPDEST)
-  (continuing \<and>* program_counter (n + 1) \<and>*
-   memory_usage m \<and>* stack_height h \<and>* gas_pred (g - Gjumpdest) \<and>* rest)"
- apply(simp add: triple_inst_sem_def program_sem.simps as_set_simps sep_conj_ac)
- apply(clarify)
- apply(sep_simp simp: program_counter_sep continuing_sep code_sep stack_height_sep gas_pred_sep pure_sep memory_usage_sep; simp)
- apply(simp split: instruction_result.splits)
- apply(simp add: vctx_next_instruction_def)
- apply(simp add: sep_conj_commute[where P="rest"] sep_conj_assoc)
- apply(simp add: instruction_simps)
- apply(clarify)
- apply(rename_tac rest0 vctx)
- apply(simp add: sep_fun_simps)
- apply (erule_tac P="(rest0 \<and>* rest)" in back_subst)
- apply(auto simp add: as_set_simps)
-done
-
-lemma inst_pc_sem:
-"triple_inst_sem
-  (\<langle> h \<le> 1023 \<and> Gbase \<le> g \<and> 0 \<le> m \<rangle> \<and>*
-   continuing \<and>* memory_usage m \<and>*
-   program_counter na \<and>* stack_height h \<and>* gas_pred g \<and>* rest)
-  (na, Pc PC)
-  (continuing \<and>* program_counter (na + 1) \<and>*
-   memory_usage m \<and>* stack_height (Suc h) \<and>*
-   stack h (word_of_int na) \<and>* gas_pred (g - Gbase) \<and>* rest)"
- apply(simp add: triple_inst_sem_def program_sem.simps as_set_simps sep_conj_ac)
- apply(clarify)
- apply(sep_simp simp: program_counter_sep continuing_sep code_sep stack_height_sep gas_pred_sep pure_sep memory_usage_sep; simp)
- apply(simp split: instruction_result.splits)
- apply(simp add: vctx_next_instruction_def)
- apply(simp add: sep_conj_commute[where P="rest"] sep_conj_assoc)
- apply(simp add: instruction_simps pc_def)
- apply(clarify)
- apply(rename_tac rest0 vctx)
- apply(simp add: sep_fun_simps)
- apply (erule_tac P="(rest0 \<and>* rest)" in back_subst)
- apply(auto simp add: as_set_simps)
-done
-
-lemma inst_iszero_sem:
-notes
-  if_split[split del]
-shows
-    "triple_inst_sem 
-      (\<langle> h \<le> 1023 \<and> Gverylow \<le> g \<and> m \<ge> 0\<rangle> **
-       continuing \<and>* memory_usage m \<and>* program_counter n \<and>*
-       stack_height (Suc h) \<and>* stack h w \<and>* gas_pred g \<and>* rest)
-      (n, Arith ISZERO)
-      (continuing \<and>* program_counter (n + 1) \<and>*
-       memory_usage m \<and>* stack_height (Suc h) \<and>*
-       stack h (iszero_stack w) \<and>*
-       gas_pred (g - Gverylow) \<and>* rest)"
- apply(simp add: triple_inst_sem_def program_sem.simps as_set_simps sep_conj_ac)
- apply(clarify)
- apply(sep_simp simp: program_counter_sep continuing_sep stack_sep code_sep stack_height_sep gas_pred_sep pure_sep memory_usage_sep; simp)
- apply(simp split: instruction_result.splits)
- apply(simp add: vctx_next_instruction_def)
- apply(simp add: sep_conj_commute[where P="rest"] sep_conj_assoc)
- apply(clarsimp simp add: instruction_simps pc_def)
- apply(rename_tac rest0 vctx t)
- apply(simp add: sep_fun_simps iszero_stack_def)
- apply (erule_tac P="(rest0 \<and>* rest)" in back_subst)
- apply(auto simp add: as_set_simps)
-done
-
 lemma triple_inst_soundness:
 notes
   sep_lc[simp del]
@@ -342,14 +265,14 @@ shows
   "triple_inst p i q \<Longrightarrow> triple_inst_sem p i q"
   apply(induction rule:triple_inst.induct)
       apply(erule triple_inst_arith.cases; clarsimp)
-      apply(simp only: inst_iszero_sem)
+			apply(inst_sound_basic simp: iszero_stack_def)
      apply(erule triple_inst_misc.cases; clarsimp)
      apply(simp only: inst_stop_sem)
     apply(erule triple_inst_pc.cases; clarsimp)
-     apply(simp only: inst_jumpdest_sem)
-    apply(simp only: inst_pc_sem)
+     apply(inst_sound_basic)
+    apply(inst_sound_basic simp: pc_def)
    apply(erule triple_inst_stack.cases; clarsimp)
-   apply(simp only: inst_push_sem)
+   apply(inst_sound_basic)
   apply(simp add: inst_strengthen_pre_sem)
  apply(simp add: inst_false_pre_sem)
 done
