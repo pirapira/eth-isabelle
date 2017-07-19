@@ -3028,6 +3028,21 @@ lemma default_one[simp]:
    vctx_stack_default 1 x1 = y"
 apply(simp add: vctx_stack_default_def)
 done
+    
+lemma set_diff_expand:
+  "x - {a,b,c} = x - {a} - {b} - {c}"
+  "x - {a,b,c,d} = x - {a} - {b} - {c} - {d}"
+  "x - {a,b,c,d,e} = x - {a} - {b} - {c} - {d} - {e}"
+  "x - {a,b,c,d,e,f} = x - {a} - {b} - {c} - {d} - {e}- {f} "
+  "x - {a,b,c,d,e,f,g} = x - {a} - {b} - {c} - {d} - {e} - {f} - {g}"
+  "x - {a,b,c,d,e,f,g,h} = x - {a} - {b} - {c} - {d} - {e} - {f} - {g} - {h}"
+  "x - {a,b,c,d,e,f,g,h,i} = x - {a} - {b} - {c} - {d} - {e} - {f} - {g} - {h} - {i}"
+  "x - {a,b,c,d,e,f,g,h,i,j} = x - {a} - {b} - {c} - {d} - {e} - {f} - {g} - {h} - {i} - {j}"
+  by blast+
+
+lemma insert_minus_set:
+ "x \<notin> t \<Longrightarrow> insert x s - t = insert x (s - t)"
+  by blast
 
 lemmas sep_tools_simps =
  emp_sep sep_true pure_sepD pure_sep 
