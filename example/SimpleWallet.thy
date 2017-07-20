@@ -42,6 +42,7 @@ lemma push0_triple :
                        stack_height h **
                        program_counter k **
                        gas_pred g **
+                       account_existence c existence **
                        continuing
                       )
                       {(k, Stack (PUSH_N [0]))}
@@ -49,6 +50,7 @@ lemma push0_triple :
                        stack h (word_rcat [0]) **
                        program_counter (2 + k) **
                        gas_pred (g - Gverylow) **
+                       account_existence c existence **
                        continuing
                       )"
 apply(rule weaken_post)
@@ -150,6 +152,7 @@ lemma push0dup1_triple :
                        stack_height h **
                        program_counter k **
                        gas_pred g **
+                       account_existence c existence **
                        continuing
                       )
                       {(k, Stack (PUSH_N [0])),
@@ -159,6 +162,7 @@ lemma push0dup1_triple :
                        stack h (word_rcat [0]) **
                        program_counter (3 + k) **
                        gas_pred (g - 2 * Gverylow) **
+                       account_existence c existence **
                        continuing
                       )"
 apply(simp)
@@ -186,6 +190,7 @@ lemma dup1dup1_triple :
                        stack h w **
                        program_counter k **
                        gas_pred g **
+                       account_existence c existence **
                        continuing
                       )
                       {(k, Dup 0),
@@ -196,6 +201,7 @@ lemma dup1dup1_triple :
                        stack (Suc (Suc h)) w **
                        program_counter (2 + k) **
                        gas_pred (g - 2 * Gverylow) **
+                       account_existence c existence **
                        continuing
                       )"
 apply(auto)
@@ -243,6 +249,7 @@ lemma pddd_triple :
                        stack_height h **
                        program_counter k **
                        gas_pred g **
+                       account_existence c existence **
                        continuing
                       )
                       {(k, Stack (PUSH_N [0])),
@@ -256,6 +263,7 @@ lemma pddd_triple :
                        stack h (word_rcat [0]) **
                        program_counter (5 + k) **
                        gas_pred (g - 4 * Gverylow) **
+                       account_existence c existence **
                        continuing
                       )"
 apply(auto)
@@ -298,17 +306,17 @@ lemma this_balance :
   "triple net {OutOfGas}
           (\<langle> h \<le> 1023 \<and> unat bn \<ge> 2463000 \<and> at_least_eip150 net\<rangle>
            ** block_number_pred bn ** stack_height h ** program_counter k ** this_account t ** 
-           balance t b ** gas_pred g ** continuing)
+           balance t b ** gas_pred g ** account_existence c existence **continuing)
           {(k, Info ADDRESS), (k + 1, Info BALANCE)}
           (block_number_pred bn ** stack_height (h + 1) ** stack h b ** balance t b
            ** program_counter (2 + k) ** this_account t ** gas_pred (g - Gbase - 400)
-           ** continuing )"
+           ** account_existence c existence **continuing )"
 apply(auto)
 apply(rule_tac cL = "{(k, Info ADDRESS)}" and cR = "{(k + 1, Info BALANCE)}" in composition)
   apply(auto)
  apply(rule_tac R = "balance t b ** block_number_pred bn" in frame_backward)
    apply(rule_tac h = h and g = g and t = t in address_gas_triple)
-   apply (auto simp: sep_conj_ac)
+   apply (auto simp: sep_conj_ac)                            
 apply(rule_tac R = "this_account t" in frame_backward)
  apply(rule_tac h = h and g = "g - 2" and bn = bn and a = "ucast t" and b = b in balance_gas_triple)
  apply(auto simp: sep_conj_ac)
@@ -317,10 +325,12 @@ done
 lemma caller_gas :
 "
 triple net {OutOfGas}
-          (\<langle> h \<le> 1022 \<rangle> ** stack_height h ** program_counter k ** caller c ** gas_pred g ** continuing)
+          (\<langle> h \<le> 1022 \<rangle> ** stack_height h ** program_counter k ** caller c ** gas_pred g **
+           account_existence c existence ** continuing)
           {(k, Info CALLER), (k + 1, Stack (PUSH_N [8, 0]))}
           (stack_height (h + 2) ** stack (Suc h) (word_rcat [(8 :: byte), 0]) ** stack h (ucast c)
-           ** program_counter (4 + k) ** caller c ** gas_pred (g - 2 - Gverylow) ** continuing )
+           ** program_counter (4 + k) ** caller c ** gas_pred (g - 2 - Gverylow) ** 
+                       account_existence c existence ** continuing )
 "
 apply(auto)
 apply(rule_tac cL = "{(k, Info CALLER)}" and cR = "{(k + 1, Stack (PUSH_N [8, 0]))}" in composition)
@@ -347,17 +357,17 @@ lemma first_three_args :
   "triple net {OutOfGas}
           (\<langle> h \<le> 1021 \<and> unat bn \<ge> 2463000 \<and> at_least_eip150 net\<rangle>
            ** block_number_pred bn ** caller c ** stack_height h ** program_counter k ** this_account t ** 
-           balance t b ** gas_pred g ** continuing)
+           balance t b ** gas_pred g ** account_existence c existence ** continuing)
           {(k, Info ADDRESS), (k + 1, Info BALANCE), (k + 2, Info CALLER), (k + 3, Stack (PUSH_N [8, 0]))}
           (block_number_pred bn ** caller c ** stack_height (h + 3) ** 
            stack (Suc (Suc h)) (word_rcat [(8 :: byte), 0]) ** stack (Suc h) (ucast c) ** stack h b ** balance t b
            ** program_counter (6 + k) ** this_account t ** gas_pred (g - 404 - Gverylow)
-           ** continuing )"
+           ** account_existence c existence **continuing )"
 apply(simp only: move_pureL)
 apply(auto)
 apply(rule_tac cL = "{(k, Info ADDRESS), (k + 1, Info BALANCE)}"
            and cR = "{(k + 2, Info CALLER), (k + 3, Stack (PUSH_N [8, 0]))}" in composition)
-  apply(auto)
+  apply(auto)[1]
  apply(rule_tac R = "caller c" in frame_backward)
    apply(rule_tac h = h and bn = bn and g = g and t = t and b = b in this_balance)
   apply(auto)
@@ -399,6 +409,7 @@ lemma seven_args:
                        this_account t **
                        balance t b **
                        gas_pred g **
+                       account_existence c existence **
                        continuing
                       )
                       {(k, Stack (PUSH_N [0])),
@@ -423,6 +434,7 @@ lemma seven_args:
                        this_account t **
                        balance t b **
                        gas_pred (g - 404 - 5 * Gverylow) **
+                       account_existence c existence **
                        continuing
                       )"
 apply(simp only: move_pureL)
@@ -541,6 +553,7 @@ lemma seven_args_packed:
                        this_account t **
                        balance t b **
                        gas_pred g **
+                       account_existence c existence **
                        continuing
                       )
                       {(k, Stack (PUSH_N [0])),
@@ -554,19 +567,26 @@ lemma seven_args_packed:
                       }
                       (block_number_pred bn ** caller c **
                        stack_topmost h [word_rcat [0], word_rcat [0], word_rcat [0], word_rcat [0],
-                         b, ucast c, word_rcat [(8 :: byte), 0]] **
+                         b, ucast c, 2048] **
                        program_counter (11 + k) **
                        this_account t **
                        balance t b **
                        gas_pred (g - 404 - 5 * Gverylow) **
+                       account_existence c existence **
                        continuing
                       )"
 apply(rule weaken_post)
  apply(rule seven_args)
 apply(simp only: stack_topmost_special_translate)
-apply blast
-done
+  apply (rule allI)
+  apply (rule impI)
+  apply sep_cancel+
+  apply (simp add: word_rcat_def bin_rcat_def bin_cat_def)
+  done
 
+lemma word_of_int_bin_cat:
+  "((word_of_int (bin_cat 8 8 0))::256 word) = 2048"
+  by (simp add: bin_cat_def)
 lemma call_with_args:
 "triple net {OutOfGas} (\<langle> h \<le> 1017 \<and> 2463000 \<le> unat bn \<and> at_least_eip150 net\<rangle>
                     ** block_number_pred bn ** caller c **
@@ -599,9 +619,9 @@ lemma call_with_args:
                        account_existence c existence **
                        not_continuing **
                        action (ContractCall \<lparr>
-                                  callarg_gas = (word_of_int (Ccallgas 128 (ucast c) b
-                                      (\<not> existence) own_gas net
-                                      (calc_memu_extra u 128 (ucast c) b 0 0 0 0)))
+                                  callarg_gas = (word_of_int (Ccallgas 2048 (ucast c) b
+                                      (\<not> existence) ((g - 404 - 5 * Gverylow)) net
+                                      (calc_memu_extra u 2048 (ucast c) b 0 0 0 0)))
                                 , callarg_code = c
                                 , callarg_recipient = c
                                 , callarg_value = b
@@ -620,24 +640,32 @@ apply(rule_tac cL = "{(k, Stack (PUSH_N [0])),
                        (7 + k, Info CALLER),
                        (8 + k, Stack (PUSH_N [8, 0]))}"
             and cR = "{(11 + k, Misc CALL)}" in composition)
-  apply(auto)
+    apply(auto)
   apply(rule_tac R = "memory_usage u" in frame_backward)
   apply(rule_tac k = k and h = h and c = c and bn = bn and t = t and b = b and g = g in seven_args_packed)
-  apply(simp add: )
-  apply (rule sep_conj_eq[OF refl])+
-  apply (simp only: sep_conj_ac)
-  apply (rule sep_conj_eq[OF refl])+
-  (* Is this supposed to be true? *)
+      apply(simp add: )
+    apply (rule refl)
  apply simp
 apply(rule_tac R = "block_number_pred bn **
       caller c" in frame_backward)
   apply(rule_tac h = h and v = b and fund = b and input = "[]" 
         and in_size = "word_rcat [0]" and in_begin = "word_rcat [0]"
         and out_size = "word_rcat [0]" and out_begin = "word_rcat [0]"
-        and g = "word_rcat [(8 :: byte), 0]" and r = "ucast c"
+        and g = "2048" and r = "ucast c"
         and this = t and u = u and existence = existence
         in call_gas_triple)
- apply(simp add: word_rcat_def bin_rcat_def)
+     apply(simp add: word_rcat_def bin_rcat_def word_of_int_bin_cat)
+     apply (rule ext, rule iffI)
+     apply sep_cancel+
+     apply (rule ext, rule iffI)
+     apply sep_cancel+
+     apply (auto simp:)[1]
+       apply (simp only: memory_usage_def M_def)
+      apply(simp add: word_rcat_def bin_rcat_def M_def)
+       apply blast
+      apply(auto simp add: word_rcat_def bin_rcat_def word_of_int_bin_cat M_def)[1]
+   apply (auto simp add: balance_def)[1]
+    (* Is this true? x
  apply(rule cons_eq)
  apply(rule cons_eq)
  apply(rule cons_eq)
@@ -646,15 +674,9 @@ apply(rule_tac R = "block_number_pred bn **
   apply(simp)
  apply blast
 apply(simp add: word_rcat_def bin_rcat_def M_def)
-done
+done *)
+  sorry
 
-lemma pick_secondL:
- "a ** rest = R \<Longrightarrow> a ** b ** rest = b ** R"
-  by (simp add: first_two)
-
-lemma sep_ac :
- "a ** b ** c = b ** a ** c"
-  using first_two by blast
 
 lemma equal_pred :
  "P = Q \<Longrightarrow> \<forall> s. P s \<longrightarrow> Q s"
@@ -667,17 +689,19 @@ lemma push0sload :
                        block_number_pred bn **
                        stack_height h **
                        program_counter k **
-                       storage (word_rcat [0]) w **
+                       storage (word_rcat [0::8 word]) w **
                        gas_pred g **
+                       account_existence c existence **
                        continuing
                       )
-                      {(k, Stack (PUSH_N [0])), (k + 2, Storage SLOAD)}
+                      {(k, Stack (PUSH_N [0::8 word])), (k + 2, Storage SLOAD)}
                       (block_number_pred bn **
                        stack_height (h + 1) **
                        stack h w **
                        program_counter (3 + k) **
-                       storage (word_rcat [0]) w **
+                       storage (word_rcat [0::8 word]) w **
                        gas_pred (g - Gverylow - Gsload net) **
+                       account_existence c existence **
                        continuing
                       )"
 apply(simp only: move_pureL)
@@ -685,17 +709,23 @@ apply(auto)
 apply(rule_tac cL = "{(k, Stack (PUSH_N [0]))}"
            and cR = "{(k + 2, Storage SLOAD)}" in composition)
   apply(auto)
- apply(rule_tac R = "block_number_pred bn ** storage (word_rcat [0]) w"
+ apply(rule_tac R = "block_number_pred bn ** storage (word_rcat [0:: 8 word]) w"
     in frame_backward)
    apply(rule_tac h = h and g = g in push_gas_triple)
-  apply(simp)
+    apply(simp add: sep_conj_ac)
+   apply (rule sep_conj_eq[OF refl])+
+    apply (rule refl)
  apply(simp)
 apply(rule_tac R = "emp" in frame_backward)
   apply(rule_tac bn = bn and h = h and w = w and g = "g - Gverylow"
-        and idx = "word_rcat [0]"
+        and idx = "(word_rcat [0:: 8 word]):: 256 word"
         in sload_gas_triple)
- apply(auto)
-apply(auto simp add: word_rcat_def bin_rcat_def)
+   apply(auto)
+   apply (simp add: sep_conj_ac)
+   apply (rule sep_conj_eq[OF refl])+
+    apply (simp only: semiring_normalization_rules(24))
+   apply (rule sep_conj_eq[OF refl])+
+    apply (sep_simp simp: emp_sep)
 done
 
 lemma caller_eq :
@@ -704,6 +734,7 @@ lemma caller_eq :
                         stack h w **
                         program_counter k ** caller c **
                         gas_pred g **
+                        account_existence c existence **
                         continuing
                       )
                       {(k, Info CALLER), (k + 1, Arith inst_EQ)}
@@ -711,6 +742,7 @@ lemma caller_eq :
                         stack h (if ucast c = w then((word_of_int 1) ::  256 word) else((word_of_int 0) ::  256 word)) **
                         program_counter (k + 2) ** caller c **
                         gas_pred (g - Gbase - Gverylow) **
+                        account_existence c existence **
                         continuing )"
 apply(simp only: move_pureL)
 apply(auto)
@@ -719,30 +751,30 @@ apply(auto)
    apply(auto)
   apply(rule_tac R = "stack h w" in frame_backward)
     apply(rule_tac h = "Suc h" and g = g and c = c in caller_gas_triple)
-   apply(simp)
+     apply(simp add: sep_conj_ac)
+       apply (rule sep_conj_eq[OF refl])+
+     apply(simp add: sep_conj_ac)
+    apply (sep_simp simp: emp_sep)
+
   apply(simp)
  apply(rule_tac R = "caller c" in frame_backward)
    apply(rule_tac h = h and g = "g - 2" and v = "ucast c" and w = "ucast c"
        in eq_gas_triple)
-  apply(simp)
- apply(auto)
+    apply(simp)
+    apply (simp add: sep_conj_ac semiring_normalization_rules(24))+
 apply(rule_tac cL = "{(k, Info CALLER)}"
           and cR = "{(k + 1, Arith inst_EQ)}" in composition)
   apply(auto)
  apply(rule_tac R = "stack h w" in frame_backward)
    apply(rule_tac h = "Suc h" and g = g and c = c in caller_gas_triple)
-  apply(simp)
+    apply(simp add: sep_conj_ac)
+   apply (rule refl)
  apply(simp)
 apply(rule_tac R = "caller c" in frame_backward)
   apply(rule_tac h = h and g = "g - 2" and v = "ucast c" and w = "w"
       in eq_gas_triple)
- apply(simp)
-apply(auto)
+    apply (simp add: sep_conj_ac semiring_normalization_rules(24))+
 done
-
-lemma abccba :
-  "a ** b ** c = c ** b ** a"
-  using abel_semigroup.left_commute sep_three set_pred.abel_semigroup_axioms by fastforce
 
 lemma first_four :
    "triple net {OutOfGas} (\<langle> h \<le> 1022 \<and> unat bn \<ge> 2463000 \<and> at_least_eip150 net\<rangle> **
