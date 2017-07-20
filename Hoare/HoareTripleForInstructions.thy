@@ -1076,7 +1076,7 @@ program_content (cctx_program co_ctx) (vctx_pc x1) = Some (Info BALANCE) \<Longr
              {GasElm g} -
              {ContinuingElm True} -
              {CodeElm (vctx_pc x1, Info BALANCE)})"
-  apply(auto simp: )
+  apply(auto simp: set_diff_eq)
          apply(rename_tac elm; case_tac elm; auto simp add: instruction_result_as_set_def as_set_simps vctx_advance_pc_def 
 prog_content_vctx_next_instruction inst_size_eq_1)
         apply (simp add: instruction_result_as_set_def stateelm_equiv_simps advance_pc_simps)+
