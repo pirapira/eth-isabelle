@@ -75,6 +75,16 @@ inductive triple_inst_stack :: "pred \<Rightarrow> pos_inst \<Rightarrow> pred \
        program_counter (n + 1 + int (length lst)) \<and>*
        stack_height (Suc h) \<and>* gas_pred (g - Gverylow) \<and>*
        stack h (word_rcat lst) \<and>* rest)"
+| inst_pop :
+    "triple_inst_stack
+      (\<langle> h \<le> 1023 \<and> Gbase \<le> g \<and> m \<ge> 0\<rangle> \<and>*
+       continuing \<and>* program_counter n \<and>* memory_usage m \<and>*
+       stack_height (Suc h) \<and>* stack h _ \<and>* 
+       gas_pred g \<and>* rest)
+      (n, Stack POP)
+      (continuing \<and>* memory_usage m \<and>*
+       program_counter (n + 1) \<and>* gas_pred (g - Gbase) \<and>*
+       stack_height h \<and>* rest)"
 
 inductive triple_inst_misc :: "pred \<Rightarrow> pos_inst \<Rightarrow> pred \<Rightarrow> bool" where
  inst_stop :

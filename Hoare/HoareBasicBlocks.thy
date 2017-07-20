@@ -271,6 +271,7 @@ shows
      apply(inst_sound_basic)
     apply(inst_sound_basic simp: pc_def)
    apply(erule triple_inst_stack.cases; clarsimp)
+    apply(inst_sound_basic)
    apply(inst_sound_basic)
   apply(simp add: inst_strengthen_pre_sem)
  apply(simp add: inst_false_pre_sem)
