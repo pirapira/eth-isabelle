@@ -221,6 +221,30 @@ method inst_sound_basic uses simp =
  simp,
  erule_tac P="(_ \<and>* _)" in back_subst,
  auto simp add: as_set_simps
+(*
+apply(simp add: triple_inst_sem_def program_sem.simps as_set_simps sep_conj_ac)
+apply(clarify)
+apply(sep_simp simp: fun_sep_simps; simp)
+apply(simp split: instruction_result.splits)
+apply(simp add: vctx_next_instruction_def)
+apply(clarsimp simp add: instruction_simps simp)
+apply((sep_simp simp: fun_sep_simps)+)
+apply(simp)
+apply(erule_tac P="(_ \<and>* _)" in back_subst)
+apply(auto simp add: as_set_simps)
+*)
+
+
+method inst_sound_set_eq uses simp =
+ simp add: triple_inst_sem_def program_sem.simps as_set_simps sep_conj_ac,
+ clarify,
+ sep_simp simp: fun_sep_simps; simp,
+ simp split: instruction_result.splits,
+ simp add: vctx_next_instruction_def,
+ clarsimp simp add: instruction_simps simp,
+ (sep_simp simp: fun_sep_simps)+,
+ simp,
+ erule_tac P="(_ \<and>* _)" in back_subst
 
 lemma inst_stop_sem:
 "triple_inst_sem
@@ -256,6 +280,312 @@ lemma inst_stop_sem:
  apply(rule allI; rule impI; simp)
 done
 
+method set_solve_2_1 =
+rule Set.equalityI,
+   simp add: Set.subset_iff,
+   rule allI,
+   rename_tac elm,
+   (case_tac elm; simp add: instruction_result_as_set_def),
+   rename_tac pair,
+   (case_tac pair; simp),
+   (case_tac "a = h"; simp),
+    blast,
+  simp add: Set.subset_iff,
+  rule allI,
+  rename_tac elm,
+  (case_tac elm; simp add: instruction_result_as_set_def),
+     clarsimp,
+    rename_tac pair,
+    (case_tac pair; simp),
+    (case_tac "a = h"; clarsimp),
+    blast,
+  clarsimp
+
+(*  apply(rule  Set.equalityI)
+   apply(simp add: Set.subset_iff)
+   apply(rule allI)
+   apply(rename_tac elm)
+   apply(case_tac elm; simp add: instruction_result_as_set_def)
+   apply(rename_tac pair)
+   apply(case_tac pair; simp)
+   apply(case_tac "a = h"; simp)
+   apply blast
+  apply(simp add: Set.subset_iff)
+  apply(rule allI)
+  apply(rename_tac elm)
+  apply(case_tac elm; simp add: instruction_result_as_set_def)
+     apply(clarsimp)
+    apply(rename_tac pair)
+    apply(case_tac pair; simp)
+    apply(case_tac "a = h"; clarsimp)
+   apply blast
+  apply(clarsimp)*)
+
+method set_solve_case_w =
+ (sep_simp simp: fun_sep_simps)+,
+  simp,
+  rule conjI,
+  erule_tac P="(_ \<and>* _)" in back_subst,
+  rule  Set.equalityI,
+   simp add: Set.subset_iff,
+   rule allI,
+   rename_tac elm,
+   (case_tac elm; simp add: instruction_result_as_set_def),
+   rename_tac pair,
+   (case_tac pair; simp),
+   (case_tac "a = h"; clarsimp),
+  simp add: Set.subset_iff,
+  rule allI,
+  rename_tac elm,
+  (case_tac elm; simp add: instruction_result_as_set_def),
+     clarsimp,
+    rename_tac pair,
+    (case_tac pair; simp),
+    (case_tac "a = h"; clarsimp),
+    (case_tac "w=0"; simp),
+   blast,
+  clarsimp,
+ (case_tac "w=0"; simp)
+
+(* apply((sep_simp simp: fun_sep_simps)+)
+  apply(simp)
+  apply(rule conjI)
+  apply(erule_tac P="(_ \<and>* _)" in back_subst)
+  apply(rule  Set.equalityI)
+   apply(simp add: Set.subset_iff)
+   apply(rule allI)
+   apply(rename_tac elm)
+   apply(case_tac elm; simp add: instruction_result_as_set_def)
+   apply(rename_tac pair)
+   apply(case_tac pair; simp)
+   apply(case_tac "a = h"; clarsimp)
+  apply(simp add: Set.subset_iff)
+  apply(rule allI)
+  apply(rename_tac elm)
+  apply(case_tac elm; simp add: instruction_result_as_set_def)
+     apply(clarsimp)
+    apply(rename_tac pair)
+    apply(case_tac pair; simp)
+    apply(case_tac "a = h"; clarsimp)
+    apply(case_tac "w=0"; simp)
+   apply blast
+  apply(clarsimp)
+ apply(case_tac "w=0"; simp)*)
+
+lemma inst_arith_2_1_low_sound:
+notes
+  if_split[split del]
+shows
+"i = MUL \<or> i = DIV \<or> i = MOD \<Longrightarrow>
+ triple_inst_sem
+  (\<langle> h \<le> 1022 \<and> Glow \<le> g \<and> 0 \<le> m \<rangle> \<and>*
+   continuing \<and>* memory_usage m \<and>* program_counter n \<and>*
+   stack_height (Suc (Suc h)) \<and>* stack (Suc h) v \<and>* stack h w \<and>* gas_pred g \<and>* rest)
+  (n, Arith i)
+  (continuing \<and>* program_counter (n + 1) \<and>* memory_usage m \<and>* stack_height (Suc h) \<and>*
+   stack h (arith_2_1_low i v w) \<and>* gas_pred (g - Glow) \<and>* rest)"
+apply(simp add: triple_inst_sem_def program_sem.simps as_set_simps sep_conj_ac)
+apply(clarify)
+apply(sep_simp simp: fun_sep_simps; simp)
+apply(simp split: instruction_result.splits)
+apply(simp add: vctx_next_instruction_def)
+apply(case_tac i; clarsimp simp add: instruction_simps)
+  apply((sep_simp simp: fun_sep_simps)+)
+  apply(simp)
+  apply(erule_tac P="(_ \<and>* _)" in back_subst)
+  apply(set_solve_2_1)
+ apply(set_solve_case_w)
+apply(set_solve_case_w)
+done
+
+lemma inst_arith_2_1_verylow_sound:
+notes
+  if_split[split del]
+shows
+"i = ADD \<or> i = SUB \<or> i = inst_GT \<or> i = inst_EQ \<or> i = inst_LT \<Longrightarrow>
+ triple_inst_sem
+  (\<langle> h \<le> 1022 \<and> Gverylow \<le> g \<and> 0 \<le> m \<rangle> \<and>*
+   continuing \<and>* memory_usage m \<and>* program_counter n \<and>* stack_height (Suc (Suc h)) \<and>*
+   stack (Suc h) v \<and>* stack h w \<and>* gas_pred g \<and>* rest)
+  (n, Arith i)
+  (continuing \<and>* program_counter (n + 1) \<and>* memory_usage m \<and>* stack_height (Suc h) \<and>*
+   stack h (arith_2_1_verylow i v w) \<and>* gas_pred (g - Gverylow) \<and>* rest)"
+apply(case_tac i; simp)
+    apply(inst_sound_set_eq)
+    apply(set_solve_2_1)
+   apply(inst_sound_set_eq)
+   apply(set_solve_2_1)
+  apply(inst_sound_set_eq)
+  apply(set_solve_2_1)
+ apply(inst_sound_set_eq)
+ apply(set_solve_2_1)
+apply(inst_sound_set_eq)
+apply(set_solve_2_1)
+done
+
+lemma inst_arith_3_1_sound:
+notes
+  if_split[split del]
+shows
+"i = ADDMOD \<or> i = MULMOD \<Longrightarrow>
+ triple_inst_sem
+  (\<langle> h \<le> 1021 \<and> Gmid \<le> g \<and> 0 \<le> m \<rangle> \<and>*
+   continuing \<and>* memory_usage m \<and>* program_counter n \<and>*
+   stack_height (Suc (Suc (Suc h))) \<and>* stack (Suc (Suc h)) u \<and>*
+   stack (Suc h) v \<and>* stack h w \<and>* gas_pred g \<and>* rest)
+  (n, Arith i)
+  (continuing \<and>* program_counter (n + 1) \<and>* memory_usage m \<and>*
+   stack_height (Suc h) \<and>* stack h (arith_3_1 i u v w) \<and>*
+   gas_pred (g - Gmid) \<and>* rest)"
+apply(simp add: triple_inst_sem_def program_sem.simps as_set_simps sep_conj_ac)
+apply(clarify)
+apply(sep_simp simp: fun_sep_simps; simp)
+apply(simp split: instruction_result.splits)
+apply(simp add: vctx_next_instruction_def)
+apply(case_tac i; clarsimp simp add: instruction_simps)
+ apply(set_solve_case_w)
+apply(set_solve_case_w)
+done
+
+lemma inst_bits_2_1_sound:
+"i = inst_AND \<or> i = inst_OR \<or> i = inst_XOR \<or> i = BYTE \<Longrightarrow>
+ triple_inst_sem
+  (\<langle> h \<le> 1022 \<and> Gverylow \<le> g \<and> 0 \<le> m \<rangle> \<and>*
+   continuing \<and>*
+   memory_usage m \<and>*
+   program_counter n \<and>*
+   stack_height (Suc (Suc h)) \<and>*
+   stack (Suc h) v \<and>* stack h w \<and>* gas_pred g \<and>* rest)
+  (n, Bits i)
+  (continuing \<and>*
+   program_counter (n + 1) \<and>*
+   memory_usage m \<and>*
+   stack_height (Suc h) \<and>*
+   stack h (bits_2_1_verylow i v w) \<and>* gas_pred (g - Gverylow) \<and>* rest)"
+apply(case_tac i; simp)
+   apply(inst_sound_set_eq)
+   apply(set_solve_2_1)
+  apply(inst_sound_set_eq)
+  apply(set_solve_2_1)
+ apply(inst_sound_set_eq)
+ apply(set_solve_2_1)
+apply(inst_sound_set_eq)
+apply(set_solve_2_1)
+done
+
+(* From HoareTripleForInstructions2 *)
+lemma tmp001:
+"length lst = h \<Longrightarrow>
+Suc (unat n) < h \<Longrightarrow>
+unat n \<le> length (drop 1 lst)"
+apply auto
+done
+
+lemma tmp000: "
+a \<noteq> h - Suc 0 \<Longrightarrow> \<not> a < h - Suc (Suc (unat n)) \<Longrightarrow> a \<noteq> h - Suc (Suc (unat n)) \<Longrightarrow> 
+a < h \<Longrightarrow> (Suc (a + unat n) - h) < unat n
+"
+apply auto
+done
+
+lemma tmp002:
+ "a \<noteq> h - Suc 0 \<Longrightarrow> a < h
+   \<Longrightarrow> Suc (h - Suc (Suc a)) = h - Suc a"
+apply auto
+done
+
+
+lemma take_drop_nth [simp] :
+  "length (vctx_stack x1) = h \<Longrightarrow>
+   Suc (unat n) < h \<Longrightarrow>
+   a \<noteq> h - Suc 0 \<Longrightarrow> \<not> a < h - Suc (Suc (unat n)) \<Longrightarrow> a \<noteq> h - Suc (Suc (unat n)) \<Longrightarrow>
+   a < h \<Longrightarrow>
+   rev (take (unat n) (drop (Suc 0) (vctx_stack x1))) ! (Suc (a + unat n) - h) = rev (vctx_stack x1) ! a"
+  apply(simp add: tmp000 tmp001 tmp002 List.rev_nth min_absorb2)
+done
+
+lemma rev_lookup :
+  "k < length lst \<Longrightarrow>
+   rev lst ! (length lst - Suc k) = lst ! k"
+apply(simp add: List.rev_nth)
+done
+
+lemma list_swap_usage :
+  "n < length lst \<Longrightarrow>
+   rev lst ! (length lst - Suc 0) = w \<Longrightarrow>
+   rev lst ! (length lst - Suc n) = v \<Longrightarrow>
+   list_swap n lst = Some ([v] @ take (n - 1) (drop 1 lst) @ [w] @ (drop (n + 1) lst))"
+apply(subgoal_tac "0 < length lst")
+ apply(simp add: rev_lookup list_swap_def)
+apply auto
+done
+
+lemma inst_swap_sound:
+notes
+  if_split[split del]
+shows
+"triple_inst_sem
+  (\<langle> h \<le> 1024 \<and> Suc (unat n) < h \<and> Gverylow \<le> g \<and> 0 \<le> m \<rangle> \<and>*
+   stack_height h \<and>* stack (h - Suc 0) w \<and>* stack (h - Suc (Suc (unat n))) v \<and>*
+   program_counter k \<and>* gas_pred g \<and>* memory_usage m \<and>* continuing \<and>* rest)
+  (k, Swap n)
+  (stack_height h \<and>* stack (h - Suc 0) v \<and>* stack (h - Suc (Suc (unat n))) w \<and>*
+   program_counter (k + 1) \<and>* gas_pred (g - Gverylow) \<and>* memory_usage m \<and>* continuing \<and>* rest)"
+apply(simp add: triple_inst_sem_def program_sem.simps as_set_simps sep_conj_ac)
+apply(clarify)
+apply(sep_simp simp: fun_sep_simps; simp)
+apply(simp split: instruction_result.splits)
+apply(simp add: vctx_next_instruction_def set_diff_eq)
+apply(clarsimp simp add: instruction_simps swap_def list_swap_def)
+apply((sep_simp simp: fun_sep_simps; simp add: set_diff_eq)+)
+apply(rule conjI)
+ apply(erule_tac P="(_ \<and>* _)" in back_subst)
+apply(rule  Set.equalityI)
+ apply(simp add: Set.subset_iff)
+ apply(rule allI)
+ apply(rename_tac elm)
+ apply(case_tac elm; simp add: instruction_result_as_set_def)
+
+ apply(rename_tac pair)
+ apply(case_tac pair; simp)
+ apply(case_tac "a = h - Suc 0"; simp add: rev_lookup)
+ apply(case_tac "a < h - Suc (Suc (unat n))"; simp)
+ apply(case_tac "a = h - Suc (Suc (unat n))"; simp add: rev_lookup)
+  apply auto[1]
+ apply auto[1]
+apply(simp add: Set.subset_iff)
+apply(rule allI)
+apply(rename_tac elm)
+apply(case_tac elm; simp add: instruction_result_as_set_def)
+    apply(rename_tac pair; case_tac pair)
+     apply simp
+    apply(simp add: rev_lookup)
+    apply(case_tac "length (vctx_stack x1) = 0"; simp)
+   apply(rename_tac pair; case_tac pair; simp)
+   apply(case_tac "a = h - Suc 0")
+    apply(clarsimp simp add: rev_lookup)
+   apply(case_tac "a < h - Suc 0"; simp)
+   apply(case_tac "a = h - Suc (Suc (unat n))"; simp)
+    apply(clarsimp simp add: rev_lookup rev_nth)
+    apply(insert subst[OF rev_lookup[where k=0], where P="\<lambda>u. _ \<noteq> u"])[1]
+    apply(drule_tac x="vctx_stack x1" and y="ba" in meta_spec2)
+    apply(drule meta_mp; clarsimp)
+   apply(case_tac "a < h - Suc (Suc (unat n))"; simp)
+    apply(simp add: tmp000 tmp001 tmp002 List.rev_nth)
+    apply linarith
+   apply(simp add: tmp000 tmp001 tmp002 List.rev_nth)
+   apply linarith
+  apply(clarsimp)
+ apply(clarsimp)
+apply(simp add: rev_lookup)
+apply(rule conjI)
+ apply(rule disjI2)
+ apply(rule conjI)
+  apply linarith
+ apply(cut_tac lst="vctx_stack x1" and k=0 in rev_lookup; clarsimp)
+apply(simp add: rev_lookup)
+done
+
 lemma triple_inst_soundness:
 notes
   sep_lc[simp del]
@@ -264,7 +594,13 @@ shows
   "triple_inst p i q \<Longrightarrow> triple_inst_sem p i q"
   apply(induction rule:triple_inst.induct)
       apply(erule triple_inst_arith.cases; clarsimp)
-			apply(inst_sound_basic simp: iszero_stack_def)
+          apply(simp add: inst_arith_2_1_low_sound)
+         apply(simp add: inst_arith_2_1_verylow_sound)
+        apply(simp add: inst_arith_3_1_sound)
+			 apply(inst_sound_basic simp: iszero_stack_def)
+      apply(erule triple_inst_bits.cases; clarsimp)
+       apply(inst_sound_basic)
+      apply(simp add: inst_bits_2_1_sound)
      apply(erule triple_inst_misc.cases; clarsimp)
      apply(simp only: inst_stop_sem)
     apply(erule triple_inst_pc.cases; clarsimp)
@@ -273,8 +609,9 @@ shows
    apply(erule triple_inst_stack.cases; clarsimp)
     apply(inst_sound_basic)
    apply(inst_sound_basic)
-  apply(simp add: inst_strengthen_pre_sem)
- apply(simp add: inst_false_pre_sem)
+  apply(simp add: inst_swap_sound)
+ apply(simp add: inst_strengthen_pre_sem)
+apply(simp add: inst_false_pre_sem)
 done
 
 (* Define the semantic of triple_seq and prove it sound *)
