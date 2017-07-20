@@ -372,16 +372,24 @@ apply(rule_tac R = "balance t b ** stack h b ** block_number_pred bn ** this_acc
    apply (subgoal_tac "(Suc (Suc (Suc h))) = h + 3"; simp only: sep_conj_ac)
 done
 
+lemma four_plus:
+ " h + 4 = (Suc (Suc (Suc (Suc h))))"
+apply(simp)
+done
+
 lemma five_plus:
- "5 + h = Suc (Suc (Suc (Suc (Suc h))))"
+ "h + 5 = Suc (Suc (Suc (Suc (Suc h))))"
 apply(simp)
 done
 
 lemma six_plus:
- "6 + h = Suc (Suc (Suc (Suc (Suc (Suc h)))))"
+ "h + 6 = Suc (Suc (Suc (Suc (Suc (Suc h)))))"
 apply(simp)
 done
 
+lemma sep_conj_eq:
+  "P = P' \<Longrightarrow> Q = Q' \<Longrightarrow> (P \<and>* Q) = (P' \<and>* Q')"
+  by auto
 
 lemma seven_args:
 "triple net {OutOfGas} (\<langle> h \<le> 1017 \<and> 2463000 \<le> unat bn \<and> at_least_eip150 net\<rangle>
@@ -431,8 +439,8 @@ apply(auto)
  apply(rule_tac R = "block_number_pred bn **
       caller c ** this_account t ** balance t b" in frame_backward)
   apply(rule_tac h = h and g = g in pddd_triple)
-  (* HERE*)
-  using sep_assoc sep_commute apply auto
+  apply (simp add: sep_conj_ac)
+  apply (rule refl)
 apply(rule_tac R = "
       stack h (word_rcat [0]) **
       stack (Suc h) (word_rcat [0]) **
@@ -444,40 +452,16 @@ apply(rule_tac R = "
              and c = c and t = t and b = b
              and g = "g - 4 * Gverylow" in first_three_args)
   apply(simp)
- apply(simp)
-apply(simp)
-apply(rule sep_functional)
- apply(simp)
-apply(rule sep_functional)
- apply(simp)
-apply(rule sep_functional)
- apply(simp)
-apply(rule sep_functional)
- apply(simp)
-apply(rule sep_functional)
- apply(simp)
-apply(rule sep_functional)
- apply(simp)
-apply(rule sep_functional)
- apply(simp)
-apply(rule first_two)
-apply(rule sep_functional)
- apply (simp add: semiring_normalization_rules(24))
-apply(rule first_two)
-apply(rule sep_functional)
- apply(simp)
-apply(rule first_two)
-apply(rule sep_functional)
- apply(simp)
-apply(rule sep_functional)
- apply (metis add.left_commute numeral_Bit0 s2n_ths(1) s2n_ths(2))
-apply(rule sep_functional)
- apply(simp)
-apply(rule sep_functional)
- apply(simp add: five_plus)
-apply(rule sep_functional)
- apply(simp add: six_plus)
-apply(simp)
+  apply(simp add: sep_conj_ac)+
+  apply (rule sep_conj_eq[OF refl] )+
+  apply (rule ext, rule iffI)
+   apply (sep_cancel)+
+  apply (simp only: semiring_normalization_rules(24) )
+   apply (sep_cancel)+
+  apply (auto simp:  four_plus five_plus six_plus)[1]
+  apply(simp only :  four_plus five_plus six_plus)
+       apply (sep_cancel)+
+  apply (simp only: semiring_normalization_rules(24) four_plus five_plus six_plus)
 done
 
 lemma pc_not_topmost [simp] :
@@ -510,26 +494,7 @@ lemma stack_topmost_translate_inner :
                        stack (Suc h) out_begin **
                        stack h out_size) **
                        rest) s"
-apply(auto simp add: stack_topmost_def)
-  apply(rule leibniz)
-   apply blast
-  apply(auto)
-  apply(rename_tac elm; case_tac elm; simp)
-  apply(case_tac x2; simp)
-  apply(case_tac "a = h"; simp)
-  apply(case_tac "a = Suc h"; simp)
-  apply(case_tac "a = Suc (Suc h)"; simp)
-  apply(case_tac "a = Suc (Suc (Suc h))"; simp)
-  apply(case_tac "a = Suc (Suc (Suc (Suc h)))"; simp)
-  apply(case_tac "a = Suc (Suc (Suc (Suc (Suc h))))"; simp)
-  apply(case_tac "a = Suc (Suc (Suc (Suc (Suc (Suc h)))))"; simp)
- apply(simp add: stack_topmost_elms.simps plus_seven)
- apply(auto)
-apply(rule leibniz)
- apply blast
-apply(simp add: stack_topmost_elms.simps plus_seven)
-apply(auto)
-done
+by (auto simp add: stack_topmost_def four_plus five_plus six_plus plus_seven elim!:back_subst[where P=rest])
 
 
 lemma stack_topmost_translate :
@@ -549,7 +514,7 @@ done
 
 lemma tri_sep :
   "\<forall> s. c s = d s \<Longrightarrow> (a ** b ** c) k = (a ** b ** d) k"
-apply(simp add: sep_def)
+apply(simp add: sep_conj_def)
 done
 
 lemma stack_topmost_special_translate :
@@ -601,85 +566,6 @@ apply(rule weaken_post)
 apply(simp only: stack_topmost_special_translate)
 apply blast
 done
-
-lemma pick_fifth_L :
-  "e ** a ** b ** c ** d ** rest = R \<Longrightarrow> a ** b ** c ** d ** e ** rest = R"
-proof -
- have "e ** a ** b ** c ** d ** rest = a ** b ** c ** d ** e ** rest"
-  using first_two by auto
- moreover assume "e ** a ** b ** c ** d ** rest = R"
- ultimately show "a ** b ** c ** d ** e ** rest = R"
-  by auto
-qed
-
-lemma pick_ninth_L :
-  "i ** a ** b ** c ** d ** e ** f ** g ** h ** rest = R \<Longrightarrow>
-   a ** b ** c ** d ** e ** f ** g ** h ** i ** rest = R"
-proof -
- have "i ** a ** b ** c ** d ** e ** f ** g ** h ** rest
-     = a ** b ** c ** d ** e ** f ** g ** h ** i ** rest"
-  using first_two by auto
- moreover assume "i ** a ** b ** c ** d ** e ** f ** g ** h ** rest = R"
- ultimately show "a ** b ** c ** d ** e ** f ** g ** h ** i ** rest = R"
-  by auto
-qed
-
-
-
-lemma pick_fifth_last_L :
-  "e ** a ** b ** c ** d = R \<Longrightarrow> a ** b ** c ** d ** e = R"
-proof -
- have "e ** a ** b ** c ** d = a ** b ** c ** d ** e"
-  using rotate4 by auto
- moreover assume "e ** a ** b ** c ** d = R"
- ultimately show "a ** b ** c ** d ** e = R"
-  by auto
-qed
-
-lemma pick_fourth_last_L :
-  "d ** a ** b ** c = R \<Longrightarrow> a ** b ** c ** d = R"
-proof -
- have "d ** a ** b ** c = a ** b ** c ** d"
-  using rotate4 by auto
- moreover assume "d ** a ** b ** c = R"
- ultimately show "a ** b ** c ** d = R"
-  by auto
-qed
-
-
-lemma pick_sixth_last_L :
-  "f ** a ** b ** c ** d ** e = R \<Longrightarrow>
-   a ** b ** c ** d ** e ** f = R"
-proof -
- have "f ** a ** b ** c ** d ** e = a ** b ** c ** d ** e ** f"
-  using rotate4 by auto
- moreover assume "f ** a ** b ** c ** d ** e = R"
- ultimately show "a ** b ** c ** d ** e ** f = R"
-  by auto
-qed
-
-
-lemma pick_fourth_L :
-  "d ** a ** b ** c ** rest = R \<Longrightarrow> a ** b ** c ** d ** rest = R"
-proof -
- have "d ** a ** b ** c ** rest = a ** b ** c ** d** rest"
-  using first_two by auto
- moreover assume "d ** a ** b ** c ** rest = R"
- ultimately show "a ** b ** c ** d ** rest = R"
-  by auto
-qed
-
-lemma pick_second_L :
-  "b ** a ** rest = R \<Longrightarrow> a ** b ** rest = R"
-proof -
- have "b ** a ** rest = a ** b ** rest"
-  using first_two by auto
- moreover assume "b ** a ** rest = R"
- ultimately show "a ** b ** rest = R"
-  by auto
-qed
-
-
 
 lemma call_with_args:
 "triple net {OutOfGas} (\<langle> h \<le> 1017 \<and> 2463000 \<le> unat bn \<and> at_least_eip150 net\<rangle>
@@ -735,9 +621,13 @@ apply(rule_tac cL = "{(k, Stack (PUSH_N [0])),
                        (8 + k, Stack (PUSH_N [8, 0]))}"
             and cR = "{(11 + k, Misc CALL)}" in composition)
   apply(auto)
- apply(rule_tac R = "memory_usage u" in frame_backward)
-   apply(rule_tac k = k and h = h and c = c and bn = bn and t = t and b = b and g = g in seven_args_packed)
-  apply(simp)
+  apply(rule_tac R = "memory_usage u" in frame_backward)
+  apply(rule_tac k = k and h = h and c = c and bn = bn and t = t and b = b and g = g in seven_args_packed)
+  apply(simp add: )
+  apply (rule sep_conj_eq[OF refl])+
+  apply (simp only: sep_conj_ac)
+  apply (rule sep_conj_eq[OF refl])+
+  (* Is this supposed to be true? *)
  apply simp
 apply(rule_tac R = "block_number_pred bn **
       caller c" in frame_backward)

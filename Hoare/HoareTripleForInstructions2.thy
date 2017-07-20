@@ -115,7 +115,7 @@ lemma iszero_gas_triple :
   apply clarsimp
   apply(hoare_sep sep: evm_sep 
                    simp: instruction_result_as_set_def  sstore_def
-                         vctx_update_storage_def hoare_simps
+                         vctx_update_storage_def hoare_simps set_diff_eq
                    dest: advance_pc_inc_but_stack
                   split:if_split_asm)
   apply (drule advance_pc_inc_but_stack)
@@ -131,7 +131,6 @@ lemma iszero_gas_triple :
     apply(rename_tac p)
     apply(case_tac p; fastforce)
    apply(rename_tac p)
-   apply(case_tac p; fastforce)
   apply(simp)
   apply(rename_tac elm)
   apply(case_tac elm; simp add: hoare_simps split:if_splits)
@@ -194,7 +193,7 @@ lemma swap_gas_triple :
                        gas_pred (g - Gverylow) **
                        continuing
                       )"
-  apply(simp add: triple_def)
+  apply(simp add: triple_def set_diff_eq)
 apply clarify
 apply(rule_tac x = 1 in exI)
 apply(case_tac presult)
@@ -357,7 +356,7 @@ lemma dup_gas_triple :
                        gas_pred (g - Gverylow) **
                        continuing
                       )"
-apply(auto simp add: triple_def )
+apply(auto simp add: triple_def set_diff_eq)
 apply(rule_tac x = 1 in exI)
 apply(case_tac presult; auto simp add:instruction_result_as_set_def)
 apply(erule_tac P=rest in back_subst)
@@ -365,8 +364,7 @@ apply(rule Set.equalityI)
  apply(clarify)
  apply(simp)
  apply(rename_tac elm; case_tac elm; simp)
-apply(clarify)
-apply(simp)
+apply clarsimp+
 apply(rename_tac elm; case_tac elm; simp)
 apply(auto)
 done
@@ -378,7 +376,7 @@ lemma address_gas_triple :
           {(k, Info ADDRESS)}
           (stack_height (h + 1) ** stack h (ucast t)
            ** program_counter (k + 1) ** this_account t ** gas_pred (g - Gbase) ** continuing )"
-apply(auto simp add: triple_def)
+apply(auto simp add: triple_def set_diff_eq)
 apply(rule_tac x = 1 in exI)
   apply(case_tac presult; simp add: instruction_result_as_set_def)
 apply clarsimp
@@ -387,8 +385,7 @@ apply(rule Set.equalityI)
  apply(clarify)
  apply(simp)
  apply(rename_tac elm; case_tac elm; simp)
-apply(clarify)
-apply(simp)
+apply(clarsimp)+
 apply(rename_tac elm; case_tac elm; simp)
 apply(auto)
 done
@@ -419,17 +416,15 @@ lemma push_gas_triple :
                        gas_pred (g - Gverylow) **
                        continuing
                       )"
-apply(auto simp add: triple_def)
+apply(auto simp add: triple_def set_diff_eq)
 apply(rule_tac x = 1 in exI)
 apply(case_tac presult; simp add: instruction_result_as_set_def constant_mark_def)
 apply clarify
 apply(erule_tac P=rest in back_subst)
 apply(rule Set.equalityI)
- apply(clarify)
- apply(simp)
- apply(rename_tac elm; case_tac elm; simp)
-apply(clarify)
-apply(simp)
+ apply(clarsimp)+
+apply(rename_tac elm; case_tac elm; simp)
+apply(clarsimp)+
 apply(rename_tac elm; case_tac elm; simp)
 apply(auto)
 done
@@ -454,11 +449,11 @@ lemma jumpi_false_gas_triple :
                        program_counter (k + 1) **
                        gas_pred (g - Ghigh) **
                        continuing)"
-apply(auto simp add: triple_def)
+apply(auto simp add: triple_def set_diff_eq)
 apply(rule_tac x = 1 in exI)
 apply(simp add: instruction_result_as_set_def)
 apply(case_tac presult; simp)
-apply(clarsimp simp add: insert_minus_set vctx_advance_pc_def set_diff_eq)
+apply(clarsimp simp add: insert_minus_set vctx_advance_pc_def)
 apply(erule_tac P=rest in back_subst)
 apply(auto simp add: stack_as_set_def)
 done
@@ -478,10 +473,10 @@ lemma jumpi_true_gas_triple :
                        gas_pred (g - Ghigh) **
                        continuing
                       )"
-apply(auto simp add: triple_def)
+apply(auto simp add: triple_def set_diff_eq)
 apply(rule_tac x = 1 in exI)
 apply(case_tac presult; simp )
-apply(auto simp add: set_diff_eq instruction_result_as_set_def)
+apply(auto simp add:  instruction_result_as_set_def)
 apply(erule_tac P=rest in back_subst)
 apply(auto simp add: stack_as_set_def)
 done
@@ -501,10 +496,10 @@ lemma jump_gas_triple :
                        gas_pred (g - Gmid) **
                        continuing
                       )"
-apply(auto simp add: triple_def)
+apply(auto simp add: triple_def set_diff_eq)
 apply(rule_tac x = 1 in exI)
 apply(case_tac presult; simp )
-apply(auto simp add: set_diff_eq instruction_result_as_set_def)
+apply(auto simp add: instruction_result_as_set_def)
 apply(erule_tac P=rest in back_subst)
 apply(auto simp add: stack_as_set_def)
 done
@@ -572,10 +567,10 @@ lemma invalid_jumpi_gas_triple :
                        not_continuing **
                        action (ContractFail [InvalidJumpDestination])
                       )"
-apply(auto simp add: triple_def)
+apply(auto simp add: triple_def set_diff_eq)
   apply(rule_tac x = 1 in exI)
  apply(case_tac presult; simp )
-apply (auto simp add: set_diff_eq instruction_result_as_set_def)
+apply (auto simp add:  instruction_result_as_set_def)
 apply(erule_tac P=rest in back_subst)
  apply(auto simp add: stack_as_set_def)[1]
 apply(erule_tac P=rest in back_subst)
@@ -604,10 +599,10 @@ lemma invalid_jump_gas_triple :
                        not_continuing **
                        action (ContractFail [InvalidJumpDestination])
                       )"
-apply(auto simp add: triple_def)
+apply(auto simp add: triple_def set_diff_eq)
 apply(rule_tac x = 1 in exI)
   apply(case_tac presult; simp)
- apply (auto simp add: set_diff_eq instruction_result_as_set_def)
+ apply (auto simp add: instruction_result_as_set_def)
 apply(erule_tac P=rest in back_subst)
  apply(auto)
 apply(erule_tac P=rest in back_subst)
@@ -656,7 +651,7 @@ lemma jumpdest_gas_triple :
                        gas_pred (g - Gjumpdest) **
                        continuing
                       )"
-apply(auto simp add: triple_def)
+apply(auto simp add: triple_def set_diff_eq)
 apply(rule_tac x = 1 in exI)
 apply(case_tac presult; simp add: instruction_result_as_set_def)
 
@@ -664,12 +659,10 @@ apply(clarify)
 apply(erule_tac P=rest in back_subst)
 apply(simp add: instruction_result_as_set_def contexts_as_set_def)
 apply(rule Set.equalityI)
- apply(clarify)
- apply(simp)
- apply(rename_tac elm; case_tac elm; simp)
-apply(clarify)
-apply(simp)
-apply(rename_tac elm; case_tac elm; simp)
+ apply(clarsimp)+
+  apply(rename_tac elm; case_tac elm; simp)
+ apply clarsimp+
+apply(rename_tac elm; case_tac elm; clarsimp)
 done 
 
 lemma pop_gas_triple : "triple net {OutOfGas} (\<langle> h \<le> 1024 \<rangle> **
@@ -685,17 +678,15 @@ lemma pop_gas_triple : "triple net {OutOfGas} (\<langle> h \<le> 1024 \<rangle> 
                             gas_pred (g - Gbase) **
                             continuing
                             )"
-apply(auto simp add: triple_def)
+apply(auto simp add: triple_def set_diff_eq)
 apply(rule_tac x = 1 in exI)
 apply(case_tac presult; simp)
   apply(case_tac "vctx_stack x1"; simp)
   apply clarify
   apply(erule_tac P=rest in back_subst)
   apply(auto simp add: instruction_result_as_set_def)
-
-apply(auto simp add:
-vctx_advance_pc_def
- contexts_as_set_def variable_ctx_as_set_def ext_program_as_set_def balance_as_set_def)
+  apply(auto simp add: vctx_advance_pc_def contexts_as_set_def 
+          variable_ctx_as_set_def ext_program_as_set_def balance_as_set_def)
 done
 
 lemma balance_gas_triple :
@@ -706,7 +697,7 @@ lemma balance_gas_triple :
           {(k, Info BALANCE)}
           (block_number_pred bn ** stack_height (h + 1) ** stack h b
            ** program_counter (k + 1) ** balance (ucast a) b ** gas_pred (g - 400) ** continuing )"
-apply(auto simp add: triple_def)
+apply(auto simp add: triple_def set_diff_eq)
 apply(rule_tac x = 1 in exI)
 apply(simp)
 apply(case_tac presult; simp)
@@ -719,7 +710,7 @@ apply(rule Set.equalityI)
  apply(rename_tac elm; case_tac elm; simp)
  apply(case_tac x2; simp)
  apply(case_tac "aa = length list"; simp)
-apply(clarsimp)
+apply(clarsimp)+
 apply(rename_tac elm; case_tac elm; simp)
 apply(case_tac " fst x2 < Suc (length list)"; auto)
 done
@@ -768,11 +759,11 @@ lemma eq_gas_triple :
                         program_counter (k + 1) **
                         gas_pred (g - Gverylow) **
                         continuing )"
-apply(auto simp add: triple_def)
+apply(auto simp add: triple_def set_diff_eq)
  apply(rule_tac x = 1 in exI)
  apply(simp add: instruction_result_as_set_def)
   apply(case_tac presult; simp)
-  apply (auto simp add: failed_for_reasons_def set_diff_eq
+  apply (auto simp add: failed_for_reasons_def
        instruction_result_as_set_def)
   apply(erule_tac P=rest in back_subst)
   apply(rule Set.equalityI)
@@ -846,11 +837,11 @@ lemma add_triple :
             gas_pred (g - Gverylow) **
             continuing
            )"
-apply(simp add: triple_def)
+apply(simp add: triple_def set_diff_eq)
 apply(clarify)
 apply(rule_tac x = "1" in exI)
   apply(case_tac presult; simp)
- apply (auto simp add: instruction_result_as_set_def set_diff_eq)
+ apply (auto simp add: instruction_result_as_set_def)
 apply(erule_tac P=rest in back_subst)
 apply(rule Set.equalityI)
  apply(clarsimp)
@@ -883,7 +874,7 @@ lemma add_gas_triple :
        gas_pred (g - Gverylow) **
        continuing
       )"
-apply(simp add: triple_def)
+apply(simp add: triple_def set_diff_eq)
 apply(clarify)
 apply(rule_tac x = "1" in exI)
 apply(case_tac presult; auto simp add: instruction_result_as_set_def)
@@ -894,13 +885,10 @@ apply(rule Set.equalityI)
  apply(case_tac "fst x2 < length ta"; simp)
  apply(case_tac "fst x2 = length ta"; simp)
  apply(case_tac "fst x2 = Suc (length ta)"; simp)
-apply(clarsimp)
+apply(clarsimp)+
 apply(rename_tac elm; case_tac elm; simp)
  apply(case_tac "fst x2 < length ta"; simp)
-
-apply auto[1]
-  apply (metis cancel_comm_monoid_add_class.diff_cancel fst_conv le_neq_implies_less less_Suc_eq_le nth_Cons_0 old.prod.exhaust snd_conv)
-
+  apply auto
 done
 
 
@@ -1013,18 +1001,16 @@ lemma pop_triple : "triple net {} (\<langle> h \<le> 1024 \<and> g \<ge> Gbase \
                             gas_pred (g - Gbase) **
                             continuing
                             )"
-apply(simp add: triple_def)
+apply(simp add: triple_def set_diff_eq)
 apply(clarify)
 apply(rule_tac x = "1" in exI)
 apply(case_tac presult; simp)
-apply(auto simp add:
-      instruction_result_as_set_def
-      )
+apply(auto simp add: instruction_result_as_set_def)
 apply(erule_tac P=rest in back_subst)
   apply(auto)
 apply(auto simp add:
-vctx_advance_pc_def
- contexts_as_set_def variable_ctx_as_set_def ext_program_as_set_def balance_as_set_def)
+      vctx_advance_pc_def contexts_as_set_def variable_ctx_as_set_def
+      ext_program_as_set_def balance_as_set_def)
 done
 
 declare misc_inst_numbers.simps [simp]
@@ -1035,7 +1021,7 @@ lemma stop_gas_triple:
           (\<langle> h \<le> 1024 \<rangle> ** stack_height h ** program_counter k ** continuing)
           {(k, Misc STOP)}
           (stack_height h ** program_counter k ** not_continuing ** action (ContractReturn []))"
-apply(simp add: triple_def)
+apply(simp add: triple_def set_diff_eq)
 apply(clarify)
 apply(rule_tac x = "1" in exI)
 apply(clarify)

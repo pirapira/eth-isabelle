@@ -167,7 +167,7 @@ apply(clarsimp simp add: triple_def )
   apply clarsimp
   apply(hoare_sep sep: evm_sep 
                    simp: instruction_result_as_set_def  sstore_def
-                         vctx_update_storage_def hoare_simps
+                         vctx_update_storage_def hoare_simps set_diff_eq
                   split:if_split_asm)
   apply(erule_tac P=rest in back_subst)
   apply(rule  Set.equalityI; clarify)
