@@ -51,7 +51,7 @@ lemma
        prefer 4
        apply(simp)
        apply(rule seq_inst)
-        apply(rule inst_strengthen_pre[OF inst_push_n[where rest=emp]])
+        apply(rule inst_strengthen_pre[OF inst_stack], rule inst_push_n[where rest=emp])
         apply(rule impI)
         apply(sep_cancel)+
         apply(sep_simp simp: gas_pred_sep)
@@ -61,8 +61,8 @@ lemma
          apply(rule refl)
         apply(simp)
        apply(rule seq_inst)
-        apply(rule inst_strengthen_pre[OF inst_push_n[where rest="stack 0 (word_rcat [1])" 
-              and h="Suc 0"]])
+        apply(rule inst_strengthen_pre[OF inst_stack], rule inst_push_n[where rest="stack 0 (word_rcat [1])" 
+              and h="Suc 0"])
         apply(rule impI)
         apply(sep_cancel)+
         apply(simp)
@@ -82,19 +82,19 @@ lemma
   apply(simp add: word_rcat_simps)
  apply(rule blocks_no)
  apply(rule seq_inst)
-  apply(rule inst_strengthen_pre[OF inst_jumpdest[where rest=emp]])
+  apply(rule inst_strengthen_pre[OF inst_pc], rule inst_jumpdest[where rest=emp])
   apply(rule impI)
   apply(sep_cancel)+
   apply(simp)
  apply(rule seq_inst)
-  apply(rule inst_strengthen_pre[OF inst_push_n[where rest=emp]])
+  apply(rule inst_strengthen_pre[OF inst_stack], rule inst_push_n[where rest=emp])
   apply(rule impI)
   apply(sep_simp simp: program_counter_sep)
   apply(rule conjI; simp)
   apply(sep_cancel)+
   apply(simp)
  apply(rule seq_inst)
-  apply(rule inst_strengthen_pre[OF inst_stop[where rest="stack 0 (word_rcat [2])"]]; rule impI)
+  apply(rule inst_strengthen_pre[OF inst_misc], rule inst_stop[where rest="stack 0 (word_rcat [2])"]; rule impI)
   apply(sep_cancel)+
   apply(sep_simp simp: program_counter_sep)
   apply(simp)
@@ -131,7 +131,7 @@ apply(rule exI)+
        prefer 4
        apply(simp)
        apply(rule seq_inst)
-        apply(rule inst_strengthen_pre[OF inst_push_n[where rest=emp]])
+        apply(rule inst_strengthen_pre[OF inst_stack], rule inst_push_n[where rest=emp])
         apply(rule impI)
         apply(sep_cancel)+
         apply(sep_simp simp: gas_pred_sep)
@@ -141,8 +141,8 @@ apply(rule exI)+
          apply(rule refl)
         apply(simp)
        apply(rule seq_inst)
-        apply(rule inst_strengthen_pre[OF inst_push_n[where rest="stack 0 (word_rcat [cond])" 
-              and h="Suc 0"]])
+        apply(rule inst_strengthen_pre[OF inst_stack], rule inst_push_n[where rest="stack 0 (word_rcat [cond])" 
+              and h="Suc 0"])
         apply(rule impI)
         apply(sep_cancel)+
         apply(sep_simp simp: program_counter_sep)
@@ -162,12 +162,12 @@ apply(rule exI)+
   apply(simp add: word_rcat_simps)
  apply(rule blocks_no)
   apply(rule seq_inst)
-   apply(rule inst_strengthen_pre[OF inst_push_n[where rest=emp]]; rule impI)
+   apply(rule inst_strengthen_pre[OF inst_stack], rule inst_push_n[where rest=emp]; rule impI)
    apply(simp)
    apply(sep_cancel)+
    apply(simp)
   apply(rule seq_inst)
-   apply(rule inst_strengthen_pre[OF inst_stop[where rest="stack 0 (word_rcat [1])"]]; rule impI)
+   apply(rule inst_strengthen_pre[OF inst_misc], rule inst_stop[where rest="stack 0 (word_rcat [1])"]; rule impI)
    apply(simp)
    apply(sep_cancel)+
    apply(simp)
@@ -176,19 +176,19 @@ apply(rule exI)+
   apply(sep_cancel)
  apply(rule blocks_no)
  apply(rule seq_inst)
-  apply(rule inst_strengthen_pre[OF inst_jumpdest[where rest=emp]])
+  apply(rule inst_strengthen_pre[OF inst_pc], rule inst_jumpdest[where rest=emp])
   apply(rule impI)
   apply(sep_cancel)+
   apply(simp)
  apply(rule seq_inst)
-  apply(rule inst_strengthen_pre[OF inst_push_n[where rest=emp]])
+  apply(rule inst_strengthen_pre[OF inst_stack], rule inst_push_n[where rest=emp])
   apply(rule impI)
   apply(sep_simp simp: program_counter_sep)
   apply(rule conjI; simp)
   apply(sep_cancel)+
   apply(simp)
  apply(rule seq_inst)
-  apply(rule inst_strengthen_pre[OF inst_stop[where rest="stack 0 (word_rcat [2])"]]; rule impI)
+  apply(rule inst_strengthen_pre[OF inst_misc], rule inst_stop[where rest="stack 0 (word_rcat [2])"]; rule impI)
   apply(sep_cancel)+
   apply(sep_simp simp: program_counter_sep)
   apply(simp)
@@ -214,13 +214,13 @@ apply(rule blocks_jumpi[where rest="\<langle>word_rcat [cond] \<noteq> (0::256 w
        prefer 4
        apply(simp)
        apply(rule seq_inst)
-        apply(rule inst_strengthen_pre[OF inst_push_n[where rest="\<langle>word_rcat [cond] \<noteq> (0::256 word)\<rangle>"]])
+        apply(rule inst_strengthen_pre[OF inst_stack], rule inst_push_n[where rest="\<langle>word_rcat [cond] \<noteq> (0::256 word)\<rangle>"])
         apply(rule impI)
         apply(sep_cancel)+
         apply(simp)
        apply(rule seq_inst)
-        apply(rule inst_strengthen_pre[OF inst_push_n[where rest="stack 0 (word_rcat [cond]) \<and>* \<langle>word_rcat [cond] \<noteq> (0::256 word)\<rangle>" 
-              and h="Suc 0"]])
+        apply(rule inst_strengthen_pre[OF inst_stack], rule inst_push_n[where rest="stack 0 (word_rcat [cond]) \<and>* \<langle>word_rcat [cond] \<noteq> (0::256 word)\<rangle>" 
+              and h="Suc 0"])
         apply(rule impI)
         apply(sep_cancel)+
         apply(sep_simp simp: program_counter_sep)
@@ -242,20 +242,20 @@ apply(rule blocks_jumpi[where rest="\<langle>word_rcat [cond] \<noteq> (0::256 w
   apply(rule seq_false_pre)
  apply(rule blocks_no)
  apply(rule seq_inst)
-  apply(rule inst_strengthen_pre[OF inst_jumpdest[where rest="\<langle>word_rcat [cond] \<noteq> (0::256 word)\<rangle>"]])
+  apply(rule inst_strengthen_pre[OF inst_pc], rule inst_jumpdest[where rest="\<langle>word_rcat [cond] \<noteq> (0::256 word)\<rangle>"])
   apply(rule impI)
   apply(sep_cancel)+
   apply(simp add: gas_pred_sep word_rcat_simps)
   apply(rule conjI; simp)
  apply(rule seq_inst)
-  apply(rule inst_strengthen_pre[OF inst_push_n[where rest=emp]])
+  apply(rule inst_strengthen_pre[OF inst_stack], rule inst_push_n[where rest=emp])
   apply(rule impI)
   apply(sep_simp simp: program_counter_sep)
   apply(rule conjI; simp)
   apply(sep_cancel)+
   apply(simp)
  apply(rule seq_inst)
-  apply(rule inst_strengthen_pre[OF inst_stop[where rest="stack 0 (word_rcat [2])"]]; rule impI)
+  apply(rule inst_strengthen_pre[OF inst_misc], rule inst_stop[where rest="stack 0 (word_rcat [2])"]; rule impI)
   apply(sep_cancel)+
   apply(sep_simp simp: program_counter_sep)
   apply(simp)
@@ -290,7 +290,7 @@ apply(rule blocks_jump[where rest="stack 0 (word_rcat [1])"])
      prefer 3
      apply(simp)
      apply(rule seq_inst)
-      apply(rule inst_strengthen_pre[OF inst_push_n[where rest=emp]])
+      apply(rule inst_strengthen_pre[OF inst_stack], rule inst_push_n[where rest=emp])
       apply(rule impI)
       apply(sep_cancel)+
       apply(sep_simp simp: gas_pred_sep)
@@ -300,8 +300,8 @@ apply(rule blocks_jump[where rest="stack 0 (word_rcat [1])"])
        apply(rule refl)
       apply(simp)
      apply(rule seq_inst)
-      apply(rule inst_strengthen_pre[OF inst_push_n[where rest="stack 0 (word_rcat [1])" 
-            and h="Suc 0"]])
+      apply(rule inst_strengthen_pre[OF inst_stack], rule inst_push_n[where rest="stack 0 (word_rcat [1])" 
+            and h="Suc 0"])
       apply(rule impI)
       apply(sep_cancel)+
       apply(sep_simp simp: program_counter_sep)
@@ -320,11 +320,11 @@ apply(rule blocks_jump[where rest="stack 0 (word_rcat [1])"])
     apply(simp)
    apply(simp)
   apply(rule seq_inst)
-   apply(rule inst_strengthen_pre[OF inst_jumpdest[where rest="stack 0 (word_rcat [1])"]]; rule impI)
+   apply(rule inst_strengthen_pre[OF inst_pc], rule inst_jumpdest[where rest="stack 0 (word_rcat [1])"]; rule impI)
    apply(sep_cancel)+
    apply(simp)
   apply(rule seq_inst)
-   apply(rule inst_strengthen_pre[OF inst_push_n[where rest="stack 0 (word_rcat [1])"]]; rule impI)
+   apply(rule inst_strengthen_pre[OF inst_stack], rule inst_push_n[where rest="stack 0 (word_rcat [1])"]; rule impI)
     apply(sep_cancel)+
     apply(simp)
   apply(rule seq_empty; rule impI)
@@ -332,12 +332,12 @@ apply(rule blocks_jump[where rest="stack 0 (word_rcat [1])"])
   apply(sep_cancel)
  apply(rule blocks_no)
  apply(rule seq_inst)
-  apply(rule inst_strengthen_pre[OF inst_jumpdest[where rest="stack 0 (word_rcat [1]) \<and>* stack (Suc 0) (word_rcat [2])"]])
+  apply(rule inst_strengthen_pre[OF inst_pc], rule inst_jumpdest[where rest="stack 0 (word_rcat [1]) \<and>* stack (Suc 0) (word_rcat [2])"])
   apply(rule impI)
   apply(sep_cancel)+
   apply(simp)
  apply(rule seq_inst)
-  apply(rule inst_strengthen_pre[OF inst_stop[where rest="stack 0 (word_rcat [1]) \<and>* stack (Suc 0) (word_rcat [2])"]]; rule impI)
+  apply(rule inst_strengthen_pre[OF inst_misc], rule inst_stop[where rest="stack 0 (word_rcat [1]) \<and>* stack (Suc 0) (word_rcat [2])"]; rule impI)
   apply(sep_cancel)+
   apply(simp)
  apply(rule seq_empty; rule impI)
