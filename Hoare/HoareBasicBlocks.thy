@@ -100,7 +100,7 @@ lemmas fun_sep_simps =
 caller_sep  balance_sep not_continuing_sep this_account_sep
 action_sep memory8_sep memory_usage_sep pure_sep code_sep gas_pred_sep
 memory_range_sep continuing_sep gas_any_sep program_counter_sep
-stack_height_sep stack_sep block_number_pred_sep storage_sep
+stack_height_sep stack_sep block_number_pred_sep storage_sep emp_sep
 
 lemmas sep_fun_simps =
 fun_sep_simps
