@@ -168,6 +168,7 @@ apply(case_tac presult; simp add: log_inst_numbers.simps sep_memory_range sep_me
         instruction_result_as_set_def vctx_stack_default_def
 memory_range_sep)
   apply clarify
+  (* There should be a way to speedup the lines above with set_diff_eq *)
   apply (clarsimp simp only: set_diff_expand stateelm_means_simps stateelm_equiv_simps)
   apply (rule conjI)
     apply (auto simp: move_neq_first create_log_entry_def vctx_returned_bytes_def set_diff_eq
