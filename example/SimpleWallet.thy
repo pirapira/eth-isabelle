@@ -587,6 +587,11 @@ apply(simp only: stack_topmost_special_translate)
 lemma word_of_int_bin_cat:
   "((word_of_int (bin_cat 8 8 0))::256 word) = 2048"
   by (simp add: bin_cat_def)
+
+lemma unat_word_rcat_0:
+  "unat (word_rcat [0::byte]) = 0"
+  by (auto simp: word_rcat_def bin_rcat_def bin_cat_def)
+    
 lemma call_with_args:
 "triple net {OutOfGas} (\<langle> h \<le> 1017 \<and> 2463000 \<le> unat bn \<and> at_least_eip150 net\<rangle>
                     ** block_number_pred bn ** caller c **
@@ -619,9 +624,8 @@ lemma call_with_args:
                        account_existence c existence **
                        not_continuing **
                        action (ContractCall \<lparr>
-                                  callarg_gas = (word_of_int (Ccallgas 2048 (ucast c) b
-                                      (\<not> existence) ((g - 404 - 5 * Gverylow)) net
-                                      (calc_memu_extra u 2048 (ucast c) b 0 0 0 0)))
+                                  callarg_gas = (word_of_int (Ccallgas 2048 (ucast c) b (\<not> existence) (g - 404 - 5 * Gverylow) net
+                   (calc_memu_extra u 2048 (ucast c) b 0 0 0 0)))
                                 , callarg_code = c
                                 , callarg_recipient = c
                                 , callarg_value = b
@@ -649,34 +653,20 @@ apply(rule_tac cL = "{(k, Stack (PUSH_N [0])),
 apply(rule_tac R = "block_number_pred bn **
       caller c" in frame_backward)
   apply(rule_tac h = h and v = b and fund = b and input = "[]" 
-        and in_size = "word_rcat [0]" and in_begin = "word_rcat [0]"
-        and out_size = "word_rcat [0]" and out_begin = "word_rcat [0]"
-        and g = "2048" and r = "ucast c"
+        and in_size = "word_rcat [0::byte]" and in_begin = "word_rcat [0::byte]"
+        and out_size = "word_rcat [0::byte]" and out_begin = "word_rcat [0::byte]"
+        and g = "2048" and r = "ucast c" and own_gas = "(g - 404 - 5 * Gverylow)"
         and this = t and u = u and existence = existence
         in call_gas_triple)
-     apply(simp add: word_rcat_def bin_rcat_def word_of_int_bin_cat)
+   apply (simp add: sep_conj_ac unat_word_rcat_0)
+  apply (simp add: sep_conj_ac unat_word_rcat_0)
+      apply (rule sep_conj_eq[OF refl] )+
      apply (rule ext, rule iffI)
-     apply sep_cancel+
-     apply (rule ext, rule iffI)
-     apply sep_cancel+
-     apply (auto simp:)[1]
-       apply (simp only: memory_usage_def M_def)
-      apply(simp add: word_rcat_def bin_rcat_def M_def)
-       apply blast
-      apply(auto simp add: word_rcat_def bin_rcat_def word_of_int_bin_cat M_def)[1]
-   apply (auto simp add: balance_def)[1]
-    (* Is this true? x
- apply(rule cons_eq)
- apply(rule cons_eq)
- apply(rule cons_eq)
- apply(rule pick_fifth_L)
- apply(rule sep_functional)
-  apply(simp)
- apply blast
-apply(simp add: word_rcat_def bin_rcat_def M_def)
-done *)
-  sorry
-
+   apply sep_cancel+
+          apply(auto simp add: word_rcat_def bin_rcat_def word_of_int_bin_cat M_def)[1]
+  apply sep_cancel+
+          apply(auto simp add: word_rcat_def bin_rcat_def word_of_int_bin_cat M_def)[1]
+done
 
 lemma equal_pred :
  "P = Q \<Longrightarrow> \<forall> s. P s \<longrightarrow> Q s"
@@ -781,8 +771,9 @@ lemma first_four :
                        block_number_pred bn **
                        stack_height h **
                        program_counter k ** caller c **
-                       storage (word_rcat [0]) w **
+                       storage (word_rcat [0::8 word]) w **
                        gas_pred g **
+                       account_existence c existence **
                        continuing
                       )
                       {(k, Stack (PUSH_N [0])), (k + 2, Storage SLOAD),
@@ -791,8 +782,9 @@ lemma first_four :
                        stack_height (h + 1) **
                        stack h (if ucast c = w then((word_of_int 1) ::  256 word) else((word_of_int 0) ::  256 word)) **
                        program_counter (5 + k) ** caller c **
-                       storage (word_rcat [0]) w **
+                       storage (word_rcat [0::8 word]) w **
                        gas_pred (g + (- Gsload net - 2) - 2 * Gverylow) **
+                       account_existence c existence **
                        continuing
                       )"
 apply(simp only: move_pureL)
@@ -802,12 +794,12 @@ apply(rule_tac cL = "{(k, Stack (PUSH_N [0])), (k + 2, Storage SLOAD)}"
   apply blast
  apply(rule_tac R = "caller c" in frame_backward)
    apply(rule_tac h = h and bn = bn and w = w and g = g in push0sload)
-  apply(simp)
- apply(simp)
-apply(rule_tac R = "storage (word_rcat [0]) w ** block_number_pred bn" in frame_backward)
+    apply(simp add: sep_conj_ac)
+    apply (rule refl)
+apply(rule_tac R = "storage (word_rcat [0::8 word]) w ** block_number_pred bn" in frame_backward)
   apply(rule triple_code_eq)
-   apply(rule_tac k = "k + 3" and h = h and w = w and c = c and g = "g - Gverylow - Gsload net" in caller_eq)
-  apply auto
+     apply(rule_tac k = "k + 3" and h = h and w = w and c = c and g = "g - Gverylow - Gsload net" in caller_eq)
+    apply (simp add: sep_conj_ac semiring_normalization_rules(24))+
 done
 
 
@@ -817,12 +809,14 @@ lemma pushjumpi_false:
                        stack h 0 **
                        program_counter k **
                        gas_pred g **
+                       account_existence c existence **
                        continuing
                       )
                       {(k, Stack (PUSH_N [x])), (k + 2, Pc JUMPI)}
                       (stack_height h **
                        program_counter (k + 3) **
                        gas_pred (g - Gverylow - Ghigh) **
+                       account_existence c existence **
                        continuing)"
 apply(auto)
 apply(rule_tac cL = "{(k, Stack (PUSH_N [x]))}"
@@ -830,11 +824,11 @@ apply(rule_tac cL = "{(k, Stack (PUSH_N [x]))}"
   apply blast
  apply(rule_tac R = "stack h 0" in frame_backward)
    apply(rule_tac g = g and h = "Suc h" in push_gas_triple)
-  apply(auto)
+  apply(auto simp: sep_conj_ac)
 apply(rule_tac R = "emp" in frame_backward)
   apply(rule_tac h = h and g = "g - Gverylow" and d = "(word_rcat [x])"
         in jumpi_false_gas_triple)
- apply(auto)
+ apply(auto simp: sep_conj_ac)
 done
 
 lemma pushjumpistop_false :
@@ -843,6 +837,7 @@ lemma pushjumpistop_false :
                        stack h 0 **
                        program_counter k **
                        gas_pred g **
+                       account_existence c existence **
                        continuing
                       )
                       {(k, Stack (PUSH_N [x])), (k + 2, Pc JUMPI),
@@ -850,6 +845,7 @@ lemma pushjumpistop_false :
                       (stack_height h **
                        program_counter (k + 3) **
                        gas_pred (g - Gverylow - Ghigh) **
+                       account_existence c existence **
                        not_continuing ** action (ContractReturn []))"
 apply(simp only: move_pureL)
 apply(auto)
@@ -861,7 +857,7 @@ apply(rule_tac cL = "{(k, Stack (PUSH_N [x])), (k + 2, Pc JUMPI)}"
  apply(auto)
 apply(rule_tac R = "gas_pred (g - Gverylow - Ghigh)" in frame_backward)
   apply(rule_tac h = h in stop_gas_triple)
- apply(auto)
+ apply(simp add: sep_conj_ac)+
 done
 
 lemma prefix_invalid_caller:
@@ -869,8 +865,9 @@ lemma prefix_invalid_caller:
                        block_number_pred bn **
                        stack_height h **
                        program_counter k ** caller c **
-                       storage (word_rcat [0]) w **
+                       storage (word_rcat [0::8 word]) w **
                        gas_pred g **
+                       account_existence c existence **
                        continuing
                       )
                       {(k, Stack (PUSH_N [0])), (k + 2, Storage SLOAD),
@@ -880,8 +877,9 @@ lemma prefix_invalid_caller:
                       (block_number_pred bn **
                        stack_height h **
                        program_counter (8 + k) ** caller c **
-                       storage (word_rcat [0]) w **
+                       storage (word_rcat [0:: 8 word]) w **
                        gas_pred (g + (- Gsload net - 2) - 2 * Gverylow - Gverylow - Ghigh) **
+                       account_existence c existence **
                        not_continuing ** action (ContractReturn []))"
 apply(simp only: move_pureL)
 apply(auto)
@@ -892,13 +890,13 @@ apply(rule_tac cL = "{(k, Stack (PUSH_N [0])), (k + 2, Storage SLOAD),
   apply(auto)
  apply(rule_tac R = emp in frame_backward)
    apply(rule_tac h = h and bn = bn and c = c and g = g and w = w in first_four)
-  apply(simp)
+  apply(simp add: sep_conj_ac)
  apply(simp)
-apply(rule_tac R = "block_number_pred bn ** caller c ** storage (word_rcat [0]) w" in frame_backward)
+apply(rule_tac R = "block_number_pred bn ** caller c ** storage (word_rcat [0::8 word]) w" in frame_backward)
   apply(rule triple_code_eq)
   apply(rule_tac h = h and k = "k + 5" and x = x and g = "(g + (- Gsload net - 2) - 2 * Gverylow)"
         in pushjumpistop_false)
-  apply(auto)
+  apply(auto simp: sep_conj_ac)
 done
 
 lemma bintrunc_byte_uint :
@@ -925,12 +923,14 @@ lemma pushjumpi_true:
                        stack h cond **
                        program_counter k **
                        gas_pred g **
+                       account_existence c existence **
                        continuing
                       )
                       {(k, Stack (PUSH_N [d])), (k + 2, Pc JUMPI), ((uint (ucast d :: w256)), Pc JUMPDEST)}
                       (stack_height h **
                        program_counter (uint d) **
                        gas_pred (g - Gverylow - Ghigh) **
+                       account_existence c existence **
                        continuing)"
 apply(simp only: move_pureL)
 apply(auto)
@@ -939,13 +939,12 @@ apply(rule_tac cL = "{(k, Stack (PUSH_N [d]))}"
   apply(auto)
  apply(rule_tac R = "stack h cond" in frame_backward)
    apply(rule_tac h = "h + 1" and g = g in push_gas_triple)
-  apply(simp)
+  apply(simp add: sep_conj_ac)
  apply(simp)
 apply(rule_tac R = "emp" in frame_backward)
   apply(rule triple_code_eq)
   apply(rule_tac g = "g - Gverylow" and cond = cond and h = h and k = "k + 2" and d = "ucast d" in jumpi_true_gas_triple)
-  apply(simp)
- apply(auto)
+  apply(simp add: sep_conj_ac semiring_normalization_rules(24))+
 done
 
 
@@ -954,8 +953,9 @@ lemma prefix_true:
                        block_number_pred bn **
                        stack_height h **
                        program_counter k ** caller c **
-                       storage (word_rcat [0]) (ucast c) **
+                       storage (word_rcat [0::byte]) (ucast c) **
                        gas_pred g **
+                       account_existence c existence **
                        continuing
                       )
                       {(k, Stack (PUSH_N [0])), (k + 2, Storage SLOAD),
@@ -965,8 +965,9 @@ lemma prefix_true:
                       (block_number_pred bn **
                        stack_height h **
                        program_counter (uint d) ** caller c **
-                       storage (word_rcat [0]) (ucast c) **
+                       storage (word_rcat [0::byte]) (ucast c) **
                        gas_pred (g + (- Gsload net - 2) - 3 * Gverylow - Ghigh) **
+                       account_existence c existence **
                        continuing
                       )"
 apply(simp only: move_pureL)
@@ -978,12 +979,12 @@ apply(rule_tac cL = "{(k, Stack (PUSH_N [0])), (k + 2, Storage SLOAD),
   apply(auto)
  apply(rule_tac R = emp in frame_backward)
    apply(rule_tac h = h and g = g and bn = bn and c = c and w = "ucast c" in first_four)
-  apply(simp)
- apply(simp)
-apply(rule_tac R = "block_number_pred bn ** caller c ** storage (word_rcat [0]) (ucast c)" in frame_backward)
+  apply(simp add: sep_conj_ac)
+ apply(rule refl)
+apply(rule_tac R = "block_number_pred bn ** caller c ** storage (word_rcat [0::byte]) (ucast c)" in frame_backward)
   apply(rule triple_code_eq)
   apply(rule_tac h = h and k = "k + 5" and d = d and cond = 1 and g = "g + (- Gsload net - 2) - 2 * Gverylow" in pushjumpi_true)
-  apply(auto)
+  apply(simp add: sep_conj_ac semiring_normalization_rules(24) )+
 done
 
 lemma prefix_true_over_JUMPDEST:
@@ -991,8 +992,9 @@ lemma prefix_true_over_JUMPDEST:
                        block_number_pred bn **
                        stack_height h **
                        program_counter k ** caller c **
-                       storage (word_rcat [0]) (ucast c) **
+                       storage (word_rcat [0::byte]) (ucast c) **
                        gas_pred g **
+                       account_existence c existence **
                        continuing
                       )
                       {(k, Stack (PUSH_N [0])), (k + 2, Storage SLOAD),
@@ -1002,8 +1004,9 @@ lemma prefix_true_over_JUMPDEST:
                       (block_number_pred bn **
                        stack_height h **
                        program_counter ((uint d) + 1) ** caller c **
-                       storage (word_rcat [0]) (ucast c) **
+                       storage (word_rcat [0::byte]) (ucast c) **
                        gas_pred (g + (- Gsload net - 2) - 3 * Gverylow - Ghigh - Gjumpdest) **
+                       account_existence c existence **
                        continuing
                       )"
 apply(simp only: move_pureL)
@@ -1016,14 +1019,12 @@ apply(rule_tac cL = "{(k, Stack (PUSH_N [0])), (k + 2, Storage SLOAD),
   apply(auto)
  apply(rule_tac R = emp in frame_backward)
    apply(rule_tac triple_code_eq)
-    apply(rule_tac bn = bn and h = h and c = c and g = g in prefix_true)
-   apply(simp)
-  apply(simp)
- apply(simp)
+      apply(rule_tac bn = bn and h = h and c = c and g = g in prefix_true)
+     apply(simp add: sep_conj_ac semiring_normalization_rules(24) )+
 apply(rule_tac R = "block_number_pred bn **
-   caller c ** storage (word_rcat [0]) (ucast c)" in frame_backward)
-  apply(rule_tac h = h and g = "g + (- Gsload net - 2) - 3 * Gverylow - Ghigh" in jumpdest_gas_triple)
- apply(auto)
+   caller c ** storage (word_rcat [0::byte]) (ucast c)" in frame_backward)
+    apply(rule_tac h = h and g = "g + (- Gsload net - 2) - 3 * Gverylow - Ghigh" in jumpdest_gas_triple)
+    apply(simp add: sep_conj_ac semiring_normalization_rules(24) )+
 done
 
 
@@ -1032,8 +1033,9 @@ lemma check_pass_whole:
                        block_number_pred bn **
                        stack_height h **
                        program_counter k ** caller c **
-                       storage (word_rcat [0]) (ucast c) **
+                       storage (word_rcat [0::byte]) (ucast c) **
                        gas_pred g **
+                       account_existence c existence **
                        continuing **
                        this_account t **
                        balance t b **
@@ -1060,9 +1062,13 @@ lemma check_pass_whole:
                        this_account t **
                        balance t 0 **
                        gas_any **
+                       account_existence c existence **
                        not_continuing **
                        action (ContractCall \<lparr>
-                                  callarg_gas = word_rcat [(8 :: byte), 0]
+                                  callarg_gas = word_of_int
+           (Ccallgas 2048 (ucast c) b (\<not> existence)
+             (g + (- Gsload net - 406 - Gjumpdest - Ghigh) - 8 * Gverylow) net
+             (calc_memu_extra u 2048 (ucast c) b 0 0 0 0))
                                 , callarg_code = c
                                 , callarg_recipient = c
                                 , callarg_value = b
@@ -1071,7 +1077,7 @@ lemma check_pass_whole:
                                 , callarg_output_size = word_rcat [0] \<rparr>) **
                        block_number_pred bn **
                        caller c **
-                       storage (word_rcat [0]) (ucast c)
+                       storage (word_rcat [0::byte]) (ucast c)
                       )"
 apply(simp only: move_pureL)
 apply(auto)
@@ -1094,17 +1100,21 @@ apply(rule_tac cL = "{(k, Stack (PUSH_N [0])), (k + 2, Storage SLOAD),
        frame_backward)
    apply(rule code_extension_backward)
     apply(rule_tac h = h and k = k in prefix_true_over_JUMPDEST)
-   apply(simp)
-  apply(auto)
-apply(rule_tac R = "storage (word_rcat [0]) (ucast c)" in
+     apply(simp)
+    apply(simp add: sep_conj_ac  pure_def  )
+      apply (rule sep_conj_eq[OF refl] )+
+    apply (sep_simp simp: pure_sep)
+    apply simp
+    apply (rule refl)
+  apply(simp add: sep_conj_ac)
+apply(rule_tac R = "storage (word_rcat [0::byte]) (ucast c)" in
       frame_backward)
   apply(rule_tac triple_code_eq)
    apply(rule_tac bn = bn and  h = h and k = "uint d + 1" and g = "g + (- Gsload net - 2) - 3 * Gverylow - Ghigh - Gjumpdest" in call_with_args)
-  apply(simp)
-(* apply(auto)
-done *)
-oops
-
+    apply(simp)
+   apply (simp add: sep_conj_ac)
+   apply (simp add: sep_conj_ac  semiring_normalization_rules(24))
+done
 (* whole_concrete_program *)
 
 definition whole_concrete_program :: "(int * inst) set"
@@ -1154,8 +1164,9 @@ lemma check_pass_whole_concrete:
                        block_number_pred bn **
                        stack_height 0 **
                        program_counter 0 ** caller c **
-                       storage (word_rcat [0]) (ucast c) **
+                       storage (word_rcat [0::byte]) (ucast c) **
                        gas_pred g **
+                       account_existence c existence **
                        continuing **
                        this_account t **
                        balance t b **
@@ -1168,9 +1179,13 @@ lemma check_pass_whole_concrete:
                        this_account t **
                        balance t 0 **
                        gas_any **
+                       account_existence c existence **
                        not_continuing **
                        action (ContractCall \<lparr>
-                                  callarg_gas = word_rcat [(8 :: byte), 0]
+                                  callarg_gas = word_of_int
+            (Ccallgas 2048 (ucast c) b (\<not> existence)
+              (g + (- Gsload net - 406 - Gjumpdest - Ghigh) - 8 * Gverylow) net
+              (calc_memu_extra 0 2048 (ucast c) b 0 0 0 0))
                                 , callarg_code = c
                                 , callarg_recipient = c
                                 , callarg_value = b
@@ -1179,15 +1194,15 @@ lemma check_pass_whole_concrete:
                                 , callarg_output_size = word_rcat [0] \<rparr>) **
                        block_number_pred bn **
                        caller c **
-                       storage (word_rcat [0]) (ucast c)
+                       storage (word_rcat [0::byte]) (ucast c)
                       )"
 apply(simp only: move_pureL)
 apply(auto)
 apply(rule triple_code_eq)
  apply(rule_tac R = "emp" in frame_backward)
    apply(rule_tac k = 0 and d = 9 and h = 0 and bn = bn and c = c and g = g and u = 0 in  check_pass_whole)
-  apply(simp)
- apply(simp)
+    apply(simp add: sep_conj_ac)
+    apply(simp add: sep_conj_ac)
 apply(simp add: whole_concrete_program_def)
 done
   
@@ -1196,23 +1211,25 @@ lemma whole_program_invalid_caller:
                        block_number_pred bn **
                        stack_height 0 **
                        program_counter 0 ** caller c **
-                       storage (word_rcat [0]) w **
+                       storage (word_rcat [0::byte]) w **
                        gas_pred g **
+                       account_existence c existence **
                        continuing
                       )
                       whole_concrete_program
                       (block_number_pred bn **
                        stack_height 0 **
                        program_counter 8 ** caller c **
-                       storage (word_rcat [0]) w **
+                       storage (word_rcat [0::byte]) w **
                        gas_pred (g + (- Gsload net - 2) - 2 * Gverylow - Gverylow - Ghigh) **
+                       account_existence c existence **
                        not_continuing ** action (ContractReturn []))"
 apply(auto)
 apply(rule code_extension_backward)
  apply(rule_tac R = emp in frame_backward)
    apply(rule_tac h = 0 and bn = bn and c = c and w = w and x = 9 in prefix_invalid_caller)
-  apply(simp)
- apply(simp)
+  apply(simp add: sep_conj_ac)
+   apply(simp add: sep_conj_ac)
 apply(simp add: whole_concrete_program_def)
 done
 

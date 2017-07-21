@@ -448,12 +448,14 @@ lemma jumpi_false_gas_triple :
                        stack h 0 **
                        program_counter k **
                        gas_pred g **
+                       account_existence c existence **
                        continuing
                       )
                       {(k, Pc JUMPI)}
                       (stack_height h **
                        program_counter (k + 1) **
                        gas_pred (g - Ghigh) **
+                       account_existence c existence **
                        continuing)"
 apply(auto simp add: triple_def set_diff_eq)
 apply(rule_tac x = 1 in exI)
@@ -471,18 +473,20 @@ lemma jumpi_true_gas_triple :
                        stack h cond **
                        program_counter k **
                        gas_pred g **
+                       account_existence c existence **
                        continuing
                       )
                       {(k, Pc JUMPI), ((uint d), Pc JUMPDEST)}
                       (stack_height h **
                        program_counter (uint d) **
                        gas_pred (g - Ghigh) **
+                       account_existence c existence **
                        continuing
                       )"
 apply(auto simp add: triple_def set_diff_eq)
 apply(rule_tac x = 1 in exI)
 apply(case_tac presult; simp )
-apply(auto simp add:  instruction_result_as_set_def)
+apply(clarsimp simp add:  instruction_result_as_set_def)
 apply(erule_tac P=rest in back_subst)
 apply(auto simp add: stack_as_set_def)
 done
@@ -649,12 +653,14 @@ lemma jumpdest_gas_triple :
                        stack_height h **
                        program_counter k **
                        gas_pred g **
+                       account_existence c existence **
                        continuing
                       )
                       {(k, Pc JUMPDEST)}
                       (stack_height h **
                        program_counter (k + 1) **
                        gas_pred (g - Gjumpdest) **
+                       account_existence c existence **
                        continuing
                       )"
 apply(auto simp add: triple_def set_diff_eq)
@@ -1028,21 +1034,17 @@ Gzero_def [simp]
 
 lemma stop_gas_triple:
   "triple net {OutOfGas}
-          (\<langle> h \<le> 1024 \<rangle> ** stack_height h ** program_counter k ** continuing)
+          (\<langle> h \<le> 1024 \<rangle> ** stack_height h ** program_counter k ** account_existence c existence **  continuing)
           {(k, Misc STOP)}
-          (stack_height h ** program_counter k ** not_continuing ** action (ContractReturn []))"
+          (stack_height h ** program_counter k **  account_existence c existence ** not_continuing ** action (ContractReturn []))"
 apply(simp add: triple_def set_diff_eq)
 apply(clarify)
 apply(rule_tac x = "1" in exI)
 apply(clarify)
-apply(case_tac presult; auto simp add: stop_def not_continuing_def action_def
+  apply(case_tac presult; simp)
+  apply (auto simp add: stop_def not_continuing_def action_def
       instruction_result_as_set_def stack_as_set_def ext_program_as_set_def)
-   apply(split if_splits; auto)
-  apply(erule_tac P=rest in back_subst)
-  apply(auto)
- apply(split if_splits; auto)
-apply(erule_tac P=rest in back_subst)
-apply(auto)
+apply((erule_tac P=rest in back_subst)?, auto split: if_splits)+
 done
 
 
