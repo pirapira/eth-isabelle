@@ -382,7 +382,7 @@ shows
    continuing \<and>* memory_usage m \<and>* program_counter n \<and>*
    stack_height (Suc (Suc h)) \<and>* stack (Suc h) v \<and>* stack h w \<and>* gas_pred g \<and>* rest)
   (n, Arith i)
-  (continuing \<and>* program_counter (n + 1) \<and>* memory_usage m \<and>* stack_height (Suc h) \<and>*
+  (program_counter (n + 1) \<and>* continuing \<and>* memory_usage m \<and>* stack_height (Suc h) \<and>*
    stack h (arith_2_1_low i v w) \<and>* gas_pred (g - Glow) \<and>* rest)"
 apply(simp add: triple_inst_sem_def program_sem.simps as_set_simps sep_conj_ac)
 apply(clarify)
@@ -408,7 +408,7 @@ shows
    continuing \<and>* memory_usage m \<and>* program_counter n \<and>* stack_height (Suc (Suc h)) \<and>*
    stack (Suc h) v \<and>* stack h w \<and>* gas_pred g \<and>* rest)
   (n, Arith i)
-  (continuing \<and>* program_counter (n + 1) \<and>* memory_usage m \<and>* stack_height (Suc h) \<and>*
+  (program_counter (n + 1) \<and>* continuing \<and>* memory_usage m \<and>* stack_height (Suc h) \<and>*
    stack h (arith_2_1_verylow i v w) \<and>* gas_pred (g - Gverylow) \<and>* rest)"
 apply(case_tac i; simp)
     apply(inst_sound_set_eq)
@@ -434,7 +434,7 @@ shows
    stack_height (Suc (Suc (Suc h))) \<and>* stack (Suc (Suc h)) u \<and>*
    stack (Suc h) v \<and>* stack h w \<and>* gas_pred g \<and>* rest)
   (n, Arith i)
-  (continuing \<and>* program_counter (n + 1) \<and>* memory_usage m \<and>*
+  (program_counter (n + 1) \<and>* continuing \<and>* memory_usage m \<and>*
    stack_height (Suc h) \<and>* stack h (arith_3_1 i u v w) \<and>*
    gas_pred (g - Gmid) \<and>* rest)"
 apply(simp add: triple_inst_sem_def program_sem.simps as_set_simps sep_conj_ac)
@@ -457,8 +457,8 @@ lemma inst_bits_2_1_sound:
    stack_height (Suc (Suc h)) \<and>*
    stack (Suc h) v \<and>* stack h w \<and>* gas_pred g \<and>* rest)
   (n, Bits i)
-  (continuing \<and>*
-   program_counter (n + 1) \<and>*
+  (program_counter (n + 1) \<and>*
+   continuing \<and>*
    memory_usage m \<and>*
    stack_height (Suc h) \<and>*
    stack h (bits_2_1_verylow i v w) \<and>* gas_pred (g - Gverylow) \<and>* rest)"
@@ -529,8 +529,9 @@ shows
    stack_height h \<and>* stack (h - Suc 0) w \<and>* stack (h - Suc (Suc (unat n))) v \<and>*
    program_counter k \<and>* gas_pred g \<and>* memory_usage m \<and>* continuing \<and>* rest)
   (k, Swap n)
-  (stack_height h \<and>* stack (h - Suc 0) v \<and>* stack (h - Suc (Suc (unat n))) w \<and>*
-   program_counter (k + 1) \<and>* gas_pred (g - Gverylow) \<and>* memory_usage m \<and>* continuing \<and>* rest)"
+  (program_counter (k + 1) \<and>* gas_pred (g - Gverylow) \<and>*
+   stack_height h \<and>* stack (h - Suc 0) v \<and>* stack (h - Suc (Suc (unat n))) w \<and>*
+   memory_usage m \<and>* continuing \<and>* rest)"
 apply(simp add: triple_inst_sem_def program_sem.simps as_set_simps sep_conj_ac)
 apply(clarify)
 apply(sep_simp simp: fun_sep_simps; simp)
@@ -545,7 +546,6 @@ apply(rule  Set.equalityI)
  apply(rule allI)
  apply(rename_tac elm)
  apply(case_tac elm; simp add: instruction_result_as_set_def)
-
  apply(rename_tac pair)
  apply(case_tac pair; simp)
  apply(case_tac "a = h - Suc 0"; simp add: rev_lookup)
@@ -1070,92 +1070,205 @@ apply(simp add: sep_conj_def)
 apply(fastforce)
 done
 
+method find_q_pc_after_inst =
+(rule exI; rule conjI),
+rule ext,
+rule iffI,
+sep_simp simp: program_counter_sep,
+assumption
+
+(*apply(rule exI; rule conjI)
+ apply(rule ext)
+ apply(rule iffI)
+  apply(sep_simp simp: program_counter_sep)
+ apply(assumption)*)
+
+lemma only_one_pc:
+"uniq_stateelm s \<Longrightarrow>
+PcElm n \<in> s \<Longrightarrow>
+PcElm (n+1) \<in> s \<Longrightarrow>
+False"
+apply(simp add: uniq_stateelm_def)
+apply(drule conjunct1)
+apply(drule spec[where x=n], erule impE, assumption)
+apply(drule spec[where x="n+1"], erule impE, assumption)
+apply simp
+done
+
+lemma only_one_gas:
+"uniq_stateelm s \<Longrightarrow>
+i > 0 \<Longrightarrow>
+GasElm g \<in> s \<Longrightarrow>
+GasElm (g-i) \<in> s \<Longrightarrow>
+False"
+apply(simp add: uniq_stateelm_def)
+apply(drule conjunct2, drule conjunct1)
+apply(drule spec[where x=g], erule impE, assumption)
+apply(drule spec[where x="g-i"], erule impE, assumption)
+apply simp
+done
+
+method uniq_state_elm_quasi=
+ (simp add: uniq_stateelm_def),
+ (rule conjI, fastforce),
+ (rule conjI, fastforce),
+ (rule conjI, fastforce),
+ (rule conjI; clarsimp),
+  (rule conjI; clarsimp),
+ (rule conjI; clarsimp)
+
+(*apply (simp add: uniq_stateelm_def)
+           apply(rule conjI, fastforce)
+           apply(rule conjI, fastforce)
+           apply(rule conjI, fastforce)
+           apply(rule conjI; clarsimp)
+            apply(rule conjI; clarsimp)
+           apply(rule conjI; clarsimp)*)
+
+method easy_case_pc_after_inst=
+(clarsimp simp add: gas_value_simps sep_fun_simps),
+(rule conjI),
+(erule_tac P=rest in back_subst),
+(auto simp add: uniq_stateelm_def)[1],
+(auto simp add: uniq_stateelm_def)[1]
+
+(*        apply(clarsimp simp add: gas_value_simps sep_fun_simps)
+        apply(rule conjI)
+         apply(erule_tac P=rest in back_subst)
+         apply(auto simp add: uniq_stateelm_def)[1]
+        apply (auto simp add: uniq_stateelm_def)[1]
+*)
+
 lemma pc_after_inst:
 notes
   if_split[split del]
+  sep_lc[simp del]
 shows
 "triple_inst pre x post \<Longrightarrow> x = (n, i) \<Longrightarrow> reg_inst i \<Longrightarrow>
 \<exists>s. pre s \<and> uniq_stateelm s \<Longrightarrow>
 \<exists>q. post = (program_counter (n + inst_size i) ** q) \<and>
     (\<exists>s0. (program_counter (n + inst_size i) ** q) s0 \<and> uniq_stateelm s0)"
  apply(induct rule: triple_inst.induct; clarsimp)
-      apply(erule triple_inst_arith.cases; clarsimp)
-      apply(sep_simp simp: program_counter_sep stack_sep continuing_sep code_sep stack_height_sep gas_pred_sep pure_sep memory_usage_sep; simp)
-      apply(rule_tac x="continuing \<and>*
-              memory_usage m \<and>*
-              stack_height (Suc h) \<and>*
-              gas_pred (g - Gverylow) \<and>* stack h (iszero_stack w) \<and>* rest" in exI)
-      apply(rule conjI)
-       apply(simp add: inst_size_simps)
-      apply(rule_tac x="(s - {GasElm g} - {PcElm n} - {StackElm (h, w)}) \<union> 
+        apply(erule triple_inst_arith.cases; clarsimp)
+           apply(find_q_pc_after_inst)
+           apply(rule_tac x="(s - {PcElm n} - {StackHeightElm (Suc (Suc h))} -
+             {StackElm (Suc h, v)} - {StackElm (h, w)} - {GasElm g}) \<union> {StackElm (h, arith_2_1_low ia v w)} \<union>
+             {GasElm (g-Glow)} \<union> {StackHeightElm (Suc h)} \<union> {PcElm (n+1)} " in exI)
+           apply(sep_simp simp: program_counter_sep gas_pred_sep stack_sep stack_height_sep pure_sep)+
+           apply(clarsimp simp add: gas_value_simps)
+           apply(rule conjI)
+            apply(erule_tac P="_ \<and>* _" in back_subst)
+            apply(auto simp add: uniq_stateelm_def)[1]
+           apply (uniq_state_elm_quasi)
+           apply(case_tac "ha=Suc h"; simp)
+          apply(find_q_pc_after_inst)
+          apply(rule_tac x="(s - {PcElm n} - {StackHeightElm (Suc (Suc h))} -
+             {StackElm (Suc h, v)} - {StackElm (h, w)} - {GasElm g}) \<union> {StackElm (h, arith_2_1_verylow ia v w)} \<union>
+             {GasElm (g-Gverylow)} \<union> {StackHeightElm (Suc h)} \<union> {PcElm (n+1)} " in exI)
+          apply(sep_simp simp: program_counter_sep gas_pred_sep stack_sep stack_height_sep pure_sep)+
+          apply(clarsimp simp add: gas_value_simps)
+          apply(rule conjI)
+           apply(erule_tac P="_ \<and>* _" in back_subst)
+           apply(rule  Set.equalityI)
+            prefer 2
+            apply(auto)[1]
+           apply(simp add: Set.subset_iff, clarify)
+           apply(rule conjI)
+            apply(rule notI; drule only_one_pc; simp)
+           apply(rule conjI, rule notI,simp add: uniq_stateelm_def)+
+           apply(rule notI; drule only_one_gas; simp)
+          apply (uniq_state_elm_quasi)
+          apply(case_tac "ha=Suc h"; simp)
+         apply(find_q_pc_after_inst)
+          apply(rule_tac x="(s - {PcElm n} - {StackHeightElm (Suc (Suc (Suc h)))} - {StackElm (Suc (Suc h), u)} -
+             {StackElm (Suc h, v)} - {StackElm (h, w)} - {GasElm g}) \<union> {StackElm (h, arith_3_1 ia u v w)} \<union>
+             {GasElm (g-Gmid)} \<union> {StackHeightElm (Suc h)} \<union> {PcElm (n+1)} " in exI) 
+         apply(sep_simp simp: program_counter_sep gas_pred_sep stack_sep stack_height_sep pure_sep)+
+         apply(clarsimp simp add: gas_value_simps)
+         apply(rule conjI)
+          apply(erule_tac P="_ \<and>* _" in back_subst)
+          apply(auto simp add: uniq_stateelm_def)[1]
+         apply (uniq_state_elm_quasi)
+         apply(thin_tac "\<forall>v. StackHeightElm v \<in> _ \<longrightarrow> _ v")
+         apply(case_tac "ha=(Suc h)"; simp)
+         apply(case_tac "ha=Suc(Suc h)"; simp)
+        apply(find_q_pc_after_inst)
+        apply(rule_tac x="(s - {GasElm g} - {PcElm n} - {StackElm (h, w)}) \<union> 
           {PcElm (n + inst_size (Arith ISZERO))} \<union>
           {StackElm (h, iszero_stack w)} \<union> {GasElm (g - Gverylow)} " in exI)
-      apply(clarsimp simp add: gas_value_simps sep_fun_simps)
-      apply(rule conjI)
-       apply(erule_tac P=rest in back_subst)
-       apply(auto simp add: uniq_stateelm_def)[1]
-      apply (auto simp add: uniq_stateelm_def)[1]
-     apply(erule triple_inst_misc.cases; clarsimp)
-    apply(erule triple_inst_pc.cases; clarsimp)
-     apply(sep_simp simp: program_counter_sep continuing_sep code_sep stack_height_sep gas_pred_sep pure_sep memory_usage_sep; simp)
-     apply(rule_tac x="continuing \<and>*
-              memory_usage m \<and>*
-              stack_height h \<and>*
-              gas_pred (g - Gjumpdest) \<and>* rest" in exI)
-     apply(rule conjI)
-      apply(simp add: inst_size_simps)
-     apply(rule_tac x="(s - {GasElm g} - {PcElm n}) \<union> {GasElm (g - Gjumpdest)} \<union>
-          {PcElm (n + inst_size (Pc JUMPDEST))}" in exI)
-     apply(clarsimp simp add: gas_value_simps sep_fun_simps)
-     apply(rule conjI)
-      apply(erule_tac P=rest in back_subst)
-      apply(auto simp add: uniq_stateelm_def)[1]
-     apply (auto simp add: uniq_stateelm_def)[1]
-    apply(sep_simp simp: program_counter_sep continuing_sep code_sep stack_height_sep gas_pred_sep pure_sep memory_usage_sep; simp)
-    apply(rule_tac x="continuing \<and>*
-              memory_usage m \<and>*
-              stack_height (Suc h) \<and>*
-              gas_pred (g - Gbase) \<and>* stack h (word_of_int n) \<and>* rest" in exI)
-    apply(rule conjI)
-     apply(simp add: inst_size_simps)
-    apply(rule_tac x="(s - {GasElm g} - {PcElm n} - {StackHeightElm h}) \<union>
+        apply(easy_case_pc_after_inst)
+       apply(erule triple_inst_bits.cases; clarsimp; simp add: inst_size_simps)
+        apply(find_q_pc_after_inst)
+        apply(rule_tac x="(s - {GasElm g} - {PcElm n} - {StackElm (h, w)}) \<union> 
+           {PcElm (n + 1)} \<union>
+           {StackElm (h, NOT w)} \<union> {GasElm (g - Gverylow)} " in exI)
+        apply(easy_case_pc_after_inst)
+       apply(find_q_pc_after_inst)
+       apply(rule_tac x="(s - {PcElm n} - {StackHeightElm (Suc (Suc h))} -
+             {StackElm (Suc h, v)} - {StackElm (h, w)} - {GasElm g}) \<union> {StackElm (h, bits_2_1_verylow ia v w)} \<union>
+             {GasElm (g-Gverylow)} \<union> {StackHeightElm (Suc h)} \<union> {PcElm (n+1)}" in exI)
+       apply(clarsimp simp add: gas_value_simps sep_fun_simps)
+       apply(rule conjI)
+        apply(erule_tac P=rest in back_subst)
+        apply(auto simp add: uniq_stateelm_def)[1]
+       apply (uniq_state_elm_quasi)
+       apply(case_tac "ha=Suc h"; simp)
+      apply(erule triple_inst_misc.cases; clarsimp)
+     apply(erule triple_inst_pc.cases; clarsimp; simp add: inst_size_simps)
+      apply(find_q_pc_after_inst)
+      apply(rule_tac x="(s - {GasElm g} - {PcElm n}) \<union> {GasElm (g - Gjumpdest)} \<union>
+          {PcElm (n + 1)}" in exI)
+      apply(easy_case_pc_after_inst)
+     apply(find_q_pc_after_inst)
+     apply(rule_tac x="(s - {GasElm g} - {PcElm n} - {StackHeightElm h}) \<union>
           {StackHeightElm (Suc h)} \<union> {GasElm (g - Gbase)} \<union> {StackElm (h, word_of_int n)} \<union>
-          {PcElm (n + inst_size (Pc PC))}" in exI)
+          {PcElm (n + 1)}" in exI)
+     apply(easy_case_pc_after_inst)
+    apply(erule triple_inst_stack.cases; clarsimp)
+     apply(clarsimp simp add: inst_size_simps pure_sep)
+     apply(find_q_pc_after_inst)
+     apply(rule_tac x="(s - {GasElm g} - {PcElm n} -
+          {StackHeightElm h}) \<union> {GasElm (g - Gverylow)} \<union> {StackElm (h, word_rcat lst)} \<union>
+          { StackHeightElm (Suc h)} \<union> {PcElm (n + (1 + int (length lst)))}" in exI)
+     apply(easy_case_pc_after_inst)
+    apply(find_q_pc_after_inst)
+    apply(rule_tac x="(s - {GasElm g} - {PcElm n} -
+          {StackHeightElm (Suc h)} - {StackElm (h, w)}) \<union> {GasElm (g - Gbase)} \<union>
+          { StackHeightElm h} \<union> {PcElm (n + 1)}" in exI)
     apply(clarsimp simp add: gas_value_simps sep_fun_simps)
     apply(rule conjI)
      apply(erule_tac P=rest in back_subst)
      apply(auto simp add: uniq_stateelm_def)[1]
-    apply (auto simp add: uniq_stateelm_def)[1]
-   apply(erule triple_inst_stack.cases; clarsimp)
-   apply(rule_tac x="(continuing \<and>*
-            memory_usage m \<and>*
-            stack_height (Suc h) \<and>*
-            gas_pred (g - Gverylow) \<and>*
-            stack h (word_rcat lst) \<and>*
-            rest)" in exI)
-   apply(rule conjI)
-    apply(sep_simp simp: pure_sep)
-    apply(simp add: inst_size_simps del: sep_lc)
-    apply (rule ext)
-    apply (rule iffI)
-     apply(sep_select_asm  3)
-     apply(sep_cancel)+
-     apply(simp add: program_counter_def)
-    apply(sep_select 3)
-    apply(sep_cancel)+
-    apply(simp add: program_counter_def)
-   apply(rule_tac x="(s - {GasElm g} - {PcElm n} -
-         {StackHeightElm h}) \<union> {GasElm (g - Gverylow)} \<union> {StackElm (h, word_rcat lst)} \<union>
-{ StackHeightElm (Suc h)} \<union> {PcElm (n + inst_size (Stack (PUSH_N lst)))}" in exI)
+    apply (simp add: uniq_stateelm_def)
+    apply(rule conjI, fastforce)
+    apply(rule conjI, fastforce)
+    apply(rule conjI, fastforce)
+    apply(rule conjI; clarsimp)
+     apply(rule conjI; clarsimp)
+    apply(case_tac "ha= h"; simp)
+   apply(clarsimp simp add: inst_size_simps pure_sep)
+   apply(find_q_pc_after_inst)
+   apply(rule_tac x="(s - {PcElm n} - {GasElm g} -
+             {StackElm (h - Suc 0, w)} - {StackElm (h - Suc (Suc (unat na)), v)}) \<union> 
+             {StackElm (h - Suc 0, v)} \<union> {StackElm (h - Suc (Suc (unat na)), w)} \<union>
+             {GasElm (g-Gverylow)} \<union> {PcElm (n+1)}" in exI)
    apply(clarsimp simp add: gas_value_simps sep_fun_simps)
    apply(rule conjI)
     apply(erule_tac P=rest in back_subst)
     apply(auto simp add: uniq_stateelm_def)[1]
-   apply (auto simp add: uniq_stateelm_def)[1]
- apply(drule meta_mp)
- apply(rule_tac x=s in exI; rule conjI; simp)
- apply(assumption)
-apply(simp add: pure_def)
+   apply (simp add: uniq_stateelm_def)
+   apply(rule conjI, fastforce)
+   apply(rule conjI, fastforce)
+   apply(rule conjI)
+    apply(clarsimp)
+    apply(rule conjI, fastforce)
+    apply(rule conjI; clarsimp)
+    apply(rule conjI; clarsimp)
+   apply(fastforce)
+  apply(drule meta_mp)
+  apply(rule_tac x=s in exI; rule conjI; simp)
+  apply(assumption)
+ apply(simp add: pure_def)
 done
 
 lemma triple_seq_empty_case[OF _ refl] :
@@ -1749,10 +1862,12 @@ x = (n, i) \<Longrightarrow>
 pre s \<and> uniq_stateelm s \<Longrightarrow>
 PcElm n \<in> s"
  apply(induct rule: triple_inst.induct; clarsimp)
-     apply(erule triple_inst_arith.cases; clarsimp; sep_simp simp: pure_sep sep_fun_simps; simp)
-    apply(erule triple_inst_misc.cases; clarsimp; sep_simp simp: pure_sep sep_fun_simps; simp)
-   apply(erule triple_inst_pc.cases; clarsimp; sep_simp simp: pure_sep sep_fun_simps; simp)
-  apply(erule triple_inst_stack.cases; clarsimp; sep_simp simp: pure_sep sep_fun_simps; simp)
+       apply(erule triple_inst_arith.cases; clarsimp; sep_simp simp: pure_sep sep_fun_simps; simp)
+      apply(erule triple_inst_bits.cases; clarsimp; sep_simp simp: pure_sep sep_fun_simps; simp)
+     apply(erule triple_inst_misc.cases; clarsimp; sep_simp simp: pure_sep sep_fun_simps; simp)
+    apply(erule triple_inst_pc.cases; clarsimp; sep_simp simp: pure_sep sep_fun_simps; simp)
+   apply(erule triple_inst_stack.cases; clarsimp; sep_simp simp: pure_sep sep_fun_simps; simp)
+  apply(sep_simp simp: pure_sep sep_fun_simps; simp)
  apply(simp add: pure_def)
 done
 

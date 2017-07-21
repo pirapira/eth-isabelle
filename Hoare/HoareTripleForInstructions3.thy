@@ -67,47 +67,47 @@ fun arith_3_1:: "arith_inst \<Rightarrow> w256 \<Rightarrow> w256 \<Rightarrow> 
 inductive triple_inst_arith :: "pred \<Rightarrow> pos_inst \<Rightarrow> pred \<Rightarrow> bool" where
   inst_arith_2_1_low :
     "i \<in> {MUL, DIV, MOD} \<Longrightarrow>
-		triple_inst_arith 
+		triple_inst_arith
       (\<langle> h \<le> 1022 \<and> Glow \<le> g \<and> m \<ge> 0\<rangle> **
        continuing \<and>* memory_usage m \<and>* program_counter n \<and>*
        stack_height (Suc (Suc h)) \<and>* stack (Suc h) v \<and>* stack h w \<and>*
 			 gas_pred g \<and>* rest)
       (n, Arith i)
-      (continuing \<and>* program_counter (n + 1) \<and>*
+      (program_counter (n + 1) \<and>* continuing \<and>*
        memory_usage m \<and>* stack_height (Suc h) \<and>*
        stack h (arith_2_1_low i v w) \<and>*
        gas_pred (g - Glow) \<and>* rest)"
 |  inst_arith_2_1_verylow :
     "i \<in> {ADD, SUB, inst_GT, inst_EQ, inst_LT} \<Longrightarrow>
-		 triple_inst_arith 
+		 triple_inst_arith
       (\<langle> h \<le> 1022 \<and> Gverylow \<le> g \<and> m \<ge> 0\<rangle> **
        continuing \<and>* memory_usage m \<and>* program_counter n \<and>*
        stack_height (Suc (Suc h)) \<and>* stack (Suc h) v \<and>* stack h w \<and>*
 			 gas_pred g \<and>* rest)
       (n, Arith i)
-      (continuing \<and>* program_counter (n + 1) \<and>*
+      (program_counter (n + 1) \<and>* continuing \<and>*
        memory_usage m \<and>* stack_height (Suc h) \<and>*
        stack h (arith_2_1_verylow i v w) \<and>*
        gas_pred (g - Gverylow) \<and>* rest)"
 |  inst_arith_3_1 :
     "i \<in> {ADDMOD, MULMOD} \<Longrightarrow>
-		 triple_inst_arith 
+		 triple_inst_arith
       (\<langle> h \<le> 1021 \<and> Gmid \<le> g \<and> m \<ge> 0\<rangle> **
        continuing \<and>* memory_usage m \<and>* program_counter n \<and>*
        stack_height (Suc (Suc (Suc h))) \<and>* stack (Suc (Suc h)) u \<and>* stack (Suc h) v \<and>* stack h w \<and>*
 			 gas_pred g \<and>* rest)
       (n, Arith i)
-      (continuing \<and>* program_counter (n + 1) \<and>*
+      (program_counter (n + 1) \<and>* continuing \<and>*
        memory_usage m \<and>* stack_height (Suc h) \<and>*
        stack h (arith_3_1 i u v w) \<and>*
        gas_pred (g - Gmid) \<and>* rest)"
 | inst_iszero :
-    "triple_inst_arith 
+    "triple_inst_arith
       (\<langle> h \<le> 1023 \<and> Gverylow \<le> g \<and> m \<ge> 0\<rangle> **
        continuing \<and>* memory_usage m \<and>* program_counter n \<and>*
        stack_height (Suc h) \<and>* stack h w \<and>* gas_pred g \<and>* rest)
       (n, Arith ISZERO)
-      (continuing \<and>* program_counter (n + 1) \<and>*
+      (program_counter (n + 1) \<and>* continuing \<and>*
        memory_usage m \<and>* stack_height (Suc h) \<and>*
        stack h (iszero_stack w) \<and>*
        gas_pred (g - Gverylow) \<and>* rest)"
@@ -126,19 +126,19 @@ inductive triple_inst_bits :: "pred \<Rightarrow> pos_inst \<Rightarrow> pred \<
        continuing \<and>* memory_usage m \<and>* program_counter n \<and>*
        stack_height (Suc h) \<and>* stack h w \<and>* gas_pred g \<and>* rest)
       (n, Bits inst_NOT)
-      (continuing \<and>* program_counter (n + 1) \<and>*
+      (program_counter (n + 1) \<and>* continuing \<and>*
        memory_usage m \<and>* stack_height (Suc h) \<and>*
        stack h (NOT w) \<and>*
        gas_pred (g - Gverylow) \<and>* rest)"
 |  inst_bits_2_1_verylow :
     "i \<in> {inst_AND, inst_OR, inst_XOR, BYTE} \<Longrightarrow>
-		 triple_inst_bits 
+		 triple_inst_bits
       (\<langle> h \<le> 1022 \<and> Gverylow \<le> g \<and> m \<ge> 0\<rangle> **
        continuing \<and>* memory_usage m \<and>* program_counter n \<and>*
        stack_height (Suc (Suc h)) \<and>* stack (Suc h) v \<and>* stack h w \<and>*
 			 gas_pred g \<and>* rest)
       (n, Bits i)
-      (continuing \<and>* program_counter (n + 1) \<and>*
+      (program_counter (n + 1) \<and>* continuing \<and>*
        memory_usage m \<and>* stack_height (Suc h) \<and>*
        stack h (bits_2_1_verylow i v w) \<and>*
        gas_pred (g - Gverylow) \<and>* rest)"
@@ -150,7 +150,7 @@ inductive triple_inst_pc :: "pred \<Rightarrow> pos_inst \<Rightarrow> pred \<Ri
        continuing \<and>* memory_usage m \<and>* program_counter n \<and>*
        stack_height h \<and>* gas_pred g \<and>* rest)
       (n, Pc JUMPDEST)
-      (continuing \<and>* program_counter (n + 1) \<and>*
+      (program_counter (n + 1) \<and>* continuing \<and>*
        memory_usage m \<and>* stack_height h \<and>*
        gas_pred (g - Gjumpdest) \<and>* rest)"
 | inst_pc :
@@ -159,7 +159,7 @@ inductive triple_inst_pc :: "pred \<Rightarrow> pos_inst \<Rightarrow> pred \<Ri
        continuing \<and>* memory_usage m \<and>* program_counter n \<and>*
        stack_height h \<and>* gas_pred g \<and>* rest)
       (n, Pc PC)
-      (continuing \<and>* program_counter (n + 1) \<and>*
+      (program_counter (n + 1) \<and>* continuing \<and>*
        memory_usage m \<and>* stack_height (Suc h) \<and>*
        stack h (word_of_int n) \<and>*
        gas_pred (g - Gbase) \<and>* rest)"
@@ -172,17 +172,17 @@ inductive triple_inst_stack :: "pred \<Rightarrow> pos_inst \<Rightarrow> pred \
        memory_usage m \<and>* stack_height h \<and>*
        gas_pred g \<and>* rest)
       (n, Stack (PUSH_N lst))
-      (continuing \<and>* memory_usage m \<and>*
-       program_counter (n + 1 + int (length lst)) \<and>*
+      (program_counter (n + (1 + int (length lst))) \<and>*
+       continuing \<and>* memory_usage m \<and>*
        stack_height (Suc h) \<and>* gas_pred (g - Gverylow) \<and>*
        stack h (word_rcat lst) \<and>* rest)"
 | inst_pop :
     "triple_inst_stack
       (\<langle> h \<le> 1023 \<and> Gbase \<le> g \<and> m \<ge> 0\<rangle> **
        continuing \<and>* memory_usage m \<and>* program_counter n \<and>*
-       stack_height (Suc h) \<and>* stack h _ \<and>* gas_pred g \<and>* rest)
+       stack_height (Suc h) \<and>* stack h w \<and>* gas_pred g \<and>* rest)
       (n, Stack POP)
-      (continuing \<and>* program_counter (n + 1) \<and>*
+      (program_counter (n + 1) \<and>* continuing \<and>*
        memory_usage m \<and>* stack_height h \<and>*
        gas_pred (g - Gbase) \<and>* rest)"
 
@@ -208,14 +208,14 @@ inductive triple_inst :: "pred \<Rightarrow> pos_inst \<Rightarrow> pred \<Right
 | inst_stack :
     "triple_inst_stack p (n, Stack i) q \<Longrightarrow> triple_inst p (n, Stack i) q"
 | inst_swap :
-		"triple_inst 
+		"triple_inst
 			(\<langle> h \<le> 1024 \<and> Suc (unat n) < h \<and> g \<ge> Gverylow \<and> m \<ge> 0\<rangle> **
 			 stack_height h ** stack (h - 1) w ** stack (h - (unat n) - 2) v **
 			 program_counter k ** gas_pred g ** memory_usage m **
 			 continuing ** rest)
 			(k, Swap n)
-			(stack_height h ** stack (h - 1) v ** stack (h - (unat n) - 2) w **
-			 program_counter (k + 1) ** gas_pred (g - Gverylow) **
+			(program_counter (k + 1) ** gas_pred (g - Gverylow) **
+			 stack_height h ** stack (h - 1) v ** stack (h - (unat n) - 2) w **
 			 memory_usage m ** continuing ** rest)"
 | inst_strengthen_pre:
     "triple_inst p i q \<Longrightarrow> (\<And>s. r s \<longrightarrow> p s) \<Longrightarrow> triple_inst r i q"
