@@ -790,35 +790,68 @@ shows
      apply(auto simp add: uniq_stateelm_def)[1]
     apply (auto simp add: uniq_stateelm_def)[1]
    apply(erule triple_inst_stack.cases; clarsimp)
-   apply(rule_tac x="(continuing \<and>*
+    apply(rule_tac x="(continuing \<and>*
             memory_usage m \<and>*
             stack_height (Suc h) \<and>*
             gas_pred (g - Gverylow) \<and>*
             stack h (word_rcat lst) \<and>*
             rest)" in exI)
+    apply(rule conjI)
+     apply(sep_simp simp: pure_sep)
+     apply(simp add: inst_size_simps del: sep_lc)
+     apply (rule ext)
+     apply (rule iffI)
+      apply(sep_select_asm  3)
+      apply(sep_cancel)+
+      apply(simp add: program_counter_def)
+     apply(sep_select 3)
+     apply(sep_cancel)+
+     apply(simp add: program_counter_def)
+    apply(rule_tac x="(s - {GasElm g} - {PcElm n} -
+         {StackHeightElm h}) \<union> {GasElm (g - Gverylow)} \<union> {StackElm (h, word_rcat lst)} \<union>
+{ StackHeightElm (Suc h)} \<union> {PcElm (n + inst_size (Stack (PUSH_N lst)))}" in exI)
+    apply(clarsimp simp add: gas_value_simps sep_fun_simps)
+    apply(rule conjI)
+     apply(erule_tac P=rest in back_subst)
+     apply(auto simp add: uniq_stateelm_def)[1]
+    apply (auto simp add: uniq_stateelm_def)[1]
+   apply(rule_tac x="(continuing \<and>*
+           memory_usage m \<and>*
+           stack_height h \<and>*
+           gas_pred (g - Gbase) \<and>*
+           rest)" in exI)
    apply(rule conjI)
     apply(sep_simp simp: pure_sep)
-    apply(simp add: inst_size_simps del: sep_lc)
     apply (rule ext)
     apply (rule iffI)
      apply(sep_select_asm  3)
      apply(sep_cancel)+
      apply(simp add: program_counter_def)
-    apply(sep_select 3)
-    apply(sep_cancel)+
-    apply(simp add: program_counter_def)
-   apply(rule_tac x="(s - {GasElm g} - {PcElm n} -
-         {StackHeightElm h}) \<union> {GasElm (g - Gverylow)} \<union> {StackElm (h, word_rcat lst)} \<union>
-{ StackHeightElm (Suc h)} \<union> {PcElm (n + inst_size (Stack (PUSH_N lst)))}" in exI)
+   apply(rename_tac u rest)
+   apply(rule_tac x="(s - {GasElm g} - {PcElm n} - {StackElm (h, u)} -
+          { StackHeightElm (Suc h)}) \<union>
+         {StackHeightElm h} \<union> {GasElm (g - Gbase)} \<union>
+          {PcElm (n + 1)}" in exI)
    apply(clarsimp simp add: gas_value_simps sep_fun_simps)
    apply(rule conjI)
     apply(erule_tac P=rest in back_subst)
     apply(auto simp add: uniq_stateelm_def)[1]
-   apply (auto simp add: uniq_stateelm_def)[1]
- apply(drule meta_mp)
- apply(rule_tac x=s in exI; rule conjI; simp)
- apply(assumption)
-apply(simp add: pure_def)
+   apply(simp add: uniq_stateelm_def)
+   apply(rule conjI)
+    apply(clarsimp, fastforce)
+   apply(rule conjI)
+    apply(clarsimp, fastforce)
+   apply(rule conjI)
+    apply(clarsimp, fastforce)
+   apply(rule conjI)
+    apply(clarsimp)
+   apply(clarsimp)
+   apply(rule conjI)
+    apply(clarsimp)
+    apply(case_tac "h=ha"; clarsimp)
+   apply(clarsimp)
+  apply (auto simp add: uniq_stateelm_def)[1]
+ apply(simp add: pure_def)
 done
 
 lemma triple_seq_empty_case[OF _ refl] :
