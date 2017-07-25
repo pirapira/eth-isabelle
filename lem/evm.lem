@@ -1337,7 +1337,7 @@ let L x = x - x / 64
    a boolean indicating emptiness of the recipient, and the remaining gas of the caller *)
 val Cgascap : w256 -> w256 -> bool -> integer -> network -> integer -> integer
 let Cgascap mu0 mu2 emp remaining_gas net memu_extra =
-  if remaining_gas >= Cextra mu2 emp net then
+  if remaining_gas >= Cextra mu2 emp net + memu_extra then
     integerMin (L (remaining_gas - Cextra mu2 emp net - memu_extra)) (uint mu0)
   else
     uint mu0
