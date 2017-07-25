@@ -32,11 +32,11 @@ inductive triple_seq :: "pred \<Rightarrow> pos_inst list \<Rightarrow> pred \<R
     triple_seq q xs post \<rbrakk> \<Longrightarrow>
    triple_seq pre (x#xs) post"
 | seq_empty:
-  "(\<And>s. pre s \<longrightarrow> post s) \<Longrightarrow>
+  "(\<And>s. pre s \<Longrightarrow> post s) \<Longrightarrow>
    triple_seq pre [] post"
 | seq_strengthen_pre:
   "triple_seq p xs q \<Longrightarrow>
-   (\<And>s. r s \<longrightarrow> p s) \<Longrightarrow>
+   (\<And>s. r s \<Longrightarrow> p s) \<Longrightarrow>
    triple_seq r xs q"
 | seq_false_pre:
   "triple_seq \<langle>False\<rangle> xs post"

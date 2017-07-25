@@ -106,7 +106,7 @@ inductive triple_inst :: "pred \<Rightarrow> pos_inst \<Rightarrow> pred \<Right
 | inst_stack :
     "triple_inst_stack p (n, Stack i) q \<Longrightarrow> triple_inst p (n, Stack i) q"
 | inst_strengthen_pre:
-    "triple_inst p i q \<Longrightarrow> (\<And>s. r s \<longrightarrow> p s) \<Longrightarrow> triple_inst r i q"
+    "triple_inst p i q \<Longrightarrow> (\<And>s. r s \<Longrightarrow> p s) \<Longrightarrow> triple_inst r i q"
 | inst_false_pre:
     "triple_inst \<langle>False\<rangle> i post"
 end
