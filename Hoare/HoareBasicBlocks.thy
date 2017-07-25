@@ -46,20 +46,20 @@ inductive triple_blocks :: "basic_blocks \<Rightarrow> pred \<Rightarrow> vertex
   "triple_seq pre insts post \<Longrightarrow>
    triple_blocks blocks pre (n, insts, No) post"
 | blocks_next :
-  "\<lbrakk>i = n + inst_size_list insts;
+  "\<lbrakk>triple_seq pre insts (program_counter i \<and>* q);
+    i = n + inst_size_list insts;
     blocks_list blocks i = Some (bi, ti);
-    triple_seq pre insts (program_counter i \<and>* q);
     triple_blocks blocks (program_counter i \<and>* q) (i, bi, ti) post\<rbrakk> \<Longrightarrow>
    triple_blocks blocks pre (n, insts, Next) post"
 | blocks_jump :
-  "\<lbrakk>blocks_list blocks dest = Some (bi, ti);
-    bi = (dest, Pc JUMPDEST) # bbi;
-    triple_seq pre insts
-      (program_counter (n + inst_size_list insts) \<and>* gas_pred g \<and>*
+  "\<lbrakk>triple_seq pre insts
+      (\<langle> h \<le> 1023 \<and> Gmid \<le> g \<and> m \<ge> 0\<rangle> \<and>*
+       program_counter (n + inst_size_list insts) \<and>* gas_pred g \<and>*
        memory_usage m \<and>* stack_height (Suc h) \<and>*
        stack h (word_of_int dest::256 word) \<and>*
-       \<langle> h \<le> 1023 \<and> Gmid \<le> g \<and> m \<ge> 0\<rangle> \<and>*
        continuing \<and>* rest);
+    blocks_list blocks dest = Some (bi, ti);
+    bi = (dest, Pc JUMPDEST) # bbi;
     triple_blocks blocks
       (program_counter dest \<and>* gas_pred (g - Gmid) \<and>*
        memory_usage m \<and>* stack_height h \<and>*
@@ -67,17 +67,17 @@ inductive triple_blocks :: "basic_blocks \<Rightarrow> pred \<Rightarrow> vertex
       (dest, bi, ti) post\<rbrakk> \<Longrightarrow>
    triple_blocks blocks pre (n, insts, Jump) post"
 | blocks_jumpi :
-  "\<lbrakk>j = n + 1 + inst_size_list insts;
-    blocks_list blocks dest = Some (bi, ti);
-    bi = (dest, Pc JUMPDEST) # bbi;
-    blocks_list blocks j = Some (bj, tj);
-    triple_seq pre insts
+  "\<lbrakk>  triple_seq pre insts
       ((\<langle> h \<le> 1022  \<and> Ghigh \<le> g \<and> m \<ge> 0\<rangle> \<and>*
        stack_height (Suc (Suc h)) \<and>*
        stack (Suc h) (word_of_int dest::256 word) \<and>*
        stack h cond \<and>* gas_pred g \<and>*
        continuing \<and>* memory_usage m \<and>*
        program_counter (n + inst_size_list insts) \<and>* rest));
+    j = n + 1 + inst_size_list insts;
+    blocks_list blocks dest = Some (bi, ti);
+    bi = (dest, Pc JUMPDEST) # bbi;
+    blocks_list blocks j = Some (bj, tj);
     r = (stack_height h \<and>* gas_pred (g - Ghigh) \<and>*
          continuing \<and>* memory_usage m \<and>* rest);
     (cond \<noteq> 0 \<Longrightarrow> triple_blocks blocks (r \<and>* program_counter dest) (dest, bi, ti) post);
