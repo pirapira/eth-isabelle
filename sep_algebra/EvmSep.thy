@@ -25,5 +25,5 @@ end
   
 lemmas sep_set_conv = zero_set_def plus_set_def sep_disj_set_def
   
-thm sep_conj_ac
+declare sep_conj_assoc[simp]
 end
