@@ -89,6 +89,19 @@ lemma triv_if_eq:
   "(if (w::w256) = 0 then word_of_int 1 else word_of_int 0) = (if w = 0 then 1 else 0)"
  by simp
 
+lemma vctx_pc_stack_oblivious:
+  "vctx_pc (x1\<lparr>vctx_stack := s\<rparr>) = vctx_pc x1"
+by simp
+
+
+lemma advance_pc_stack_oblivious:
+  "vctx_pc (vctx_advance_pc co_ctx (x1\<lparr>vctx_stack := s\<rparr>)) = 
+   vctx_pc (vctx_advance_pc co_ctx x1) 
+  "
+using vctx_advance_pc_def vctx_next_instruction_def vctx_pc_stack_oblivious apply auto
+by(case_tac "program_content (cctx_program co_ctx) (vctx_pc x1)"; auto)
+
+
 lemma iszero_gas_triple :
   notes if_split[split del]
   shows
@@ -120,7 +133,7 @@ lemma iszero_gas_triple :
                   split:if_split_asm)
   apply (drule advance_pc_inc_but_stack)
   apply (simp add: image_def)
-  apply (simp  add: triv_if_eq)
+  apply (simp  add: triv_if_eq advance_pc_stack_oblivious)
   apply(erule_tac P=rest in back_subst)
   apply simp
   apply(rename_tac presult t)           
@@ -133,11 +146,8 @@ lemma iszero_gas_triple :
    apply(rename_tac p)
   apply(simp)
   apply(rename_tac elm)
-  apply(case_tac elm; simp add: hoare_simps split:if_splits)
-   apply(rename_tac p)
-   apply(case_tac p; fastforce)
-  apply(rename_tac p)
-  apply(case_tac p; fastforce)
+  apply(case_tac elm; simp add: hoare_simps advance_pc_stack_oblivious split:if_splits)
+  apply auto
  done
 
 lemma tmp001:
@@ -200,7 +210,6 @@ apply(case_tac presult)
    defer
    apply(simp add: instruction_result_as_set_def)
   apply(simp add: instruction_result_as_set_def)
- apply(simp add: instruction_result_as_set_def)
 apply(simp add: swap_def list_swap_usage swap_inst_numbers_def)
 apply(rule impI)
 apply(erule_tac P=rest in back_subst)

@@ -4,7 +4,6 @@ open Conv
 let empty_program : program =
   { program_content = (fun _ -> None)
   ; program_length = Nat_big_num.of_int 0
-  ; program_annotation = (fun _ -> [])
   }
 
 let dummy_constant_ctx : constant_ctx =

@@ -115,7 +115,6 @@ let format_program_result (r : Evm.instruction_result) : Easy_format.t =
   | InstructionToEnvironment (act, touched, stashed_opt) ->
      Label ((Atom ("ProgramToEnvironment", atom), label),
             List (list_usual, format_quad_as_list act stashed_opt))
-  | InstructionAnnotationFailure -> Atom ("ProgramAnnotationFailure", atom)
 
 let format_stack (stack : Word256.word256 list) =
   Easy_format.(Atom ("format_stack", atom))

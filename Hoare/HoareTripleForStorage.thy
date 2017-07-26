@@ -43,7 +43,6 @@ apply(case_tac smaller; simp)
     
 lemma next_state_noop[simp]:
   "next_state stopper c net (InstructionToEnvironment x y z) = (InstructionToEnvironment x y z)" 
-  "next_state stopper c net InstructionAnnotationFailure = InstructionAnnotationFailure" 
   by (simp add: next_state_def)+
 
 lemmas hoare_simps = stateelm_means_simps stateelm_equiv_simps 

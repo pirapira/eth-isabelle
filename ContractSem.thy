@@ -101,8 +101,6 @@ apply(auto)
 done
 
 declare empty_program_def [simp]
-declare prepend_annotation_def [simp]
-declare program_annotation_of_lst.simps [simp]
 declare program_of_lst_def [simp]
    
 subsection {* The Result of an Instruction *}
@@ -121,7 +119,6 @@ declare stack_1_1_op_def [simp]
 declare stack_2_1_op_def [simp]
 declare stack_3_1_op_def [simp]
 declare sstore_def [simp]
-declare build_aenv_def [simp]
 declare jump_def [simp]
 
 text {* When the second argument is already @{term True}, the simplification can continue.
@@ -198,7 +195,6 @@ done
 
 declare instruction_sem_def [simp]
 
-declare check_annotations_def [simp]
 declare next_state_def [simp]
 declare program_sem.simps [simp]
 
@@ -361,9 +357,6 @@ declare inst_size_def [simp]
 lemma program_sem_to_environment [simp]: "program_sem k con n net (InstructionToEnvironment a b c) = InstructionToEnvironment a b c"
 apply(induct_tac n; auto)
 done
-
-lemma program_sem_annotation_failure [simp] : "program_sem k con n net InstructionAnnotationFailure = InstructionAnnotationFailure"
-by (induct_tac n; auto)
 
 lemma not_at_least_one :
   "\<not> 1 \<le> (aa :: 256 word) \<Longrightarrow> aa = 0"
