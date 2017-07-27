@@ -307,25 +307,25 @@ When I state something, I will be then obliged to prove the statement.  This hap
 *}
 
 text {* I define the conjunction of the properties requested at the final states.
-The whole thing is more readable when I inline-expand @{term no_assertion_failure_post},
+The whole thing is more readable when I inline-expand @{term invariant_holds_post},
 but if I do that, the @{text auto} tactic splits out a subgoal for each conjunct.
 This doubles the already massive number of subgoals.
 *}
 
-definition no_assertion_failure_post ::
+definition invariant_holds_post ::
   "(account_state \<Rightarrow> bool) \<Rightarrow> (account_state \<times> environment_input) \<Rightarrow> bool"
 where
-"no_assertion_failure_post I fin =
+"invariant_holds_post I fin =
  (I (fst fin)(* The invariant holds. *))
 "
 
-lemma no_assertion_failure_in_fail [simp] :
+lemma invariant_holds_in_fail [simp] :
 "I state \<Longrightarrow>
- no_assertion_failure_post I (state, Execution (InstructionToEnvironment (ContractFail x) v v_opt))"
-apply(simp add: no_assertion_failure_post_def)
+ invariant_holds_post I (state, Execution (InstructionToEnvironment (ContractFail x) v v_opt))"
+apply(simp add: invariant_holds_post_def)
 done
 
-text {* @{term "no_assertion_failure"} is a template for statements.
+text {* @{term "invariant_holds"} is a template for statements.
 It takes a single argument @{term I} for the invariant.
 The invariant is assumed to hold at the initial state.
 The initial state is when the contract is called (this can be the first
@@ -351,9 +351,9 @@ reentrancy in Why ML.
 I have not justified the idea in Isabelle/HOL.
 *}
 
-definition no_assertion_failure :: "network \<Rightarrow> (account_state \<Rightarrow> bool) \<Rightarrow> bool"
+definition invariant_holds :: "network \<Rightarrow> (account_state \<Rightarrow> bool) \<Rightarrow> bool"
 where
-"no_assertion_failure net (I :: account_state \<Rightarrow> bool) \<equiv>
+"invariant_holds net (I :: account_state \<Rightarrow> bool) \<equiv>
   (\<forall> addr str code bal ongoing killed callenv.
     I \<lparr> account_address = addr, account_storage = str, account_code = code,
        account_balance = bal,
@@ -365,7 +365,7 @@ where
       account_ongoing_calls = ongoing,
       account_killed = killed \<rparr>
   , Init callenv) fin \<longrightarrow>
-  no_assertion_failure_post I fin))"
+  invariant_holds_post I fin))"
 
 subsection {* How to State a Pre-Post Condition Pair *}
 
