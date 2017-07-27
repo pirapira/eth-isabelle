@@ -3183,6 +3183,11 @@ lemmas stateelm_dest =
   ext_all
   not_ext_all
 
+lemma gasprice_advance_pc [simp]:
+ "vctx_gasprice
+        (vctx_advance_pc co_ctx x) = vctx_gasprice x"
+by(simp add: vctx_advance_pc_def)
+
 lemmas stateelm_subset_diff_elim =
   memory_range_in_minus_balance
   memory_range_elms_in_x_minus_lognum
