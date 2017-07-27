@@ -34,6 +34,7 @@ lemma move_neq_first:
    "{x. P x \<and> x \<noteq> v \<and> Q x} = {x. x \<noteq> v \<and> P x \<and> Q x}"
   by blast+
 
+
 lemma log0_gas_triple :
   "triple net {OutOfGas}
           (\<langle> h \<le> 1022 \<and> length data = unat logged_size \<rangle> **
@@ -63,6 +64,7 @@ apply clarify
     defer
     apply (simp)
    apply (simp  add:  memory_range_sep )
+apply(rename_tac continued)
 apply(simp add: log_inst_numbers.simps sep_memory_range
       sep_memory_range_sep log_def memory_range_sep
         instruction_result_as_set_def insert_minus_set
@@ -77,10 +79,11 @@ apply(rule Set.equalityI)
  apply clarify
  apply simp
  apply(rename_tac elm; case_tac elm; simp)
- apply(case_tac "fst x2 < length ta"; simp)
-apply clarify
-apply simp
-apply (case_tac "a = length ta"; clarsimp)
+   apply(rename_tac st)
+   apply(case_tac st; clarsimp)
+   apply(erule disjE; clarsimp)
+  apply auto[1]
+ apply(simp add: gasprice_advance_pc)
 apply auto
 apply(rename_tac elm; case_tac elm; simp)
 apply(case_tac "length (vctx_logs x1) \<le> fst x5"; auto)
@@ -133,6 +136,7 @@ apply(rule Set.equalityI)
  apply simp
  apply(rename_tac elm; case_tac elm; clarsimp)
  apply (drule imp_to_disjD, erule disjE; clarsimp)
+ apply (simp add: gasprice_advance_pc)
 apply clarify
 apply simp
 apply(rename_tac elm; case_tac elm; clarsimp)

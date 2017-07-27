@@ -79,7 +79,7 @@ lemma sstore_gas_triple :
   apply(rename_tac elm)
   apply(simp add: vctx_update_storage_def) 
   apply (case_tac elm; simp add: hoare_simps split:if_splits) 
-  using some_list_gotcha apply blast
+  using some_list_gotcha gasprice_advance_pc apply blast
   apply(rename_tac elm)
   apply (simp add: set_diff_eq) 
   apply (case_tac elm; simp add: hoare_simps  split:if_splits) 

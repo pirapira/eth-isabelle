@@ -88,3 +88,4 @@ session "light" = "HOL" +
     "example/AlwaysFail"
     "example/FailOnReentrance"
     "Parse"
+    "example/SimpleWallet"
