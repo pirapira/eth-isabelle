@@ -755,12 +755,12 @@ by (auto simp add: as_set_simps vctx_advance_pc_def)
 
 lemma gasprice_elm_means :
   "GaspriceElm x26 \<in> variable_ctx_as_set x1
-  = (x26 = block_gasprice (vctx_block x1))"
+  = (x26 = vctx_gasprice x1)"
   by (auto simp add: as_set_simps )
 
 lemma gasprice_c_means :
   "GaspriceElm x26 \<in> contexts_as_set x1 co_ctx
-  = (x26 = block_gasprice (vctx_block x1))"
+  = (x26 = vctx_gasprice x1)"
 by (auto simp add: as_set_simps)
 
 lemma advance_keeps_gasprice_elm:

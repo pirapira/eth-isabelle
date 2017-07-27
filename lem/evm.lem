@@ -957,7 +957,6 @@ type block_info = <|
   block_number : w256; (* the blocknumber of the block *)
   block_difficulty : w256;
   block_gaslimit : w256; (* the block gas imit *)
-  block_gasprice : w256;
 |>
 
 
@@ -991,6 +990,7 @@ type variable_ctx = <|
   vctx_touched_storage_index : list w256;
   vctx_logs : list log_entry; (* stored newest first *)
   vctx_refund : integer;
+  vctx_gasprice : w256;
 |>
 
 (* The constant context contains information that is rather stable. *)
@@ -1848,7 +1848,7 @@ let instruction_sem v c inst net =
   | Info ORIGIN -> stack_0_1_op v c (address_to_w256 v.vctx_origin)
   | Info CALLVALUE -> stack_0_1_op v c v.vctx_value_sent
   | Info CODESIZE -> stack_0_1_op v c (word256FromInteger c.cctx_program.program_length)
-  | Info GASPRICE -> stack_0_1_op v c v.vctx_block.block_gasprice
+  | Info GASPRICE -> stack_0_1_op v c v.vctx_gasprice
   | Info EXTCODESIZE -> stack_1_1_op v c
        (fun arg -> word256FromInteger (v.vctx_ext_program (w256_to_address arg)).program_length)
   | Info BLOCKHASH -> stack_1_1_op v c v.vctx_block.block_blockhash
@@ -2037,7 +2037,7 @@ let empty_memory = (fun _ -> 0)
 
 
 indreln [build_vctx_called : account_state -> call_env -> variable_ctx -> bool]
-  vctx_called : forall bal a env origin ext block gas existence.
+  vctx_called : forall bal a env origin gasprice ext block gas existence.
     word256ToInteger block.block_number >= eip150_block && (* only the newest version of EVM matters *)
     bal a.account_address = a.account_balance ==>
     build_vctx_called a env
@@ -2057,6 +2057,7 @@ indreln [build_vctx_called : account_state -> call_env -> variable_ctx -> bool]
      vctx_storage_at_call = a.account_storage; (* the snapshot of the storage is remembered in case of failure *)
      vctx_balance_at_call = bal; (* the snapshot of the balance is remembered in case of failure *)
      vctx_origin = origin; (* the origin of the transaction is arbitrarily chosen *)
+     vctx_gasprice = gasprice; (* the gasprice of the transaction is arbitrarily chosen *)
      vctx_ext_program = ext; (* the codes of the external programs are arbitrary. *)
      vctx_block = block; (* the block information is chosen arbitrarily. *)
      vctx_gas = gas; (* the amount of gas is chosen arbitrarily. *)
@@ -2078,7 +2079,7 @@ indreln [build_vctx_returned : account_state -> return_result -> variable_ctx ->
 vctx_returned:
    forall a_code v_pc new_bal a_bal a_addr a_storage v_stack v_memory v_memory_usage
           v_storage v_balance v_caller v_value v_data v_init_storage v_init_balance
-          v_origin v_ext_program v_ext_program' v_block v_gas v_gas' mem_start mem_size
+          v_origin v_gasprice v_ext_program v_ext_program' v_block v_gas v_gas' mem_start mem_size
           r rest whichever v_ex v_ex' v_touched v_logs v_refund.
    (is_call_like (a_code.program_content (v_pc - 1))) &&
    (word256UGE new_bal a_bal) ==> (* the balance might have increased *)
@@ -2102,6 +2103,7 @@ vctx_returned:
          ; vctx_storage_at_call = v_init_storage
          ; vctx_balance_at_call = v_init_balance
          ; vctx_origin = v_origin
+         ; vctx_gasprice = v_gasprice
          ; vctx_ext_program = v_ext_program
          ; vctx_block = v_block
          ; vctx_gas = v_gas
@@ -2131,6 +2133,7 @@ vctx_returned:
        ; vctx_storage_at_call = v_init_storage
        ; vctx_balance_at_call = v_init_balance
        ; vctx_origin = v_origin
+       ; vctx_gasprice = v_gasprice
        ; vctx_ext_program = v_ext_program'
        ; vctx_block = v_block
        ; vctx_gas = v_gas' (* safe approximation.  saving proof space *)

@@ -64,7 +64,7 @@ abbreviation block_info_as_set :: "block_info \<Rightarrow> state_element set"
 where "block_info_as_set b ==
   blockhash_as_elm (block_blockhash b) \<union> { CoinbaseElm (block_coinbase b),
   TimestampElm (block_timestamp b), DifficultyElm (block_difficulty b),
-  GaslimitElm (block_gaslimit b), GaspriceElm (block_gasprice b), BlockNumberElm (block_number b) }"
+  GaslimitElm (block_gaslimit b), BlockNumberElm (block_number b) }"
 
 abbreviation account_existence_as_set :: "(address \<Rightarrow> bool) \<Rightarrow> state_element set"
 where
@@ -137,6 +137,7 @@ definition variable_ctx_as_set :: "variable_ctx \<Rightarrow> state_element set"
       , CallerElm (vctx_caller v)
       , SentValueElm (vctx_value_sent v)
       , OriginElm (vctx_origin v)
+      , GaspriceElm (vctx_gasprice v)
       , GasElm (vctx_gas v)
       , PcElm (vctx_pc v)
       , SentDataLengthElm (length (vctx_data_sent v))
