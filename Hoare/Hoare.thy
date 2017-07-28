@@ -219,16 +219,16 @@ rules to simplify, it rule attempt to apply all of them, multiple times.\<close>
 
 method sep_simp_asm uses simp =
  (simp (*asm_lr*) only: sep_conj_assoc)?,
- ((sep_select_asm 1, subst (asm) simp, (erule conjE)+) |
-  (sep_select_asm 2, subst (asm) simp, (erule conjE)+) |
-  (sep_select_asm 3, subst (asm) simp, (erule conjE)+) |
-  (sep_select_asm 4, subst (asm) simp, (erule conjE)+) |
-  (sep_select_asm 5, subst (asm) simp, (erule conjE)+) |
-  (sep_select_asm 6, subst (asm) simp, (erule conjE)+) |
-  (sep_select_asm 7, subst (asm) simp, (erule conjE)+) |
-  (sep_select_asm 8, subst (asm) simp, (erule conjE)+) |
-  (sep_select_asm 9, subst (asm) simp, (erule conjE)+) |
-  (sep_select_asm 10, subst (asm) simp, (erule conjE)+))+
+ ((sep_select_asm 1, subst (asm) simp, (erule conjE)?) |
+  (sep_select_asm 2, subst (asm) simp, (erule conjE)?) |
+  (sep_select_asm 3, subst (asm) simp, (erule conjE)?) |
+  (sep_select_asm 4, subst (asm) simp, (erule conjE)?) |
+  (sep_select_asm 5, subst (asm) simp, (erule conjE)?) |
+  (sep_select_asm 6, subst (asm) simp, (erule conjE)?) |
+  (sep_select_asm 7, subst (asm) simp, (erule conjE)?) |
+  (sep_select_asm 8, subst (asm) simp, (erule conjE)?) |
+  (sep_select_asm 9, subst (asm) simp, (erule conjE)?) |
+  (sep_select_asm 10, subst (asm) simp, (erule conjE)?))+
 
 method sep_simp uses simp =
   ((sep_simp_asm simp: simp, (sep_simp_no_asm simp: simp)?) |

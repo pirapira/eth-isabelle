@@ -32,11 +32,11 @@ inductive triple_seq :: "pred \<Rightarrow> pos_inst list \<Rightarrow> pred \<R
     triple_seq q xs post \<rbrakk> \<Longrightarrow>
    triple_seq pre (x#xs) post"
 | seq_empty:
-  "(\<And>s. pre s \<longrightarrow> post s) \<Longrightarrow>
+  "(\<And>s. pre s \<Longrightarrow> post s) \<Longrightarrow>
    triple_seq pre [] post"
 | seq_strengthen_pre:
   "triple_seq p xs q \<Longrightarrow>
-   (\<And>s. r s \<longrightarrow> p s) \<Longrightarrow>
+   (\<And>s. r s \<Longrightarrow> p s) \<Longrightarrow>
    triple_seq r xs q"
 | seq_false_pre:
   "triple_seq \<langle>False\<rangle> xs post"
@@ -46,20 +46,20 @@ inductive triple_blocks :: "basic_blocks \<Rightarrow> pred \<Rightarrow> vertex
   "triple_seq pre insts post \<Longrightarrow>
    triple_blocks blocks pre (n, insts, No) post"
 | blocks_next :
-  "\<lbrakk>i = n + inst_size_list insts;
+  "\<lbrakk>triple_seq pre insts (program_counter i \<and>* q);
+    i = n + inst_size_list insts;
     blocks_list blocks i = Some (bi, ti);
-    triple_seq pre insts (program_counter i \<and>* q);
     triple_blocks blocks (program_counter i \<and>* q) (i, bi, ti) post\<rbrakk> \<Longrightarrow>
    triple_blocks blocks pre (n, insts, Next) post"
 | blocks_jump :
-  "\<lbrakk>blocks_list blocks dest = Some (bi, ti);
-    bi = (dest, Pc JUMPDEST) # bbi;
-    triple_seq pre insts
-      (program_counter (n + inst_size_list insts) \<and>* gas_pred g \<and>*
+  "\<lbrakk>triple_seq pre insts
+      (\<langle> h \<le> 1023 \<and> Gmid \<le> g \<and> m \<ge> 0\<rangle> \<and>*
+       program_counter (n + inst_size_list insts) \<and>* gas_pred g \<and>*
        memory_usage m \<and>* stack_height (Suc h) \<and>*
        stack h (word_of_int dest::256 word) \<and>*
-       \<langle> h \<le> 1023 \<and> Gmid \<le> g \<and> m \<ge> 0\<rangle> \<and>*
        continuing \<and>* rest);
+    blocks_list blocks dest = Some (bi, ti);
+    bi = (dest, Pc JUMPDEST) # bbi;
     triple_blocks blocks
       (program_counter dest \<and>* gas_pred (g - Gmid) \<and>*
        memory_usage m \<and>* stack_height h \<and>*
@@ -67,17 +67,17 @@ inductive triple_blocks :: "basic_blocks \<Rightarrow> pred \<Rightarrow> vertex
       (dest, bi, ti) post\<rbrakk> \<Longrightarrow>
    triple_blocks blocks pre (n, insts, Jump) post"
 | blocks_jumpi :
-  "\<lbrakk>j = n + 1 + inst_size_list insts;
-    blocks_list blocks dest = Some (bi, ti);
-    bi = (dest, Pc JUMPDEST) # bbi;
-    blocks_list blocks j = Some (bj, tj);
-    triple_seq pre insts
+  "\<lbrakk>  triple_seq pre insts
       ((\<langle> h \<le> 1022  \<and> Ghigh \<le> g \<and> m \<ge> 0\<rangle> \<and>*
        stack_height (Suc (Suc h)) \<and>*
        stack (Suc h) (word_of_int dest::256 word) \<and>*
        stack h cond \<and>* gas_pred g \<and>*
        continuing \<and>* memory_usage m \<and>*
        program_counter (n + inst_size_list insts) \<and>* rest));
+    j = n + 1 + inst_size_list insts;
+    blocks_list blocks dest = Some (bi, ti);
+    bi = (dest, Pc JUMPDEST) # bbi;
+    blocks_list blocks j = Some (bj, tj);
     r = (stack_height h \<and>* gas_pred (g - Ghigh) \<and>*
          continuing \<and>* memory_usage m \<and>* rest);
     (cond \<noteq> 0 \<Longrightarrow> triple_blocks blocks (r \<and>* program_counter dest) (dest, bi, ti) post);
@@ -100,7 +100,7 @@ lemmas fun_sep_simps =
 caller_sep  balance_sep not_continuing_sep this_account_sep
 action_sep memory8_sep memory_usage_sep pure_sep code_sep gas_pred_sep
 memory_range_sep continuing_sep gas_any_sep program_counter_sep
-stack_height_sep stack_sep block_number_pred_sep storage_sep
+stack_height_sep stack_sep block_number_pred_sep storage_sep emp_sep
 
 lemmas sep_fun_simps =
 fun_sep_simps
@@ -1154,7 +1154,7 @@ shows
            apply(rule_tac x="(s - {PcElm n} - {StackHeightElm (Suc (Suc h))} -
              {StackElm (Suc h, v)} - {StackElm (h, w)} - {GasElm g}) \<union> {StackElm (h, arith_2_1_low ia v w)} \<union>
              {GasElm (g-Glow)} \<union> {StackHeightElm (Suc h)} \<union> {PcElm (n+1)} " in exI)
-           apply(sep_simp simp: program_counter_sep gas_pred_sep stack_sep stack_height_sep pure_sep)+
+           apply(sep_simp simp: program_counter_sep gas_pred_sep stack_sep stack_height_sep pure_sep, (erule conjE)?)+
            apply(clarsimp simp add: gas_value_simps)
            apply(rule conjI)
             apply(erule_tac P="_ \<and>* _" in back_subst)
@@ -1165,7 +1165,7 @@ shows
           apply(rule_tac x="(s - {PcElm n} - {StackHeightElm (Suc (Suc h))} -
              {StackElm (Suc h, v)} - {StackElm (h, w)} - {GasElm g}) \<union> {StackElm (h, arith_2_1_verylow ia v w)} \<union>
              {GasElm (g-Gverylow)} \<union> {StackHeightElm (Suc h)} \<union> {PcElm (n+1)} " in exI)
-          apply(sep_simp simp: program_counter_sep gas_pred_sep stack_sep stack_height_sep pure_sep)+
+          apply(sep_simp simp: program_counter_sep gas_pred_sep stack_sep stack_height_sep pure_sep, (erule conjE)?)+
           apply(clarsimp simp add: gas_value_simps)
           apply(rule conjI)
            apply(erule_tac P="_ \<and>* _" in back_subst)
@@ -1183,7 +1183,7 @@ shows
           apply(rule_tac x="(s - {PcElm n} - {StackHeightElm (Suc (Suc (Suc h)))} - {StackElm (Suc (Suc h), u)} -
              {StackElm (Suc h, v)} - {StackElm (h, w)} - {GasElm g}) \<union> {StackElm (h, arith_3_1 ia u v w)} \<union>
              {GasElm (g-Gmid)} \<union> {StackHeightElm (Suc h)} \<union> {PcElm (n+1)} " in exI) 
-         apply(sep_simp simp: program_counter_sep gas_pred_sep stack_sep stack_height_sep pure_sep)+
+         apply(sep_simp simp: program_counter_sep gas_pred_sep stack_sep stack_height_sep pure_sep, (erule conjE)?)+
          apply(clarsimp simp add: gas_value_simps)
          apply(rule conjI)
           apply(erule_tac P="_ \<and>* _" in back_subst)
@@ -1239,16 +1239,16 @@ shows
     apply(rule conjI)
      apply(erule_tac P=rest in back_subst)
      apply(auto simp add: uniq_stateelm_def)[1]
-    apply (simp add: uniq_stateelm_def)
+    apply(simp add: uniq_stateelm_def)
     apply(rule conjI, fastforce)
     apply(rule conjI, fastforce)
     apply(rule conjI, fastforce)
-    apply(rule conjI; clarsimp)
-     apply(rule conjI; clarsimp)
-    apply(case_tac "ha= h"; simp)
-   apply(clarsimp simp add: inst_size_simps pure_sep)
+    apply(rule conjI, fastforce)
+    apply(rule allI, rule conjI; clarsimp)
+    apply(case_tac "ha=h"; clarsimp)
+   apply(simp add: inst_size_simps)
    apply(find_q_pc_after_inst)
-   apply(rule_tac x="(s - {PcElm n} - {GasElm g} -
+apply(rule_tac x="(s - {PcElm n} - {GasElm g} -
              {StackElm (h - Suc 0, w)} - {StackElm (h - Suc (Suc (unat na)), v)}) \<union> 
              {StackElm (h - Suc 0, v)} \<union> {StackElm (h - Suc (Suc (unat na)), w)} \<union>
              {GasElm (g-Gverylow)} \<union> {PcElm (n+1)}" in exI)
@@ -1268,7 +1268,7 @@ shows
   apply(drule meta_mp)
   apply(rule_tac x=s in exI; rule conjI; simp)
   apply(assumption)
- apply(simp add: pure_def)
+apply(simp add: pure_def)
 done
 
 lemma triple_seq_empty_case[OF _ refl] :

@@ -218,7 +218,7 @@ inductive triple_inst :: "pred \<Rightarrow> pos_inst \<Rightarrow> pred \<Right
 			 stack_height h ** stack (h - 1) v ** stack (h - (unat n) - 2) w **
 			 memory_usage m ** continuing ** rest)"
 | inst_strengthen_pre:
-    "triple_inst p i q \<Longrightarrow> (\<And>s. r s \<longrightarrow> p s) \<Longrightarrow> triple_inst r i q"
+    "triple_inst p i q \<Longrightarrow> (\<And>s. r s \<Longrightarrow> p s) \<Longrightarrow> triple_inst r i q"
 | inst_false_pre:
     "triple_inst \<langle>False\<rangle> i post"
 end

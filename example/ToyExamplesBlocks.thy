@@ -24,7 +24,8 @@ by (rule ext, simp add: pure_def sep_conj_def emp_def )+
 context
 notes if_split[ split del ] sep_fun_simps[simp del]
 gas_value_simps[simp add] pure_emp_simps[simp add]
-evm_fun_simps[simp add]
+evm_fun_simps[simp add] sep_lc[simp del] sep_conj_first[simp add]
+pure_false_simps[simp add]
 begin
 
 (* Example with a Jumpi and a No block *)
@@ -37,6 +38,56 @@ schematic_goal c_val:
  by(simp add: c_def  word_rcat_simps Let_def dropWhile.simps  blocks_simps next_i_def
   split:if_splits nat.splits option.splits )
 
+lemmas strengthen_insts =
+inst_strengthen_pre[OF inst_stack[OF inst_push_n]]
+inst_strengthen_pre[OF inst_pc[OF inst_jumpdest]]
+inst_strengthen_pre[OF inst_misc[OF inst_stop]]
+
+lemma instantiate_emp:
+"P sd \<Longrightarrow> (P \<and>* emp) sd"
+apply(sep_simp simp: emp_sep)
+apply(assumption)
+done
+
+method sep_imp_solve =
+clarsimp;
+(rule conjI),
+  (clarsimp simp add: word_rcat_def)?,
+  (sep_cancel)+,
+  (erule instantiate_emp)?,
+(simp)
+
+method triple_seq_vcg =
+  (rule seq_inst; ((rule strengthen_insts) | triple_seq_vcg)?) |
+  rule seq_empty
+
+method triple_jumpi_vcg =
+ ((rule blocks_jumpi; (rule refl)?),
+  triple_seq_vcg, sep_imp_solve+); simp add: bin_rcat_def
+
+method triple_jump_vcg =
+ ((rule blocks_jump; (rule refl)?),
+  triple_seq_vcg, sep_imp_solve+); simp add: bin_rcat_def
+
+
+method triple_no_vcg =
+ (rule blocks_no; triple_seq_vcg, sep_imp_solve+),
+ simp add: word_rcat_simps, sep_cancel+
+
+method triple_next_vcg =
+ ((rule blocks_next; (rule refl)?),
+  triple_seq_vcg, sep_imp_solve+); simp add: bin_rcat_def;
+  (simp add: word_rcat_simps; sep_cancel+)?
+
+
+method triple_vcg =
+ (triple_jumpi_vcg |
+  triple_jump_vcg |
+  triple_no_vcg |
+  triple_next_vcg |
+  rule blocks_false_pre)+
+
+thm triple_blocks.intros
 (* For a jumpif that can be solved statically, it works *)
 lemma
  "\<exists>rest. triple_blocks c
@@ -46,66 +97,8 @@ lemma
  apply(unfold c_val)
  apply (simp)
  apply(rule exI)
- apply(rule blocks_jumpi[where rest=emp])
-        apply(simp)
-       prefer 4
-       apply(simp)
-       apply(rule seq_inst)
-        apply(rule inst_strengthen_pre[OF inst_stack], rule inst_push_n[where rest=emp])
-        apply(rule impI)
-        apply(sep_cancel)+
-        apply(sep_simp simp: gas_pred_sep)
-        apply(simp add: gas_pred_def)
-        apply(clarsimp)
-        apply(rule conjI)
-         apply(rule refl)
-        apply(simp)
-       apply(rule seq_inst)
-        apply(rule inst_strengthen_pre[OF inst_stack], rule inst_push_n[where rest="stack 0 (word_rcat [1])" 
-              and h="Suc 0"])
-        apply(rule impI)
-        apply(sep_cancel)+
-        apply(simp)
-        apply(drule subst[OF sep_conj_commute]; simp only: emp_sep)
-       apply(rule seq_empty)
-       apply(rule impI)
-       apply(sep_simp simp: stack_height_sep)
-       apply(rule conjI)
-        apply(assumption)
-       apply(sep_simp simp: program_counter_sep)
-       apply(rule conjI; simp)
-       apply(sep_cancel)+
-       apply(sep_simp simp: stack_sep; simp add: word_rcat_def stack_def)
-      apply(simp add: bin_rcat_def)+
-  apply(simp add: word_rcat_simps)
-  prefer 2
-  apply(simp add: word_rcat_simps)
- apply(rule blocks_no)
- apply(rule seq_inst)
-  apply(rule inst_strengthen_pre[OF inst_pc], rule inst_jumpdest[where rest=emp])
-  apply(rule impI)
-  apply(sep_cancel)+
-  apply(simp)
- apply(rule seq_inst)
-  apply(rule inst_strengthen_pre[OF inst_stack], rule inst_push_n[where rest=emp])
-  apply(rule impI)
-  apply(sep_simp simp: program_counter_sep)
-  apply(rule conjI; simp)
-  apply(sep_cancel)+
-  apply(simp)
- apply(rule seq_inst)
-  apply(rule inst_strengthen_pre[OF inst_misc], rule inst_stop[where rest="stack 0 (word_rcat [2])"]; rule impI)
-  apply(sep_cancel)+
-  apply(sep_simp simp: program_counter_sep)
-  apply(simp)
- apply(rule seq_empty; rule impI)
- apply(sep_simp simp: stack_sep)
- apply(simp add: stack_def)
- apply(rule conjI)
-  apply(simp add: word_rcat_simps)
- apply(simp add: word_rcat_simps)
+  apply triple_vcg
 done
-
 
 (* Same example but we put an unknown value and an if in the post condition *)
 (* For a jumpif where we don't know at all which branch to follow, it works *)
@@ -126,75 +119,7 @@ lemma
 apply(unfold c2_val)
 apply (simp)
 apply(rule exI)+
- apply(rule blocks_jumpi[where rest=emp])
-        apply(simp)
-       prefer 4
-       apply(simp)
-       apply(rule seq_inst)
-        apply(rule inst_strengthen_pre[OF inst_stack], rule inst_push_n[where rest=emp])
-        apply(rule impI)
-        apply(sep_cancel)+
-        apply(sep_simp simp: gas_pred_sep)
-        apply(simp add: gas_pred_def)
-        apply(clarsimp)
-        apply(rule conjI)
-         apply(rule refl)
-        apply(simp)
-       apply(rule seq_inst)
-        apply(rule inst_strengthen_pre[OF inst_stack], rule inst_push_n[where rest="stack 0 (word_rcat [cond])" 
-              and h="Suc 0"])
-        apply(rule impI)
-        apply(sep_cancel)+
-        apply(sep_simp simp: program_counter_sep)
-        apply(simp add: program_counter_def)
-       apply(rule seq_empty)
-       apply(rule impI)
-       apply(sep_simp simp: stack_height_sep)
-       apply(rule conjI)
-        apply(assumption)
-       apply(sep_simp simp: program_counter_sep)
-       apply(rule conjI; simp)
-       apply(sep_cancel)+
-       apply(sep_simp simp: stack_sep; simp add: word_rcat_def stack_def)
-      apply(simp add: bin_rcat_def)+
-  apply(simp add: word_rcat_simps)
-  prefer 2
-  apply(simp add: word_rcat_simps)
- apply(rule blocks_no)
-  apply(rule seq_inst)
-   apply(rule inst_strengthen_pre[OF inst_stack], rule inst_push_n[where rest=emp]; rule impI)
-   apply(simp)
-   apply(sep_cancel)+
-   apply(simp)
-  apply(rule seq_inst)
-   apply(rule inst_strengthen_pre[OF inst_misc], rule inst_stop[where rest="stack 0 (word_rcat [1])"]; rule impI)
-   apply(simp)
-   apply(sep_cancel)+
-   apply(simp)
-  apply(rule seq_empty; rule impI)
-  apply(simp add: word_rcat_simps)
-  apply(sep_cancel)
- apply(rule blocks_no)
- apply(rule seq_inst)
-  apply(rule inst_strengthen_pre[OF inst_pc], rule inst_jumpdest[where rest=emp])
-  apply(rule impI)
-  apply(sep_cancel)+
-  apply(simp)
- apply(rule seq_inst)
-  apply(rule inst_strengthen_pre[OF inst_stack], rule inst_push_n[where rest=emp])
-  apply(rule impI)
-  apply(sep_simp simp: program_counter_sep)
-  apply(rule conjI; simp)
-  apply(sep_cancel)+
-  apply(simp)
- apply(rule seq_inst)
-  apply(rule inst_strengthen_pre[OF inst_misc], rule inst_stop[where rest="stack 0 (word_rcat [2])"]; rule impI)
-  apply(sep_cancel)+
-  apply(sep_simp simp: program_counter_sep)
-  apply(simp)
- apply(rule seq_empty; rule impI)
- apply(simp add: word_rcat_simps)
- apply(sep_cancel)
+apply(triple_vcg)
 done
 
 (* Same example as the previous one but with the unknown value as a precondition *)
@@ -209,62 +134,7 @@ lemma
 apply(unfold c2_val)
 apply (simp)
 apply(rule exI)
-apply(rule blocks_jumpi[where rest="\<langle>word_rcat [cond] \<noteq> (0::256 word)\<rangle>"])
-        apply(simp)
-       prefer 4
-       apply(simp)
-       apply(rule seq_inst)
-        apply(rule inst_strengthen_pre[OF inst_stack], rule inst_push_n[where rest="\<langle>word_rcat [cond] \<noteq> (0::256 word)\<rangle>"])
-        apply(rule impI)
-        apply(sep_cancel)+
-        apply(simp)
-       apply(rule seq_inst)
-        apply(rule inst_strengthen_pre[OF inst_stack], rule inst_push_n[where rest="stack 0 (word_rcat [cond]) \<and>* \<langle>word_rcat [cond] \<noteq> (0::256 word)\<rangle>" 
-              and h="Suc 0"])
-        apply(rule impI)
-        apply(sep_cancel)+
-        apply(sep_simp simp: program_counter_sep)
-        apply(simp add: program_counter_def)
-       apply(rule seq_empty)
-       apply(rule impI)
-       apply(sep_simp simp: stack_height_sep)
-       apply(rule conjI)
-        apply(assumption)
-       apply(sep_simp simp: program_counter_sep)
-       apply(rule conjI; simp)
-       apply(sep_cancel)+
-       apply(sep_simp simp: stack_sep; simp add: word_rcat_def stack_def)
-      apply(simp add: bin_rcat_def)+
-  apply(simp add: word_rcat_simps)
-  prefer 2
-  apply(simp add: word_rcat_simps pure_false_simps)
-  apply(rule blocks_no)
-  apply(rule seq_false_pre)
- apply(rule blocks_no)
- apply(rule seq_inst)
-  apply(rule inst_strengthen_pre[OF inst_pc], rule inst_jumpdest[where rest="\<langle>word_rcat [cond] \<noteq> (0::256 word)\<rangle>"])
-  apply(rule impI)
-  apply(sep_cancel)+
-  apply(simp add: gas_pred_sep word_rcat_simps)
-  apply(rule conjI; simp)
- apply(rule seq_inst)
-  apply(rule inst_strengthen_pre[OF inst_stack], rule inst_push_n[where rest=emp])
-  apply(rule impI)
-  apply(sep_simp simp: program_counter_sep)
-  apply(rule conjI; simp)
-  apply(sep_cancel)+
-  apply(simp)
- apply(rule seq_inst)
-  apply(rule inst_strengthen_pre[OF inst_misc], rule inst_stop[where rest="stack 0 (word_rcat [2])"]; rule impI)
-  apply(sep_cancel)+
-  apply(sep_simp simp: program_counter_sep)
-  apply(simp)
- apply(rule seq_empty; rule impI)
- apply(sep_simp simp: stack_sep)
- apply(simp add: stack_def)
- apply(rule conjI)
-  apply(simp add: word_rcat_simps)
- apply(simp add: word_rcat_simps)
+apply(triple_vcg)
 done
 
 (* Example with a Jump and a Next block*)
@@ -286,62 +156,7 @@ lemma
 apply(unfold c4_val)
 apply (simp)
 apply(rule exI)
-apply(rule blocks_jump[where rest="stack 0 (word_rcat [1])"])
-     prefer 3
-     apply(simp)
-     apply(rule seq_inst)
-      apply(rule inst_strengthen_pre[OF inst_stack], rule inst_push_n[where rest=emp])
-      apply(rule impI)
-      apply(sep_cancel)+
-      apply(sep_simp simp: gas_pred_sep)
-      apply(simp add: gas_pred_def)
-      apply(clarsimp)
-      apply(rule conjI)
-       apply(rule refl)
-      apply(simp)
-     apply(rule seq_inst)
-      apply(rule inst_strengthen_pre[OF inst_stack], rule inst_push_n[where rest="stack 0 (word_rcat [1])" 
-            and h="Suc 0"])
-      apply(rule impI)
-      apply(sep_cancel)+
-      apply(sep_simp simp: program_counter_sep)
-      apply(simp add: program_counter_def)
-     apply(rule seq_empty)
-     apply(rule impI)
-     apply(sep_simp simp: stack_height_sep)
-     apply(rule conjI)
-      apply(assumption)
-     apply(sep_simp simp: program_counter_sep)
-     apply(rule conjI; simp)
-     apply(sep_cancel)+
-     apply(sep_simp simp: stack_sep; simp add: word_rcat_def stack_def)
-    apply(simp add: bin_rcat_def)+
- apply(rule blocks_next)
-    apply(simp)
-   apply(simp)
-  apply(rule seq_inst)
-   apply(rule inst_strengthen_pre[OF inst_pc], rule inst_jumpdest[where rest="stack 0 (word_rcat [1])"]; rule impI)
-   apply(sep_cancel)+
-   apply(simp)
-  apply(rule seq_inst)
-   apply(rule inst_strengthen_pre[OF inst_stack], rule inst_push_n[where rest="stack 0 (word_rcat [1])"]; rule impI)
-    apply(sep_cancel)+
-    apply(simp)
-  apply(rule seq_empty; rule impI)
-  apply(simp)
-  apply(sep_cancel)
- apply(rule blocks_no)
- apply(rule seq_inst)
-  apply(rule inst_strengthen_pre[OF inst_pc], rule inst_jumpdest[where rest="stack 0 (word_rcat [1]) \<and>* stack (Suc 0) (word_rcat [2])"])
-  apply(rule impI)
-  apply(sep_cancel)+
-  apply(simp)
- apply(rule seq_inst)
-  apply(rule inst_strengthen_pre[OF inst_misc], rule inst_stop[where rest="stack 0 (word_rcat [1]) \<and>* stack (Suc 0) (word_rcat [2])"]; rule impI)
-  apply(sep_cancel)+
-  apply(simp)
- apply(rule seq_empty; rule impI)
- apply(sep_simp simp: stack_sep)+
+apply(triple_vcg)
 done
 end
 
