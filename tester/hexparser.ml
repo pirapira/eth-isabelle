@@ -25,8 +25,6 @@ let program_from_impl (imp : program_impl) : program =
         | Failure _ -> None
       )
   ; program_length = Nat_big_num.of_int imp.p_impl_length
-  ; program_annotation =
-      fun _ -> []
   }
 
 let rec add_unknown_bytes_from (pos : int) (lst : byte list) (orig : inst IntMap.t) : inst IntMap.t =

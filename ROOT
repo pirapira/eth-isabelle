@@ -26,7 +26,6 @@ session "deed" = "HOL" +
   theories
     ContractSem
     RelationalSem
-    "example/Deed"
   document_files
     "root.tex"
 
@@ -79,7 +78,6 @@ session "all" = "HOL" +
     "example/Optimization"
     "example/AlwaysFail"
     "example/FailOnReentrance"
-    "example/Deed"
     "example/SimpleWallet"
 
 session "light" = "HOL" +
@@ -90,3 +88,4 @@ session "light" = "HOL" +
     "example/AlwaysFail"
     "example/FailOnReentrance"
     "Parse"
+    "example/SimpleWallet"

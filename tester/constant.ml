@@ -4,7 +4,6 @@ open Conv
 let empty_program : program =
   { program_content = (fun _ -> None)
   ; program_length = Nat_big_num.of_int 0
-  ; program_annotation = (fun _ -> [])
   }
 
 let dummy_constant_ctx : constant_ctx =
@@ -30,7 +29,6 @@ let dummy_block_info : block_info =
   ; block_number = zero_word
   ; block_difficulty = zero_word
   ; block_gaslimit = zero_word
-  ; block_gasprice = zero_word
   }
 
 let dummy_variable_con : variable_ctx =
@@ -46,6 +44,7 @@ let dummy_variable_con : variable_ctx =
   ; vctx_storage_at_call = empty_storage
   ; vctx_balance_at_call = empty_balance
   ; vctx_origin = dummy_address
+  ; vctx_gasprice = Conv.word256_of_big_int (Big_int.big_int_of_int 21000000000)
   ; vctx_ext_program = empty_ext_program
   ; vctx_block = dummy_block_info
   ; vctx_gas = Nat_big_num.of_int 50000

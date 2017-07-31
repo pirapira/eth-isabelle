@@ -772,7 +772,7 @@ lemma tr_balance_finished :
     total_balance (f_state st2) \<le> total_balance (g_orig st1)"
 apply (simp add:next0_def Let_def)
 apply (cases "g_vmstate st1"; auto simp add:Let_def)
-apply (case_tac "x31"; auto  simp add:Let_def split:if_splits)
+apply (case_tac "x21"; auto  simp add:Let_def split:if_splits)
 apply (case_tac "g_stack st1"; auto simp add:Let_def)
 apply (case_tac "g_stack st1"; auto simp add:Let_def)
 subgoal for x32 x33 dst
@@ -897,10 +897,10 @@ apply (case_tac "g_stack st1"; auto)
 apply (case_tac b; auto)
 apply (case_tac "x6 = [] \<and> list = [] \<and> g_create st1"; simp)
   apply (auto simp add: inv_orig_current total_balance_update_return)[1]
-apply (case_tac "vctx_gas x32 < 200 * int (length x6) \<and>
+apply (case_tac "vctx_gas x22 < 200 * int (length x6) \<and>
                 homestead_block
-                \<le> unat (block_number (vctx_block x32))"; simp)
-apply (case_tac "vctx_gas x32 < 200 * int (length x6)"; auto)
+                \<le> sint (block_number (vctx_block x22))"; simp)
+apply (case_tac "vctx_gas x22 < 200 * int (length x6)"; auto)
 done
 
 lemma tr_balance_continue :
@@ -910,7 +910,6 @@ lemma tr_balance_continue :
     balance_inv st2"
 apply (simp add:next0_def Let_def)
 apply (cases "g_vmstate st1"; auto)
-using inv_depend apply force
 using inv_depend apply force
 subgoal for act v zz
 apply (cases act; auto simp add:Let_def)
@@ -1081,7 +1080,7 @@ subgoal for x6 saved_state aa ab list x2
 apply (cases "x6 = [] \<and> list = [] \<and> g_create st1"; simp)
 apply (cases "vctx_gas v < 200 * int (length x6) \<and>
              homestead_block
-             \<le> unat (block_number (vctx_block v))"; simp)
+             \<le> sint (block_number (vctx_block v))"; simp)
 apply clarsimp
 using inv_pop apply force
 apply (cases "vctx_gas v < 200 * int (length x6)"; clarsimp)

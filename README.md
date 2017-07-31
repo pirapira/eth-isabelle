@@ -1,6 +1,7 @@
 # Formalization of Ethereum Virtual Machine in Lem
 
 [![Build Status](https://travis-ci.org/pirapira/eth-isabelle.svg?branch=master)](https://travis-ci.org/pirapira/eth-isabelle)
+[![CircleCI](https://circleci.com/gh/pirapira/eth-isabelle/tree/master.svg?style=svg)](https://circleci.com/gh/pirapira/eth-isabelle/tree/master)
 
 This repository contains
 
@@ -76,7 +77,6 @@ done
 
 ## Makefile goals
 
-* `make deed` produces a verified PDF document for the Deed contract in `output/document.pdf`.  Make sure that `isabelle` points to `Isabelle2016-1/bin/isabelle` (not earlier versions).
 * `make doc` produces `output/document.pdf` as well as `lem/*.pdf`.
 * `make lem-thy` compiles the Lem sources into Isabelle/HOL
 * `make lem-hol` compiles the Lem sources into HOL4
@@ -90,3 +90,4 @@ done
 
 * For a bigger picture, see [overview of Yoichi's formal verification efforts on smart contracts](https://github.com/pirapira/ethereum-formal-verification-overview/blob/master/README.md#formal-verification-of-ethereum-contracts-yoichis-attempts)
 * For updates, visit [a gitter channel](https://gitter.im/ethereum/formal-methods)
+* A related project [EVM formalization in K framework](https://github.com/kframework/evm-semantics)

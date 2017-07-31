@@ -241,22 +241,25 @@ definition sep_add :: "'a set_pred \<Rightarrow> 'a set_pred \<Rightarrow> 'a se
   where
     "sep_add p q == (\<lambda> s. p s \<or> q s)"
 
-notation sep_add (infixr "##" 59)
+notation sep_add (infixr "\<or>*" 59)
 
-lemma sep_add_assoc [simp]: "((a ## b) ## c) = (a ## b ## c)"
+lemma sep_add_assoc [simp]: "((a \<or>* b) \<or>* c) = (a \<or>* b \<or>* c)"
   by (simp add: sep_add_def)
 
-lemma sep_add_commute [simp]: "(a ## b)= (b ## a)"
+lemma sep_add_commute [simp]: "(a \<or>* b)= (b \<or>* a)"
  by (simp add: sep_add_def) blast
 
 definition never :: "'a set_pred" where
 "never == (\<lambda>s. False)"
 
-lemma sep_add_never [simp] : "r ## never = r"
+lemma sep_add_never [simp] : "r \<or>* never = r"
 by (simp add: never_def sep_add_def)
 
-lemma sep_add_distr [simp] : "a ** (b ## c) = a**b ## a**c"
-by (simp add: sep_def sep_add_def) blast
+(*
+lemma sep_add_distr [simp] : "a ** (b \<or>* c) == (a**b) \<or>* (a**c)"
+apply (simp add: sep_add_def sep_conj_def sep_distinct_def)
+apply blast
+*)
 
 definition action ::
    "(contract_action \<Rightarrow> bool) \<Rightarrow> state_element set_pred" where
@@ -338,26 +341,18 @@ lemma no_reasons_next :
    (next_state stopper c net (InstructionContinue v)) = False"
 by (auto simp:failed_for_reasons_def)
 
-lemma program_annotation :
-"program_sem stopper c n net InstructionAnnotationFailure =
- InstructionAnnotationFailure"
-by (induction n, auto simp:program_sem.simps)
-
 lemma program_environment :
 "program_sem stopper c n net (InstructionToEnvironment a b d) =
  (InstructionToEnvironment a b d)"
-by (induction n, auto simp:program_sem.simps)
+by (induction n, auto simp:program_sem.simps next_state_def)
 
-declare next_state_def [simp del]
 
 lemma no_reasons [simp] :
    "failed_for_reasons {}
    (program_sem stopper c n net (InstructionContinue v)) = False"
 apply (induction n arbitrary:v)
-apply (simp add:program_sem.simps failed_for_reasons_def
-  program_annotation no_reasons_next)
-apply (simp add:program_sem.simps no_reasons_next
-  failed_for_reasons_def)
+apply (auto simp add:program_sem.simps failed_for_reasons_def
+  no_reasons_next)
 done
 
 (*
@@ -367,13 +362,13 @@ lemmas context_rw = contexts_as_set_def constant_ctx_as_set_def variable_ctx_as_
       account_balance_as_set_def
 *)
 
+(*
 lemma not_cont_insert :
  "x (s-{ContinuingElm False}) \<Longrightarrow>
   (x ** not_continuing) (insert (ContinuingElm False) s)"
-apply(auto simp add:rw sep_def  not_continuing_def all_def
+apply(auto simp add:rw sep_conj_def  not_continuing_def all_def
          failing_def some_gas_def code_def gas_pred_def context_rw)
 done
-
 lemma context_cont :
   "contexts_as_set x1 co_ctx -
       {ContinuingElm a, ContractActionElm b} =
@@ -403,6 +398,7 @@ apply(auto simp add:rw sep_def  not_continuing_def all_def
          failing_def some_gas_def code_def gas_pred_def context_rw)
 done
 
+*)
 
 lemma meter_gas_check :
   "\<not> meter_gas a x1 co_ctx net \<le> vctx_gas x1 \<Longrightarrow>
@@ -537,46 +533,6 @@ apply(case_tac "\<not> cctx_hash_filter c ( cut_memory x21 x21a (vctx_memory v1)
      apply (case_tac "x13"; clarsimp simp: instruction_sem_simps  split: pc_inst.splits option.splits list.splits if_splits)
 done
 
-lemma no_annotation_inst :
-"instruction_sem v c a net \<noteq> InstructionAnnotationFailure"
-apply (cases a)
-apply (simp add:rw)
-apply (rename_tac inst; case_tac inst;auto simp:rw split:list.split)
-apply (rename_tac inst; case_tac inst;auto simp:rw split:list.split)
-apply (rename_tac inst; case_tac inst;auto simp:rw sha3_def
-   split:list.split if_split)
-apply(case_tac "\<not> cctx_hash_filter c ( cut_memory x21 x21a
-                (vctx_memory v))"; auto simp:rw)
-apply (rename_tac inst; case_tac inst;auto simp:rw split:list.split)
-apply (rename_tac inst; case_tac inst;
-  auto simp:rw split:list.split option.split)
-apply (rename_tac inst; case_tac inst;auto simp:rw split:list.split)
-apply (rename_tac inst; case_tac inst;auto simp:rw split:list.split)
-defer
-apply (rename_tac inst; case_tac inst;auto simp:rw split:list.split)
-apply (rename_tac inst; case_tac inst;auto simp:rw
-   split:list.split option.split)
-apply (rename_tac inst; case_tac inst;auto simp:rw split:list.split)
-apply (rename_tac inst; case_tac inst;auto simp:rw split:list.split)
-apply (rename_tac inst; case_tac inst;auto simp:rw
-   split:list.split option.split)
-apply (case_tac "vctx_next_instruction (v
-               \<lparr>vctx_stack := x22,
-                  vctx_pc := uint x21\<rparr>)
-                  c"; auto simp:rw)
-subgoal for x y aaa
-apply (case_tac aaa; auto simp:rw)
-apply (case_tac x9; auto simp:rw)
-done
-apply (case_tac "vctx_next_instruction (v
-               \<lparr>vctx_stack := x22,
-                  vctx_pc := uint x21\<rparr>)
-                  c"; auto simp:rw)
-subgoal for x y z aaa
-apply (case_tac aaa; auto simp:rw)
-apply (case_tac x9; auto simp:rw)
-done
-done
 
 lemma call_instruction :
 "instruction_sem v c inst net =
@@ -1205,8 +1161,6 @@ lemma get_condition1 :
     block_difficulty (vctx_block v2) \<and>
     block_gaslimit (vctx_block v1) =
     block_gaslimit (vctx_block v2) \<and>
-    block_gasprice (vctx_block v1) =
-    block_gasprice (vctx_block v2) \<and>
     block_number (vctx_block v1) =
     block_number (vctx_block v2) \<and>
     cctx_this c1 = cctx_this c2"
@@ -1217,6 +1171,7 @@ lemma eq_class :
     "vctx_memory_usage v1 = vctx_memory_usage v2 \<Longrightarrow>
     vctx_caller v1 = vctx_caller v2 \<Longrightarrow>
     vctx_value_sent v1 = vctx_value_sent v2 \<Longrightarrow>
+    vctx_gasprice v1 = vctx_gasprice v2 \<Longrightarrow>
     vctx_origin v1 = vctx_origin v2 \<Longrightarrow>
     vctx_gas v1 = vctx_gas v2 \<Longrightarrow>
     vctx_pc v1 = vctx_pc v2 \<Longrightarrow>
@@ -1231,8 +1186,6 @@ lemma eq_class :
     block_difficulty (vctx_block v2) \<Longrightarrow>
     block_gaslimit (vctx_block v1) =
     block_gaslimit (vctx_block v2) \<Longrightarrow>
-    block_gasprice (vctx_block v1) =
-    block_gasprice (vctx_block v2) \<Longrightarrow>
     block_number (vctx_block v1) = block_number (vctx_block v2) \<Longrightarrow>
     vctx_logs v1 = vctx_logs v2 \<Longrightarrow>
     vctx_stack v1 = vctx_stack v2 \<Longrightarrow>
@@ -1266,11 +1219,11 @@ apply(simp add:context_rw)
 apply(simp add:context_rw)
 apply(simp add:context_rw)
 apply(simp add:context_rw)
+apply(simp add:context_rw)
   apply (metis data_from_context data_sent_subset order.trans)
 apply(simp add:context_rw)
 using block_from_context and block_subset
 apply force
-apply(simp add:context_rw)
 apply(simp add:context_rw)
 apply(simp add:context_rw)
 apply(simp add:context_rw)
@@ -1292,7 +1245,7 @@ using ext_content_from_context and ext_program_subset apply force
 done
 
 (* Looping *)
-
+(*
 definition zero :: "'a set_pred" where
 "zero = (\<lambda>x. False)"
 
@@ -1719,5 +1672,6 @@ apply (simp add:failed_for_reasons_def)
 apply (simp add:failed_for_reasons_def)
 apply clarsimp
 oops
+*)
 
 end

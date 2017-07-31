@@ -172,11 +172,11 @@ type network =
 | Metropolis
 
 
-val network_of_block_number : natural -> network
+val network_of_block_number : integer -> network
 let network_of_block_number bn =
-  if bn < 1150000 then Frontier
-  else if bn < 2463000 then Homestead
-  else if bn < 2675000 then EIP150
+  if bn < 115 * 100 * 100 then Frontier
+  else if bn < 3 * 821 * 10 * 100 then Homestead
+  else if bn < 5 * 5 * 107 * 10 * 100 then EIP150
   else EIP158
 (* This needs to be updated when a new fork is planned. *)
 
@@ -199,36 +199,6 @@ let before_homestead n =
   | EIP158 -> false
   | Metropolis -> false
   end
-
-type aenv = <|
-  aenv_stack : list (w256);
-  aenv_memory : memory;
-  aenv_storage : storage;
-  aenv_balance : address -> w256;
-  aenv_caller : address;
-  aenv_value_sent : w256;
-  aenv_data_sent : list byte;
-  aenv_storage_at_call : storage;
-  aenv_balance_at_call : address -> w256;
-  aenv_this : address;
-  aenv_origin : address;
-|>
-
-(* @{term aenv_balance} field keeps track of the balance of all accounts because the contract *)
-(* under verification can send some Eth to other accounts.  To capture the effect of this, I chose to *)
-(* keep track of the balances of the other contracts.  *)
-
-(* @{term aenv_storage_at_call} and @{term aenv_balance_at_call} fields remember the states at the *)
-(* time of the contract invocation.  These are used for rolling back the state after a failure. *)
-(* Failures happen for example when the contract under verification jumps to a wrong destination, *)
-(* or it runs out of gas. *)
-
-(* @{term aenv_origin} might be the same as but might be different from @{term aenv_caller}. *)
-(* An Ethereum transaction is started by an external account (that is, an account which does not *)
-(* have codes but owned by somebody with a secret key).  @{term aenv_origin} denotes this external *)
-(* account.  During a transaction, the origin first sends a message to an account, the receiver can *)
-(* in turn call other accounts as well.  When the calls nest, @{term aenv_caller} points to the *)
-(* immediate caller of the current invocation. *)
 
 
 (* This section lists the EVM instructions and their byte representations. *)
@@ -656,10 +626,6 @@ type inst =
   | Log of log_inst
   | Misc of misc_inst
 
-(* subsection {* Annotation  *} *)
-
-type annotation = aenv -> bool
-
 (* subsection {* The Whole Instruction Set *} *)
 
 (* The small inductive sets above are here combined into a single type. *)
@@ -730,10 +696,10 @@ let Gmid = 8
 val Ghigh : integer
 let Ghigh = 10
 
-val eip150_block : natural
+val eip150_block : integer
 let inline eip150_block = 2463*1000
 
-val homestead_block : natural
+val homestead_block : integer
 let homestead_block = 1150*1000
 
 val Gextcode : network -> integer
@@ -938,7 +904,6 @@ type contract_action =
 type program = <|
   program_content : integer -> maybe inst; (* a way to look up instructions from positions *)
   program_length  : integer; (* the length of the program in bytes *)
-  program_annotation : integer -> list annotation; (* a mapping from positions to annotations *)
 |>
 
 (* The empty program is easy to define. *)
@@ -946,32 +911,11 @@ type program = <|
 val empty_program : program
 let empty_program = <|
   program_content = (fun _ -> Nothing);
-  program_length = 0;
-  program_annotation = (fun _ -> [])
+  program_length = 0
 |>
 
 
 (* subsection "Translating an Instruction List into a Program" *)
-
-(* subsubsection {* Storing annotations in a program in a mapping *} *)
-
-(* Annotations are stored in a mapping that maps positions into lists of annotations. *)
-(* The rationale for this data structure is that a single position might contain multiple annotations. *)
-(* Here is a function that inserts an annotation *)
-(* at a specified position. *)
-
-val prepend_annotation : integer -> annotation -> (integer -> list annotation) -> (integer -> list annotation)
-let prepend_annotation pos annot orig p = if pos = p then annot :: orig p else orig p
-
-(* Currently annotations are inserted into a mapping with Isabelle/HOL's mapping updates. *)
-(* When this causes performance problems, I need to switch to AVL trees again. *)
-
-val program_annotation_of_lst : int -> list inst -> integer -> list annotation
-let rec program_annotation_of_lst pos lst = match lst with
-| [] -> (fun _ -> [])
-| i :: rest -> program_annotation_of_lst (pos + inst_size i) rest
-end
-declare termination_argument program_annotation_of_lst = automatic
 
 (* subsubsection {* Translating a list of instructions into a program *} *)
 
@@ -984,7 +928,6 @@ val program_of_lst : list inst -> (list inst -> (integer -> maybe inst)) -> prog
 let program_of_lst lst program_content_formatter = <|
   program_content = program_content_formatter lst;
   program_length = integerFromNat (length lst);
-  program_annotation = program_annotation_of_lst 0 lst;
 |>
 
 (* subsection {* Program as a Byte Sequence *} *)
@@ -1017,7 +960,6 @@ type block_info = <|
   block_number : w256; (* the blocknumber of the block *)
   block_difficulty : w256;
   block_gaslimit : w256; (* the block gas imit *)
-  block_gasprice : w256;
 |>
 
 
@@ -1051,6 +993,7 @@ type variable_ctx = <|
   vctx_touched_storage_index : list w256;
   vctx_logs : list log_entry; (* stored newest first *)
   vctx_refund : integer;
+  vctx_gasprice : w256;
 |>
 
 (* The constant context contains information that is rather stable. *)
@@ -1067,7 +1010,6 @@ type constant_ctx = <|
 
 type instruction_result =
 | InstructionContinue of variable_ctx (* the execution should continue. *)
-| InstructionAnnotationFailure (* the annotation turned out to be false. *)
 | InstructionToEnvironment of
   (* the execution has stopped; either for the moment just calling out another account, or *)
   (* finally finishing the current invocation *)
@@ -1225,25 +1167,6 @@ let sstore v c = match v.vctx_stack with
                      vctx_refund = v.vctx_refund + check_refund (v.vctx_storage addr) vl |>))
  | _ -> instruction_failure_result v [TooShortStack]
 end
-
-(* For interpreting the annotations, I first need to construct the annotation environment *)
-(* out of the current execution environments.  When I try to remove this step, I face some *)
-(* circular definitions of data types. *)
-
-val build_aenv : variable_ctx -> constant_ctx -> aenv
-let build_aenv v c = <|
-  aenv_stack = v.vctx_stack;
-  aenv_memory = v.vctx_memory;
-  aenv_storage = v.vctx_storage;
-  aenv_balance = v.vctx_balance;
-  aenv_caller = v.vctx_caller;
-  aenv_value_sent = v.vctx_value_sent;
-  aenv_data_sent = v.vctx_data_sent;
-  aenv_storage_at_call = v.vctx_storage_at_call;
-  aenv_balance_at_call = v.vctx_balance_at_call;
-  aenv_this = c.cctx_this;
-  aenv_origin = v.vctx_origin;
-|>
 
 (* The JUMP instruction has the following meaning.  When it cannot find the JUMPDEST instruction *)
 (* at the destination, the execution fails. *)
@@ -1787,7 +1710,6 @@ let subtract_gas consumption memory_usage orig =
   match orig with
   | InstructionContinue v ->
     InstructionContinue (<| v with vctx_gas = v.vctx_gas - consumption; vctx_memory_usage = memory_usage |>)
-  | InstructionAnnotationFailure -> InstructionAnnotationFailure
   | InstructionToEnvironment act v opt ->
     InstructionToEnvironment act (<|v with vctx_gas = v.vctx_gas - consumption; vctx_memory_usage = memory_usage |>) opt
   end
@@ -1897,7 +1819,7 @@ let instruction_sem v c inst net =
   | Info ORIGIN -> stack_0_1_op v c (address_to_w256 v.vctx_origin)
   | Info CALLVALUE -> stack_0_1_op v c v.vctx_value_sent
   | Info CODESIZE -> stack_0_1_op v c (word256FromInteger c.cctx_program.program_length)
-  | Info GASPRICE -> stack_0_1_op v c v.vctx_block.block_gasprice
+  | Info GASPRICE -> stack_0_1_op v c v.vctx_gasprice
   | Info EXTCODESIZE -> stack_1_1_op v c
        (fun arg -> word256FromInteger (v.vctx_ext_program (w256_to_address arg)).program_length)
   | Info BLOCKHASH -> stack_1_1_op v c v.vctx_block.block_blockhash
@@ -1936,22 +1858,12 @@ let instruction_sem v c inst net =
 (* about smart contracts, the theorems are of the form ``for any value of the initial step counter, *)
 (* this and that never happen.'' *)
 
-(* Since our program struct contains a list of annotations for each program position, *)
-(* I have a function that checks all annotations at a particular program position: *)
-val check_annotations : variable_ctx -> constant_ctx -> bool
-let check_annotations v c =
-  let annots : list annotation = c.cctx_program.program_annotation v.vctx_pc in
-  List.all (fun annot -> annot (build_aenv v c)) annots
-
-
 val next_state: (instruction_result -> unit) -> constant_ctx -> network -> instruction_result -> instruction_result
 let next_state stopper c net pr =
   match pr with
   | InstructionToEnvironment _ _ _ ->
     let () = stopper pr in pr
-  | InstructionAnnotationFailure -> let () = stopper pr in pr
   | InstructionContinue v ->
-     if not (check_annotations v c) then InstructionAnnotationFailure else
      match vctx_next_instruction v c with
       | Nothing -> InstructionToEnvironment (ContractFail [ShouldNotHappen]) v Nothing
       | Just i ->
@@ -2096,8 +2008,8 @@ let empty_memory = (fun _ -> 0)
 
 
 indreln [build_vctx_called : account_state -> call_env -> variable_ctx -> bool]
-  vctx_called : forall bal a env origin ext block gas existence.
-    word256ToNatural block.block_number >= eip150_block && (* only the newest version of EVM matters *)
+  vctx_called : forall bal a env origin gasprice ext block gas existence.
+    word256ToInteger block.block_number >= eip150_block && (* only the newest version of EVM matters *)
     bal a.account_address = a.account_balance ==>
     build_vctx_called a env
  <| vctx_stack = []; (* The stack is initialized for every invocation *)
@@ -2116,6 +2028,7 @@ indreln [build_vctx_called : account_state -> call_env -> variable_ctx -> bool]
      vctx_storage_at_call = a.account_storage; (* the snapshot of the storage is remembered in case of failure *)
      vctx_balance_at_call = bal; (* the snapshot of the balance is remembered in case of failure *)
      vctx_origin = origin; (* the origin of the transaction is arbitrarily chosen *)
+     vctx_gasprice = gasprice; (* the gasprice of the transaction is arbitrarily chosen *)
      vctx_ext_program = ext; (* the codes of the external programs are arbitrary. *)
      vctx_block = block; (* the block information is chosen arbitrarily. *)
      vctx_gas = gas; (* the amount of gas is chosen arbitrarily. *)
@@ -2137,7 +2050,7 @@ indreln [build_vctx_returned : account_state -> return_result -> variable_ctx ->
 vctx_returned:
    forall a_code v_pc new_bal a_bal a_addr a_storage v_stack v_memory v_memory_usage
           v_storage v_balance v_caller v_value v_data v_init_storage v_init_balance
-          v_origin v_ext_program v_ext_program' v_block v_gas v_gas' mem_start mem_size
+          v_origin v_gasprice v_ext_program v_ext_program' v_block v_gas v_gas' mem_start mem_size
           r rest whichever v_ex v_ex' v_touched v_logs v_refund.
    (is_call_like (a_code.program_content (v_pc - 1))) &&
    (word256UGE new_bal a_bal) ==> (* the balance might have increased *)
@@ -2161,6 +2074,7 @@ vctx_returned:
          ; vctx_storage_at_call = v_init_storage
          ; vctx_balance_at_call = v_init_balance
          ; vctx_origin = v_origin
+         ; vctx_gasprice = v_gasprice
          ; vctx_ext_program = v_ext_program
          ; vctx_block = v_block
          ; vctx_gas = v_gas
@@ -2190,6 +2104,7 @@ vctx_returned:
        ; vctx_storage_at_call = v_init_storage
        ; vctx_balance_at_call = v_init_balance
        ; vctx_origin = v_origin
+       ; vctx_gasprice = v_gasprice
        ; vctx_ext_program = v_ext_program'
        ; vctx_block = v_block
        ; vctx_gas = v_gas' (* safe approximation.  saving proof space *)

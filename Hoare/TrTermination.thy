@@ -12,8 +12,7 @@ definition vm_gas :: "instruction_result \<Rightarrow> int" where
  | InstructionToEnvironment (ContractDelegateCall args) v hint \<Rightarrow>
     vctx_gas v + uint (callarg_gas args)
  | InstructionToEnvironment _ v hint \<Rightarrow>
-    vctx_gas v
- | _ \<Rightarrow> 0 )"
+    vctx_gas v)"
 
 definition stack_gas2 ::
    "(world_state * variable_ctx * constant_ctx * stack_hint) list \<Rightarrow> nat \<Rightarrow> int" where
@@ -348,7 +347,6 @@ done
 fun system_vms_vm :: "instruction_result \<Rightarrow> variable_ctx list" where
 "system_vms_vm (InstructionContinue v) = [v]"
 | "system_vms_vm (InstructionToEnvironment act v hint) = [v]"
-| "system_vms_vm _ = []"
 
 fun tuple_4_2 :: "world_state * variable_ctx * constant_ctx * stack_hint \<Rightarrow> variable_ctx" where
 "tuple_4_2 (_,v,_,_) = v"
@@ -396,17 +394,12 @@ lemma memu_simp1 :
 by (auto simp add: memu_invariant_def system_vms_def)
 
 
-lemma next_state_anno :
-"next_state stopper c net InstructionAnnotationFailure
- = InstructionAnnotationFailure"
-by (simp add: next_state_def)
-
 lemma memu_start :
- "0 \<le> vctx_memory_usage (start_env a b c d e f)"
+ "0 \<le> vctx_memory_usage (start_env a b c d e f x)"
 by (simp add: start_env_def)
 
 lemma memu_create :
-"0 \<le> vctx_memory_usage (create_env a b c d e f g h)"
+"0 \<le> vctx_memory_usage (create_env a b c d e f g h x)"
 by (simp add: create_env_def)
 
 lemma memu_update_world :
@@ -419,7 +412,7 @@ lemma memu_next :
    Continue st2 = next0 net (Continue st1) \<Longrightarrow>
    memu_invariant st2"
 apply (auto simp add:next0_def Let_def  memu_next_aux1
-  memu_simp1 next_state_anno
+  memu_simp1
   memu_invariant_def system_vms_def
   memu_start memu_create memu_update_world
   split:if_split_asm option.split_asm list.split_asm
@@ -646,7 +639,7 @@ by (auto simp add:next0_def next_state_def Let_def
    instruction_result.splits)
 
 lemma gas_create_env :
-  "vctx_gas (create_env a state value data gs cller origin block) =
+  "vctx_gas (create_env a state value data gs cller origin block x) =
    gs"
 by (simp add:create_env_def)
 
@@ -664,7 +657,7 @@ by (auto simp add:next0_def next_state_def Let_def
    instruction_result.splits)
 
 lemma gas_start_env :
-  "vctx_gas (start_env a state args cller origin block) =
+  "vctx_gas (start_env a state args cller origin block x) =
    uint (callarg_gas args)"
 by (simp add:start_env_def)
 
@@ -702,12 +695,10 @@ lemma gas_le :
 apply (cases "g_vmstate st1")
 apply (simp add:vm_gas_def memu_invariant_def system_vms_def
   gas_le_continue)
-apply (simp add:vm_gas_def memu_invariant_def system_vms_def
-  gas_le_continue system_gas_def next0_def next_state_def)
-apply (case_tac x31)
+apply (case_tac x21)
 apply (auto simp add:vm_gas_def memu_invariant_def system_vms_def
   gas_le_call gas_le_delegate gas_le_create gas_le_fail
-  gas_le_suicide gas_le_return)
+  gas_le_suicide gas_le_return Let_def)
 done
 
 fun estimate_vm :: "instruction_result \<Rightarrow> int" where
@@ -715,7 +706,6 @@ fun estimate_vm :: "instruction_result \<Rightarrow> int" where
 | "estimate_vm (InstructionToEnvironment (ContractCall args) _ _) = 4"
 | "estimate_vm (InstructionToEnvironment (ContractCreate args) _ _) = 4"
 | "estimate_vm (InstructionToEnvironment _ _ _) = 0"
-| "estimate_vm InstructionAnnotationFailure = 0"
 | "estimate_vm _ = 1"
 
 definition estimate :: "global0 \<Rightarrow> int" where
@@ -903,7 +893,6 @@ lemma super_hard :
 
 lemma estimation :
   "Continue st2 = next0 net (Continue st1) \<Longrightarrow>
-   g_vmstate st1 \<noteq> InstructionAnnotationFailure  \<Longrightarrow>
    memu_invariant st1 \<Longrightarrow>
    vm_gas (g_vmstate st1) \<ge> 0 \<Longrightarrow>
    estimate st1 > estimate st2"
@@ -911,8 +900,7 @@ apply (cases "g_vmstate st1")
 apply (cases "g_vmstate st2")
 apply (clarsimp simp add:memu_invariant_def system_vms_def)
 using estimation_clean apply force
-apply (simp add:estimate_def env_stack gas_le)
-apply (case_tac x31)
+apply (case_tac x21)
 apply (clarsimp simp add:memu_invariant_def system_vms_def
   estimation_call)
 apply (clarsimp simp add:memu_invariant_def system_vms_def
@@ -920,7 +908,7 @@ apply (clarsimp simp add:memu_invariant_def system_vms_def
 apply (clarsimp simp add:memu_invariant_def system_vms_def
   estimation_create)
 apply (auto simp add:estimation_fail estimation_return estimation_suicide)
-apply (case_tac x31)
+apply (case_tac x21)
 apply (simp add:estimate_def env_continue_est)
 using stack_limit gas_le apply force
 apply (simp add:estimate_def env_continue_est)
@@ -970,7 +958,7 @@ lemma gas_next :
    Continue st2 = next0 net (Continue st1) \<Longrightarrow>
    gas_invariant st2"
 apply (auto simp add:next0_def Let_def
-  gas_invariant_def system_vms_def next_state_anno
+  gas_invariant_def system_vms_def
   gas_update_world gas_create_env gas_start_env L_def
   split:if_split_asm option.split_asm list.split_asm
    contract_action.split_asm stack_hint.split_asm

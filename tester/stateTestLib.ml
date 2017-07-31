@@ -27,7 +27,6 @@ let construct_block_info (t : test_case) : block_info =
   ; block_number    = block_number
   ; block_difficulty = Conv.word256_of_big_int t.env.currentDifficulty
   ; block_gaslimit = Conv.word256_of_big_int t.env.currentGasLimit
-  ; block_gasprice = Conv.word256_of_big_int t.tr.gasPrice
   }
 
 let string_to_w256 str = Conv.word256_of_big_int (Big_int.big_int_of_string str)
@@ -79,7 +78,6 @@ let debug_vm c1 pr =
         prerr_endline ("Inst " ^ String.concat "," (List.map (fun x -> Z.format "%x" (Word8.word8ToNatural x)) (inst_code i)));
         prerr_endline ("Stack " ^ String.concat "," (List.map (fun x -> Z.format "%d" (Word256.word256ToNatural x)) v.vctx_stack)) )
   | InstructionToEnvironment( _, v, _) -> prerr_endline ("Gas left " ^ Z.to_string v.vctx_gas)
-  | InstructionAnnotationFailure -> ()
 
 let debug_state = function
  | Continue res -> debug_vm res.g_cctx res.g_vmstate
