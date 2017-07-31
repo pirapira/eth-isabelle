@@ -337,12 +337,12 @@ apply(rule_tac x = 1 in exI)
   apply(case_tac presult; simp)
 apply(clarify)
 apply(simp add: call_def)
-apply(simp add: instruction_result_as_set_def)
+apply(simp add: instruction_result_as_set_def vctx_recipient_def)
 apply(simp add: sep_memory_range_sep sep_memory_range memory_range_sep failed_for_reasons_def)
     apply(simp add: vctx_stack_default_def)
         apply (rule conjI, (auto simp: move_neq_first 
                         elim!: set_mp dest!: memory_range_elms_conjD memory_range_elms_disjD)[1])+
-      
+
 apply(erule_tac P=rest in back_subst)
 apply(rule Set.equalityI)
  apply(clarify)
