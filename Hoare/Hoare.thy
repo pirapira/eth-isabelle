@@ -607,13 +607,7 @@ lemma codeElmEquiv:
   "CodeElm (pos, i) \<in> contexts_as_set va_ctx co_ctx =
    ((program_content (cctx_program co_ctx) pos = Some i) \<or>
    (program_content (cctx_program co_ctx) pos = None) \<and> i = Misc STOP)"
-<<<<<<< HEAD
 by (auto simp add:context_rw)
-=======
-apply(auto simp add: contexts_as_set_def constant_ctx_as_set_def variable_ctx_as_set_def
-      program_as_set_def stack_as_set_def memory_as_set_def storage_as_set_def
-      balance_as_set_def log_as_set_def data_sent_as_set_def ext_program_as_set_def)
-  done
 
 lemmas stateelm_equiv_simps = 
   stackHeightElmEquiv
@@ -621,7 +615,6 @@ lemmas stateelm_equiv_simps =
   pcElmEquiv
   gasElmEquiv
   codeElmEquiv
->>>>>>> c94e7f2c15f7cd1e727c60a79b9b0b4ef72f4812
 
 lemma insert_minus : "a \<noteq> b \<Longrightarrow> insert a s - { b } = insert a (s - {b})"
   apply(simp add: insert_Diff_if)
