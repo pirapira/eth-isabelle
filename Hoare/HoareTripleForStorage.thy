@@ -86,69 +86,6 @@ lemma sstore_gas_triple :
   apply auto
 done
 
-(*
-lemma sstore_gas_triple :
-  "triple net {OutOfGas}
-          (\<langle> h \<le> 1024\<rangle>
-           ** stack_height (h + 2)
-           ** stack (h + 1) idx
-           ** stack h new
-           ** program_counter k ** storage idx old
-           ** gas_pred g ** continuing)
-          {(k, Storage SSTORE)}
-          (stack_height h
-           ** program_counter (k + 1) ** storage idx new **
-           gas_pred (g - Csstore old new) ** continuing)"
-apply(auto simp add: triple_def)
-apply (subgoal_tac "((gas_pred g \<and>*
-         program_counter k \<and>*
-         stack h new \<and>*
-         storage idx old \<and>*
-         stack (Suc h) idx \<and>* stack_height (Suc (Suc h)) \<and>* \<langle> h \<le> 1024 \<rangle> \<and>* continuing) \<and>*
-        rest) = (gas_pred g \<and>*
-         program_counter k \<and>*
-         stack h new \<and>*
-         storage idx old \<and>*
-         stack (Suc h) idx \<and>* stack_height (Suc (Suc h)) \<and>* \<langle> h \<le> 1024 \<rangle> \<and>* continuing \<and>*
-        rest)")
-apply(rule_tac x = 1 in exI)
-apply(case_tac presult; auto simp add:
-   instruction_result_as_set_def sstore_def)
-apply (subgoal_tac "((stack_height (length ta) \<and>*
-         storage idx new \<and>*
-         program_counter (vctx_pc x1 + 1) \<and>*
-         gas_pred
-          (vctx_gas x1 - Csstore (vctx_storage x1 idx) new) \<and>*
-         continuing) \<and>*
-        rest) = (stack_height (length ta) \<and>*
-         storage idx new \<and>*
-         program_counter (vctx_pc x1 + 1) \<and>*
-         gas_pred
-          (vctx_gas x1 - Csstore (vctx_storage x1 idx) new) \<and>*
-         continuing \<and>*
-        rest)")
-apply (auto simp add:
-   instruction_result_as_set_def sstore_def vctx_update_storage_def)
-apply(rule leibniz)
- apply blast
-apply(rule Set.equalityI; clarify)
- apply(rename_tac elm)
- apply(simp add: vctx_update_storage_def)
- apply(case_tac elm; simp)
- using some_list_gotcha apply blast
- apply(split if_splits; simp)
-apply(rename_tac elm)
-apply(case_tac elm; simp)
- apply auto[1]
-defer
-  apply (metis (no_types, hide_lams) sep.mult.left_commute sep.mult_commute)
-  apply (metis (no_types, hide_lams) sep.mult.left_commute sep.mult_commute)
-
-apply (simp add:vctx_advance_pc_def)
-
-using foo apply force
-done
-*)
 
 lemma sload_gas_triple :
   "triple net {OutOfGas}

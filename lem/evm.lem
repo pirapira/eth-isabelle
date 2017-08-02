@@ -85,12 +85,14 @@ let rec log2 x =
   if x <= 1 then 0
   else 1 + log2 (x / 2)
 declare coq target_rep function log2 = `Z.log2`
+declare termination_argument log2 = automatic
 
 val log256floor : integer -> integer
 let rec {isabelle; hol; ocaml} log256floor x =
   if x <= 255 then 0
   else 1 + log256floor (x / 256)
 let {coq} log256floor x = log2 x / 8
+declare termination_argument log256floor = automatic
 
 val word_exp : integer -> natural -> integer
 let rec {isabelle;hol;ocaml} word_exp i n =
@@ -107,6 +109,7 @@ let rec {coq} word_exp i n =
   | 0 -> 1
   | n+1 -> (word_exp i n * i) mod (2 ** 256)
   end
+declare termination_argument word_exp = automatic
 
 (* In EVM, the memory contains one byte for each machine word (offset). *)
 (* The storage contains one machine word for each machine word (index). *)
@@ -1236,6 +1239,7 @@ let rec cut_natural_map idx n nmap = match n with
  | 0 -> []
  | n + 1 -> nmap idx :: cut_natural_map (idx + 1) n nmap
 end
+declare termination_argument cut_natural_map = automatic
 
 (* Cnew is the funciton denoted as C_\text{\tiny NEW} in the yellow paper.*)
 (* However, it takes the sent value and a boolean indicating emptiness of the recipient. *)
@@ -1270,7 +1274,7 @@ let Cgascap mu0 mu2 emp remaining_gas net memu_extra =
    a boolean indicating emptiness of the recipient, and the remaining gas of the caller *)
 val Ccallgas : w256 -> w256 -> w256 -> bool -> integer -> network -> integer -> integer
 let Ccallgas mu0 mu1 mu2 emp remaining_gas net memu_extra =
-  ( if at_least_eip150 net then word256ToInteger mu0  else Cgascap mu0 mu2 emp remaining_gas net memu_extra) +
+  ( if at_least_eip150 net then Cgascap mu0 mu2 emp remaining_gas net memu_extra else uint mu0) +
   ( if mu2 = 0 then 0 else Gcallstipend )
 
 (* Ccall is the function denoted as C_{\text{\tiny CALL}} *)
@@ -1278,8 +1282,8 @@ let Ccallgas mu0 mu1 mu2 emp remaining_gas net memu_extra =
    emptiness of the recipient, and the remaining gas of the caller *)
 val Ccall : w256 -> w256 -> w256 -> bool -> integer -> network -> integer -> integer
 let Ccall mu0 mu1 mu2 emp remaining_gas net memu_extra =
-  if at_least_eip150 net then integerFromNatural (word256ToNatural mu0) + Cextra mu2 emp net else
-  Cgascap mu0 mu2 emp remaining_gas net memu_extra + Cextra mu2 emp net
+  ( if at_least_eip150 net then Cgascap mu0 mu2 emp remaining_gas net memu_extra else integerFromNatural (word256ToNatural mu0) ) +
+  Cextra mu2 emp net
 
 (* Cmem is the function denoted as C_{mem} in the yellow paper. *)
 val Cmem : integer -> integer
@@ -1296,6 +1300,24 @@ val Csuicide : bool -> network -> integer
 let Csuicide recipient_empty net =
   Gsuicide net + (if recipient_empty && at_least_eip150 net then Gnewaccount else 0)
 
+val vctx_next_instruction_default : variable_ctx -> constant_ctx -> inst
+let vctx_next_instruction_default v c =
+    match vctx_next_instruction v c with
+    | Just i -> i
+    | Nothing -> Misc STOP
+    end
+
+val vctx_recipient : variable_ctx -> constant_ctx -> address
+let vctx_recipient v c =
+  match vctx_next_instruction_default v c with
+  | Misc SUICIDE -> w256_to_address (vctx_stack_default 0 v)
+  | Misc CALL -> w256_to_address (vctx_stack_default 1 v)
+  | Misc CALLCODE -> c.cctx_this
+  | Misc DELEGATECALL -> c.cctx_this
+  | _ -> 0
+  end
+
+
 
 let calc_memu_extra orig_memory_usage s0 s1 s2 s3 s4 s5 s6 =
   Cmem (new_memory_consumption (Misc CALL) orig_memory_usage s0 s1 s2 s3 s4 s5 s6) - Cmem orig_memory_usage
@@ -1306,16 +1328,10 @@ let calc_memu_extra2 v s0 s1 s2 s3 s4 s5 s6 = Cmem (new_memory_consumption (Misc
 val call : network -> variable_ctx -> constant_ctx -> instruction_result
 let call net v c = match v.vctx_stack with
  | g :: r :: value :: in_begin :: in_size :: out_begin :: out_size :: rest ->
-     (* strict_if (word256ULT (v.vctx_balance c.cctx_this) e2)
-        (fun _ -> (InstructionContinue
-           (vctx_advance_pc c
-             <| v with
-                vctx_stack = (0 :: rest)
-             |>
-           ))) *)
      InstructionToEnvironment (ContractCall
          <| callarg_gas = word256FromInteger (Ccallgas g r value
-                     (not (v.vctx_account_existence (w256_to_address r))) v.vctx_gas net (calc_memu_extra v.vctx_memory_usage g r value in_begin in_size out_begin out_size));
+                     (not (v.vctx_account_existence (vctx_recipient v c)))
+                     v.vctx_gas net (calc_memu_extra v.vctx_memory_usage g r value in_begin in_size out_begin out_size));
             callarg_code = w256_to_address r;
             callarg_recipient = w256_to_address r;
             callarg_value = value;
@@ -1334,18 +1350,10 @@ end
 val delegatecall : network -> variable_ctx -> constant_ctx -> instruction_result
 let delegatecall net v c = match v.vctx_stack with
  | e0 :: e1 :: e3 :: e4 :: e5 :: e6 :: rest ->
-    (* if word256ULT (v.vctx_balance c.cctx_this) v.vctx_value_sent then
-        (InstructionContinue
-           (vctx_advance_pc c
-             <| v with
-                vctx_stack = (0 :: rest)
-             |>
-           ))
-     else *)
        InstructionToEnvironment
          (ContractDelegateCall
            <| callarg_gas = word256FromInteger (Ccallgas e0 e1 0
-                     (not (v.vctx_account_existence (w256_to_address e1))) v.vctx_gas net (calc_memu_extra2 v e0 e1 e3 e4 e5 e6 0));
+                     (not (v.vctx_account_existence (vctx_recipient v c))) v.vctx_gas net (calc_memu_extra2 v e0 e1 e3 e4 e5 e6 (vctx_stack_default 6 v)));
               callarg_code = w256_to_address e1;
               callarg_recipient = w256_to_address e1;
               callarg_value = v.vctx_value_sent;
@@ -1362,18 +1370,10 @@ end
 val callcode : network -> variable_ctx -> constant_ctx -> instruction_result
 let callcode net v c = match v.vctx_stack with
  | e0 :: e1 :: e2 :: e3 :: e4 :: e5 :: e6 :: rest ->
-    (* if word256ULT (v.vctx_balance  c.cctx_this) e2 then
-        (InstructionContinue
-           (vctx_advance_pc c
-             <| v with
-                vctx_stack = (0 :: rest)
-             |>
-           ))
-     else *)
        InstructionToEnvironment
          (ContractCall
            <| callarg_gas = word256FromInteger (Ccallgas e0 e1 e2
-                     (not (v.vctx_account_existence (w256_to_address e1))) v.vctx_gas net
+                     (not (v.vctx_account_existence (vctx_recipient v c))) v.vctx_gas net
                      (calc_memu_extra v.vctx_memory_usage e0 e1 e2 e3 e4 e5 e6));
               callarg_code = w256_to_address e1;
               callarg_recipient = c.cctx_this;
@@ -1382,8 +1382,7 @@ let callcode net v c = match v.vctx_stack with
               callarg_output_begin = e5;
               callarg_output_size = e6 |>)
           (<| (vctx_advance_pc c v) with
-                  vctx_stack = rest;
-                  vctx_balance = update_balance c.cctx_this (fun orig -> orig - e2) v.vctx_balance |>)
+                  vctx_stack = rest |>)
           (Just (* saving the variable environment *) (uint e5, uint e6))
   | _ -> instruction_failure_result v [TooShortStack]
 end
@@ -1392,21 +1391,11 @@ end
 val create : variable_ctx -> constant_ctx -> instruction_result
 let create v c = match v.vctx_stack with
   | vl :: code_start :: code_len :: rest ->
-      if word256ULT (v.vctx_balance c.cctx_this) vl then
-        (InstructionContinue
-           (vctx_advance_pc c
-             <| v with
-                vctx_stack = (0 :: rest)
-             |>
-           ))
-      else
         let code = cut_memory code_start code_len v.vctx_memory in
-        let new_balance = update_balance c.cctx_this (fun orig -> orig - vl) v.vctx_balance in
         InstructionToEnvironment
            (ContractCreate
              <| createarg_value = vl; createarg_code = code |>)
-            (<| (vctx_advance_pc c v) with vctx_stack = rest;
-                 vctx_balance = new_balance |>)
+            (<| (vctx_advance_pc c v) with vctx_stack = rest |>)
             (Just (* when returning to this invocation, use the following variable environment *)
               (0, 0))
   | _ -> instruction_failure_result v [TooShortStack]
@@ -1697,29 +1686,12 @@ let C old_memory_consumption new_memory_consumption i s0 s1 s2 s3 recipient_empt
   Cmem new_memory_consumption  - Cmem old_memory_consumption +
   thirdComponentOfC i s0 s1 s2 s3 recipient_empty orig new_val remaining_gas net (Cmem new_memory_consumption - Cmem old_memory_consumption)
 
-val vctx_next_instruction_default : variable_ctx -> constant_ctx -> inst
-let vctx_next_instruction_default v c =
-    match vctx_next_instruction v c with
-    | Just i -> i
-    | Nothing -> Misc STOP
-    end
-
-val vctx_recipient : variable_ctx -> constant_ctx -> address
-let vctx_recipient v c =
-  match vctx_next_instruction_default v c with
-  | Misc SUICIDE -> w256_to_address (vctx_stack_default 0 v)
-  | Misc CALL -> w256_to_address (vctx_stack_default 1 v)
-  | Misc CALLCODE -> c.cctx_this
-  | Misc DELEGATECALL -> c.cctx_this
-  | _ -> 0
-  end
-
 val meter_gas : inst -> variable_ctx -> constant_ctx -> network -> integer
 let meter_gas i v c net =
   C v.vctx_memory_usage
    (new_memory_consumption i v.vctx_memory_usage (vctx_stack_default 0 v) (vctx_stack_default 1 v) (vctx_stack_default 2 v) (vctx_stack_default 3 v)
       (vctx_stack_default 4 v) (vctx_stack_default 5 v) (vctx_stack_default 6 v))
-   (vctx_next_instruction_default v c)
+      i
     (vctx_stack_default 0 v) (vctx_stack_default 1 v) (vctx_stack_default 2 v) (vctx_stack_default 3 v)
     (not (v.vctx_account_existence (vctx_recipient v c))) (v.vctx_storage (vctx_stack_default 0 v))
     (vctx_stack_default 1 v) v.vctx_gas net
@@ -1785,8 +1757,7 @@ let instruction_sem v c inst net =
   | Bits inst_OR -> stack_2_1_op v c (fun a b -> a lor b)
   | Bits inst_XOR -> stack_2_1_op v c (fun a b -> a lxor b)
   | Bits inst_NOT -> stack_1_1_op v c (fun a -> lnot a)
-  | Bits BYTE ->
-      stack_2_1_op v c get_byte
+  | Bits BYTE -> stack_2_1_op v c get_byte
   | Sarith SDIV -> stack_2_1_op v c
        (fun n divisor -> if divisor = 0 then 0 else
                          let divisor = sintFromW256 divisor in
