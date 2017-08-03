@@ -6,13 +6,8 @@ imports  "../lem/Evm" "Hoare"
 
 begin
 
-context
-includes sep_crunch simp_for_triples
-begin
-
 definition memory :: "w256 \<Rightarrow> w256 \<Rightarrow> state_element set_pred" where
 "memory ind w = memory_range ind (word_rsplit w)"
-
 
 lemma memory_range_elms_cut_memory2 :
   "length lst = unat in_size \<Longrightarrow> 
@@ -38,6 +33,7 @@ apply auto
 apply (auto simp:word_length)
 done
 
+(*
 lemma helper :
   assumes a:" cut_memory_aux (addr+1) x mem @
            cut_memory_aux
@@ -63,6 +59,42 @@ apply(auto simp:cut_memory_aux.simps)
 using helper
 apply force
 done
+*)
+
+lemma iota_rev_aux :
+"a # iota0 addr y acc = iota0 addr y (acc@[a])"
+apply (induction y arbitrary:addr acc)
+apply (auto simp add:iota0.simps)
+done
+
+lemma iota_rev_aux2 :
+"rev acc @ iota0 addr y acc2 = iota0 addr y (acc2@acc)"
+apply (induction acc arbitrary:acc2 addr)
+apply (simp add:iota0.simps)
+apply (simp add:iota0.simps)
+  by (metis append.assoc append_Cons append_Nil iota0_non_empty)
+
+lemma iota_rev :
+"rev acc @ iota0 addr y [] = iota0 addr y acc"
+  using iota_rev_aux2 by auto
+
+lemma iota_append :
+"iota0 addr x acc @
+ iota0 (addr + word_of_int (int x)) y [] =
+ iota0 addr (x + y) acc"
+apply (induction x arbitrary:addr acc)
+apply (simp add:iota0.simps)
+using iota_rev apply force
+  by (metis (no_types, hide_lams) add.assoc add.commute add_Suc_right iota0.simps(2) of_nat_Suc one_word.abs_eq word_of_nat)
+
+lemma cut_memory_aux_append :
+  "cut_memory_aux_alt addr x mem @
+   cut_memory_aux_alt (addr+word_of_int (int x)) y mem =
+   cut_memory_aux_alt addr (x+y) mem"
+apply(auto simp:cut_memory_aux_alt_def)
+using iota_append
+  by (metis map_append)
+
 
 lemma word_of_nat : "word_of_int (int (unat x)) = x"
   by (metis uint_nat word_of_int_uint)
@@ -130,8 +162,8 @@ lemma word_of_inc : "word_of_int (1 + x) = 1 + word_of_int x"
   by (metis one_word.abs_eq wi_hom_add)
 
 lemma memory_append :
-   "memory_range x l1 **
-      memory_range (x+(word_of_int (int (length l1))::w256)) l2 =
+   "(memory_range x l1 **
+      memory_range (x+(word_of_int (int (length l1))::w256)) l2) =
     memory_range x (l1@l2)"
 apply (induction l1 arbitrary:x)
 apply auto
@@ -207,23 +239,21 @@ lemma sep_memory3 [simp] :
    memory_range_elms a (word_rsplit w) \<subseteq> s \<and>
    rest (s - memory_range_elms a (word_rsplit w))"
 using sep_memory
-apply force
-done
+  by (simp add: sep_conj_commute)
 
 lemma sep_memory_ran3 [simp] :
   "(memory_ran a w ** rest) s ==
    memory_range_elms a (tk w) \<subseteq> s \<and>
    rest (s - memory_range_elms a (tk w))"
-apply auto
-done
+  by (simp add: sep_conj_commute)
 
 lemma sep_memory4 [simp] :
   "((rest1 ** memory a w ** rest) s) =
    (memory_range_elms a (word_rsplit w) \<subseteq> s \<and>
    (rest1 ** rest) (s - memory_range_elms a (word_rsplit w)))"
 proof -
-  have a : "rest1 ** memory a w ** rest = (rest1 ** rest) ** memory a w"
-    by auto
+  have a : "rest1 ** memory a w ** rest == (rest1 ** rest) ** memory a w"
+    by (simp add: abel_semigroup.commute abel_semigroup.left_commute sep.mult.abel_semigroup_axioms)
   then show ?thesis by
    (subst a) (rule sep_memory)
 qed
@@ -233,29 +263,21 @@ lemma sep_memory_ran4 [simp] :
    (memory_range_elms a (tk w) \<subseteq> s \<and>
    (rest1 ** rest) (s - memory_range_elms a (tk w)))"
 proof -
-  have a : "rest1 ** memory_ran a w ** rest =
+  have a : "rest1 ** memory_ran a w ** rest ==
      (rest1 ** rest) ** memory_ran a w"
-    by auto
+    by (simp add: abel_semigroup.commute abel_semigroup.left_commute sep.mult.abel_semigroup_axioms)
   then show ?thesis by
    (subst a) (rule sep_memory_ran)
 qed
 
+(*
 declare memory_range_elms.simps [simp]
-
-
 declare meter_gas_def [simp del]
-
-lemma subtract_gas_annotation :
- "subtract_gas x m res = InstructionAnnotationFailure \<Longrightarrow>
-  res = InstructionAnnotationFailure"
-apply(cases res)
-apply(auto)
-done
+*)
 
 lemma mload_inst [simp] :
    "inst_size (Memory MLOAD) = 1"
-apply (auto simp:inst_size_def inst_code.simps)
-done
+by (auto simp:inst_size_def inst_code.simps)
 
 lemma get_good_mem_elem_nat_aux :
 "(x \<in> memory_range_elms (addr+1)
@@ -311,7 +333,7 @@ then have "x = MemoryElm (addr + (word_of_int (int n)::w256),
 then show ?thesis by force
 qed
 
-
+(*
 lemma memory_not_changed :
   "memory_range_elms memaddr (word_rsplit (w::w256))
        \<subseteq> variable_ctx_as_set x1 \<Longrightarrow>
@@ -322,9 +344,11 @@ lemma memory_not_changed :
                  vctx_gas := new_gas,
                  vctx_memory_usage := memu\<rparr>)
            co_ctx"
-apply(auto simp add: contexts_as_set_def variable_ctx_as_set_def stack_as_set_def ext_program_as_set_def
-       balance_as_set_def)
+apply(simp add: contexts_as_set_def variable_ctx_as_set_def
+ memory_as_set_def)
+
 done
+*)
 
 lemma read_split :
   "read_word_from_bytes 0 (word_rsplit w) = w"
@@ -346,6 +370,7 @@ proof -
    then show ?thesis by (auto simp:read_split)
 qed
 
+(*
 lemma set_dir1 :
   "vctx_stack x1 = memaddr # t \<Longrightarrow>
    x \<noteq> StackHeightElm (Suc (length t)) \<Longrightarrow>
@@ -403,55 +428,86 @@ lemma set_dir2 :
 apply(auto simp add: contexts_as_set_def variable_ctx_as_set_def stack_as_set_def ext_program_as_set_def
        balance_as_set_def)
 done
+*)
+
+context
+  includes hoare_bundle hoare_inst_bundle
+           sep_crunch_bundle simp_for_triples_bundle
+
+begin
+
+lemma memory_range_elms_conjD:
+  "memory_range_elms logged_start data \<subseteq> {x. x \<noteq> v \<and> P x} \<Longrightarrow> v \<notin> range MemoryElm  \<Longrightarrow>
+   memory_range_elms logged_start data \<subseteq> {x. P x}"
+  by auto
+
+lemma memory_range_elms_disjD:
+  "memory_range_elms logged_start data \<subseteq> {x. x = v \<or> P x} \<Longrightarrow> v \<notin> range MemoryElm  \<Longrightarrow>
+   memory_range_elms logged_start data \<subseteq> {x. P x}"
+  by (induct data arbitrary:logged_start; clarsimp)
+
+lemma move_neq_first:
+   "{x. P x \<and> x \<noteq> v} = {x. x \<noteq> v \<and> P x}"
+   "{x. P x \<and> x \<noteq> v \<and> Q x} = {x. x \<noteq> v \<and> P x \<and> Q x}"
+  by blast+
+
 
 lemma mload_gas_triple :
-  "triple {OutOfGas}
+  "triple network {OutOfGas}
      (\<langle> h \<le> 1023 \<rangle> **
-       stack h memaddr **
-       stack_height (h+1) **
+       stack_topmost h [memaddr] **
        program_counter k **   
        memory_usage memu **
        memory memaddr v **
        gas_pred g **
        continuing)
      {(k, Memory MLOAD)}
-    (stack_height (h + 1) **
-     stack h v **
+    (stack_topmost h [v] **
      memory memaddr v **
      memory_usage (M memu memaddr 32) **
      program_counter (k + 1) **
      gas_pred (g - Gverylow + Cmem memu -
                Cmem (M memu memaddr 32)) **
      continuing )"
-apply(auto simp add: triple_def)
-apply(rule_tac x = 1 in exI)
-(* apply(case_tac presult) *)
-apply(case_tac presult;
-   auto simp add: meter_gas_def mload_def
-        memory_inst_numbers.simps    
-        instruction_result_as_set_def vctx_advance_pc_def
-        memory_not_changed memory_works)
-apply (rule leibniz)
-apply blast
-apply auto
-apply (rule set_dir1)
-apply auto
-apply (rule set_dir2)
-apply auto
-done
 
-lemma sha_annotation :
-  "sha3 v c = InstructionAnnotationFailure \<Longrightarrow> False"
-apply (auto simp:sha3_def)
-apply(cases "vctx_stack v")
-apply(simp)
-apply(cases "tl (vctx_stack v)")
-apply(simp)
-apply(simp)
-apply auto
-apply (case_tac "\<not> cctx_hash_filter c (cut_memory a aa (vctx_memory v))")
-apply auto
-done
+apply (simp add: triple_def)
+apply clarify
+  apply (rule_tac x = 1 in exI)
+  apply (case_tac presult)
+    defer
+    apply (simp)
+   apply (simp  add:  memory_range_sep )
+apply(rename_tac continued)
+apply(simp add: memory_inst_numbers.simps sep_memory_range
+      sep_memory_range_sep mload_def memory_range_sep
+        instruction_result_as_set_def insert_minus_set
+vctx_stack_default_def set_diff_expand set_diff_eq )
+  apply clarify
+  apply (auto simp: move_neq_first create_log_entry_def vctx_returned_bytes_def
+              elim: set_mp dest!: memory_range_elms_conjD memory_range_elms_disjD)
+  using memory_works apply blast
+
+(*
+  apply (drule (1) set_mp)
+  apply (rename_tac elm, case_tac elm; simp)
+*)
+
+
+
+apply (erule_tac P=rest in  back_subst)
+  apply(rule Set.equalityI)
+ apply clarify
+ apply simp
+ apply(rename_tac elm; case_tac elm; simp)
+   apply(rename_tac st)
+   apply(case_tac st; clarsimp)
+   apply(erule disjE; clarsimp)
+  apply auto[1]
+ apply(simp add: vctx_advance_pc_def contexts_as_set_def)
+apply(rename_tac elm; case_tac elm; auto)
+  using memory_works apply blast
+  using memory_works apply blast
+  by (simp add: memory_word_meaning read_split)
 
 (*
 lemma subtract_gas_environment :
@@ -561,7 +617,7 @@ lemma rsplit_length :
 
 
 lemma hash_memory_split :
-  "memory addr table ** memory (addr+32) key =
+  "(memory addr table ** memory (addr+32) key) =
    memory_range addr (word_rsplit table @ word_rsplit key)"
 apply (simp add:memory_def)
 apply (subst rsplit_length)
@@ -583,7 +639,7 @@ apply (auto simp:tk_def word_length)
 done
 
 lemma magic_hash_property :
-  "no_assertion c \<Longrightarrow>
+  "cctx_hash_filter c = magic_filter \<Longrightarrow>
    vctx_stack v = addr # 64 # blah \<Longrightarrow>
    cut_memory addr 64 (vctx_memory v) =
       word_rsplit table @ word_rsplit key \<Longrightarrow>
@@ -592,7 +648,7 @@ lemma magic_hash_property :
 apply(auto simp:sha3_def)
 apply (case_tac "\<not> cctx_hash_filter c
     (word_rsplit table @ word_rsplit key)")
-apply(auto simp:no_assertion_def magic_filter_def)
+apply(auto simp:magic_filter_def)
 done
 
 lemma cut_memory_works :
@@ -608,7 +664,7 @@ proof -
      using a memory_range_elms_cut_memory
      by force
 qed
-
+(*
 lemma many_such_cases :
  "contexts_as_set
            (v\<lparr>vctx_pc := pca, vctx_gas := gasa,
@@ -671,17 +727,18 @@ lemma sort_out_sets_again :
 apply(auto simp add: contexts_as_set_def variable_ctx_as_set_def stack_as_set_def ext_program_as_set_def
        balance_as_set_def)
   using le_less_Suc_eq by force
+*)
 
 (*** need hoare triple for sha  *)
+(*
 lemma hash2_gas_triple :
-  "triple {OutOfGas}
+  "triple network {OutOfGas}
      (\<langle> h \<le> 1022 \<rangle> **
        stack (h+1) memaddr **
        stack h 64 **
        stack_height (h+2) **
        program_counter k **   
        memory_usage memu **
-(* memory memaddr table ** memory (memaddr+32) key ** *)
        memory_ran memaddr
         (word_rsplit table @ word_rsplit key) **
        gas_pred g **
@@ -771,7 +828,7 @@ using sha_special_helper
 apply force
 done
 done
-
+*)
 
 (* nothing will work properly because everything is mod 2^256 *)
 
@@ -830,9 +887,9 @@ lemma memory_range_at_memory_set [simp]:
    "memory_range_elms memaddr lst
        \<subseteq> variable_ctx_as_set v \<Longrightarrow>
    memory_range_elms memaddr lst \<subseteq> memory_as_set (vctx_memory v)"
-apply(auto simp add: contexts_as_set_def variable_ctx_as_set_def stack_as_set_def ext_program_as_set_def
-       balance_as_set_def)
-done
+by(auto simp add: contexts_as_set_def variable_ctx_as_set_def stack_as_set_def ext_program_as_set_def
+       balance_as_set_def
+   account_existence_as_set_def)
 
 lemma memory_at_set [simp]:
    "memory_range_elms memaddr lst \<subseteq> memory_as_set (vctx_memory v)
@@ -894,8 +951,7 @@ apply (auto simp: range_elms_def)
 
 lemma cut_index_one :
   "mem addr = cut_memory addr 1 mem ! 0"
-apply (auto simp:cut_memory_def cut_memory_aux.simps)
-done
+by (auto simp:cut_memory_def cut_memory_aux_alt_def iota0.simps)
 
 lemma unat_minus :
  "unat (i::w256) \<le> n \<Longrightarrow>
@@ -953,10 +1009,15 @@ apply (induction i arbitrary:addr mem)
 apply (auto simp:cut_memory_aux.simps)
 done
 
+lemma iota_length :
+   "length (iota0 addr i acc) = i + length acc"
+apply (induction i arbitrary:addr acc)
+apply (auto simp:iota0.simps)
+done
+
 lemma cut_length [simp] : 
    "length (cut_memory addr i mem) = unat i"
-apply (simp add:cut_memory_def cut_aux_length)
-done
+by (simp add:cut_memory_def cut_memory_aux_alt_def iota_length)
 
 lemma unat_index [simp] :
    "length l1 = unat (i::w256) \<Longrightarrow>
@@ -1206,7 +1267,7 @@ lemma other_similar :
                (word_rsplit (v::w256)) \<Longrightarrow>
          False"
 apply(auto simp add: contexts_as_set_def variable_ctx_as_set_def stack_as_set_def ext_program_as_set_def
-       balance_as_set_def)
+       balance_as_set_def account_existence_as_set_def)
 apply (rule range_not_in_constant[of x memaddr _ co_ctx])
 apply auto
 apply (rule work_on_it)
@@ -1248,7 +1309,7 @@ lemma plz_sort_it_out :
 "
 apply (auto)
 apply(auto simp add: contexts_as_set_def variable_ctx_as_set_def stack_as_set_def ext_program_as_set_def
-       balance_as_set_def)[1]
+       balance_as_set_def account_existence_as_set_def)[1]
 using le_less_Suc_eq apply fastforce
 
 using stuff2 [of memaddr old_v x1 _ v]
@@ -1256,11 +1317,11 @@ apply force
 using other_similar [of memaddr old_v x1 _ co_ctx v]
 apply force
 apply(auto simp add: contexts_as_set_def variable_ctx_as_set_def stack_as_set_def ext_program_as_set_def
-       balance_as_set_def)[1]
+       balance_as_set_def account_existence_as_set_def)[1]
 using still_left [of memaddr old_v x1 _ v]
 apply force
 apply(auto simp add: contexts_as_set_def variable_ctx_as_set_def stack_as_set_def ext_program_as_set_def
-       balance_as_set_def)[1]
+       balance_as_set_def account_existence_as_set_def)[1]
 apply (rule range_not_in_constant[of _ memaddr _ co_ctx])
 apply auto
 apply (auto simp:range_elms_eq range_elms_def memory_as_set_def
@@ -1275,7 +1336,7 @@ lemma memory_range_fact :
              (word_rsplit old_v) \<Longrightarrow>
  x \<in> memory_as_set (vctx_memory x1)"
 apply(auto simp add: contexts_as_set_def variable_ctx_as_set_def stack_as_set_def ext_program_as_set_def
-       balance_as_set_def)
+       balance_as_set_def account_existence_as_set_def)
 done
 
 lemma falseness : "False \<Longrightarrow> P"
@@ -1283,7 +1344,7 @@ apply auto
 done
 
 lemma mstore_gas_triple :
-  "triple {OutOfGas}
+  "triple network {OutOfGas}
      (\<langle> h \<le> 1022 \<rangle> **
        stack (h+1) memaddr **
        stack h v **
@@ -1327,12 +1388,60 @@ apply (rule memory_was_changed [of x memaddr v "M (vctx_memory_usage x1)
                    Gverylow)"  "(x1::variable_ctx)" ta co_ctx] )
 apply auto
 done
+apply (erule_tac P=rest in  back_subst)
+apply(rule Set.equalityI)
+ apply clarify
+ apply simp
+ apply(rename_tac elm; case_tac elm; simp)
 
-apply (rule leibniz)
-apply blast
-apply (rule plz_sort_it_out)
-apply (auto simp:memory_range_fact)
+apply auto[1]
+  apply (metis cancel_comm_monoid_add_class.diff_cancel le_less_Suc_eq less_SucE nth_Cons')
+apply (subgoal_tac "a = Suc (length ta)")
+apply auto[1]
+  apply (metis cancel_comm_monoid_add_class.diff_cancel le_less_Suc_eq less_SucE nth_Cons')
+  apply (metis cancel_comm_monoid_add_class.diff_cancel le_less_Suc_eq less_SucE nth_Cons')
+apply (subgoal_tac "a = Suc (length ta)")
+apply auto[1]
+  apply (metis cancel_comm_monoid_add_class.diff_cancel le_less_Suc_eq less_SucE nth_Cons')
+apply auto[1]
+subgoal for co_ctx x1 ta a
+apply (rule stuff[of memaddr x1 old_v "MemoryElm (a, vctx_memory x1 a)" v])
+apply (auto simp add:memory_as_set_def)
 done
+defer
+apply auto[1]
+ apply(rename_tac elm; case_tac elm; simp)
+apply (case_tac x4; auto)
+subgoal for co_ctx x1 ta a
+apply (rule still_left[of memaddr old_v x1
+ " MemoryElm
+     (a, store_word_memory memaddr v (vctx_memory x1) a)
+" v])
+apply (auto simp add:memory_as_set_def)
+ apply(rename_tac elm; case_tac elm; simp)
+apply (case_tac x4; auto)
+done
+ apply(rename_tac elm; case_tac elm; simp)
+apply (case_tac x4; auto)
+defer
+subgoal for co_ctx x1 ta a
+apply (rule other_similar [of memaddr old_v x1
+  "MemoryElm (a, vctx_memory x1 a)" co_ctx])
+apply (auto simp add:memory_as_set_def)
+ apply(rename_tac elm; case_tac elm; simp)
+apply (case_tac x4; auto)
+done
+subgoal for co_ctx x1 ta aa
+apply (rule one_more_obstacle[of memaddr old_v x1
+ " MemoryElm
+     (aa, store_word_memory memaddr v (vctx_memory x1) aa)"
+ v ])
+apply (auto simp add:memory_as_set_def)
+ apply(rename_tac elm; case_tac elm; simp)
+apply (case_tac x4; auto)
+done
+done
+
 
 end
 
