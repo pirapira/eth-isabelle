@@ -1,0 +1,27 @@
+
+(* Specification of Solidity intermediate language *)
+
+open import Pervasives
+open import List
+open import Word
+open import Word256
+open import Word160
+open import Word8
+
+type id = int
+
+type builtin_type =
+ | Boolean
+ | S256
+ | S128
+ | S64
+ | S32
+ | S8
+ | U256
+ | U128
+ | U64
+ | U32
+ | U8
+
+
+
