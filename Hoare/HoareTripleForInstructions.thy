@@ -167,6 +167,11 @@ lemma memory_element_means:
    (vctx_memory v (fst addrw) = snd addrw)"
   by (case_tac addrw; auto simp: as_set_simps)
 
+lemma memory_usage_element_means:
+  "MemoryUsageElm m \<in> variable_ctx_as_set v =
+   (vctx_memory_usage v = m)"
+  by (auto simp: as_set_simps)
+
 lemma balance_all:
   "P \<in> balance_as_set b \<Longrightarrow> P \<in> range BalanceElm"
 by (fastforce simp add: balance_as_set_def)
@@ -195,10 +200,6 @@ lemma log_element_means:
   "(LogElm p \<in> variable_ctx_as_set v) =
    (rev (vctx_logs v) ! (fst p) = (snd p) \<and> fst p < length (vctx_logs v))"
   by (case_tac p; auto simp: as_set_simps)
-
-lemma memory_usage_element_means:
-  "(MemoryUsageElm u \<in> variable_ctx_as_set v) = (vctx_memory_usage v = u)"
-  by (auto simp: as_set_simps)
 
 lemma code_element_means:
   "(CodeElm xy \<in> constant_ctx_as_set c) = 
@@ -389,6 +390,11 @@ done
 
 lemma memory_elm_not_constant :
   "MemoryElm m \<notin> constant_ctx_as_set c"
+apply(simp add: constant_ctx_as_set_def program_as_set_def)
+done
+
+lemma memory_usage_elm_not_constant :
+  "MemoryUsageElm m \<notin> constant_ctx_as_set c"
 apply(simp add: constant_ctx_as_set_def program_as_set_def)
 done
 
@@ -820,6 +826,11 @@ lemma pc_elm_means:
     (k = vctx_pc x1)"
   by (auto simp add: as_set_simps vctx_advance_pc_def instruction_result_as_set_def)
 
+lemma memory_usage_elm_means:
+   "MemoryUsageElm k \<in> instruction_result_as_set co_ctx (InstructionContinue x1) =
+    (k = vctx_memory_usage x1)"
+  by (auto simp add: as_set_simps vctx_advance_pc_def instruction_result_as_set_def)
+
 lemma block_number_pred_sep:
   "(block_number_pred bn ** rest) s =
    ((BlockNumberElm bn \<in> s) \<and> rest (s - {BlockNumberElm bn}))"
@@ -1156,6 +1167,12 @@ lemma memory_elm_means:
   apply(simp add: contexts_as_set_def stateelm_basic_means_simps memory_elm_not_constant)
 done
 
+lemma memory_usage_elm_c_means:
+   "MemoryUsageElm m \<in> contexts_as_set x1 co_ctx =
+    (vctx_memory_usage x1 = m)"
+  apply(simp add: contexts_as_set_def stateelm_basic_means_simps memory_usage_elm_not_constant)
+done
+
 lemma log_not_constant :
   "LogElm ab \<notin> constant_ctx_as_set co_ctx"
 apply(simp add: constant_ctx_as_set_def program_as_set_def)
@@ -1220,6 +1237,7 @@ lemmas not_constant_simps =
   storage_elm_not_constant
   stack_height_elm_not_constant
   memory_elm_not_constant
+  memory_usage_elm_not_constant
   pc_elm_not_constant
   gas_elm_not_constant
   balance_not_constant
@@ -1241,11 +1259,6 @@ lemma code_elms :
  ({CodeElm (pos, i) | pos i. P pos i} \<subseteq> S \<and> {CodeElm (pos, i) | pos i. Q pos i} \<subseteq> S)"
 apply(auto)
 done
-
-lemma memory_usage_elm_means:
-  "MemoryUsageElm x8 \<in> contexts_as_set x1 co_ctx =
-   (vctx_memory_usage x1 = x8)"
-by (auto simp add: as_set_simps stateelm_basic_means_simps)
 
 lemma pc_update_v:
   "x \<in> variable_ctx_as_set (x1\<lparr>vctx_pc := p\<rparr>) =
@@ -1909,6 +1922,10 @@ lemma memory_range_elms_not_code :
 
 lemma memory_not_stack_topmost:
   "MemoryElm p \<notin> stack_topmost_elms h lst"
+by (induction lst arbitrary: h, auto simp add: stack_topmost_elms.simps)
+
+lemma memory_usage_not_stack_topmost:
+  "MemoryUsageElm p \<notin> stack_topmost_elms h lst"
 by (induction lst arbitrary: h, auto simp add: stack_topmost_elms.simps)
 
 lemma stack_topmost_not_memory :
@@ -3196,7 +3213,6 @@ lemmas stateelm_means_simps =
 pc_not_balance
 caller_elm_means
 gas_element_means
-memory_usage_element_means
 origin_element_means
 pc_element_means
 sent_value_means
@@ -3210,7 +3226,6 @@ sent_data_length_means
 stack_height_element_means
 timestamp_elm_means
 caller_elm_means_c
-memory_usage_elm_means
 orogin_elm_c_means
 sent_value_c_means
 this_account_means
@@ -3228,6 +3243,7 @@ account_existence_elm_means
 account_existence_means_v
 balance_elm_means
 memory_element_means
+memory_usage_element_means
 storage_element_means
 block_number_elm_means
 stack_heigh_elm_means
@@ -3236,6 +3252,8 @@ ext_program_size_elm_means
 account_existence_elm_means_c
 balance_elm_c_means
 memory_elm_means
+memory_usage_elm_means
+memory_usage_elm_c_means
 storage_elm_means
 stack_height_in_topmost_means
 blockhash_c_means
