@@ -55,15 +55,11 @@ declare one_round.simps [simp]
 declare environment_turn.simps [simp]
 declare contract_turn.simps [simp]
 
-lemma no_assertion_failure:
-"no_assertion_failure net (\<lambda> a. \<exists> initial_balance. a = (always_fail_account_state initial_balance))"
-apply(simp add: no_assertion_failure_def)
+lemma invariant:
+"invariant_holds net (\<lambda> a. \<exists> initial_balance. a = (always_fail_account_state initial_balance))"
+apply(simp add: invariant_holds_def)
 apply(auto)
-apply(drule star_case; auto simp add: no_assertion_failure_post_def)
-  apply(case_tac steps; auto)
-  apply(case_tac nat; auto)
- apply(case_tac steps; auto)
- apply(case_tac nat; auto)
+apply(drule star_case; auto simp add: invariant_holds_post_def)
 apply(case_tac steps; auto)
 apply(case_tac nat; auto)
 done
@@ -77,11 +73,6 @@ pre_post_conditions net (\<lambda> a. \<exists> initial_balance. a = (always_fai
 (\<lambda> initial_state _ (post_state, _). account_balance initial_state \<le> account_balance post_state)
 "
 apply(simp add: pre_post_conditions_def; auto)
-        apply(drule star_case; auto)
-         apply(case_tac steps; auto)
-         apply(case_tac nat; auto)
-        apply(case_tac steps; auto)
-        apply(case_tac nat; auto)
        apply(drule star_case; auto)
        apply(case_tac steps; auto)
        apply(case_tac nat; auto)

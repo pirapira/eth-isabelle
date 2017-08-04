@@ -88,7 +88,7 @@ inductive triple_blocks :: "basic_blocks \<Rightarrow> pred \<Rightarrow> vertex
 
 (* Group lemmas *)
 lemmas as_set_simps =
-balance_as_set_def contract_action_as_set_def annotation_failure_as_set
+balance_as_set_def contract_action_as_set_def
 contexts_as_set_def constant_ctx_as_set_def memory_as_set_def storage_as_set_def
 data_sent_as_set_def log_as_set_def stack_as_set_def instruction_result_as_set_def
 program_as_set_def variable_ctx_as_set_def ext_program_as_set_def
@@ -109,7 +109,7 @@ sep_balance sep_balance_sep
 sep_not_continuing_sep
 sep_this_account sep_this_account_sep
 sep_action sep_action_sep
-memory8_sepD memory8_sepI memory8_sep_h_cancelD sep_memory8 sep_memory8_sep
+sep_memory8_sep
 sep_memory_usage sep_memory_usage_sep
 sep_memory_range
 sep_continuing_sep
@@ -184,7 +184,6 @@ begin
 definition triple_inst_sem :: "pred \<Rightarrow> pos_inst \<Rightarrow> pred \<Rightarrow> bool" where
 "triple_inst_sem pre inst post ==
     \<forall>co_ctx presult rest stopper n.
-			no_assertion co_ctx \<longrightarrow>
       (pre \<and>* code {inst} \<and>* rest) (instruction_result_as_set co_ctx presult) \<longrightarrow>
       ((post \<and>* code {inst} \<and>* rest) (instruction_result_as_set co_ctx
           (program_sem stopper co_ctx 1 n presult)))"
@@ -197,7 +196,6 @@ lemma inst_strengthen_pre_sem:
   apply (simp add: triple_inst_sem_def)
   apply(clarify)
   apply(drule_tac x = co_ctx in spec)
-  apply(simp)
   apply(drule_tac x = presult in spec)
   apply(drule_tac x = rest in spec)
   apply (erule impE)
@@ -251,6 +249,7 @@ lemma inst_stop_sem:
   (\<langle> h \<le> 1024 \<and> 0 \<le> g \<and> m \<ge> 0\<rangle> \<and>* continuing \<and>* memory_usage m  \<and>* program_counter n \<and>* stack_height h \<and>* gas_pred g \<and>* rest)
   (n, Misc STOP)
   (stack_height h \<and>* not_continuing \<and>* memory_usage m \<and>* program_counter n \<and>* action (ContractReturn []) \<and>* gas_pred g \<and>* rest )"
+sorry
  apply(simp add: triple_inst_sem_def program_sem.simps as_set_simps sep_conj_ac)
  apply(clarify)
  apply(simp split: instruction_result.splits)
@@ -619,7 +618,6 @@ done
 definition triple_seq_sem :: "pred \<Rightarrow> pos_inst list \<Rightarrow> pred \<Rightarrow> bool" where
 "triple_seq_sem pre insts post ==
     \<forall>co_ctx presult rest stopper net.
-			no_assertion co_ctx \<longrightarrow>
       (pre ** code (set insts) ** rest) (instruction_result_as_set co_ctx presult) \<longrightarrow>
       ((post ** code (set insts) ** rest) (instruction_result_as_set co_ctx (program_sem stopper co_ctx (length insts) net presult)))"
 
@@ -668,7 +666,6 @@ lemma seq_strengthen_pre_sem:
   apply (simp add: triple_seq_sem_def)
   apply(clarify)
   apply(drule_tac x = co_ctx in spec)
-  apply(simp)
   apply(drule_tac x = presult in spec)
   apply(drule_tac x = rest in spec)
    apply(erule impE)
@@ -696,9 +693,7 @@ done
 (*val program_sem_t_alt: constant_ctx -> network -> instruction_result -> instruction_result*)
 function (sequential,domintros)  program_sem_t_alt  :: " constant_ctx \<Rightarrow> network \<Rightarrow> instruction_result \<Rightarrow> instruction_result "  where
 "program_sem_t_alt c net  (InstructionToEnvironment x y z) = (InstructionToEnvironment x y z)"
-|" program_sem_t_alt c net InstructionAnnotationFailure = InstructionAnnotationFailure"
 |" program_sem_t_alt c net (InstructionContinue v) =
-     (if \<not> (check_annotations v c) then InstructionAnnotationFailure else
      (case  vctx_next_instruction v c of
         None => InstructionToEnvironment (ContractFail [ShouldNotHappen]) v None
       | Some i =>
@@ -797,7 +792,6 @@ done
 definition triple_sem_t :: "pred \<Rightarrow> pos_inst set \<Rightarrow> pred \<Rightarrow> bool" where
 "triple_sem_t  pre insts post ==
     \<forall> co_ctx presult rest net (stopper::instruction_result \<Rightarrow> unit).
-				no_assertion co_ctx \<longrightarrow>
        (pre ** code insts ** rest) (instruction_result_as_set co_ctx presult) \<longrightarrow>
        ((post ** code insts ** rest) (instruction_result_as_set co_ctx
             (program_sem_t_alt co_ctx net presult))) "
@@ -808,7 +802,6 @@ definition triple :: "pred \<Rightarrow> basic_blocks \<Rightarrow> pred \<Right
 definition triple_blocks_sem_t :: "basic_blocks \<Rightarrow> pred \<Rightarrow> vertex \<Rightarrow> pred \<Rightarrow> bool" where
 "triple_blocks_sem_t c pre v post ==
     \<forall> co_ctx presult rest net (stopper::instruction_result \<Rightarrow> unit).
-				no_assertion co_ctx \<longrightarrow>
         wf_blocks c \<longrightarrow>
         blocks_list c (v_ind v) = Some (snd v) \<longrightarrow>
        (pre ** code (blocks_insts c) ** rest) (instruction_result_as_set co_ctx presult) \<longrightarrow>
@@ -1402,7 +1395,6 @@ notes code_elm_means[simp del]
 shows
 "blocks_list blocks dest = Some (bi, ti) \<Longrightarrow>
  bi = (dest, Pc JUMPDEST) # bbi \<Longrightarrow>
- no_assertion co_ctx \<Longrightarrow>
  wf_blocks blocks \<Longrightarrow>
  blocks = build_blocks bytecode \<Longrightarrow>
  blocks_list blocks n = Some (insts, Jump) \<Longrightarrow>
@@ -1591,7 +1583,6 @@ shows
 "      blocks_list blocks i = Some (bi, ti) \<Longrightarrow>
        blocks_list blocks j = Some (bj, tj) \<Longrightarrow>
 			 j = n + 1 + inst_size_list insts \<Longrightarrow>
-       no_assertion co_ctx \<Longrightarrow>
        blocks = build_blocks bytecode \<Longrightarrow>
        wf_blocks blocks \<Longrightarrow>
        blocks_list blocks n = Some (insts, Jumpi) \<Longrightarrow>
@@ -1651,7 +1642,6 @@ shows
 "      blocks_list blocks dest = Some (bi, ti) \<Longrightarrow>
        blocks_list blocks j = Some (bj, tj) \<Longrightarrow>
 			 bi = (dest, Pc JUMPDEST) # bbi \<Longrightarrow>
-       no_assertion co_ctx \<Longrightarrow>
        blocks = build_blocks bytecode \<Longrightarrow>
        wf_blocks blocks \<Longrightarrow>
        blocks_list blocks n = Some (insts, Jumpi) \<Longrightarrow>

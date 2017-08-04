@@ -85,12 +85,14 @@ let rec log2 x =
   if x <= 1 then 0
   else 1 + log2 (x / 2)
 declare coq target_rep function log2 = `Z.log2`
+declare termination_argument log2 = automatic
 
 val log256floor : integer -> integer
 let rec {isabelle; hol; ocaml} log256floor x =
   if x <= 255 then 0
   else 1 + log256floor (x / 256)
 let {coq} log256floor x = log2 x / 8
+declare termination_argument log256floor = automatic
 
 val word_exp : integer -> natural -> integer
 let rec {isabelle;hol;ocaml} word_exp i n =
@@ -107,6 +109,7 @@ let rec {coq} word_exp i n =
   | 0 -> 1
   | n+1 -> (word_exp i n * i) mod (2 ** 256)
   end
+declare termination_argument word_exp = automatic
 
 (* In EVM, the memory contains one byte for each machine word (offset). *)
 (* The storage contains one machine word for each machine word (index). *)
@@ -196,36 +199,6 @@ let before_homestead n =
   | EIP158 -> false
   | Metropolis -> false
   end
-
-type aenv = <|
-  aenv_stack : list (w256);
-  aenv_memory : memory;
-  aenv_storage : storage;
-  aenv_balance : address -> w256;
-  aenv_caller : address;
-  aenv_value_sent : w256;
-  aenv_data_sent : list byte;
-  aenv_storage_at_call : storage;
-  aenv_balance_at_call : address -> w256;
-  aenv_this : address;
-  aenv_origin : address;
-|>
-
-(* @{term aenv_balance} field keeps track of the balance of all accounts because the contract *)
-(* under verification can send some Eth to other accounts.  To capture the effect of this, I chose to *)
-(* keep track of the balances of the other contracts.  *)
-
-(* @{term aenv_storage_at_call} and @{term aenv_balance_at_call} fields remember the states at the *)
-(* time of the contract invocation.  These are used for rolling back the state after a failure. *)
-(* Failures happen for example when the contract under verification jumps to a wrong destination, *)
-(* or it runs out of gas. *)
-
-(* @{term aenv_origin} might be the same as but might be different from @{term aenv_caller}. *)
-(* An Ethereum transaction is started by an external account (that is, an account which does not *)
-(* have codes but owned by somebody with a secret key).  @{term aenv_origin} denotes this external *)
-(* account.  During a transaction, the origin first sends a message to an account, the receiver can *)
-(* in turn call other accounts as well.  When the calls nest, @{term aenv_caller} points to the *)
-(* immediate caller of the current invocation. *)
 
 
 (* This section lists the EVM instructions and their byte representations. *)
@@ -653,10 +626,6 @@ type inst =
   | Log of log_inst
   | Misc of misc_inst
 
-(* subsection {* Annotation  *} *)
-
-type annotation = aenv -> bool
-
 (* subsection {* The Whole Instruction Set *} *)
 
 (* The small inductive sets above are here combined into a single type. *)
@@ -935,7 +904,6 @@ type contract_action =
 type program = <|
   program_content : integer -> maybe inst; (* a way to look up instructions from positions *)
   program_length  : integer; (* the length of the program in bytes *)
-  program_annotation : integer -> list annotation; (* a mapping from positions to annotations *)
 |>
 
 (* The empty program is easy to define. *)
@@ -943,32 +911,11 @@ type program = <|
 val empty_program : program
 let empty_program = <|
   program_content = (fun _ -> Nothing);
-  program_length = 0;
-  program_annotation = (fun _ -> [])
+  program_length = 0
 |>
 
 
 (* subsection "Translating an Instruction List into a Program" *)
-
-(* subsubsection {* Storing annotations in a program in a mapping *} *)
-
-(* Annotations are stored in a mapping that maps positions into lists of annotations. *)
-(* The rationale for this data structure is that a single position might contain multiple annotations. *)
-(* Here is a function that inserts an annotation *)
-(* at a specified position. *)
-
-val prepend_annotation : integer -> annotation -> (integer -> list annotation) -> (integer -> list annotation)
-let prepend_annotation pos annot orig p = if pos = p then annot :: orig p else orig p
-
-(* Currently annotations are inserted into a mapping with Isabelle/HOL's mapping updates. *)
-(* When this causes performance problems, I need to switch to AVL trees again. *)
-
-val program_annotation_of_lst : int -> list inst -> integer -> list annotation
-let rec program_annotation_of_lst pos lst = match lst with
-| [] -> (fun _ -> [])
-| i :: rest -> program_annotation_of_lst (pos + inst_size i) rest
-end
-declare termination_argument program_annotation_of_lst = automatic
 
 (* subsubsection {* Translating a list of instructions into a program *} *)
 
@@ -981,7 +928,6 @@ val program_of_lst : list inst -> (list inst -> (integer -> maybe inst)) -> prog
 let program_of_lst lst program_content_formatter = <|
   program_content = program_content_formatter lst;
   program_length = integerFromNat (length lst);
-  program_annotation = program_annotation_of_lst 0 lst;
 |>
 
 (* subsection {* Program as a Byte Sequence *} *)
@@ -1014,7 +960,6 @@ type block_info = <|
   block_number : w256; (* the blocknumber of the block *)
   block_difficulty : w256;
   block_gaslimit : w256; (* the block gas imit *)
-  block_gasprice : w256;
 |>
 
 
@@ -1048,6 +993,7 @@ type variable_ctx = <|
   vctx_touched_storage_index : list w256;
   vctx_logs : list log_entry; (* stored newest first *)
   vctx_refund : integer;
+  vctx_gasprice : w256;
 |>
 
 (* The constant context contains information that is rather stable. *)
@@ -1064,7 +1010,6 @@ type constant_ctx = <|
 
 type instruction_result =
 | InstructionContinue of variable_ctx (* the execution should continue. *)
-| InstructionAnnotationFailure (* the annotation turned out to be false. *)
 | InstructionToEnvironment of
   (* the execution has stopped; either for the moment just calling out another account, or *)
   (* finally finishing the current invocation *)
@@ -1223,25 +1168,6 @@ let sstore v c = match v.vctx_stack with
  | _ -> instruction_failure_result v [TooShortStack]
 end
 
-(* For interpreting the annotations, I first need to construct the annotation environment *)
-(* out of the current execution environments.  When I try to remove this step, I face some *)
-(* circular definitions of data types. *)
-
-val build_aenv : variable_ctx -> constant_ctx -> aenv
-let build_aenv v c = <|
-  aenv_stack = v.vctx_stack;
-  aenv_memory = v.vctx_memory;
-  aenv_storage = v.vctx_storage;
-  aenv_balance = v.vctx_balance;
-  aenv_caller = v.vctx_caller;
-  aenv_value_sent = v.vctx_value_sent;
-  aenv_data_sent = v.vctx_data_sent;
-  aenv_storage_at_call = v.vctx_storage_at_call;
-  aenv_balance_at_call = v.vctx_balance_at_call;
-  aenv_this = c.cctx_this;
-  aenv_origin = v.vctx_origin;
-|>
-
 (* The JUMP instruction has the following meaning.  When it cannot find the JUMPDEST instruction *)
 (* at the destination, the execution fails. *)
 
@@ -1313,6 +1239,7 @@ let rec cut_natural_map idx n nmap = match n with
  | 0 -> []
  | n + 1 -> nmap idx :: cut_natural_map (idx + 1) n nmap
 end
+declare termination_argument cut_natural_map = automatic
 
 (* Cnew is the funciton denoted as C_\text{\tiny NEW} in the yellow paper.*)
 (* However, it takes the sent value and a boolean indicating emptiness of the recipient. *)
@@ -1337,7 +1264,7 @@ let L x = x - x / 64
    a boolean indicating emptiness of the recipient, and the remaining gas of the caller *)
 val Cgascap : w256 -> w256 -> bool -> integer -> network -> integer -> integer
 let Cgascap mu0 mu2 emp remaining_gas net memu_extra =
-  if remaining_gas >= Cextra mu2 emp net then
+  if remaining_gas >= Cextra mu2 emp net + memu_extra then
     integerMin (L (remaining_gas - Cextra mu2 emp net - memu_extra)) (uint mu0)
   else
     uint mu0
@@ -1347,7 +1274,7 @@ let Cgascap mu0 mu2 emp remaining_gas net memu_extra =
    a boolean indicating emptiness of the recipient, and the remaining gas of the caller *)
 val Ccallgas : w256 -> w256 -> w256 -> bool -> integer -> network -> integer -> integer
 let Ccallgas mu0 mu1 mu2 emp remaining_gas net memu_extra =
-  ( if at_least_eip150 net then word256ToInteger mu0  else Cgascap mu0 mu2 emp remaining_gas net memu_extra) +
+  ( if at_least_eip150 net then Cgascap mu0 mu2 emp remaining_gas net memu_extra else uint mu0) +
   ( if mu2 = 0 then 0 else Gcallstipend )
 
 (* Ccall is the function denoted as C_{\text{\tiny CALL}} *)
@@ -1355,8 +1282,8 @@ let Ccallgas mu0 mu1 mu2 emp remaining_gas net memu_extra =
    emptiness of the recipient, and the remaining gas of the caller *)
 val Ccall : w256 -> w256 -> w256 -> bool -> integer -> network -> integer -> integer
 let Ccall mu0 mu1 mu2 emp remaining_gas net memu_extra =
-  if at_least_eip150 net then integerFromNatural (word256ToNatural mu0) + Cextra mu2 emp net else
-  Cgascap mu0 mu2 emp remaining_gas net memu_extra + Cextra mu2 emp net
+  ( if at_least_eip150 net then Cgascap mu0 mu2 emp remaining_gas net memu_extra else integerFromNatural (word256ToNatural mu0) ) +
+  Cextra mu2 emp net
 
 (* Cmem is the function denoted as C_{mem} in the yellow paper. *)
 val Cmem : integer -> integer
@@ -1373,6 +1300,24 @@ val Csuicide : bool -> network -> integer
 let Csuicide recipient_empty net =
   Gsuicide net + (if recipient_empty && at_least_eip150 net then Gnewaccount else 0)
 
+val vctx_next_instruction_default : variable_ctx -> constant_ctx -> inst
+let vctx_next_instruction_default v c =
+    match vctx_next_instruction v c with
+    | Just i -> i
+    | Nothing -> Misc STOP
+    end
+
+val vctx_recipient : variable_ctx -> constant_ctx -> address
+let vctx_recipient v c =
+  match vctx_next_instruction_default v c with
+  | Misc SUICIDE -> w256_to_address (vctx_stack_default 0 v)
+  | Misc CALL -> w256_to_address (vctx_stack_default 1 v)
+  | Misc CALLCODE -> c.cctx_this
+  | Misc DELEGATECALL -> c.cctx_this
+  | _ -> 0
+  end
+
+
 
 let calc_memu_extra orig_memory_usage s0 s1 s2 s3 s4 s5 s6 =
   Cmem (new_memory_consumption (Misc CALL) orig_memory_usage s0 s1 s2 s3 s4 s5 s6) - Cmem orig_memory_usage
@@ -1383,16 +1328,10 @@ let calc_memu_extra2 v s0 s1 s2 s3 s4 s5 s6 = Cmem (new_memory_consumption (Misc
 val call : network -> variable_ctx -> constant_ctx -> instruction_result
 let call net v c = match v.vctx_stack with
  | g :: r :: value :: in_begin :: in_size :: out_begin :: out_size :: rest ->
-     (* strict_if (word256ULT (v.vctx_balance c.cctx_this) e2)
-        (fun _ -> (InstructionContinue
-           (vctx_advance_pc c
-             <| v with
-                vctx_stack = (0 :: rest)
-             |>
-           ))) *)
      InstructionToEnvironment (ContractCall
          <| callarg_gas = word256FromInteger (Ccallgas g r value
-                     (not (v.vctx_account_existence (w256_to_address r))) v.vctx_gas net (calc_memu_extra v.vctx_memory_usage g r value in_begin in_size out_begin out_size));
+                     (not (v.vctx_account_existence (vctx_recipient v c)))
+                     v.vctx_gas net (calc_memu_extra v.vctx_memory_usage g r value in_begin in_size out_begin out_size));
             callarg_code = w256_to_address r;
             callarg_recipient = w256_to_address r;
             callarg_value = value;
@@ -1411,18 +1350,10 @@ end
 val delegatecall : network -> variable_ctx -> constant_ctx -> instruction_result
 let delegatecall net v c = match v.vctx_stack with
  | e0 :: e1 :: e3 :: e4 :: e5 :: e6 :: rest ->
-    (* if word256ULT (v.vctx_balance c.cctx_this) v.vctx_value_sent then
-        (InstructionContinue
-           (vctx_advance_pc c
-             <| v with
-                vctx_stack = (0 :: rest)
-             |>
-           ))
-     else *)
        InstructionToEnvironment
          (ContractDelegateCall
            <| callarg_gas = word256FromInteger (Ccallgas e0 e1 0
-                     (not (v.vctx_account_existence (w256_to_address e1))) v.vctx_gas net (calc_memu_extra2 v e0 e1 e3 e4 e5 e6 0));
+                     (not (v.vctx_account_existence (vctx_recipient v c))) v.vctx_gas net (calc_memu_extra2 v e0 e1 e3 e4 e5 e6 (vctx_stack_default 6 v)));
               callarg_code = w256_to_address e1;
               callarg_recipient = w256_to_address e1;
               callarg_value = v.vctx_value_sent;
@@ -1439,18 +1370,10 @@ end
 val callcode : network -> variable_ctx -> constant_ctx -> instruction_result
 let callcode net v c = match v.vctx_stack with
  | e0 :: e1 :: e2 :: e3 :: e4 :: e5 :: e6 :: rest ->
-    (* if word256ULT (v.vctx_balance  c.cctx_this) e2 then
-        (InstructionContinue
-           (vctx_advance_pc c
-             <| v with
-                vctx_stack = (0 :: rest)
-             |>
-           ))
-     else *)
        InstructionToEnvironment
          (ContractCall
            <| callarg_gas = word256FromInteger (Ccallgas e0 e1 e2
-                     (not (v.vctx_account_existence (w256_to_address e1))) v.vctx_gas net
+                     (not (v.vctx_account_existence (vctx_recipient v c))) v.vctx_gas net
                      (calc_memu_extra v.vctx_memory_usage e0 e1 e2 e3 e4 e5 e6));
               callarg_code = w256_to_address e1;
               callarg_recipient = c.cctx_this;
@@ -1459,8 +1382,7 @@ let callcode net v c = match v.vctx_stack with
               callarg_output_begin = e5;
               callarg_output_size = e6 |>)
           (<| (vctx_advance_pc c v) with
-                  vctx_stack = rest;
-                  vctx_balance = update_balance c.cctx_this (fun orig -> orig - e2) v.vctx_balance |>)
+                  vctx_stack = rest |>)
           (Just (* saving the variable environment *) (uint e5, uint e6))
   | _ -> instruction_failure_result v [TooShortStack]
 end
@@ -1469,21 +1391,11 @@ end
 val create : variable_ctx -> constant_ctx -> instruction_result
 let create v c = match v.vctx_stack with
   | vl :: code_start :: code_len :: rest ->
-      if word256ULT (v.vctx_balance c.cctx_this) vl then
-        (InstructionContinue
-           (vctx_advance_pc c
-             <| v with
-                vctx_stack = (0 :: rest)
-             |>
-           ))
-      else
         let code = cut_memory code_start code_len v.vctx_memory in
-        let new_balance = update_balance c.cctx_this (fun orig -> orig - vl) v.vctx_balance in
         InstructionToEnvironment
            (ContractCreate
              <| createarg_value = vl; createarg_code = code |>)
-            (<| (vctx_advance_pc c v) with vctx_stack = rest;
-                 vctx_balance = new_balance |>)
+            (<| (vctx_advance_pc c v) with vctx_stack = rest |>)
             (Just (* when returning to this invocation, use the following variable environment *)
               (0, 0))
   | _ -> instruction_failure_result v [TooShortStack]
@@ -1774,29 +1686,12 @@ let C old_memory_consumption new_memory_consumption i s0 s1 s2 s3 recipient_empt
   Cmem new_memory_consumption  - Cmem old_memory_consumption +
   thirdComponentOfC i s0 s1 s2 s3 recipient_empty orig new_val remaining_gas net (Cmem new_memory_consumption - Cmem old_memory_consumption)
 
-val vctx_next_instruction_default : variable_ctx -> constant_ctx -> inst
-let vctx_next_instruction_default v c =
-    match vctx_next_instruction v c with
-    | Just i -> i
-    | Nothing -> Misc STOP
-    end
-
-val vctx_recipient : variable_ctx -> constant_ctx -> address
-let vctx_recipient v c =
-  match vctx_next_instruction_default v c with
-  | Misc SUICIDE -> w256_to_address (vctx_stack_default 0 v)
-  | Misc CALL -> w256_to_address (vctx_stack_default 1 v)
-  | Misc CALLCODE -> c.cctx_this
-  | Misc DELEGATECALL -> c.cctx_this
-  | _ -> 0
-  end
-
 val meter_gas : inst -> variable_ctx -> constant_ctx -> network -> integer
 let meter_gas i v c net =
   C v.vctx_memory_usage
    (new_memory_consumption i v.vctx_memory_usage (vctx_stack_default 0 v) (vctx_stack_default 1 v) (vctx_stack_default 2 v) (vctx_stack_default 3 v)
       (vctx_stack_default 4 v) (vctx_stack_default 5 v) (vctx_stack_default 6 v))
-   (vctx_next_instruction_default v c)
+      i
     (vctx_stack_default 0 v) (vctx_stack_default 1 v) (vctx_stack_default 2 v) (vctx_stack_default 3 v)
     (not (v.vctx_account_existence (vctx_recipient v c))) (v.vctx_storage (vctx_stack_default 0 v))
     (vctx_stack_default 1 v) v.vctx_gas net
@@ -1815,7 +1710,6 @@ let subtract_gas consumption memory_usage orig =
   match orig with
   | InstructionContinue v ->
     InstructionContinue (<| v with vctx_gas = v.vctx_gas - consumption; vctx_memory_usage = memory_usage |>)
-  | InstructionAnnotationFailure -> InstructionAnnotationFailure
   | InstructionToEnvironment act v opt ->
     InstructionToEnvironment act (<|v with vctx_gas = v.vctx_gas - consumption; vctx_memory_usage = memory_usage |>) opt
   end
@@ -1863,8 +1757,7 @@ let instruction_sem v c inst net =
   | Bits inst_OR -> stack_2_1_op v c (fun a b -> a lor b)
   | Bits inst_XOR -> stack_2_1_op v c (fun a b -> a lxor b)
   | Bits inst_NOT -> stack_1_1_op v c (fun a -> lnot a)
-  | Bits BYTE ->
-      stack_2_1_op v c get_byte
+  | Bits BYTE -> stack_2_1_op v c get_byte
   | Sarith SDIV -> stack_2_1_op v c
        (fun n divisor -> if divisor = 0 then 0 else
                          let divisor = sintFromW256 divisor in
@@ -1926,7 +1819,7 @@ let instruction_sem v c inst net =
   | Info ORIGIN -> stack_0_1_op v c (address_to_w256 v.vctx_origin)
   | Info CALLVALUE -> stack_0_1_op v c v.vctx_value_sent
   | Info CODESIZE -> stack_0_1_op v c (word256FromInteger c.cctx_program.program_length)
-  | Info GASPRICE -> stack_0_1_op v c v.vctx_block.block_gasprice
+  | Info GASPRICE -> stack_0_1_op v c v.vctx_gasprice
   | Info EXTCODESIZE -> stack_1_1_op v c
        (fun arg -> word256FromInteger (v.vctx_ext_program (w256_to_address arg)).program_length)
   | Info BLOCKHASH -> stack_1_1_op v c v.vctx_block.block_blockhash
@@ -1965,21 +1858,12 @@ let instruction_sem v c inst net =
 (* about smart contracts, the theorems are of the form ``for any value of the initial step counter, *)
 (* this and that never happen.'' *)
 
-(* Since our program struct contains a list of annotations for each program position, *)
-(* I have a function that checks all annotations at a particular program position: *)
-val check_annotations : variable_ctx -> constant_ctx -> bool
-let check_annotations v c =
-  let annots : list annotation = c.cctx_program.program_annotation v.vctx_pc in
-  List.all (fun annot -> annot (build_aenv v c)) annots
-
 val next_state: (instruction_result -> unit) -> constant_ctx -> network -> instruction_result -> instruction_result
 let next_state stopper c net pr =
   match pr with
   | InstructionToEnvironment _ _ _ ->
     let () = stopper pr in pr
-  | InstructionAnnotationFailure -> let () = stopper pr in pr
   | InstructionContinue v ->
-     if not (check_annotations v c) then InstructionAnnotationFailure else
      match vctx_next_instruction v c with
       | Nothing -> InstructionToEnvironment (ContractFail [ShouldNotHappen]) v Nothing
       | Just i ->
@@ -2016,9 +1900,7 @@ val program_sem_t: constant_ctx -> network -> instruction_result -> instruction_
 let rec program_sem_t c net p =
   match p with
   | InstructionToEnvironment _ _ _ -> p
-  | InstructionAnnotationFailure -> p
   | InstructionContinue v ->
-     if not (check_annotations v c) then InstructionAnnotationFailure else
      match vctx_next_instruction v c with
       | Nothing -> InstructionToEnvironment (ContractFail [ShouldNotHappen]) v Nothing
       | Just i ->
@@ -2150,7 +2032,7 @@ let empty_memory = (fun _ -> 0)
 
 
 indreln [build_vctx_called : account_state -> call_env -> variable_ctx -> bool]
-  vctx_called : forall bal a env origin ext block gas existence.
+  vctx_called : forall bal a env origin gasprice ext block gas existence.
     word256ToInteger block.block_number >= eip150_block && (* only the newest version of EVM matters *)
     bal a.account_address = a.account_balance ==>
     build_vctx_called a env
@@ -2170,6 +2052,7 @@ indreln [build_vctx_called : account_state -> call_env -> variable_ctx -> bool]
      vctx_storage_at_call = a.account_storage; (* the snapshot of the storage is remembered in case of failure *)
      vctx_balance_at_call = bal; (* the snapshot of the balance is remembered in case of failure *)
      vctx_origin = origin; (* the origin of the transaction is arbitrarily chosen *)
+     vctx_gasprice = gasprice; (* the gasprice of the transaction is arbitrarily chosen *)
      vctx_ext_program = ext; (* the codes of the external programs are arbitrary. *)
      vctx_block = block; (* the block information is chosen arbitrarily. *)
      vctx_gas = gas; (* the amount of gas is chosen arbitrarily. *)
@@ -2191,7 +2074,7 @@ indreln [build_vctx_returned : account_state -> return_result -> variable_ctx ->
 vctx_returned:
    forall a_code v_pc new_bal a_bal a_addr a_storage v_stack v_memory v_memory_usage
           v_storage v_balance v_caller v_value v_data v_init_storage v_init_balance
-          v_origin v_ext_program v_ext_program' v_block v_gas v_gas' mem_start mem_size
+          v_origin v_gasprice v_ext_program v_ext_program' v_block v_gas v_gas' mem_start mem_size
           r rest whichever v_ex v_ex' v_touched v_logs v_refund.
    (is_call_like (a_code.program_content (v_pc - 1))) &&
    (word256UGE new_bal a_bal) ==> (* the balance might have increased *)
@@ -2215,6 +2098,7 @@ vctx_returned:
          ; vctx_storage_at_call = v_init_storage
          ; vctx_balance_at_call = v_init_balance
          ; vctx_origin = v_origin
+         ; vctx_gasprice = v_gasprice
          ; vctx_ext_program = v_ext_program
          ; vctx_block = v_block
          ; vctx_gas = v_gas
@@ -2244,6 +2128,7 @@ vctx_returned:
        ; vctx_storage_at_call = v_init_storage
        ; vctx_balance_at_call = v_init_balance
        ; vctx_origin = v_origin
+       ; vctx_gasprice = v_gasprice
        ; vctx_ext_program = v_ext_program'
        ; vctx_block = v_block
        ; vctx_gas = v_gas' (* safe approximation.  saving proof space *)

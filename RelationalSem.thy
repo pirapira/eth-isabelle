@@ -131,7 +131,6 @@ where
 -- {* because we are not modeling nested calls here, the effect of the nested calls are modeled in
       account\_state\_return\_change *}
 | "returnable_result (InstructionToEnvironment (ContractReturn _) _ _) = False"
-| "returnable_result InstructionAnnotationFailure = False"
 
 fun returnable_from_delegate_call :: "instruction_result \<Rightarrow> bool"
 where
@@ -144,7 +143,6 @@ where
 -- {* because we are not modeling nested calls here, the effect of the nested calls are modeled in
       account\_state\_return\_change *}
 | "returnable_from_delegate_call (InstructionToEnvironment (ContractReturn _) _ _) = False"
-| "returnable_from_delegate_call InstructionAnnotationFailure = False"
 
 subsection {* A Round of the Game *}
 
@@ -236,16 +234,6 @@ where
    contract_turn net (old_account, old_vctx)
       (account_state_going_out, Execution (InstructionToEnvironment act v opt_v))"
 
-| contract_annotation_failure:
-  "(* If a constant environment is built from the old account state, *)  
-   build_cctx old_account = cctx \<Longrightarrow>
-   
-   (* and if the contract execution results in an annotation failure, *)
-   program_sem k cctx steps net (InstructionContinue old_vctx) = InstructionAnnotationFailure \<Longrightarrow>
-
-   (* the contract makes a move, indicating the annotation failure. *)
-   contract_turn net (old_account, old_vctx) (old_account, Execution InstructionAnnotationFailure)"
-
 text {* When we combine the environment's turn and the contract's turn, we get one round.
 The round is a binary relation over a single set.
 *}
@@ -305,15 +293,6 @@ apply(drule star_case; simp)
 apply(simp add: one_round.simps add: environment_turn.simps)
 done
 
-text {* And then the rounds can go nowhere after an annotation failure. *}
-lemma no_entry_annotation_failure [dest!]:
-"star (one_round net I)
-      (a, Execution InstructionAnnotationFailure)
-      (b, c) \<Longrightarrow> b = a \<and> c = Execution InstructionAnnotationFailure"
-apply(drule star_case; simp)
-apply(simp add: one_round.simps add: environment_turn.simps)
-done
-
 subsection {* How to State an Invariant *}
 
 text {* For any invariant @{term I} over account states, now @{term "star net (one_round I)"}
@@ -328,26 +307,25 @@ When I state something, I will be then obliged to prove the statement.  This hap
 *}
 
 text {* I define the conjunction of the properties requested at the final states.
-The whole thing is more readable when I inline-expand @{term no_assertion_failure_post},
+The whole thing is more readable when I inline-expand @{term invariant_holds_post},
 but if I do that, the @{text auto} tactic splits out a subgoal for each conjunct.
 This doubles the already massive number of subgoals.
 *}
 
-definition no_assertion_failure_post ::
+definition invariant_holds_post ::
   "(account_state \<Rightarrow> bool) \<Rightarrow> (account_state \<times> environment_input) \<Rightarrow> bool"
 where
-"no_assertion_failure_post I fin =
- (I (fst fin) \<and> (* The invariant holds. *)
-  snd fin \<noteq> Execution InstructionAnnotationFailure)  (* No annotations have failed. *)
+"invariant_holds_post I fin =
+ (I (fst fin)(* The invariant holds. *))
 "
 
-lemma no_assertion_failure_in_fail [simp] :
+lemma invariant_holds_in_fail [simp] :
 "I state \<Longrightarrow>
- no_assertion_failure_post I (state, Execution (InstructionToEnvironment (ContractFail x) v v_opt))"
-apply(simp add: no_assertion_failure_post_def)
+ invariant_holds_post I (state, Execution (InstructionToEnvironment (ContractFail x) v v_opt))"
+apply(simp add: invariant_holds_post_def)
 done
 
-text {* @{term "no_assertion_failure"} is a template for statements.
+text {* @{term "invariant_holds"} is a template for statements.
 It takes a single argument @{term I} for the invariant.
 The invariant is assumed to hold at the initial state.
 The initial state is when the contract is called (this can be the first
@@ -373,9 +351,9 @@ reentrancy in Why ML.
 I have not justified the idea in Isabelle/HOL.
 *}
 
-definition no_assertion_failure :: "network \<Rightarrow> (account_state \<Rightarrow> bool) \<Rightarrow> bool"
+definition invariant_holds :: "network \<Rightarrow> (account_state \<Rightarrow> bool) \<Rightarrow> bool"
 where
-"no_assertion_failure net (I :: account_state \<Rightarrow> bool) \<equiv>
+"invariant_holds net (I :: account_state \<Rightarrow> bool) \<equiv>
   (\<forall> addr str code bal ongoing killed callenv.
     I \<lparr> account_address = addr, account_storage = str, account_code = code,
        account_balance = bal,
@@ -387,7 +365,7 @@ where
       account_ongoing_calls = ongoing,
       account_killed = killed \<rparr>
   , Init callenv) fin \<longrightarrow>
-  no_assertion_failure_post I fin))"
+  invariant_holds_post I fin))"
 
 subsection {* How to State a Pre-Post Condition Pair *}
 
@@ -461,9 +439,6 @@ where
      
   (* for any final state that are reachable from these initial conditions, *)
   (\<forall> fin. star (one_round net I) (initial_account, Init initial_call) fin \<longrightarrow>
-  
-  (* the annotations have not failed *)
-  snd fin \<noteq> Execution InstructionAnnotationFailure \<and>
   
   (* and for any observed final state after this final state, *)
   (\<forall> fin_observed. account_state_natural_change (fst fin) fin_observed \<longrightarrow>

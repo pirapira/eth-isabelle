@@ -243,12 +243,6 @@ lemma program_sem_t_imp_program_sem:
       apply (erule meta_impE , simp)
       apply (subst program_sem_t.simps)
       apply (simp only: instruction_result.simps)
-      apply (split if_split)
-      apply (rule conjI)
-       apply clarify
-       apply (rule exI[where x="Suc 0"])
-       apply (simp add: program_sem.simps next_state_def split: if_split)
-      apply (rule impI)
       apply (simp only: option.simps split:if_split)
       apply (rule impI | rule conjI)+
       apply (rule exI[where x="Suc 0"])
@@ -282,9 +276,6 @@ lemma program_sem_t_imp_program_sem:
       apply clarsimp
         apply (rule exI[where x="Suc 0"])
         apply (simp add: program_sem_t.simps program_sem.simps next_state_def)
-      apply clarsimp
-            apply (rule exI[where x="Suc 0"])
-         apply (simp add: program_sem.simps program_sem_t.simps next_state_def)
   done
     
 definition hoare_triple ::
@@ -293,7 +284,7 @@ definition hoare_triple ::
  ("_ \<turnstile> \<lbrace>_\<rbrace> _ \<lbrace>_\<rbrace>" [81,81,81,81] 100)
 where
   "hoare_triple F P c Q \<equiv>
-    \<forall>const net ir rest. no_assertion const \<longrightarrow>
+    \<forall>const net ir rest.
        (P ** code c ** rest) (instruction_result_as_set const ir) \<longrightarrow>
          (((Q ** code c ** rest) (instruction_result_as_set const (program_sem_t const net ir)))
          \<or> failed_for_reasons F (program_sem_t const net ir))"
@@ -306,33 +297,4 @@ lemma Collect_union_disj_pair:
  "{P x y | x y. (x,y) \<in> c1} \<union> {P x y |x y. (x,y) \<in> c2} = {P x y|x y.  (x,y) \<in> c1 \<or> (x,y) \<in> c2}"
   by blast
     
-lemma hoare_comp:
-   "F \<turnstile> \<lbrace>P\<rbrace> c1 \<lbrace>R\<rbrace> \<Longrightarrow> F \<turnstile> \<lbrace>R\<rbrace> c2 \<lbrace>Q\<rbrace> \<Longrightarrow> c = c1 \<union> c2 \<Longrightarrow> c1 \<inter> c2 = {} \<Longrightarrow>  F \<turnstile> \<lbrace>P\<rbrace> c \<lbrace>Q\<rbrace>"
-  apply (simp add: hoare_triple_def)
-  apply clarsimp
-  apply (drule_tac x=const in spec)+
-  apply clarsimp
-  apply (drule_tac x=net in spec)
-  apply (drule_tac x=ir and y="code c2 ** rest" in spec2)
-  apply clarsimp
-  apply (drule mp)
-  apply (rule conjI)
-    apply fastforce
-  apply (rule conjI)
-    apply fastforce
-   apply (subst diff_diff_union)
-   apply (subst Collect_union_disj_pair)
-   apply simp
-  apply clarsimp
-  apply (drule_tac x=net in spec)
-  apply (drule_tac x="program_sem_t const net ir" in spec)
-  apply (drule_tac x="rest ** code c1" in spec)
-  apply (drule mp)
-  apply (rule conjI)
-    apply blast
-  defer
-   apply (rule conjI)
-    apply (subst Collect_union_disj_pair[symmetric])
-     apply (subst (asm) Diff_triv ) back back back
-     oops   
 end

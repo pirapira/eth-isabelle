@@ -97,6 +97,7 @@ let test_one_case j : testResult =
     ; vctx_storage_at_call = initial_storage
     ; vctx_balance_at_call = initial_balance
     ; vctx_origin = word160_of_big_int test_case.exec.origin
+    ; vctx_gasprice = word256_of_big_int test_case.exec.gasPrice
     ; vctx_ext_program = construct_ext_program test_case.pre
     ; vctx_block = construct_block_info test_case
     ; vctx_gas = Nat_big_num.of_string_nat (Big_int.string_of_big_int test_case.exec.gas)
@@ -154,9 +155,6 @@ let test_one_case j : testResult =
      end
   | InstructionToEnvironment (ContractReturn retval, v, Some _) ->
      let () = Printf.printf "unexpected return format\n" in
-     TestFailure
-  | InstructionAnnotationFailure ->
-     let () = Printf.printf "ProgramAnnotationFailure\n" in
      TestFailure
 
 let test_one_file ((num_success : int ref), (num_failure : int ref), (num_skipped : int ref)) (case_name : string option) (path : string) : unit =
