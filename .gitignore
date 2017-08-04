@@ -1,7 +1,7 @@
 *~
 *#
 *.bak
-julia/*.lem
+julia/*.ml
 lem/*.vo
 lem/*.d
 lem/*.glob
