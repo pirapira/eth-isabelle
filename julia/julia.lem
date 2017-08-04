@@ -3,12 +3,15 @@
 
 open import Pervasives
 open import List
+open import String
 open import Word
 open import Word256
 open import Word160
 open import Word8
 
-type id = int
+(** Syntax *)
+
+type id = integer
 
 type builtin_type =
  | Boolean
@@ -23,5 +26,31 @@ type builtin_type =
  | U32
  | U8
 
+type type_name =
+ | BuiltinType of builtin_type
+ | CustomType of id
+
+type literal_kind =
+ | TrueLiteral
+ | FalseLiteral
+ | StringLiteral of list word8
+ | NumberLiteral of integer
+
+type expression =
+ | FunctionCall of id * list expression
+ | Identifier of id
+ | Literal of literal_kind * type_name
+
+type statement =
+ | Block of list statement
+ | FunctionDefinition of id * list (id * type_name) * list (id * type_name) * list statement
+ | VariableDeclaration of list (id * type_name) * expression
+ | Assignment of list id * expression
+ | Switch of expression * list (literal_kind * type_name * list statement) * maybe (list statement)
+ | Break
+ | Continue
+ | ForLoop of list statement * expression * list statement * list statement
+
+(** Interpreter *)
 
 
