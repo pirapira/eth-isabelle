@@ -3,6 +3,7 @@
 
 open import Pervasives
 open import List
+open import Map
 open import String
 open import Word
 open import Word256
@@ -45,12 +46,75 @@ type statement =
  | Block of list statement
  | FunctionDefinition of id * list (id * type_name) * list (id * type_name) * list statement
  | VariableDeclaration of list (id * type_name) * expression
+ | EmptyVariableDeclaration of list (id * type_name)
  | Assignment of list id * expression
  | Switch of expression * list (literal_kind * type_name * list statement) * maybe (list statement)
  | Break
  | Continue
- | ForLoop of list statement * expression * list statement * list statement
+ | ForLoopInit of list statement * expression * statement * statement
+ | ForLoop of expression * statement * statement
 
 (** Interpreter *)
 
+type global = unit
+
+type seq_mode =
+ | RegularMode
+ | BreakMode
+ | ContinueMode
+
+type value =
+ | IntV of integer
+ | StringV of list word8
+ | ErrorV
+ | ListV of list value
+ | FalseV
+ | TrueV
+
+val eval_literal : literal_kind -> value
+let eval_literal l = match l with
+ | TrueLiteral -> TrueV
+ | FalseLiteral -> FalseV
+ | StringLiteral lst -> StringV lst
+ | NumberLiteral i -> IntV i
+end
+
+val eval_statement : global -> map id value -> statement -> global * map id value * seq_mode
+val eval_expression : global -> map id value -> expression -> global * map id value * value
+val step_statement : statement -> global * map id value * seq_mode -> global * map id value * seq_mode
+
+let rec eval_statement g (l:map id value) st = match st with
+ | Block lst ->
+    let (g', l', _) = List.foldr step_statement (g,l,RegularMode) lst in
+    (g', Map.mapi (fun k _ -> Map.findWithDefault k ErrorV l') l, RegularMode)
+ | VariableDeclaration lst expr ->
+    eval_statement g l (Assignment (List.map fst lst) expr)
+ | EmptyVariableDeclaration lst ->
+    let (lnew : map id value) = Map.fromList (List.map (fun x -> (fst x, IntV 0)) lst) in
+    (g, (l union lnew), RegularMode)
+ | Assignment lst expr ->
+    let (g, l, v) = eval_expression g l expr in
+    let v = match v with ListV x -> x | a -> [a] end in
+    let lst2 = List.mapi (fun i x -> (x, match List.index v i with Nothing -> ErrorV | Just x -> x end)) lst in
+    let (lnew : map id value) = Map.fromList (lst2) in
+    (g, (l union lnew), RegularMode)
+ | Break -> (g, l, BreakMode)
+ | Continue -> (g, l, ContinueMode)
+ | ForLoopInit init cond post body ->
+    eval_statement g l (Block (init ++ [ForLoop cond post body]))
+ | ForLoop cond post body ->
+    let (g, l, v) = eval_expression g l cond in
+    if v = FalseV then (g, l, RegularMode) else
+    let (g, l, mode) = eval_statement g l body in
+    if mode = BreakMode then (g, l, RegularMode) else
+    let (g, l, mode) = eval_statement g l post in
+    eval_statement g l (ForLoop cond post body)
+    
+end
+and step_statement st (g, l, mode) =
+  if mode = RegularMode then eval_statement g l st else (g, l, mode)
+
+and eval_expression g (l:map id value) expr = match expr with
+ | x -> (g, l, ErrorV)
+end
 
