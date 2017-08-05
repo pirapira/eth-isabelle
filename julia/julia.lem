@@ -70,6 +70,7 @@ type value =
  | ListV of list value
  | FalseV
  | TrueV
+ | FunctionV of id * list (id * type_name) * list (id * type_name) * list statement
 
 val eval_literal : literal_kind -> value
 let eval_literal l = match l with
@@ -92,6 +93,8 @@ let rec eval_statement g (l:map id value) st = match st with
  | EmptyVariableDeclaration lst ->
     let (lnew : map id value) = Map.fromList (List.map (fun x -> (fst x, IntV 0)) lst) in
     (g, (l union lnew), RegularMode)
+ | FunctionDefinition id params rets st ->
+    (g, Map.insert id (FunctionV id params rets st) l, RegularMode)
  | Assignment lst expr ->
     let (g, l, v) = eval_expression g l expr in
     let v = match v with ListV x -> x | a -> [a] end in
@@ -107,14 +110,26 @@ let rec eval_statement g (l:map id value) st = match st with
     if v = FalseV then (g, l, RegularMode) else
     let (g, l, mode) = eval_statement g l body in
     if mode = BreakMode then (g, l, RegularMode) else
-    let (g, l, mode) = eval_statement g l post in
+    let (g, l, _) = eval_statement g l post in
     eval_statement g l (ForLoop cond post body)
-    
 end
-and step_statement st (g, l, mode) =
-  if mode = RegularMode then eval_statement g l st else (g, l, mode)
+
+and step_statement st (g, l, mode) = if mode = RegularMode then eval_statement g l st else (g, l, mode)
 
 and eval_expression g (l:map id value) expr = match expr with
- | x -> (g, l, ErrorV)
+ | Literal lit _ -> (g, l, eval_literal lit)
+ | Identifier x -> (g, l, Map.findWithDefault x ErrorV l)
+ | FunctionCall id lst ->
+    let (g, l, lst) = List.foldr (fun expr (g, l, lst) -> let (g,l,v) = eval_expression g l expr in (g,l,v::lst)) (g,l,[]) lst in
+    match Map.lookup id l with
+    | Just (FunctionV id params rets st) ->
+       if List.length params <> List.length lst then (g,l,ErrorV) else
+       let param_init = List.zip (List.map fst params) lst in
+       let rets_init = List.map (fun x -> (fst x, IntV 0)) rets in
+       let fctx : map id value = Map.fromList ((id, FunctionV id params rets st) :: param_init ++ rets_init) in
+       let (g, l', _) = eval_statement g (l union fctx) (Block st) in
+       (g, l, ListV (List.map (fun (k,_) -> Map.findWithDefault k ErrorV l') rets))
+    | _ -> (g,l,ErrorV)
+    end
 end
 
