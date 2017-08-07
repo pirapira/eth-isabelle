@@ -80,6 +80,7 @@ let eval_literal l = match l with
  | NumberLiteral i -> IntV i
 end
 
+(*
 val eval_statement : global -> map id value -> statement -> global * map id value * seq_mode
 val eval_expression : global -> map id value -> expression -> global * map id value * value
 val step_statement : statement -> global * map id value * seq_mode -> global * map id value * seq_mode
@@ -132,4 +133,100 @@ and eval_expression g (l:map id value) expr = match expr with
     | _ -> (g,l,ErrorV)
     end
 end
+*)
+
+val eval_statement : global -> map id value -> statement -> nat -> maybe (global * map id value * seq_mode)
+val eval_expression : global -> map id value -> expression -> nat -> maybe (global * map id value * value)
+val step_statement : statement -> maybe (global * map id value * seq_mode) -> nat -> maybe (global * map id value * seq_mode)
+
+let rec eval_statement g (l:map id value) st n =
+ match n with
+ | 0 -> Nothing
+ | n+1 ->
+ match st with
+ | Block lst ->
+    match List.foldr (fun st a -> step_statement st a n) (Just (g,l,RegularMode)) lst with
+     | Just (g', l', _) -> Just (g', Map.mapi (fun k _ -> Map.findWithDefault k ErrorV l') l, RegularMode)
+     | Nothing -> Nothing
+    end
+ | VariableDeclaration lst expr ->
+    eval_statement g l (Assignment (List.map fst lst) expr) n
+ | EmptyVariableDeclaration lst ->
+    let (lnew : map id value) = Map.fromList (List.map (fun x -> (fst x, IntV 0)) lst) in
+    Just (g, (l union lnew), RegularMode)
+ | FunctionDefinition id params rets st ->
+    Just (g, Map.insert id (FunctionV id params rets st) l, RegularMode)
+ | Assignment lst expr ->
+    match eval_expression g l expr n with
+    | Just (g, l, v) ->
+      let v = match v with ListV x -> x | a -> [a] end in
+      let lst2 = List.mapi (fun i x -> (x, match List.index v i with Nothing -> ErrorV | Just x -> x end)) lst in
+      let (lnew : map id value) = Map.fromList (lst2) in
+      Just (g, (l union lnew), RegularMode)
+    | Nothing ->Nothing
+    end
+ | Break -> Just (g, l, BreakMode)
+ | Continue -> Just (g, l, ContinueMode)
+ | ForLoopInit init cond post body ->
+    eval_statement g l (Block (init ++ [ForLoop cond post body])) n
+ | ForLoop cond post body ->
+    match eval_expression g l cond n with
+    | Just (g, l, v) ->
+       if v = FalseV then Just (g, l, RegularMode) else
+       match eval_statement g l body n with
+       | Just (g, l, mode) ->
+          if mode = BreakMode then Just (g, l, RegularMode) else
+          match eval_statement g l post n with
+          | Just (g, l, _) -> eval_statement g l (ForLoop cond post body) n
+          | Nothing -> Nothing
+          end
+       | Nothing -> Nothing
+       end
+    | Nothing -> Nothing
+    end
+end
+end
+
+and step_statement st a n =
+  match a with
+  | Just (g, l, mode) -> if mode = RegularMode then eval_statement g l st n else Just (g, l, mode)
+  | Nothing -> Nothing
+  end
+
+and eval_expression g (l:map id value) expr n =
+ match n with
+ | 0 -> Nothing
+ | n+1 ->
+ match expr with
+ | Literal lit _ -> Just (g, l, eval_literal lit)
+ | Identifier x -> Just (g, l, Map.findWithDefault x ErrorV l)
+ | FunctionCall id lst ->
+    let loop expr a = match a with
+    | Just (g, l, lst) -> 
+       match eval_expression g l expr n with
+       | Just (g,l,v) -> Just (g,l,v::lst)
+       | Nothing -> Nothing
+       end
+    | Nothing -> Nothing
+    end in
+    match List.foldr loop (Just (g,l,[])) lst with
+    | Just (g, l, lst) ->
+     match Map.lookup id l with
+     | Just (FunctionV id params rets st) ->
+       if List.length params <> List.length lst then Nothing else
+       let param_init = List.zip (List.map fst params) lst in
+       let rets_init = List.map (fun x -> (fst x, IntV 0)) rets in
+       let fctx : map id value = Map.fromList ((id, FunctionV id params rets st) :: param_init ++ rets_init) in
+       match eval_statement g (l union fctx) (Block st) n with
+       | Just (g, l', _) -> Just (g, l, ListV (List.map (fun (k,_) -> Map.findWithDefault k ErrorV l') rets))
+       | Nothing -> Nothing
+       end
+     | _ -> Nothing
+     end
+    | Nothing -> Nothing
+    end
+end
+end
+
+
 
