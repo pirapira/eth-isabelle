@@ -1701,7 +1701,8 @@ let check_resources v c s i net =
   match inst_stack_numbers i with
   | (consumed, produced) ->
     (intFromNat (length s) + produced - consumed <= 1024) &&
-    (meter_gas i v c net <= v.vctx_gas)
+    (meter_gas i v c net <= v.vctx_gas) &&
+    (0 <= v.vctx_memory_usage)
   end
 
 
@@ -1898,6 +1899,34 @@ match fuel with
  | fuel_pred + 1 -> program_sem stopper c fuel_pred net (next_state stopper c net pr)
 end
 declare termination_argument program_sem = automatic
+
+
+val program_sem_t: constant_ctx -> network -> instruction_result -> instruction_result
+let rec program_sem_t c net p =
+  match p with
+  | InstructionToEnvironment _ _ _ -> p
+  | InstructionContinue v ->
+     match vctx_next_instruction v c with
+      | Nothing -> InstructionToEnvironment (ContractFail [ShouldNotHappen]) v Nothing
+      | Just i ->
+        if check_resources v c v.vctx_stack i net then
+          (* This if is required to prove that vctx_gas is stictly decreasing on program_sem's recursion *)
+          (if v.vctx_gas <= 0 then
+              instruction_sem v c i net
+          else  program_sem_t c net (instruction_sem v c i net))
+        else
+          InstructionToEnvironment (ContractFail
+              (match inst_stack_numbers i with
+               | (consumed, produced) ->
+                 (if (intFromNat (length v.vctx_stack) + produced - consumed <= 1024) then [] else [TooLongStack])
+                  ++ (if meter_gas i v c net <= v.vctx_gas then [] else [OutOfGas])
+               end
+              ))
+              v Nothing
+     end
+     end
+declare termination_argument program_sem_t = manual
+
 
 (* subsection {* Account's State *} *)
 
