@@ -31,7 +31,7 @@ type type_name =
 type literal_kind =
  | TrueLiteral
  | FalseLiteral
- | StringLiteral of list word8
+ | StringLiteral of integer (* list word8 *)
  | NumberLiteral of integer
 
 type expression =
@@ -41,7 +41,7 @@ type expression =
 
 type statement =
  | Block of list statement
- | FunctionDefinition of id * list (id * type_name) * list (id * type_name) * list statement
+ | FunctionDefinition of id * list (id * type_name) * list (id * type_name) * statement
  | VariableDeclaration of list (id * type_name) * expression
  | EmptyVariableDeclaration of list (id * type_name)
  | Assignment of list id * expression
@@ -63,11 +63,11 @@ type seq_mode =
 
 type value =
  | IntV of integer
- | StringV of list word8
+ | StringV of integer
  | ListV of list value
  | FalseV
  | TrueV
- | FunctionV of id * list (id * type_name) * list (id * type_name) * list statement
+ | FunctionV of id * list (id * type_name) * list (id * type_name) * statement
 
 val eval_literal : literal_kind -> value
 let eval_literal l = match l with
@@ -250,7 +250,7 @@ and eval_expression g (l:map id value) expr n =
        let param_init = List.zip (List.map fst params) lst in
        let rets_init = List.map (fun x -> (fst x, IntV 0)) rets in
        let fctx : map id value = Map.fromList ((id, FunctionV id params rets st) :: param_init ++ rets_init) in
-       match eval_statement g (l union fctx) (Block st) n with
+       match eval_statement g (l union fctx) st n with
        | Just (g, l', _) -> Just (g, l, ListV (List.map (fun (k,_) -> Map.findWithDefault k (IntV 0) l') rets))
        | Nothing -> Nothing
        end
