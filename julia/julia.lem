@@ -66,7 +66,6 @@ type seq_mode =
 type value =
  | IntV of integer
  | StringV of list word8
- | ErrorV
  | ListV of list value
  | FalseV
  | TrueV
@@ -146,7 +145,9 @@ let rec eval_statement g (l:map id value) st n =
  match st with
  | Block lst ->
     match List.foldr (fun st a -> step_statement st a n) (Just (g,l,RegularMode)) lst with
-     | Just (g', l', _) -> Just (g', Map.mapi (fun k _ -> Map.findWithDefault k ErrorV l') l, RegularMode)
+     | Just (g', l', _) ->
+       (* Should we check for error here too? should be impossible *)
+       Just (g', Map.mapi (fun k _ -> Map.findWithDefault k (IntV 0) l') l, RegularMode)
      | Nothing -> Nothing
     end
  | VariableDeclaration lst expr ->
@@ -160,8 +161,8 @@ let rec eval_statement g (l:map id value) st n =
     match eval_expression g l expr n with
     | Just (g, l, v) ->
       let v = match v with ListV x -> x | a -> [a] end in
-      let lst2 = List.mapi (fun i x -> (x, match List.index v i with Nothing -> ErrorV | Just x -> x end)) lst in
-      let (lnew : map id value) = Map.fromList (lst2) in
+      if List.length v <> List.length lst then Nothing else
+      let lnew = Map.fromList (List.zip lst v) in
       Just (g, (l union lnew), RegularMode)
     | Nothing ->Nothing
     end
@@ -199,7 +200,11 @@ and eval_expression g (l:map id value) expr n =
  | n+1 ->
  match expr with
  | Literal lit _ -> Just (g, l, eval_literal lit)
- | Identifier x -> Just (g, l, Map.findWithDefault x ErrorV l)
+ | Identifier x ->
+    match Map.lookup x l with
+    | Just v -> Just (g, l, v)
+    | Nothing -> Nothing
+    end
  | FunctionCall id lst ->
     let loop expr a = match a with
     | Just (g, l, lst) -> 
@@ -218,7 +223,7 @@ and eval_expression g (l:map id value) expr n =
        let rets_init = List.map (fun x -> (fst x, IntV 0)) rets in
        let fctx : map id value = Map.fromList ((id, FunctionV id params rets st) :: param_init ++ rets_init) in
        match eval_statement g (l union fctx) (Block st) n with
-       | Just (g, l', _) -> Just (g, l, ListV (List.map (fun (k,_) -> Map.findWithDefault k ErrorV l') rets))
+       | Just (g, l', _) -> Just (g, l, ListV (List.map (fun (k,_) -> Map.findWithDefault k (IntV 0) l') rets))
        | Nothing -> Nothing
        end
      | _ -> Nothing
@@ -227,6 +232,4 @@ and eval_expression g (l:map id value) expr n =
     end
 end
 end
-
-
 
