@@ -68,7 +68,7 @@ lemma sstore_gas_triple :
            gas_pred (g - Csstore old new) ** continuing)"
   apply (clarsimp simp: triple_def)
   apply(rule_tac x = 1 in exI)
-  apply (clarsimp simp add: program_sem.simps)
+  apply (clarsimp simp add: program_sem.simps next_state_def failed_for_reasons_def)
   apply(case_tac presult ; (solves \<open>(hoare_sep sep: evm_sep simp:   stateelm_means_simps dest: stateelm_dest)\<close>) ?)
   apply (hoare_sep sep: evm_sep 
                    simp: instruction_result_as_set_def  sstore_def
@@ -98,7 +98,7 @@ lemma sload_gas_triple :
            ** program_counter (k + 1) ** storage idx w ** gas_pred (g - Gsload net) **  account_existence c existence ** continuing )"
 apply(clarsimp simp add: triple_def)
   apply(rule_tac x = 1 in exI)
-  apply(clarsimp simp add: program_sem.simps)
+  apply(clarsimp simp add: program_sem.simps next_state_def failed_for_reasons_def)
   apply(case_tac presult;  (solves \<open>(hoare_sep sep: evm_sep simp:  set_diff_eq stateelm_means_simps dest: stateelm_dest)\<close>)?)
   apply clarsimp
   apply(hoare_sep sep: evm_sep 
@@ -117,6 +117,7 @@ apply(clarsimp simp add: triple_def)
   apply(case_tac elm; simp add: hoare_simps split:if_splits)
   apply(rename_tac pair)
   apply(case_tac pair; fastforce)
+apply(fastforce)+
 done
 
 end

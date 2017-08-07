@@ -1,6 +1,6 @@
 theory "ToyExamplesBlocks"
 
-imports "../Hoare/HoareBasicBlocks"
+imports "../Hoare/HoareTripleForBasicBlocks"
 begin
 
 lemmas evm_fun_simps = 
@@ -46,7 +46,6 @@ inst_strengthen_pre[OF inst_misc[OF inst_stop]]
 lemma instantiate_emp:
 "P sd \<Longrightarrow> (P \<and>* emp) sd"
 apply(sep_simp simp: emp_sep)
-apply(assumption)
 done
 
 method sep_imp_solve =

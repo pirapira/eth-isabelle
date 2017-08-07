@@ -21,6 +21,7 @@ lemmas as_set_simps =
   variable_ctx_as_set_def
   contexts_as_set_def
   account_existence_as_set_def
+  instruction_result_as_set_def
 
 lemma continuing_not_context[simp]:
   "ContinuingElm b \<notin> contexts_as_set x32 co_ctx"
@@ -3065,7 +3066,9 @@ code_sep sep_code sep_sep_code sep_code_sep
 lemmas inst_numbers_simps =
 dup_inst_numbers_def storage_inst_numbers.simps stack_inst_numbers.simps
 pc_inst_numbers.simps info_inst_numbers.simps inst_stack_numbers.simps
-arith_inst_numbers.simps misc_inst_numbers.simps
+arith_inst_numbers.simps misc_inst_numbers.simps swap_inst_numbers_def
+memory_inst_numbers.simps log_inst_numbers.simps bits_stack_nums.simps
+sarith_inst_nums.simps
 
 lemmas inst_size_simps =
 inst_size_def inst_code.simps stack_inst_code.simps
@@ -3278,8 +3281,6 @@ gaslimit_elm_c
 code_elm_c
 
 lemmas evm_sep =
-emp_sep
-true_sep
 pure_sep
 continuing_sep
 not_continuing_sep
