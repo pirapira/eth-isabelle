@@ -14,7 +14,8 @@ open import Word8
 
 type id = integer
 
-type builtin_type =
+type type_name =
+ | CustomType of id
  | Boolean
  | S256
  | S128
@@ -26,10 +27,6 @@ type builtin_type =
  | U64
  | U32
  | U8
-
-type type_name =
- | BuiltinType of builtin_type
- | CustomType of id
 
 type literal_kind =
  | TrueLiteral
@@ -53,6 +50,7 @@ type statement =
  | Continue
  | ForLoopInit of list statement * expression * statement * statement
  | ForLoop of expression * statement * statement
+ | Expression of expression
 
 (** Interpreter *)
 
@@ -152,6 +150,11 @@ let rec eval_statement g (l:map id value) st n =
     end
  | VariableDeclaration lst expr ->
     eval_statement g l (Assignment (List.map fst lst) expr) n
+ | Expression expr ->
+    match eval_expression g l expr n with
+    | Just (g, l, _) -> Just (g, l, RegularMode)
+    | Nothing -> Nothing
+    end
  | EmptyVariableDeclaration lst ->
     let (lnew : map id value) = Map.fromList (List.map (fun x -> (fst x, IntV 0)) lst) in
     Just (g, (l union lnew), RegularMode)
