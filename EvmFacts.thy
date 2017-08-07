@@ -93,10 +93,11 @@ lemma thirdComponentOfC_gt_0:
          done
 
 lemma Cmem_lift:
-  "0 \<le> x \<Longrightarrow> x \<le> y \<Longrightarrow> Cmem x \<le> Cmem y"
+  "max 0 x \<le> y \<Longrightarrow> Cmem (max 0 x) \<le> Cmem y"
   apply (simp add: Cmem_def Gmemory_def)
   apply (case_tac "x = y")
-   apply clarsimp
+   apply (clarsimp simp: max_def)
+  apply clarsimp
   apply (drule (1) order_class.le_neq_trans)
   apply simp
   apply (rule add_mono, simp)
@@ -104,15 +105,11 @@ lemma Cmem_lift:
   apply (rule mult_mono ; simp)
   done
 
- lemma max_2:
-"(n::int) \<le> max (max n i) j"
-by(auto simp add: max_def)   
-
 lemma vctx_memory_usage_never_decreases:
-  "vctx_memory_usage v \<le> (new_memory_consumption i(vctx_memory_usage   v) (vctx_stack_default(( 0 :: int)) v) (vctx_stack_default(( 1 :: int)) v) (vctx_stack_default(( 2 :: int)) v) (vctx_stack_default(( 3 :: int)) v)
+  "max 0 (vctx_memory_usage v) \<le> (new_memory_consumption i(max 0 (vctx_memory_usage   v)) (vctx_stack_default(( 0 :: int)) v) (vctx_stack_default(( 1 :: int)) v) (vctx_stack_default(( 2 :: int)) v) (vctx_stack_default(( 3 :: int)) v)
       (vctx_stack_default(( 4 :: int)) v) (vctx_stack_default(( 5 :: int)) v) (vctx_stack_default(( 6 :: int)) v))"
 apply(case_tac i)
-apply(rename_tac x, case_tac x; simp add: new_memory_consumption.simps vctx_stack_default_def M_def max_2 )+
+apply(rename_tac x, case_tac x; simp add: new_memory_consumption.simps vctx_stack_default_def M_def max_def)+
 done
 
 lemma meter_gas_gt_0:
@@ -120,13 +117,13 @@ lemma meter_gas_gt_0:
     inst \<noteq> Misc RETURN \<Longrightarrow>
     inst \<noteq> Misc SUICIDE \<Longrightarrow>
     inst \<notin> range Unknown \<Longrightarrow>
-   0\<le> vctx_memory_usage var \<Longrightarrow>
     inst \<notin>  (if before_homestead net then {Misc DELEGATECALL} else {}) \<Longrightarrow>
 program_content (cctx_program const) (vctx_pc var) = Some inst \<Longrightarrow>
    0 < meter_gas inst var const net"
 
-  using Cmem_lift[OF _ vctx_memory_usage_never_decreases[where i=inst and v=var]]
-  apply (clarsimp simp add: C_def meter_gas_def Cmem_def Gmemory_def)
+  using Cmem_lift[OF
+    vctx_memory_usage_never_decreases[where i=inst and v=var]]
+  apply (clarsimp simp add: C_def meter_gas_def Cmem_def Gmemory_def Let_def)
   apply(case_tac inst)
 apply( simp add: new_memory_consumption.simps vctx_next_instruction_default_def vctx_next_instruction_def;
    fastforce  intro: ordered_comm_monoid_add_class.add_nonneg_pos 
@@ -176,7 +173,6 @@ inst \<notin> {Misc STOP, Misc RETURN, Misc SUICIDE} \<union> range Unknown \<un
 lemma inst_sem_gas_consume:
   "instruction_sem var const inst net = InstructionContinue v \<Longrightarrow>
    inst \<notin> {Misc STOP, Misc RETURN, Misc SUICIDE} \<union> range Unknown \<union> (if before_homestead net then {Misc DELEGATECALL} else {}) \<Longrightarrow>
-   0\<le> vctx_memory_usage var \<Longrightarrow>
   \<not> vctx_gas var \<le> 0 \<Longrightarrow>
   program_content (cctx_program const) (vctx_pc var) = Some inst \<Longrightarrow>
   vctx_gas v < vctx_gas var"
@@ -208,13 +204,13 @@ termination program_sem_t
     apply (case_tac "instruction_sem var const inst net" ; simp)
     apply (clarsimp simp add: check_resources_def prod.case_eq_if )
      apply (frule instruction_sem_continuing)
-     apply (erule (3) inst_sem_gas_consume)
+     apply (erule (2) inst_sem_gas_consume)
   apply (simp add: vctx_next_instruction_def split:option.splits)
     done
 done
     
 lemma program_sem_t_no_gas_not_continuing:
-  "\<lbrakk>vctx_gas var \<le> 0 ; 0\<le> vctx_memory_usage var \<rbrakk> \<Longrightarrow>
+  "\<lbrakk>vctx_gas var \<le> 0 \<rbrakk> \<Longrightarrow>
 \<forall>v. program_sem_t const net (InstructionContinue var) \<noteq> InstructionContinue v"
   apply (clarsimp simp add: check_resources_def prod.case_eq_if  split:option.split)
   apply (drule instruction_sem_continuing)
@@ -272,7 +268,7 @@ lemma program_sem_ItoE :
 (* perhaps rename this to 'program_sem_no_gas_not_continuing' and 
    the above to 'program_sem_t_no_gas_not_continuing' *)    
 lemma program_sem_no_gas_not_continuing' :
-  "\<lbrakk>vctx_gas var \<le> 0 ; 0\<le> vctx_memory_usage var \<rbrakk> \<Longrightarrow>
+  "\<lbrakk>vctx_gas var \<le> 0  \<rbrakk> \<Longrightarrow>
 \<forall>k>0. \<forall>v. program_sem (\<lambda>_. ()) c k net (InstructionContinue var) \<noteq> InstructionContinue v"
   apply clarify
   apply(case_tac k, simp)
@@ -303,29 +299,28 @@ theorem program_sem_t_in_program_sem:
      (\<forall>l<k. \<exists>z. program_sem (\<lambda>_. ()) const l net ir = InstructionContinue z)"
   apply(induct_tac const net ir rule: program_sem_t.induct) 
   apply(case_tac p)
-    apply clarify
-    apply(rename_tac c net p inst) 
-    apply(drule_tac x=inst in meta_spec)
-    apply(case_tac "vctx_next_instruction inst c", simp add: vctx_next_instruction_def split:option.splits)
-    apply(rename_tac nxt_inst) 
-    apply(drule_tac x="nxt_inst" in meta_spec)
-    apply(erule meta_impE, simp)
-    apply(subst program_sem_t.simps)
-  apply(simp only: instruction_result.simps)
-  apply (drule meta_mp, simp)
-  apply simp
-  apply(split if_split)    
-  apply(rule conjI)    
    apply clarify
+   apply(rename_tac c net p inst) 
+   apply(drule_tac x=inst in meta_spec)
+   apply(case_tac "vctx_next_instruction inst c", simp add: vctx_next_instruction_def split:option.splits)
+   apply(rename_tac nxt_inst) 
+   apply(drule_tac x="nxt_inst" in meta_spec)
+   apply(erule meta_impE, simp)
+   apply(subst program_sem_t.simps)
+   apply(simp only: instruction_result.simps)
    apply (drule meta_mp, simp)
+   apply simp
    apply(split if_split)    
-   apply(rule conjI)
+   apply(rule conjI)    
+    apply clarify
+    apply (drule meta_mp, simp)
+    apply(split if_split)
+    apply(rule conjI)
     apply clarify
     apply(rule exI[where x="Suc 0"])    
     apply(simp add: program_sem.simps next_state_def split: if_split)
     apply(drule_tac c=c and net=net in program_sem_no_gas_not_continuing')
-     apply(clarsimp simp add: check_resources_def)
-     apply fastforce
+    apply fastforce
     apply(rule impI, simp)
     apply(erule exE)
     apply(rule_tac x="k + 1" in exI, clarify)

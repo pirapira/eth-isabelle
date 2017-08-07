@@ -1688,8 +1688,9 @@ let C old_memory_consumption new_memory_consumption i s0 s1 s2 s3 recipient_empt
 
 val meter_gas : inst -> variable_ctx -> constant_ctx -> network -> integer
 let meter_gas i v c net =
-  C v.vctx_memory_usage
-   (new_memory_consumption i v.vctx_memory_usage (vctx_stack_default 0 v) (vctx_stack_default 1 v) (vctx_stack_default 2 v) (vctx_stack_default 3 v)
+  let musage = max 0 v.vctx_memory_usage
+  in C musage
+   (new_memory_consumption i musage (vctx_stack_default 0 v) (vctx_stack_default 1 v) (vctx_stack_default 2 v) (vctx_stack_default 3 v)
       (vctx_stack_default 4 v) (vctx_stack_default 5 v) (vctx_stack_default 6 v))
       i
     (vctx_stack_default 0 v) (vctx_stack_default 1 v) (vctx_stack_default 2 v) (vctx_stack_default 3 v)
@@ -1701,8 +1702,7 @@ let check_resources v c s i net =
   match inst_stack_numbers i with
   | (consumed, produced) ->
     (intFromNat (length s) + produced - consumed <= 1024) &&
-    (meter_gas i v c net <= v.vctx_gas) &&
-    (0 <= v.vctx_memory_usage)
+    (meter_gas i v c net <= v.vctx_gas)
   end
 
 
