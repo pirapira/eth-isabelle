@@ -29,7 +29,11 @@ rule read =
   | "for" { FOR }
   | "break" { BREAK }
   | "continue" { CONTINUE }
-  | ":=" { ASSIGN}
+  | "(" { LPAREN }
+  | ")" { RPAREN }
+  | "{" { LBRACE }
+  | "}" { RBRACE }
+  | ":=" { ASSIGN }
   | "," { COMMA }
   | ":" { COLON }
   | "->" { ARROW }

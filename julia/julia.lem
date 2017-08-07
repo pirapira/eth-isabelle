@@ -69,6 +69,11 @@ type value =
  | TrueV
  | FunctionV of id * list (id * type_name) * list (id * type_name) * statement
 
+val initial : map id value
+let initial = Map.empty
+
+
+
 val eval_literal : literal_kind -> value
 let eval_literal l = match l with
  | TrueLiteral -> TrueV

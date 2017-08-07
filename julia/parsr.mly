@@ -76,8 +76,8 @@ block:
   LBRACE st = statement* RBRACE { Block st }
 
 expression:
-  id = IDENT { Identifier id }
 | l = literal { Literal (fst l, snd l) }
 | id = IDENT LPAREN es = separated_list(COMMA, expression) RPAREN { FunctionCall (id, es) }
+| id = IDENT { Identifier id }
 
 
