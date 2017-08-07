@@ -48,7 +48,7 @@ type statement =
  | VariableDeclaration of list (id * type_name) * expression
  | EmptyVariableDeclaration of list (id * type_name)
  | Assignment of list id * expression
- | Switch of expression * list (literal_kind * type_name * list statement) * maybe (list statement)
+ | Switch of expression * list (literal_kind * type_name * statement) * maybe statement
  | Break
  | Continue
  | ForLoopInit of list statement * expression * statement * statement
@@ -185,6 +185,31 @@ let rec eval_statement g (l:map id value) st n =
        end
     | Nothing -> Nothing
     end
+ | Switch expr cases def ->
+    match eval_expression g l expr n with
+    | Just (g, l, v) ->
+      let handle_case (lit, _, st) a = match a with
+       | Just (g, l, Nothing) ->
+          let v2 = eval_literal lit in
+          if v2 <> v then Just (g, l, Nothing) else
+          match eval_statement g l st n with
+          | Nothing -> Nothing
+          | Just (g, l, mode) -> Just (g, l, Just mode)
+          end
+       | a -> a
+      end in
+      match List.foldr handle_case (Just (g, l, Nothing)) cases with
+      | Just (g, l, Just mode) -> Just (g, l, mode)
+      | Just (g, l, Nothing) ->
+        match def with
+        | Nothing -> Just (g, l, RegularMode)
+        | Just st -> eval_statement g l st n
+        end
+      | Nothing -> Nothing
+      end
+    | Nothing -> Nothing
+    end
+   
 end
 end
 
