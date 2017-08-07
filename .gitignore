@@ -1,7 +1,12 @@
 *~
 *#
 *.bak
-julia/*.ml
+julia/julia.ml
+julia/parsr.ml
+julia/parsr.mli
+julia/*.native
+julia/_build
+julia/lem
 lem/*.vo
 lem/*.d
 lem/*.glob

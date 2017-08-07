@@ -8,8 +8,13 @@
 let white = [' ' '\t']+
 let newline = '\r' | '\n' | "\r\n"
 let digit = ['0'-'9']
+let hdigit = ['0'-'9' 'a'-'f' 'A' - 'F']
+let decimal = ['0'-'9']+
+let hexnumber = "0x" ['0'-'9']+
 let id = ['a'-'z' 'A'-'Z' '_'] ['a'-'z' 'A'-'Z' '0'-'9' '_']*
 let comment = "//" (_ # ['\r' '\n'])* newline
+let hexliteral = "hex" ('\"' (hdigit hdigit)* '\"' | '\'' (hdigit hdigit)* '\'')
+let string = '"' ([^'"''\r''\n''\\'] | '\\' _)* '"'
 
 rule read =
   parse
@@ -41,4 +46,10 @@ rule read =
   | "u128" { U128 }
   | "s256" { S256 }
   | "u256" { U256 }
+  | decimal { NUMBER (JuliaUtil.decimal_of_string (lexeme lexbuf)) }
+  | hexnumber { NUMBER (JuliaUtil.hex_of_string (lexeme lexbuf)) }
+  | hexliteral { STRING (JuliaUtil.hexliteral_of_string (lexeme lexbuf)) }
+  | string { STRING (JuliaUtil.literal_of_string (lexeme lexbuf)) }
+  | id  { IDENT (JuliaUtil.string_to_Z (lexeme lexbuf)) }
+  | eof { EOS }
 
