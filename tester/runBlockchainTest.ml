@@ -3,8 +3,16 @@ open Yojson.Basic
 exception SkipTest
 
 let parsed_transaction_into_model_transaction (tr : BlockchainTestParser.transaction) : Block.transaction =
-  { tr_from = failwith "cannot compute tr_from, using the parsed transaction"
-  }
+  Block.(
+    { tr_from = failwith "cannot compute tr_from, using the parsed transaction"
+    ; tr_nonce = tr.BlockchainTestParser.tr_nonce
+    ; tr_to = tr.BlockchainTestParser.transactionTo
+    ; tr_gas_limit = tr.BlockchainTestParser.transactionGasLimit
+    ; tr_gas_price = tr.BlockchainTestParser.transactionGasPrice
+    ; tr_value = tr.BlockchainTestParser.transactionValue
+    ; tr_data = tr.BlockchainTestParser.transactionData
+    }
+  )
 
 let test_one_case (path : string) (case_name, test) =
   let strip_singleton_list lst =
