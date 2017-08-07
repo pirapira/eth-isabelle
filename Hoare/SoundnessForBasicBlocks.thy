@@ -29,7 +29,7 @@ C_def thirdComponentOfC_def
 instruction_sem_def
 
 (* Soundness proof for instruction rules *)
-(*
+
 lemma inst_strengthen_pre_sem:
   assumes  "triple_inst_sem P c Q"
   and      "(\<forall> s. R s \<longrightarrow> P s)"
@@ -373,13 +373,12 @@ apply(clarsimp)
 apply(simp add: rev_nth)
 apply(arith)
 done
-*)
+
 lemma triple_inst_soundness:
 notes
   if_split[split del]
 shows
   "triple_inst p i q \<Longrightarrow> triple_inst_sem p i q"
-sorry
   apply(induction rule:triple_inst.induct)
       apply(erule triple_inst_arith.cases; clarsimp)
           apply(simp add: inst_arith_2_1_low_sound)
@@ -471,104 +470,38 @@ lemma triple_seq_soundness:
  apply(simp add: triple_seq_sem_def pure_sep)
 done
 
-(* Re-define program_sem_t and prove the new one equivalent to the original one *)
-(* It makes some proofs easier *)
-
-(*val program_sem_t_alt: constant_ctx -> network -> instruction_result -> instruction_result*)
-function (sequential,domintros)  program_sem_t_alt  :: " constant_ctx \<Rightarrow> network \<Rightarrow> instruction_result \<Rightarrow> instruction_result "  where
-"program_sem_t_alt c net  (InstructionToEnvironment x y z) = (InstructionToEnvironment x y z)"
-|" program_sem_t_alt c net (InstructionContinue v) =
-     (case  vctx_next_instruction v c of
-        None => InstructionToEnvironment (ContractFail [ShouldNotHappen]) v None
-      | Some i =>
-        if check_resources v c(vctx_stack   v) i net then
-          (* This if is required to prove that vctx_gas is stictly decreasing on program_sem's recursion *)
-          (if(vctx_gas   v) \<le>( 0 :: int) then
-              instruction_sem v c i net
-          else  program_sem_t_alt c net (instruction_sem v c i net))
-        else
-          InstructionToEnvironment (ContractFail
-              ((case  inst_stack_numbers i of
-                 (consumed, produced) =>
-                 (if (((int (List.length(vctx_stack   v)) + produced) - consumed) \<le>( 1024 :: int)) then [] else [TooLongStack])
-                  @ (if meter_gas i v c net \<le>(vctx_gas   v) then [] else [OutOfGas])
-               )
-              ))
-              v None
-     )"
-by pat_completeness auto
-
-termination program_sem_t_alt
-  apply (relation "measure (\<lambda>(c,net,ir). nat (case ir of InstructionContinue v \<Rightarrow>  vctx_gas v | _ \<Rightarrow> 0))")
-   apply (simp)
-  apply clarsimp
-  subgoal for const net var inst
-    apply (case_tac "instruction_sem var const inst net" ; simp)
-    apply (clarsimp simp add: check_resources_def prod.case_eq_if )
-     apply (frule instruction_sem_continuing)
-     apply (erule (3) inst_sem_gas_consume)
-  apply (simp add: vctx_next_instruction_def split:option.splits)
-    done
-done
-declare program_sem_t_alt.simps[simp del]
-
-lemma program_sem_t_alt_eq_continue:
-"program_sem_t cctx net (InstructionContinue x) = program_sem_t_alt cctx net (InstructionContinue x)"
-thm program_sem_t.induct[where P="\<lambda>x y z. program_sem_t x y z = program_sem_t_alt x y z"]
- apply(induction
- rule: program_sem_t.induct[where P="\<lambda>x y z. program_sem_t x y z = program_sem_t_alt x y z"] )
- apply(case_tac p; clarsimp)
-   apply(simp (no_asm) add:program_sem_t_alt.simps program_sem_t.simps)
-   apply(simp split:option.splits)
-  apply(simp add:program_sem_t_alt.simps program_sem_t.simps)+
-done
-
-lemma program_sem_t_alt_eq:
-"program_sem_t_alt cctx net pr = program_sem_t cctx net pr"
- apply(case_tac pr)
-   apply(simp add: program_sem_t_alt_eq_continue)
-  apply(simp add: program_sem_t.simps program_sem_t_alt.simps)+
-done
-
-(* program_sem_t_alt never returns InstructionContinue  *)
-
-lemma program_sem_no_gas_not_continuing_1:
-  "\<lbrakk>vctx_gas var \<le> 0 ; 0\<le> vctx_memory_usage var \<rbrakk> \<Longrightarrow>
-\<forall>v. program_sem_t_alt const net (InstructionContinue var) \<noteq> InstructionContinue v"
- by(simp add: program_sem_t_alt_eq program_sem_no_gas_not_continuing)
-
 (* How to compose program_sem and program_sem_t_alt *)
 
-lemma program_sem_t_alt_exec_continue_1:
-" program_sem_t_alt co_ctx net
+lemma program_sem_t_exec_continue_1:
+" program_sem_t co_ctx net
    (program_sem stopper co_ctx (Suc 0) net presult) =
-  program_sem_t_alt co_ctx net presult"
+  program_sem_t co_ctx net presult"
  apply(case_tac presult)
-   apply(simp add: program_sem.simps program_sem_t_alt.simps next_state_def)
-   apply(insert program_sem_no_gas_not_continuing_1)[1]
+   apply(simp add: program_sem.simps next_state_def)
+   apply(insert program_sem_no_gas_not_continuing)[1]
    apply(drule_tac x=x1 and y=co_ctx in meta_spec2)
    apply(drule_tac x=net in meta_spec)
    apply(simp split: option.splits)
    apply (rule conjI)
-    apply (simp add: program_sem_t_alt.simps)
+    apply (simp add: program_sem_t.simps)
    apply clarsimp
-   apply (simp add: program_sem_t_alt.simps)
+   apply (simp add: program_sem_t.simps)
    apply(clarsimp)
    apply(simp add: check_resources_def)
    apply(case_tac "inst_stack_numbers x2"; clarsimp)
    apply(case_tac "instruction_sem x1 co_ctx x2 net")
      apply(drule_tac x=x1a in spec; simp)
-    apply (simp add: program_sem_t_alt.simps)+
-  apply (simp add: program_sem_t_alt.simps program_sem.simps next_state_def)
+    apply (simp)+
+  apply (simp add: program_sem.simps next_state_def)
 done
 
-lemma program_sem_t_alt_exec_continue:
-"program_sem_t_alt co_ctx net (program_sem stopper co_ctx k net presult) =
-       program_sem_t_alt co_ctx net presult"
+lemma program_sem_t_exec_continue:
+"program_sem_t co_ctx net (program_sem stopper co_ctx k net presult) =
+       program_sem_t co_ctx net presult"
  apply(induction k arbitrary: presult)
   apply(simp add: program_sem.simps next_state_def)
  apply(drule_tac x="program_sem stopper co_ctx 1 net presult" in meta_spec)
- apply(simp add:program_sem_t_alt_exec_continue_1 execution_continue)
+ apply(simp add:program_sem_t_exec_continue_1 execution_continue)
 done
 
 (* Define the semantic of triple_blocks using program_sem_t and prove it sound *)
@@ -580,7 +513,7 @@ definition triple_blocks_sem_t :: "basic_blocks \<Rightarrow> pred \<Rightarrow>
         blocks_list c (v_ind v) = Some (snd v) \<longrightarrow>
        (pre ** code (blocks_insts c) ** rest) (instruction_result_as_set co_ctx presult) \<longrightarrow>
        ((post ** code (blocks_insts c) ** rest) (instruction_result_as_set co_ctx
-            (program_sem_t_alt co_ctx net presult))) "
+            (program_sem_t co_ctx net presult))) "
 
 (* Lemmas to group code elements *)
 lemma block_in_insts_:
@@ -739,7 +672,7 @@ lemma blocks_next_sem_t:
  apply(sep_select_asm 3, sep_select_asm 3, simp)
  apply(drule_tac x = "net" in spec)
  apply (erule_tac P="(post \<and>* code (blocks_insts blocks) \<and>* rest)" in back_subst)
- apply(subst program_sem_t_alt_exec_continue )
+ apply(subst program_sem_t_exec_continue )
  apply(simp)
 done
 
@@ -1269,7 +1202,7 @@ lemma blocks_jump_sem_t:
          m=m and restb=rest and rest=resta and bytecode=bytecode and co_ctx=co_ctx
          in jump_sem; simp add: sep_lc)
    apply(simp add: sep_lc)
-  apply(simp add: program_sem_t_alt_exec_continue)
+  apply(simp add: program_sem_t_exec_continue)
  apply(cut_tac m="n + inst_size_list insts" and n=n
 			 and post=" (gas_pred g \<and>* memory_usage m \<and>* stack_height (Suc h) \<and>*
          stack h (word_of_int dest) \<and>* \<langle> h \<le> 1023 \<and> Gmid \<le> g \<and> 0 \<le> m \<rangle> \<and>* continuing \<and>* rest)"
@@ -1325,7 +1258,7 @@ lemma blocks_jump_sem_t:
 	apply(sep_select 6, simp)
  apply(simp add: execution_continue)
  apply(sep_cancel)+
-apply(simp add: program_sem_t_alt_exec_continue) 
+apply(simp add: program_sem_t_exec_continue) 
 done
 
 (* JUMPI case *)
@@ -1594,7 +1527,7 @@ lemma blocks_jumpi_sem_t:
          in jumpi_sem_zero; simp add: sep_lc)
     apply(simp add: sep_lc)
    apply(drule_tac x=net in spec)
-   apply(simp add: program_sem_t_alt_exec_continue)
+   apply(simp add: program_sem_t_exec_continue)
   apply(clarsimp)
   apply(drule_tac x=co_ctx in spec; drule_tac x="(program_sem (\<lambda>x. ()) co_ctx (Suc 0) net presult)" in spec)
   apply(drule_tac x=resta in spec)
@@ -1616,7 +1549,7 @@ lemma blocks_jumpi_sem_t:
          in jumpi_sem_non_zero; simp add: sep_lc)
    apply(simp add: sep_lc)
   apply(drule_tac x=net in spec)
-  apply(simp add: program_sem_t_alt_exec_continue)
+  apply(simp add: program_sem_t_exec_continue)
  apply(cut_tac m="n + inst_size_list insts" and n=n
 			 and post=" (continuing \<and>*
          gas_pred g \<and>*
@@ -1671,7 +1604,7 @@ lemma blocks_jumpi_sem_t:
 		apply(simp add: sep_lc)
 	 apply(simp add: execution_continue)
    apply(drule_tac x = "net" in spec)
-   apply(simp add: program_sem_t_alt_exec_continue)
+   apply(simp add: program_sem_t_exec_continue)
   apply(sep_simp simp:program_counter_sep)
  apply(drule_tac x = "co_ctx" in spec)
  apply(drule_tac x = "(program_sem stopper co_ctx (Suc (length insts)) net presult)" in spec)
@@ -1686,7 +1619,7 @@ lemma blocks_jumpi_sem_t:
 	apply(simp add: execution_continue)
  apply(drule_tac x = "net" in spec)
  apply (erule_tac P="post \<and>* code (blocks_insts (build_blocks bytecode)) \<and>* resta" in back_subst)
- apply(subst program_sem_t_alt_exec_continue; simp)
+ apply(subst program_sem_t_exec_continue; simp)
 done
 
 (* NO case *)
@@ -1723,13 +1656,13 @@ done
 lemma execution_stop:
 "\<forall>v. program_sem stopper co_ctx k net presult \<noteq>
 		InstructionContinue v \<Longrightarrow>
-program_sem_t_alt co_ctx net presult = program_sem stopper co_ctx k net presult"
+program_sem_t co_ctx net presult = program_sem stopper co_ctx k net presult"
  apply(case_tac "program_sem stopper co_ctx k net presult")
    apply(fastforce)
-  apply(insert program_sem_t_alt_exec_continue[where stopper=stopper and co_ctx=co_ctx and k=k and net=net and presult=presult])
-  apply(drule sym[where t="program_sem_t_alt co_ctx net presult"])
-  apply(clarsimp simp add: program_sem_t_alt.simps)
- apply(insert program_sem_t_alt_exec_continue[where stopper=stopper and co_ctx=co_ctx and k=k and net=net and presult=presult])
+  apply(insert program_sem_t_exec_continue[where stopper=stopper and co_ctx=co_ctx and k=k and net=net and presult=presult])
+  apply(drule sym[where t="program_sem_t co_ctx net presult"])
+  apply(clarsimp simp add: program_sem_t.simps)
+ apply(insert program_sem_t_exec_continue[where stopper=stopper and co_ctx=co_ctx and k=k and net=net and presult=presult])
 done
 
 lemma pc_advance_continue:
