@@ -33,6 +33,14 @@ let rec value_to_string = function
  | StringV i -> "'" ^ Z.to_string i ^ "'"
  | ListV lst -> "[" ^ String.concat "," (List.map value_to_string lst) ^ "]"
  | FunctionV (id, _, _, _) -> "function " ^ Z.to_string id
+ | BuiltinV _ -> "builtin"
+
+let builtins = [
+  "addu256", AddU256
+]
+
+let init =
+  List.fold_left (fun acc (k,v) -> Pmap.add (JuliaUtil.string_to_Z k) (BuiltinV v) acc) Julia.initial builtins
 
 let print_state l =
   Pmap.iter (fun k v -> prerr_endline (Z.to_string k ^ " -> " ^ value_to_string v)) l 
@@ -50,7 +58,7 @@ let main () =
   let lexbuf = Lexing.from_channel (open_in Sys.argv.(1)) in
   let lst = parse_with_error lexbuf in
   let _ = Printf.printf "Finished parsing.\n" in
-  do_calc Julia.initial lst
+  do_calc init lst
 
 let _ = main ()
 

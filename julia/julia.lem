@@ -61,6 +61,35 @@ type seq_mode =
  | BreakMode
  | ContinueMode
 
+type builtin =
+ | Convert of type_name * type_name
+ | AddU256
+
+val two8 : integer
+val two32 : integer
+val two64 : integer
+val two128 : integer
+val two256 : integer
+let two8 = 256
+let two32 = 2**32
+let two64 = 2**64
+let two128 = 2**128
+let two256 = 2**256
+
+let typesize t = match t with
+| U8 -> two8
+| S8 -> two8
+| U32 -> two32
+| S32 -> two32
+| U64 -> two64
+| S64 -> two64
+| U128 -> two128
+| S128 -> two128
+| U256 -> two256
+| S256 -> two256
+| _ -> 2
+end
+
 type value =
  | IntV of integer
  | StringV of integer
@@ -68,11 +97,24 @@ type value =
  | FalseV
  | TrueV
  | FunctionV of id * list (id * type_name) * list (id * type_name) * statement
+ | BuiltinV of builtin
+
+(* Have another set of builtin that changes the global state *)
+
+
+
+val eval_builtin : builtin -> list value -> list value
+let eval_builtin b lst = match (b, lst) with
+ | (AddU256, [IntV a; IntV b]) -> [IntV ((a+b) mod two256)]
+ | (Convert _ Boolean, [IntV x]) -> if x = 0 then [FalseV] else [TrueV]
+ | (Convert Boolean _, [FalseV]) -> [IntV 0]
+ | (Convert Boolean _, [TrueV]) -> [IntV 1]
+ | (Convert _ t, [IntV a]) -> [IntV (a mod typesize t)]
+ | _ -> []
+end
 
 val initial : map id value
 let initial = Map.empty
-
-
 
 val eval_literal : literal_kind -> value
 let eval_literal l = match l with
@@ -250,6 +292,7 @@ and eval_expression g (l:map id value) expr n =
     match List.foldr loop (Just (g,l,[])) lst with
     | Just (g, l, lst) ->
      match Map.lookup id l with
+     | Just (BuiltinV name) -> Just (g, l, ListV (eval_builtin name lst))
      | Just (FunctionV id params rets st) ->
        if List.length params <> List.length lst then Nothing else
        let param_init = List.zip (List.map fst params) lst in
