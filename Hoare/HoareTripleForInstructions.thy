@@ -3018,6 +3018,7 @@ block_number_pred_sep sep_block_number_pred_sep
 sep_log_number_sep sep_logged
 storage_sep sep_storage
 code_sep sep_code sep_sep_code sep_code_sep
+sent_data_sep
 
 lemmas inst_numbers_simps =
 dup_inst_numbers_def storage_inst_numbers.simps stack_inst_numbers.simps
@@ -3255,6 +3256,7 @@ stack_sep
 storage_sep
 memory_range_sep
 code_sep
+sent_data_sep
 
 lemmas constant_diff_simps =
   constant_diff_gas

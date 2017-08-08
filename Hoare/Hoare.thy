@@ -577,6 +577,13 @@ lemma sep_memory_usage_sep:
    (MemoryUsageElm u \<in> s \<and> (a ** rest) (s - {MemoryUsageElm u}))"
 	by (sep_simp simp:  memory_usage_sep)
 
+definition sent_data :: "byte list \<Rightarrow> state_element set \<Rightarrow> bool" where
+"sent_data d s = (s = {SentDataElm d})"
+
+lemma sent_data_sep:
+  "(sent_data d ** rest) s =
+   (SentDataElm d \<in> s \<and> rest (s - {SentDataElm d}))"
+by (solve_sep_iff simp: sent_data_def)
 
 lemma stackHeightElmEquiv: "StackHeightElm h \<in> contexts_as_set v c =
   (length (vctx_stack v) = h)
