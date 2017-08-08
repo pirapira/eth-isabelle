@@ -12,7 +12,6 @@ lemmas as_set_simps =
   log_as_set_def
   balance_as_set_def
   next_state_def
-  data_sent_as_set_def
   contract_action_as_set_def
   stack_as_set_def
   ext_program_as_set_def
@@ -219,12 +218,8 @@ lemma sent_value_means:
 
 lemma sent_data_means:
 "SentDataElm p \<in> variable_ctx_as_set x1 = 
- (vctx_data_sent x1 ! (fst p) = (snd p) \<and> (fst p) < (length (vctx_data_sent x1)))"
+ (p = vctx_data_sent x1)"
   by (case_tac p; auto simp: as_set_simps)
-
-lemma sent_data_length_means:
-  "SentDataLengthElm x15 \<in> variable_ctx_as_set x1 = (x15 = length (vctx_data_sent x1))"
-  by (auto simp: as_set_simps)
 
 lemma block_number_elm_c_means :
 "BlockNumberElm x22 \<in> contexts_as_set x1 co_ctx =
@@ -241,7 +236,6 @@ lemma stack_as_set_cons_means:
    x = StackElm (length lst, w) \<or>
    x \<in> stack_as_set lst - {StackHeightElm (length lst)})"
  by (auto simp add: as_set_simps rev_nth_simps)
-
 
 lemma ext_program_size_elm_means :
    "ExtProgramSizeElm ab \<in> variable_ctx_as_set v =
@@ -324,7 +318,6 @@ lemmas stateelm_basic_means_simps =
   origin_element_means 
   sent_value_means
   sent_data_means
-  sent_data_length_means
   caller_elm_means
   block_number_elm_c_means
   balance_elm_means
@@ -641,20 +634,9 @@ lemma advance_keeps_sent_value_elm:
    (SentValueElm x14 \<in> contexts_as_set x1 co_ctx)"
  by (auto simp add: as_set_simps vctx_advance_pc_def)
 
-lemma sent_data_length_not_constant:
-  "SentDataLengthElm x15 \<notin> constant_ctx_as_set c"
- by (auto simp add: as_set_simps vctx_advance_pc_def)
-
 lemma data_sent_advance_pc:
   "vctx_data_sent (vctx_advance_pc co_ctx x1) = vctx_data_sent x1"
  by (auto simp add: vctx_advance_pc_def)
-
-
-lemma advance_keeps_sent_data_length_elm:
-  "SentDataLengthElm x15 \<in> contexts_as_set (vctx_advance_pc co_ctx x1) co_ctx =
-   (SentDataLengthElm x15 \<in> contexts_as_set x1 co_ctx)"
-   by (auto simp add: as_set_simps vctx_advance_pc_def)
-
 
 lemma advance_keeps_sent_data_elm :
   "SentDataElm ab \<in> contexts_as_set (vctx_advance_pc co_ctx x1) co_ctx =
@@ -913,10 +895,6 @@ lemma sent_value_not_stack :
  "SentValueElm x14 \<notin> stack_as_set lst"
 by (auto dest: stack_all)
 
-lemma sent_data_length_not_stack :
-  "SentDataLengthElm x15 \<notin> stack_as_set lst"
-by (auto dest: stack_all)
-
 lemma ext_program_not_stack:
   "ExtProgramElm a \<notin> stack_as_set lst"
 by (auto dest: stack_all)
@@ -1038,7 +1016,6 @@ lemmas advance_pc_simps =
   advance_keeps_memory_usage_elm
   advance_keeps_origin_elm
   advance_keeps_sent_data_elm
-  advance_keeps_sent_data_length_elm
   advance_keeps_sent_value_elm
   advance_keeps_storage_elm
   advance_keeps_this_account_elm
@@ -1218,11 +1195,6 @@ lemma sent_value_c_means :
   apply(auto simp add: contexts_as_set_def stateelm_basic_means_simps sent_value_not_constant)
 done
 
-lemma sent_data_length_c_means:
-  "SentDataLengthElm x15 \<in> contexts_as_set x1 co_ctx =
-  (length (vctx_data_sent x1) = x15)"
-  by(auto simp add: contexts_as_set_def  stateelm_basic_means_simps  constant_ctx_as_set_def program_as_set_def)
-
 lemma sent_data_not_constant:
   "SentDataElm ab \<notin> constant_ctx_as_set co_ctx"
 apply(simp add: constant_ctx_as_set_def program_as_set_def)
@@ -1230,7 +1202,7 @@ done
 
 lemma sent_data_elm_c_means :
   "SentDataElm ab \<in> contexts_as_set x1 co_ctx =
-   (fst ab < length (vctx_data_sent x1) \<and> (vctx_data_sent x1) ! (fst ab) = snd ab)"
+   (ab = vctx_data_sent x1)"
 by (auto simp add: contexts_as_set_def  sent_data_not_constant stateelm_basic_means_simps )
    
 lemmas not_constant_simps =
@@ -1878,11 +1850,6 @@ lemma sent_value_not_memory_range  :
 by (auto dest: memory_range_elms_all)
 
 
-lemma sent_data_length_not_memory_range  :
-  "SentDataLengthElm x5 \<notin> memory_range_elms in_begin input"
-by (auto dest: memory_range_elms_all)
-
-
 lemma memory_usage_not_memory_range:
  "MemoryUsageElm x  \<notin> memory_range_elms in_begin  input"
  by (auto dest: memory_range_elms_all)
@@ -1905,7 +1872,6 @@ lemmas not_memory_range_simps =
   caller_not_memory_range 
   origin_not_memory_range 
   sent_value_not_memory_range   
-  sent_data_length_not_memory_range   
   memory_usage_not_memory_range 
 
 
@@ -2177,10 +2143,6 @@ lemma origin_not_topmost :
 
 lemma sent_value_not_topmost :
   "SentValueElm x \<notin> stack_topmost_elms len lst"
- by (auto dest: topmost_all)
-
-lemma sent_data_length_not_topmost :
-    "SentDataLengthElm x \<notin> stack_topmost_elms len lst"
  by (auto dest: topmost_all)
 
 lemma sent_data_not_topmost:
@@ -2695,12 +2657,6 @@ lemma memory_range_in_origin  :
 lemma memory_range_in_pc  :
   "memory_range_elms in_begin input
      \<subseteq> insert (PcElm c) X =
-   (memory_range_elms in_begin input \<subseteq> X)"
- by  (auto simp: as_set_simps dest: memory_range_elms_all)
-
-lemma memory_range_in_sd  :
-  "memory_range_elms in_begin input
-     \<subseteq> insert (SentDataLengthElm c) X =
    (memory_range_elms in_begin input \<subseteq> X)"
  by  (auto simp: as_set_simps dest: memory_range_elms_all)
 
@@ -3225,7 +3181,6 @@ difficulty_elm_means
 gaslimit_elm_means
 gasprice_elm_means
 log_num_in_v_means
-sent_data_length_means
 stack_height_element_means
 timestamp_elm_means
 caller_elm_means_c
@@ -3237,7 +3192,6 @@ coinbase_c_means
 difficulty_c_means
 gasprice_c_means
 log_num_elm_means
-sent_data_length_c_means
 timestamp_c_means
 gas_elm_i_means
 pc_elm_means
@@ -3310,7 +3264,6 @@ lemmas constant_diff_simps =
 
 bundle hoare_inst_bundle =
 continuing_not_context[simp]
-data_sent_as_set_def[simp]
 caller_elm_means[simp]
 advance_pc_advance[simp]
 advance_pc_no_gas_change[simp]
@@ -3332,7 +3285,6 @@ code_element_means[simp]
 origin_element_means[simp]
 sent_value_means[simp]
 sent_data_means[simp]
-sent_data_length_means[simp]
 inst_size_nonzero[simp]
 advance_pc_different[simp]
 stack_elm_not_program[simp]
@@ -3391,9 +3343,7 @@ advance_keeps_this_account_elm[simp]
 advance_keeps_balance_elm[simp]
 advance_keeps_origin_elm[simp]
 advance_keeps_sent_value_elm[simp]
-sent_data_length_not_constant[simp]
 data_sent_advance_pc[simp]
-advance_keeps_sent_data_length_elm[simp]
 advance_keeps_sent_data_elm[simp]
 ext_program_size_not_constant[simp]
 ext_program_size_elm_means[simp]
@@ -3452,7 +3402,6 @@ gas_elm_i_means[simp]
 continuing_continuing[simp]
 origin_not_stack[simp]
 sent_value_not_stack[simp]
-sent_data_length_not_stack[simp]
 ext_program_not_stack[simp]
 sent_data_not_stack[simp]
 contract_action_elm_not_stack[simp]
@@ -3490,7 +3439,6 @@ origin_not_constant[simp]
 orogin_elm_c_means[simp]
 sent_value_not_constant[simp]
 sent_value_c_means[simp]
-sent_data_length_c_means[simp]
 sent_data_not_constant[simp]
 sent_data_elm_c_means[simp]
 short_rev_append[simp]
@@ -3590,7 +3538,6 @@ log_not_topmost[simp]
 caller_not_topmost[simp]
 origin_not_topmost[simp]
 sent_value_not_topmost[simp]
-sent_data_length_not_topmost[simp]
 sent_data_not_topmost[simp]
 ext_program_size_not_topmost[simp]
 code_elm_c[simp]
@@ -3629,7 +3576,6 @@ log_not_memory_range[simp]
 caller_not_memory_range[simp]
 origin_not_memory_range[simp]
 sent_value_not_memory_range[simp]
-sent_data_length_not_memory_range[simp]
 memory_range_elms_in_insert_continuing[simp]
 memory_range_elms_in_insert_contract_action[simp]
 memory_range_elms_in_insert_gas[simp]
@@ -3673,7 +3619,6 @@ memory_range_in_caller[simp]
 memory_range_in_sent_value[simp]
 memory_range_in_origin[simp]
 memory_range_in_pc[simp]
-memory_range_in_sd[simp]
 memory_range_in_coinbase[simp]
 vset_update_balance[simp]
 memory_range_elms_update_balance[simp]

@@ -42,8 +42,7 @@ datatype state_element =
   | CallerElm "address"
   | OriginElm "address"
   | SentValueElm "w256"
-  | SentDataLengthElm "nat" (* considering making it int *)
-  | SentDataElm "nat * byte" (* position, content.  Considering making position an int *)
+  | SentDataElm "byte list"
   | ExtProgramSizeElm "address * int" (* address, size.  Considering making size an int *)
   | ExtProgramElm "address * nat * byte" (* address, position, byte.  Considering making position an int *)
   | ContractActionElm "contract_action" (* None indicates continued execution *)
@@ -91,11 +90,6 @@ definition stack_as_set :: "w256 list \<Rightarrow> state_element set"
     "stack_as_set s == { StackHeightElm (length s) } \<union>
                        { StackElm (idx, v) | idx v. idx < length s \<and> (rev s) ! idx = v }"
 
-definition data_sent_as_set :: "byte list \<Rightarrow> state_element set"
-  where
-    "data_sent_as_set lst == { SentDataLengthElm (length lst) } \<union>
-                             { SentDataElm (idx, v) | idx v. idx < length lst \<and> lst ! idx = v }"
-
 definition ext_program_as_set :: "(address \<Rightarrow> program) \<Rightarrow> state_element set"
   where
     "ext_program_as_set ext ==
@@ -130,7 +124,6 @@ definition variable_ctx_as_set :: "variable_ctx \<Rightarrow> state_element set"
     \<union> balance_as_set (vctx_balance v)
     \<union> log_as_set (vctx_logs v)
     \<union> block_info_as_set (vctx_block v)
-    \<union> data_sent_as_set (vctx_data_sent v)
     \<union> ext_program_as_set (vctx_ext_program v)
     \<union> account_existence_as_set (vctx_account_existence v)
     \<union> { MemoryUsageElm (vctx_memory_usage v)
@@ -140,7 +133,7 @@ definition variable_ctx_as_set :: "variable_ctx \<Rightarrow> state_element set"
       , GaspriceElm (vctx_gasprice v)
       , GasElm (vctx_gas v)
       , PcElm (vctx_pc v)
-      , SentDataLengthElm (length (vctx_data_sent v))
+      , SentDataElm (vctx_data_sent v)
       }"
 
 definition contexts_as_set :: "variable_ctx \<Rightarrow> constant_ctx \<Rightarrow> state_element set"
@@ -409,7 +402,7 @@ by (clarsimp simp add: sep_basic_simps stack_def)
 
 lemmas context_rw = contexts_as_set_def variable_ctx_as_set_def constant_ctx_as_set_def
       stack_as_set_def memory_as_set_def
-      balance_as_set_def storage_as_set_def log_as_set_def program_as_set_def data_sent_as_set_def
+      balance_as_set_def storage_as_set_def log_as_set_def program_as_set_def
       ext_program_as_set_def account_existence_as_set_def
 
 lemma stack_sound1 :
