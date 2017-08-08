@@ -448,6 +448,11 @@ inductive triple_inst :: "pred \<Rightarrow> pos_inst \<Rightarrow> pred \<Right
       (program_counter (k + 1) \<and>* gas_pred (g - Gverylow) \<and>*
        stack_height (Suc h) \<and>* stack (h - (unat n) - 1) w \<and>* stack h w \<and>*
        memory_usage m \<and>* continuing \<and>* rest )"
+| inst_unknown :
+    "triple_inst
+      (program_counter k \<and>* rest)
+      (k, Unknown i)
+      (program_counter k \<and>* action (ContractFail [ShouldNotHappen]) \<and>* rest)"
 | inst_strengthen_pre:
     "triple_inst p i q \<Longrightarrow> (\<And>s. r s \<Longrightarrow> p s) \<Longrightarrow> triple_inst r i q"
 | inst_false_pre:
@@ -558,5 +563,20 @@ lemma blocks_jump_uint :
       (uint dest, bi, ti) post\<rbrakk> \<Longrightarrow>
    triple_blocks blocks pre (n, insts, Jump) post"
 by(rule blocks_jump; simp)
+
+lemma inst_return_memory :
+    "triple_inst_misc
+     (\<langle> h \<le> 1022 \<and> m \<ge> 0 \<and> length (word_rsplit lst::byte list) = unat v \<and> (Cmem (M m u v) - Cmem m) \<le> g \<rangle> \<and>*
+      continuing \<and>* memory_usage m \<and>* memory u lst \<and>*
+      program_counter n \<and>* stack_height (Suc (Suc h)) \<and>* gas_pred g \<and>*
+      stack (Suc h) u \<and>* stack h v \<and>* rest)
+     (n, Misc RETURN)
+     (stack_height (Suc (Suc h)) \<and>* not_continuing \<and>* memory_usage (M m u v) \<and>*
+      action (ContractReturn (word_rsplit lst)) \<and>* gas_pred (g - (Cmem (M m u v) - Cmem m)) \<and>*
+      stack (Suc h) u \<and>* stack h v \<and>* memory u lst \<and>*
+      program_counter n \<and>* rest)"
+apply(simp add: memory_def)
+apply(rule inst_return)
+done
 
 end
