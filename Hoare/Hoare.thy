@@ -585,6 +585,14 @@ lemma sent_data_sep:
    (SentDataElm d \<in> s \<and> rest (s - {SentDataElm d}))"
 by (solve_sep_iff simp: sent_data_def)
 
+definition sent_value :: "256 word \<Rightarrow> state_element set \<Rightarrow> bool" where
+"sent_value v s = (s = {SentValueElm v})"
+
+lemma sent_value_sep:
+  "(sent_value v ** rest) s =
+   (SentValueElm v \<in> s \<and> rest (s - {SentValueElm v}))"
+by (solve_sep_iff simp: sent_value_def)
+
 lemma stackHeightElmEquiv: "StackHeightElm h \<in> contexts_as_set v c =
   (length (vctx_stack v) = h)
   "
