@@ -31,7 +31,7 @@ type transaction =
   ; transactionNonce : Big_int.big_int
   ; transactionR : Big_int.big_int
   ; transactionS : Big_int.big_int
-  ; transactionTo : Big_int.big_int
+  ; transactionTo : Big_int.big_int option
   ; transactionV : Big_int.big_int
   ; transactionValue : Big_int.big_int
   }

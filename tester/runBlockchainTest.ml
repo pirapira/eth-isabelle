@@ -5,12 +5,12 @@ exception SkipTest
 let parsed_transaction_into_model_transaction (tr : BlockchainTestParser.transaction) : Block.transaction =
   Block.(
     { tr_from = failwith "cannot compute tr_from, using the parsed transaction"
-    ; tr_nonce = tr.BlockchainTestParser.tr_nonce
-    ; tr_to = tr.BlockchainTestParser.transactionTo
-    ; tr_gas_limit = tr.BlockchainTestParser.transactionGasLimit
-    ; tr_gas_price = tr.BlockchainTestParser.transactionGasPrice
-    ; tr_value = tr.BlockchainTestParser.transactionValue
-    ; tr_data = tr.BlockchainTestParser.transactionData
+    ; tr_nonce = Conv.word256_of_big_int tr.BlockchainTestParser.transactionNonce
+    ; tr_to = BatOption.map Conv.word160_of_big_int tr.BlockchainTestParser.transactionTo
+    ; tr_gas_limit = Conv.word256_of_big_int tr.BlockchainTestParser.transactionGasLimit
+    ; tr_gas_price = Conv.word256_of_big_int tr.BlockchainTestParser.transactionGasPrice
+    ; tr_value = Conv.word256_of_big_int tr.BlockchainTestParser.transactionValue
+    ; tr_data = Conv.parse_hex_string tr.BlockchainTestParser.transactionData
     }
   )
 

@@ -77,7 +77,7 @@ type transaction =
   ; transactionNonce : Big_int.big_int
   ; transactionR : Big_int.big_int
   ; transactionS : Big_int.big_int
-  ; transactionTo : Big_int.big_int
+  ; transactionTo : Big_int.big_int option
   ; transactionV : Big_int.big_int
   ; transactionValue : Big_int.big_int
   }
@@ -90,7 +90,12 @@ let parse_transaction (j : json) : transaction =
   ; transactionNonce = parse_address_from_field "nonce" j
   ; transactionR = parse_address_from_field "r" j
   ; transactionS = parse_address_from_field "s" j
-  ; transactionTo = parse_address_from_field "to" j
+  ; transactionTo =
+      if (to_string (member "data" j) = "" || to_string (member "data" j) = "0x")
+      then
+        None (* XXX: this needs to be tested *)
+      else
+        Some (parse_address_from_field "to" j)
   ; transactionV = parse_address_from_field "v" j
   ; transactionValue = parse_address_from_field "value" j
   }
@@ -104,7 +109,10 @@ let format_transaction (t : transaction) : Easy_format.t =
     ; Label ((Atom ("nonce", atom), label), Atom (Big_int.string_of_big_int t.transactionNonce, atom))
     ; Label ((Atom ("r", atom), label), Atom (Big_int.string_of_big_int t.transactionR, atom))
     ; Label ((Atom ("s", atom), label), Atom (Big_int.string_of_big_int t.transactionS, atom))
-    ; Label ((Atom ("to", atom), label), Atom (Big_int.string_of_big_int t.transactionTo, atom))
+    ; Label ((Atom ("to", atom), label), Atom (
+                                             (match t.transactionTo with
+                                             | Some addr -> Big_int.string_of_big_int addr
+                                             | None -> ""), atom))
     ; Label ((Atom ("v", atom), label), Atom (Big_int.string_of_big_int t.transactionV, atom))
     ; Label ((Atom ("value", atom), label), Atom (Big_int.string_of_big_int t.transactionValue, atom))
     ] in
