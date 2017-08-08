@@ -318,7 +318,7 @@ inductive triple_inst_stack :: "pred \<Rightarrow> pos_inst \<Rightarrow> pred \
        continuing \<and>* memory_usage m \<and>* program_counter n \<and>* sent_data lst \<and>*
        stack_height (Suc h) \<and>* stack h u \<and>* gas_pred g \<and>* rest)
       (n, Stack CALLDATALOAD)
-      (program_counter (n + 1) \<and>* continuing \<and>* data_lst 0 lst \<and>*
+      (program_counter (n + 1) \<and>* continuing \<and>* sent_data lst \<and>*
        memory_usage m \<and>* stack_height (Suc h) \<and>*
        stack h (read_word_from_bytes (unat u) lst) \<and>*
        gas_pred (g - Gverylow) \<and>* rest)"
