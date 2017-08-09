@@ -54,8 +54,6 @@ type statement =
 
 (** Interpreter *)
 
-type global = unit
-
 type seq_mode =
  | RegularMode
  | BreakMode
@@ -64,6 +62,27 @@ type seq_mode =
 type builtin =
  | Convert of type_name * type_name
  | AddU256
+ | SplitU256U64
+
+type gbuiltin =
+ | MLoad
+ | MStore
+ | MStore8
+ | MSize
+ | SLoad
+ | SStore
+ | Log of integer
+ | Gasleft
+ | Balance
+ | This
+ | Create
+ | Call
+ | Return
+ | Revert
+ | Selfdestruct
+
+(* It might be necessary to assume that there is a function for compiling / decompiling code to
+   implement stuff like code size etc. *)
 
 val two8 : integer
 val two32 : integer
@@ -98,10 +117,39 @@ type value =
  | TrueV
  | FunctionV of id * list (id * type_name) * list (id * type_name) * statement
  | BuiltinV of builtin
+ | GBuiltinV of gbuiltin
 
-(* Have another set of builtin that changes the global state *)
+type account = <|
+  memory : int -> value;
+  storage : int -> value;
+  balance : int;
+|>
 
+let empty_account = <|
+  memory = (fun _ -> IntV 0);
+  storage = (fun _ -> IntV 0);
+  balance = 0;
+|>
 
+type state = <|
+   address : int;
+   accounts : int -> account;
+   compile : statement -> list value;
+   decompile :  list value -> statement;
+|>
+
+let simple_compile st = [FunctionV 0 [] [] st]
+let simple_decompile lst = match lst with
+ | [FunctionV _ _ _ st] -> st
+ | _ -> Block []
+end
+
+let init_global addr = <|
+   address = addr;
+   accounts = (fun _ -> empty_account);
+   compile = simple_compile;
+   decompile = simple_decompile;
+|>
 
 val eval_builtin : builtin -> list value -> list value
 let eval_builtin b lst = match (b, lst) with
@@ -110,6 +158,11 @@ let eval_builtin b lst = match (b, lst) with
  | (Convert Boolean _, [FalseV]) -> [IntV 0]
  | (Convert Boolean _, [TrueV]) -> [IntV 1]
  | (Convert _ t, [IntV a]) -> [IntV (a mod typesize t)]
+ | (SplitU256U64, [IntV a]) ->
+    let a2 = a div two64 in
+    let a3 = a2 div two64 in
+    let a4 = a3 div two64 in
+    [IntV (a mod two64); IntV (a2 mod two64); IntV (a3 mod two64); IntV (a4 mod two64)]
  | _ -> []
 end
 
@@ -179,9 +232,9 @@ and eval_expression g (l:map id value) expr = match expr with
 end
 *)
 
-val eval_statement : global -> map id value -> statement -> nat -> maybe (global * map id value * seq_mode)
-val eval_expression : global -> map id value -> expression -> nat -> maybe (global * map id value * value)
-val step_statement : statement -> maybe (global * map id value * seq_mode) -> nat -> maybe (global * map id value * seq_mode)
+val eval_statement : state -> map id value -> statement -> nat -> maybe (state * map id value * seq_mode)
+val eval_expression : state -> map id value -> expression -> nat -> maybe (state * map id value * value)
+val step_statement : statement -> maybe (state * map id value * seq_mode) -> nat -> maybe (state * map id value * seq_mode)
 
 let rec eval_statement g (l:map id value) st n =
  match n with
