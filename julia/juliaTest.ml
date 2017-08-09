@@ -34,6 +34,7 @@ let rec value_to_string = function
  | ListV lst -> "[" ^ String.concat "," (List.map value_to_string lst) ^ "]"
  | FunctionV (id, _, _, _) -> "function " ^ Z.to_string id
  | BuiltinV _ -> "builtin"
+ | GBuiltinV _ -> "state builtin"
 
 let builtins = [
   "addu256", AddU256
@@ -47,9 +48,9 @@ let print_state l =
 
 let rec do_calc l = function
  | st :: lst ->
-    let l = match Julia.eval_statement () l st 100 with
-     | None -> prerr_endline "<error>"; l
-     | Some (_,l,_) -> print_state l; prerr_endline "<step>"; l in
+    let l = match Julia.eval_statement Julia.init_global l st 100 with
+     | Exit _ -> prerr_endline "<error>"; l
+     | Normal (_,l,_) -> print_state l; prerr_endline "<step>"; l in
     do_calc l lst
  | [] -> prerr_endline "Exiting ..."
 
@@ -57,7 +58,7 @@ let main () =
   if Array.length Sys.argv < 2 then prerr_endline "need filename" else
   let lexbuf = Lexing.from_channel (open_in Sys.argv.(1)) in
   let lst = parse_with_error lexbuf in
-  let _ = Printf.printf "Finished parsing.\n" in
+  let _ = prerr_endline "Finished parsing" in
   do_calc init lst
 
 let _ = main ()
