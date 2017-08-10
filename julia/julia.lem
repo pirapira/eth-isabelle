@@ -164,6 +164,7 @@ type state = <|
    decompile :  list value -> statement;
    new_address : integer -> integer -> integer;
    gas : integer;
+   context : map id value;
 |>
 
 let simple_compile st = [FunctionV 0 [] [] st]
@@ -174,6 +175,7 @@ end
 
 let init_global = <|
    address = 0;
+   context = initial;
    current = empty_account;
    memory = (fun _ -> IntV 0);
    memory_size = 0;
@@ -287,10 +289,10 @@ let eval_gbuiltin state b lst = match (b, lst) with
    let state = update_memory_size state (addr+32) in
    let mem x = if x >= addr && x < addr+32 then IntV (get_byte (x-addr) v) else state.memory x in
    Normal (<| state with memory = mem |>, [])
-(* | (MStore, [IntV addr; v]) ->
+ | (MStore8, [IntV addr; v]) ->
    let state = update_memory_size state (addr+1) in
    let mem x = if x = addr then v else state.memory x in
-   Normal (<| state with memory = mem |>, []) *)
+   Normal (<| state with memory = mem |>, [])
  | (MSize, []) -> Normal (state, [IntV (roundup state.memory_size 32)])
  | (SLoad, [IntV addr]) -> Normal (state, [state.current.storage addr])
  | (SStore, [IntV addr; v]) ->
@@ -320,11 +322,11 @@ let rec eval_statement g (l:map id value) st n =
  | n+1 ->
  match st with
  | Block lst ->
-    let step_statement st a = match a with
+    let step_statement a st = match a with
     | Normal (g, l, RegularMode) -> eval_statement g l st n
     | a -> a
     end in
-    match List.foldr step_statement (Normal (g,l,RegularMode)) lst with
+    match List.foldl step_statement (Normal (g,l,RegularMode)) lst with
      | Normal (g', l', _) ->
        (* Should we check for error here too? should be impossible *)
        Normal (g', Map.mapi (fun k _ -> Map.findWithDefault k (IntV 0) l') l, RegularMode)
@@ -410,15 +412,15 @@ and eval_expression g (l:map id value) expr n =
     | Nothing -> Exit Error
     end
  | FunctionCall id lst ->
-    let loop expr a = match a with
+    let loop a expr = match a with
     | Normal (g, l, lst) -> 
        match eval_expression g l expr n with
-       | Normal (g,l,v) -> Normal (g,l,v::lst)
+       | Normal (g,l,v) -> Normal (g,l,lst ++ [v])
        | Exit x -> Exit x
        end
     | Exit x -> Exit x
     end in
-    match List.foldr loop (Normal (g,l,[])) lst with
+    match List.foldl loop (Normal (g,l,[])) lst with
     | Normal (g, l, lst) ->
      match Map.lookup id l with
      | Just (BuiltinV name) -> Normal (g, l, ListV (eval_builtin name lst))
@@ -433,7 +435,7 @@ and eval_expression g (l:map id value) expr n =
           let ng = build_state g addr g.gas in
           let st = g.decompile (memory_values g.memory offset (natFromInteger size)) in
           let ng = <| ng with current = <| empty_account with code = Just st |> |> in
-          match eval_statement ng initial st n with
+          match eval_statement ng ng.context st n with
           | Exit Error -> Exit Error
           | Exit (RevertExit _ _ _) ->
               Normal (g, l, IntV 0)
@@ -458,7 +460,7 @@ and eval_expression g (l:map id value) expr n =
           | Just st ->
             let ng = build_state g addr gas in
             let ng = <| ng with calldata = memory_values g.memory in_offset (natFromInteger in_size) |> in
-            match eval_statement ng initial st n with
+            match eval_statement ng ng.context st n with
             | Exit Error -> Exit Error
             | Normal (ng, l, _) -> Normal (update_state g ng, l, TrueV)
             | Exit (RevertExit ng offset sz) ->

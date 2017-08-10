@@ -45,6 +45,7 @@ let init =
 
 let builtins2 = [
   "mstore", MStore;
+  "mstore8", MStore8;
   "mload", MLoad;
   "sstore", SStore;
   "sload", SLoad;
@@ -75,7 +76,7 @@ let main () =
   let lexbuf = Lexing.from_channel (open_in Sys.argv.(1)) in
   let lst = parse_with_error lexbuf in
   let _ = prerr_endline "Finished parsing" in
-  do_calc Julia.init_global init lst
+  do_calc {Julia.init_global with context=init; address=Z.of_int 1337} init lst
 
 let _ =
   prerr_endline (Z.to_string (get_byte (Z.of_int 0) (Z.of_int 1234)));
