@@ -76,6 +76,9 @@ type gbuiltin =
  | Return
  | Revert
  | Selfdestruct
+ | CalldataLoad
+ | CalldataSize
+ | CalldataCopy
 
 (* It might be necessary to assume that there is a function for compiling / decompiling code to
    implement stuff like code size etc. *)
@@ -115,48 +118,6 @@ type value =
  | BuiltinV of builtin
  | GBuiltinV of gbuiltin
 
-type account = <|
-  storage : integer -> value;
-  balance : integer;
-  code : maybe statement;
-|>
-
-let empty_account = <|
-  storage = (fun _ -> IntV 0);
-  balance = 0;
-  code = Nothing;
-|>
-
-type state = <|
-   address : integer;
-   memory : integer -> value;
-   memory_size : integer;
-   current : account;
-   logs : list value;
-   accounts : integer -> account;
-   compile : statement -> list value;
-   decompile :  list value -> statement;
-   gas : integer;
-|>
-
-let simple_compile st = [FunctionV 0 [] [] st]
-let simple_decompile lst = match lst with
- | [FunctionV _ _ _ st] -> st
- | _ -> Block []
-end
-
-let init_global = <|
-   address = 0;
-   current = empty_account;
-   memory = (fun _ -> IntV 0);
-   memory_size = 0;
-   accounts = (fun _ -> empty_account);
-   compile = simple_compile;
-   decompile = simple_decompile;
-   logs = [];
-   gas = 0;
-|>
-
 val eval_builtin : builtin -> list value -> list value
 let eval_builtin b lst = match (b, lst) with
  | (AddU256, [IntV a; IntV b]) -> [IntV ((a+b) mod two256)]
@@ -174,6 +135,56 @@ end
 
 val initial : map id value
 let initial = Map.empty
+
+(* Global state *)
+
+type account = <|
+  storage : integer -> value;
+  balance : integer;
+  code : maybe statement;
+  nonce : integer;
+|>
+
+let empty_account = <|
+  storage = (fun _ -> IntV 0);
+  balance = 0;
+  code = Nothing;
+  nonce = 0;
+|>
+
+type state = <|
+   address : integer;
+   memory : integer -> value;
+   memory_size : integer;
+   current : account;
+   calldata : list value;
+   logs : list value;
+   accounts : integer -> account;
+   compile : statement -> list value;
+   decompile :  list value -> statement;
+   new_address : integer -> integer -> integer;
+   gas : integer;
+|>
+
+let simple_compile st = [FunctionV 0 [] [] st]
+let simple_decompile lst = match lst with
+ | [FunctionV _ _ _ st] -> st
+ | _ -> Block []
+end
+
+let init_global = <|
+   address = 0;
+   current = empty_account;
+   memory = (fun _ -> IntV 0);
+   memory_size = 0;
+   calldata = [];
+   accounts = (fun _ -> empty_account);
+   compile = simple_compile;
+   decompile = simple_decompile;
+   new_address = (fun a b -> a*two256 + b);
+   logs = [];
+   gas = 0;
+|>
 
 val eval_literal : literal_kind -> value
 let eval_literal l = match l with
@@ -221,6 +232,12 @@ let rec memory_bytes mem addr n = match n with
    end
 end
 
+val memory_values : (integer -> value) -> integer -> nat -> list value
+let rec memory_values mem addr n = match n with
+ | 0 -> []
+ | n+1 -> mem addr :: memory_values mem (addr+1) n
+end
+
 val roundup : integer -> integer -> integer
 let roundup i align = ((i + align - 1) div align) * align
 
@@ -234,23 +251,44 @@ let update_balance g sender receiver money =
     if x = receiver then <| a with balance = a.balance + money |> else a in
   <| g with accounts = acc |>
 
+let build_state g addr gas =
+  let acc x = if x = g.address then g.current else g.accounts x in
+  <| g with address = addr;
+    current = acc addr;
+    accounts = acc;
+    gas = gas;
+  |>
+
+let update_state g ng =
+  let acc x = if x = ng.address then ng.current else ng.accounts x in
+  <| g with current = acc g.address; accounts = acc |>
+
+let list_to_map lst x =
+  match List.index lst (natFromInteger x) with
+  | Nothing -> IntV 0
+  | Just x -> x
+  end
+
+let copy_memory g ng offset n_offset sz =
+  (fun x -> if x >= offset && x < offset + sz then ng (n_offset - offset + x) else g x)
+
 val eval_gbuiltin : state -> gbuiltin -> list value -> ret (state * list value)
 let eval_gbuiltin state b lst = match (b, lst) with
  | (Return, [IntV a; IntV b]) -> Exit (ReturnExit state a b)
  | (Revert, [IntV a; IntV b]) -> Exit (RevertExit state a b)
  | (MLoad, [IntV addr]) ->
-   let state = update_memory_size state (addr+31) in
+   let state = update_memory_size state (addr+32) in
    Normal (state, [memory_integer state.memory addr 32])
  | (MStore8, [IntV addr; IntV v]) ->
-   let state = update_memory_size state addr in
+   let state = update_memory_size state (addr+1) in
    let mem x = if x = addr then IntV (v mod two8) else state.memory x in
    Normal (<| state with memory = mem |>, [])
  | (MStore, [IntV addr; IntV v]) ->
-   let state = update_memory_size state (addr+31) in
+   let state = update_memory_size state (addr+32) in
    let mem x = if x >= addr && x < addr+32 then IntV (get_byte (x-addr) v) else state.memory x in
    Normal (<| state with memory = mem |>, [])
 (* | (MStore, [IntV addr; v]) ->
-   let state = update_memory_size state addr in
+   let state = update_memory_size state (addr+1) in
    let mem x = if x = addr then v else state.memory x in
    Normal (<| state with memory = mem |>, []) *)
  | (MSize, []) -> Normal (state, [IntV (roundup state.memory_size 32)])
@@ -264,24 +302,14 @@ let eval_gbuiltin state b lst = match (b, lst) with
    let state = update_memory_size state (addr+size) in
    let data = memory_bytes state.memory addr (natFromInteger size) in
    Normal (<| state with logs = ListV (List.map (fun x -> IntV x) data) :: state.logs |>, [])
+ | (CalldataSize, []) -> Normal (state, [IntV (integerFromNat (List.length state.calldata))])
+ | (CalldataLoad, [IntV offset]) ->
+   Normal (state, [memory_integer (list_to_map state.calldata) offset 32])
+ | (CalldataCopy, [IntV mem_offset; IntV data_offset; IntV size]) ->
+   let state = update_memory_size state (mem_offset + size - 1) in
+   Normal (<| state with memory = copy_memory state.memory (list_to_map state.calldata) mem_offset data_offset size |>, [])
  | _ -> Exit Error
 end
-
-let build_state g addr gas =
-  let acc x = if x = g.address then g.current else g.accounts x in
-  <| g with address = addr;
-    current = acc addr;
-    accounts = acc;
-    gas = gas;
-  |>
-
-let update_state g ng =
-  let acc x = if x = ng.address then ng.current else ng.accounts x in
-  <| g with current = acc g.address; accounts = acc |>
-
-let copy_memory g ng offset out_offset sz =
-  let mem x = if x >= offset && x < offset + sz then ng.memory (out_offset - offset + x) else g.memory x in
-  <| g with memory = mem |>
 
 val eval_statement : state -> map id value -> statement -> nat -> ret (state * map id value * seq_mode)
 val eval_expression : state -> map id value -> expression -> nat -> ret (state * map id value * value)
@@ -394,6 +422,25 @@ and eval_expression g (l:map id value) expr n =
     | Normal (g, l, lst) ->
      match Map.lookup id l with
      | Just (BuiltinV name) -> Normal (g, l, ListV (eval_builtin name lst))
+     | Just (GBuiltinV Create) ->
+       match lst with
+       | [IntV money; IntV offset; IntV size] ->
+          let g = update_memory_size g (offset+size) in
+          if (g.accounts g.address).balance < money then Normal (g, l, FalseV) else
+          let addr = g.new_address g.address g.current.nonce in
+          let g = <| g with current = <| (g.current) with nonce = g.current.nonce+1 |> |> in
+          let g = update_balance g g.address addr money in
+          let ng = build_state g addr g.gas in
+          let st = g.compile (memory_values g.memory offset size) in
+          let ng = <| ng with current = <| empty_account with code = Just st |> |> in
+          match eval_statement ng initial st n with
+          | Exit Error -> Exit Error
+          | Exit (RevertExit ng offset sz) ->
+              Normal (g, l, )
+          | Exit (ReturnExit ng offset sz) ->
+              let g = <| g with memory = copy_memory g.memory ng.memory out_offset offset (min sz out_size) |> in
+              Normal (update_state g ng, l, TrueV)
+          end
      | Just (GBuiltinV Call) ->
        match lst with
        | [IntV gas; IntV addr; IntV money; IntV in_offset; IntV in_size; IntV out_offset; IntV out_size] ->
@@ -405,14 +452,15 @@ and eval_expression g (l:map id value) expr n =
           | Nothing -> Normal (g, l, TrueV)
           | Just st ->
             let ng = build_state g addr gas in
+            let ng = <| ng with calldata = memory_values g.memory in_offset (natFromInteger in_size) |> in
             match eval_statement ng initial st n with
             | Exit Error -> Exit Error
             | Normal (ng, l, _) -> Normal (update_state g ng, l, TrueV)
             | Exit (RevertExit ng offset sz) ->
-              let g = copy_memory g ng offset out_offset (min sz out_size) in
+              let g = <| g with memory = copy_memory g.memory ng.memory out_offset offset (min sz out_size) |> in
               Normal (g, l, FalseV)
             | Exit (ReturnExit ng offset sz) ->
-              let g = copy_memory g ng offset out_offset (min sz out_size) in
+              let g = <| g with memory = copy_memory g.memory ng.memory out_offset offset (min sz out_size) |> in
               Normal (update_state g ng, l, TrueV)
             end
           end
