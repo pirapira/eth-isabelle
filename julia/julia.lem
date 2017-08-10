@@ -431,16 +431,21 @@ and eval_expression g (l:map id value) expr n =
           let g = <| g with current = <| (g.current) with nonce = g.current.nonce+1 |> |> in
           let g = update_balance g g.address addr money in
           let ng = build_state g addr g.gas in
-          let st = g.compile (memory_values g.memory offset size) in
+          let st = g.decompile (memory_values g.memory offset (natFromInteger size)) in
           let ng = <| ng with current = <| empty_account with code = Just st |> |> in
           match eval_statement ng initial st n with
           | Exit Error -> Exit Error
-          | Exit (RevertExit ng offset sz) ->
-              Normal (g, l, )
+          | Exit (RevertExit _ _ _) ->
+              Normal (g, l, IntV 0)
+          | Normal _ ->
+              Normal (g, l, IntV 0)
           | Exit (ReturnExit ng offset sz) ->
-              let g = <| g with memory = copy_memory g.memory ng.memory out_offset offset (min sz out_size) |> in
-              Normal (update_state g ng, l, TrueV)
+              let st = g.decompile (memory_values ng.memory offset (natFromInteger sz)) in
+              let ng = <| ng with current = <| (ng.current) with code = Just st |> |> in
+              Normal (update_state g ng, l, IntV addr)
           end
+       | _ -> Exit Error
+       end
      | Just (GBuiltinV Call) ->
        match lst with
        | [IntV gas; IntV addr; IntV money; IntV in_offset; IntV in_size; IntV out_offset; IntV out_size] ->
