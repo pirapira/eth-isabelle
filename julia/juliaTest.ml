@@ -37,21 +37,37 @@ let rec value_to_string = function
  | GBuiltinV _ -> "state builtin"
 
 let builtins = [
-  "addu256", AddU256
+  "addu256", AddU256;
 ]
 
 let init =
   List.fold_left (fun acc (k,v) -> Pmap.add (JuliaUtil.string_to_Z k) (BuiltinV v) acc) Julia.initial builtins
 
+let builtins2 = [
+  "mstore", MStore;
+  "mload", MLoad;
+  "sstore", SStore;
+  "sload", SLoad;
+  "return", Return;
+  "revert", Revert;
+  "create", Create;
+  "call", Call;
+]
+
+let init =
+  List.fold_left (fun acc (k,v) -> Pmap.add (JuliaUtil.string_to_Z k) (GBuiltinV v) acc) init builtins2
+
 let print_state l =
   Pmap.iter (fun k v -> prerr_endline (Z.to_string k ^ " -> " ^ value_to_string v)) l 
 
-let rec do_calc l = function
+let print_memory mem sz = ()
+
+let rec do_calc g l = function
  | st :: lst ->
-    let l = match Julia.eval_statement Julia.init_global l st 100 with
-     | Exit _ -> prerr_endline "<error>"; l
-     | Normal (_,l,_) -> print_state l; prerr_endline "<step>"; l in
-    do_calc l lst
+    let l, g = match Julia.eval_statement g l st 100 with
+     | Exit _ -> prerr_endline "<error>"; (l, g)
+     | Normal (g,l,_) -> print_state l; print_memory g.memory g.memory_size; prerr_endline "<step>"; (l, g) in
+    do_calc g l lst
  | [] -> prerr_endline "Exiting ..."
 
 let main () =
@@ -59,7 +75,10 @@ let main () =
   let lexbuf = Lexing.from_channel (open_in Sys.argv.(1)) in
   let lst = parse_with_error lexbuf in
   let _ = prerr_endline "Finished parsing" in
-  do_calc init lst
+  do_calc Julia.init_global init lst
 
-let _ = main ()
+let _ =
+  prerr_endline (Z.to_string (get_byte (Z.of_int 0) (Z.of_int 1234)));
+  prerr_endline (Z.to_string (get_byte (Z.of_int 1) (Z.of_int 1234)));
+  main ()
 

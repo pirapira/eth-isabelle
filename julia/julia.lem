@@ -206,7 +206,7 @@ type ret 'a =
 val get_byte_aux : nat -> integer -> integer 
 let rec get_byte_aux n i = match n with
  | 0 -> i mod two8
- | n+1 -> get_byte_aux n (i div two256)
+ | n+1 -> get_byte_aux n (i div two8)
 end
 
 val get_byte : integer -> integer -> integer
