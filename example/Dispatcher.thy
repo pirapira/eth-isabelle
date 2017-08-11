@@ -765,30 +765,33 @@ apply(block_vcg)
 apply(sep_cancel)+
 done
 
-definition return_action' ::"32 word \<Rightarrow> contract_action" where
-"return_action' z = 
-  (if z = dispatch1_hash then ContractReturn (word_rsplit (1:: w256))
+definition return_action' ::"32 word \<Rightarrow> w256 \<Rightarrow> contract_action" where
+"return_action' z x = 
+  (if z = dispatch1_hash then ContractReturn (word_rsplit (x))
   else (if z = dispatch2_hash then ContractReturn (word_rsplit (2:: w256))
   else ContractFail [ShouldNotHappen]))"
 
 
 lemma verify_dispatcher:
-"\<exists>r.
-triple 
-  (
-program_counter 0 ** stack_height 0 ** (sent_data (word_rsplit (z::32 word)::byte list)) ** sent_value 0 **
+"\<exists>r. triple 
+  (program_counter 0 ** stack_height 0 ** (sent_data (word_rsplit (z::32 word)::byte list)) ** sent_value 1 **
    memory_usage 0 ** continuing ** gas_pred 3000 ** memory (word_rcat [64::byte]) (word_rcat [x::byte]::256 word) **
    memory (word_rcat [96::byte]) (word_rcat [y::byte]::256 word))
   blocks
-  (action (return_action' z) ** r)"
-apply(simp add: return_action'_def)
-apply(case_tac "z = dispatch1_hash")
- apply(simp add: spec_fun1[simplified] dispatch1_hash_def dispatch2_hash_def return_action'_def)
-apply(case_tac "z = dispatch2_hash")
- apply(simp add: dispatch1_hash_def dispatch2_hash_def return_action'_def)
- apply(rule spec_fun2[simplified])
-apply(simp add: spec_fail return_action'_def)
-done
+  (action (return_action' z 1) ** r)"
+apply(simp add: return_action'_def blocks_def triple_def dispatch1_hash_def dispatch2_hash_def)
+apply(split if_split, rule conjI)
+ apply(rule impI, rule exI)
+ apply((block_vcg)+)[1]
+ apply(sep_cancel)+
+apply(split if_split, rule conjI)
+ apply(rule impI, rule exI)
+ apply((block_vcg)+)[1]
+ apply(sep_cancel)+
+apply(rule impI, rule exI)
+apply((block_vcg; bit_mask_solve?)+)[1]
+apply(sep_cancel)+
+sorry
 
 definition return_action:: "(32 word \<Rightarrow> contract_action option) \<Rightarrow> 32 word \<Rightarrow> contract_action" where
 "return_action m w = (case m w of 
