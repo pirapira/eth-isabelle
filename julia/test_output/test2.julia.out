@@ -1,0 +1,106 @@
+210
+4
+Finished parsing
+97 -> 1
+1667329132 -> state builtin
+469970674020 -> state builtin
+495740477796 -> state builtin
+109342978307173 -> state builtin
+120342642127461 -> state builtin
+125780071117422 -> state builtin
+125780103623284 -> state builtin
+126939711894117 -> state builtin
+27413455366665526 -> builtin
+30807716384630072 -> state builtin
+<step>
+97 -> 1
+98 -> 2
+1667329132 -> state builtin
+469970674020 -> state builtin
+495740477796 -> state builtin
+109342978307173 -> state builtin
+120342642127461 -> state builtin
+125780071117422 -> state builtin
+125780103623284 -> state builtin
+126939711894117 -> state builtin
+27413455366665526 -> builtin
+30807716384630072 -> state builtin
+<step>
+97 -> 1
+98 -> 2
+99 -> 3
+1667329132 -> state builtin
+469970674020 -> state builtin
+495740477796 -> state builtin
+109342978307173 -> state builtin
+120342642127461 -> state builtin
+125780071117422 -> state builtin
+125780103623284 -> state builtin
+126939711894117 -> state builtin
+27413455366665526 -> builtin
+30807716384630072 -> state builtin
+<step>
+97 -> 1
+98 -> 2
+99 -> 3
+122 -> 4
+1667329132 -> state builtin
+469970674020 -> state builtin
+495740477796 -> state builtin
+109342978307173 -> state builtin
+120342642127461 -> state builtin
+125780071117422 -> state builtin
+125780103623284 -> state builtin
+126939711894117 -> state builtin
+27413455366665526 -> builtin
+30807716384630072 -> state builtin
+<step>
+97 -> 1
+98 -> 2
+99 -> 3
+122 -> 4
+6714734 -> function 6714734
+1667329132 -> state builtin
+469970674020 -> state builtin
+495740477796 -> state builtin
+109342978307173 -> state builtin
+120342642127461 -> state builtin
+125780071117422 -> state builtin
+125780103623284 -> state builtin
+126939711894117 -> state builtin
+27413455366665526 -> builtin
+30807716384630072 -> state builtin
+<step>
+97 -> 1
+98 -> 2
+99 -> 3
+122 -> 1234
+6714734 -> function 6714734
+1667329132 -> state builtin
+469970674020 -> state builtin
+495740477796 -> state builtin
+109342978307173 -> state builtin
+120342642127461 -> state builtin
+125780071117422 -> state builtin
+125780103623284 -> state builtin
+126939711894117 -> state builtin
+27413455366665526 -> builtin
+30807716384630072 -> state builtin
+<step>
+97 -> 1
+98 -> 222
+99 -> 3
+122 -> 1234
+6714734 -> function 6714734
+1667329132 -> state builtin
+469970674020 -> state builtin
+495740477796 -> state builtin
+109342978307173 -> state builtin
+120342642127461 -> state builtin
+125780071117422 -> state builtin
+125780103623284 -> state builtin
+126939711894117 -> state builtin
+27413455366665526 -> builtin
+30807716384630072 -> state builtin
+<step>
+Exiting ...

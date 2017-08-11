@@ -56,3 +56,6 @@ script:
 - ./runVmTest.native 89
 - cd -
 - make light-isabelle
+- cd julia
+- make test
+- cd -

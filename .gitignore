@@ -1,6 +1,7 @@
 *~
 *#
 *.bak
+*.out2
 julia/julia.ml
 julia/parsr.ml
 julia/parsr.mli
