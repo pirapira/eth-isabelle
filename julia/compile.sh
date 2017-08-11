@@ -1,4 +1,3 @@
-cd ..; make lem-ocaml; cd julia
 rm -rf lem
 mkdir lem
 cp ../lem/*.ml lem

@@ -2,12 +2,12 @@
 all: juliaTest.native
 
 juliaTest.native: julia.ml juliaUtil.ml juliaTest.ml
-	./compile.sh
+	sh ./compile.sh
 
 build: all
-	./maketests.sh
+	sh ./maketests.sh
 
 test: all
-	./runtests.sh
+	sh ./runtests.sh
 
 
