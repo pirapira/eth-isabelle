@@ -48,6 +48,9 @@ script:
 - make lem-thy
 - make lem-hol
 - make lem-coq
+- cd julia
+- make test
+- cd -
 # - cd lem
 # - ../HOL/bin/Holmake evmTheory.uo
 # - cd -
@@ -56,6 +59,4 @@ script:
 - ./runVmTest.native 89
 - cd -
 - make light-isabelle
-- cd julia
-- make test
-- cd -
+
