@@ -118,6 +118,9 @@ let format_transaction (t : transaction) : Easy_format.t =
     ] in
   List (("{", ",", "}", list), lst)
 
+let sender_of_transaction (t : transaction) : Evm.address =
+  failwith "sender_of_transaction"
+
 type block =
   { blockHeader : blockHeader
   ; blockNumber : Big_int.big_int option (* This field is just informational *)

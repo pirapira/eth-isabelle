@@ -40,6 +40,8 @@ val parse_transaction : json -> transaction
 
 val format_transaction : transaction -> Easy_format.t
 
+val sender_of_transaction : transaction -> Evm.address
+
 type block =
   { blockHeader : blockHeader
   ; blockNumber : Big_int.big_int option
