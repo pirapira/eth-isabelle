@@ -119,6 +119,10 @@ let format_transaction (t : transaction) : Easy_format.t =
   List (("{", ",", "}", list), lst)
 
 let sender_of_transaction (t : transaction) : Evm.address =
+  let ctx = Secp256k1.(Context.create [Verify]) in
+  let msg = failwith  "msg" in
+  let sign = failwith "sign" in
+  let recovered = Secp256k1.RecoverableSign.recover ctx sign msg in
   failwith "sender_of_transaction"
 
 type block =
