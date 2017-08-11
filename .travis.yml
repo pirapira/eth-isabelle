@@ -48,6 +48,7 @@ script:
 - make lem-thy
 - make lem-hol
 - make lem-coq
+- make lem-julia
 - cd julia
 - make test
 - cd -

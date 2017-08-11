@@ -1,8 +1,7 @@
 
 all: juliaTest.native
 
-juliaTest.native: julia.lem juliaUtil.ml juliaTest.ml
-	../lem -ocaml *.lem
+juliaTest.native: julia.ml juliaUtil.ml juliaTest.ml
 	./compile.sh
 
 build: all
