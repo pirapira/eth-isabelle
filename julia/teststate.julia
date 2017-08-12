@@ -1,0 +1,12 @@
+
+let pos:u256 := 2:u256
+
+mstore(pos, 1234:u256)
+
+let a:u256 := mload(pos)
+
+sstore(pos, 12345:u256)
+
+let b:u256 := sload(pos)
+
+

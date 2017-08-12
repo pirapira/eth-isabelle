@@ -1,0 +1,12 @@
+
+// Only parsing
+
+let a:s32 := 1:s32
+let b:s32 := 2:s32
+let c:s32 := 3:s32
+
+b := fun(a, c)
+
+for {let i:u8 := 2:u8} cond { i := inc(i) }
+{ foo(i) }
+

@@ -22,7 +22,7 @@ before_install:
 - opam init -y --comp=4.04.1
 - eval `opam config env`
 - opam update
-- opam install -y ocamlbuild ocamlfind batteries yojson bignum easy-format bisect_ppx zarith depext sha
+- opam install -y ocamlbuild ocamlfind batteries yojson bignum easy-format bisect_ppx zarith depext sha menhir
 - git clone https://github.com/mrsmkl/ECC-OCaml.git ECC-OCaml
 - cd ECC-OCaml/src
 - make depend
@@ -48,6 +48,10 @@ script:
 - make lem-thy
 - make lem-hol
 - make lem-coq
+- make lem-julia
+- cd julia
+- make test
+- cd -
 # - cd lem
 # - ../HOL/bin/Holmake evmTheory.uo
 # - cd -
@@ -56,3 +60,4 @@ script:
 - ./runVmTest.native 89
 - cd -
 - make light-isabelle
+

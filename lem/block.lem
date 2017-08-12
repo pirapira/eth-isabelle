@@ -490,13 +490,14 @@ let next net = function
          | (old_state,nv,c,CreateAddress new_addr) :: rest ->
            if bytes = [] && length rest = 0 && global.g_create then
              Finished <| f_state=n_state; f_killed=global.g_killed; f_gas=v.vctx_gas; f_refund=v.vctx_refund; f_logs = v.vctx_logs |> else
-           let (n_state, v) =
+           let (n_state, v, ret) =
               if v.vctx_gas < integerFromNat (200*length bytes) && homestead_block <= word256ToInteger v.vctx_block.block_number then
-                 (old_state, <| v with vctx_gas = 0 |>) 
-              else if v.vctx_gas < integerFromNat (200*length bytes) then (n_state, v)
-              else (create_account n_state new_addr bytes, <| v with vctx_gas = v.vctx_gas - integerFromNat (200*length bytes) |>) in
+                 (old_state, <| v with vctx_gas = 0 |>, 0)
+              else if v.vctx_gas < integerFromNat (200*length bytes) then (n_state, v, 0)
+              else (create_account n_state new_addr bytes, <| v with vctx_gas = v.vctx_gas - integerFromNat (200*length bytes) |>,
+                     address_to_w256 new_addr) in
            let acc = n_state c.cctx_this in
-           let nv = <| nv with vctx_stack = address_to_w256 new_addr::nv.vctx_stack |> in
+           let nv = <| nv with vctx_stack = ret::nv.vctx_stack |> in
            let nv = vctx_update_from_world nv acc n_state v in
            Continue (<| global with g_stack=rest; g_current=n_state; g_cctx=c; g_vmstate=InstructionContinue nv |>)
          | _ -> Unimplemented (* should be impossible *)

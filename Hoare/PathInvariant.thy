@@ -1168,11 +1168,28 @@ using concat_pcs_length [of lst]
 apply (simp add:min_def)
   by (metis Suc_diff_1 Suc_lessD call_length_simp concat_eq_Nil_conv diff_less has_piece length_greater_0_conv numerals(2))
 
+(*
 definition iv_cond :: "('b * 'a list \<Rightarrow> bool) \<Rightarrow> nat \<Rightarrow> ('b * 'a list) rel" where
 "iv_cond iv level =
   {(a,b) | a b. length (snd a) = level \<and> length (snd b) = level \<and> (iv a \<longrightarrow> iv b) }
 \<union> {(a,b) | a b. length (snd a) = level \<and> length (snd b) + 1 = level \<and> (iv a \<longrightarrow> iv b) }
 \<union> {(a,b) | a b. length (snd a) + 1 = level \<and> length (snd b) = level \<and> (iv a \<longrightarrow> iv b) }
+\<union> {(a,b) | a b. length (snd a) \<noteq> level \<and> length (snd b) \<noteq> level}"
+*)
+
+definition iv_cond :: "('b * 'a list \<Rightarrow> bool) \<Rightarrow> nat \<Rightarrow> ('b * 'a list) rel" where
+"iv_cond iv level =
+  (* stay inside call *)
+  {(a,b) | a b. length (snd a) = level \<and> length (snd b) = level \<and> (iv a \<longrightarrow> iv b) }
+  (* exit call *)
+\<union> {(a,b) | a b. length (snd a) = level \<and> length (snd b) + 1 = level \<and> (iv a \<longrightarrow> iv b) }
+  (* enter call (no extra conditions) *)
+\<union> {(a,b) | a b. length (snd a) + 1 = level \<and> length (snd b) = level }
+  (* call other *)
+\<union> {(a,b) | a b. length (snd a) = level \<and> length (snd b) = level + 1 \<and> (iv a \<longrightarrow> iv b) }
+  (* other exited (no extra conditions) *)
+\<union> {(a,b) | a b. length (snd a) = level + 1 \<and> length (snd b) = level }
+  (* not directly related *)
 \<union> {(a,b) | a b. length (snd a) \<noteq> level \<and> length (snd b) \<noteq> level}"
 
 lemma handle_const_seq :
@@ -1183,7 +1200,6 @@ lemma handle_const_seq :
     iv (last lst)"
 apply (induction lst; auto)
 by (case_tac lst; auto; simp add:iv_cond_def pathR.simps const_seq_def)
-
 
 lemma iv_cond_push :
  "(x, y) \<in> iv_cond iv len \<Longrightarrow> iv x \<Longrightarrow>
@@ -1200,6 +1216,16 @@ lemma iv_cond_pop :
   iv y"
 apply (simp add:iv_cond_def tlR_def)
   by (smt n_not_Suc_n snd_conv)
+
+(*
+lemma iv_cond_error :
+ "(x, y) \<in> iv_cond iv len \<Longrightarrow>
+  length (snd x) = len \<Longrightarrow>
+  (snd y, snd x) \<in> tlR \<Longrightarrow>
+  False"
+apply (simp add:iv_cond_def tlR_def)
+  by (smt length_Cons lessI list.size(4) not_add_less1 prod.collapse snd_conv)
+*)
 
 lemma call_invariant_aux :
  "\<forall>i j. length (take i (drop j lst)) < length lst \<longrightarrow>
@@ -1383,17 +1409,18 @@ using call_stack_length [of "map snd lst"]
   by (metis gr_implies_not0 hd_conv_nth last_map length_0_conv length_greater_0_conv map_is_Nil_conv nth_map)
 
 lemma tr_invariant :
-  "\<forall>lst. pathR tr lst \<longrightarrow>
-    call (map snd lst) \<longrightarrow>
-    pathR (iv_cond iv (length (snd (lst ! 1)))) lst \<Longrightarrow>
+  "\<forall>lst2.
+    length lst2 \<le> length lst \<longrightarrow> pathR tr lst2 \<longrightarrow>
+    call (map snd lst2) \<longrightarrow>
+    pathR (iv_cond iv (length (snd (lst2 ! 1)))) lst \<Longrightarrow>
   pathR tr lst \<Longrightarrow>
   call (map snd lst) \<Longrightarrow>
   iv (lst!1) \<Longrightarrow>
   iv (last lst)"
 apply (induction "length lst" arbitrary:lst rule:nat_less_induct)
 apply (rule call_invariant; simp)
-  by (simp add: pathR_drop pathR_take)
-
+using pathR_drop pathR_take
+  by (smt diff_is_0_eq' le_trans length_drop length_take nat_le_linear not_gr0 zero_less_diff)
 
 
 end
