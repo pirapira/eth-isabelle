@@ -479,7 +479,7 @@ inductive triple_seq :: "pred \<Rightarrow> pos_inst list \<Rightarrow> pred \<R
 inductive triple_blocks :: "basic_blocks \<Rightarrow> pred \<Rightarrow> vertex \<Rightarrow> pred \<Rightarrow> bool" where
   blocks_no :
   "triple_seq pre insts post \<Longrightarrow>
-   triple_blocks blocks pre (n, insts, No) post"
+   triple_blocks blocks pre (n, insts, Terminal) post"
 | blocks_next :
   "\<lbrakk>triple_seq pre insts (program_counter i \<and>* q);
     i = n + inst_size_list insts;

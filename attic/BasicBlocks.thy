@@ -22,7 +22,7 @@ imports "../lem/Evm"
 begin
 (* Types definitions *)
 datatype tblock =
-Next | Jump | Jumpi | No
+Next | Jump | Jumpi | Terminal
 
 type_synonym position = "int"
 type_synonym pos_inst = "position * inst"
@@ -117,10 +117,10 @@ fun aux_basic_block :: "pos_inst list \<Rightarrow> pos_inst list \<Rightarrow> 
     else (bl_pt, block, Next) # (aux_basic_block tl1 [i]))
   | Pc JUMP \<Rightarrow>(bl_pt, block, Jump) # ( aux_basic_block tl1 [])
   | Pc JUMPI \<Rightarrow>(bl_pt, block, Jumpi) # ( aux_basic_block tl1 [])
-  | Misc RETURN \<Rightarrow>(bl_pt, block @ [i], No) # ( aux_basic_block tl1 [])
-  | Misc SUICIDE \<Rightarrow>(bl_pt, block @ [i], No) # ( aux_basic_block tl1 [])
-  | Misc STOP \<Rightarrow>(bl_pt, block @ [i], No) # ( aux_basic_block tl1 [])
-  | Unknown a \<Rightarrow> (bl_pt, block @ [i], No) # ( aux_basic_block tl1 [])
+  | Misc RETURN \<Rightarrow>(bl_pt, block @ [i], Terminal) # ( aux_basic_block tl1 [])
+  | Misc SUICIDE \<Rightarrow>(bl_pt, block @ [i], Terminal) # ( aux_basic_block tl1 [])
+  | Misc STOP \<Rightarrow>(bl_pt, block @ [i], Terminal) # ( aux_basic_block tl1 [])
+  | Unknown a \<Rightarrow> (bl_pt, block @ [i], Terminal) # ( aux_basic_block tl1 [])
   | _ \<Rightarrow> aux_basic_block tl1 (block@[i])))"
 declare aux_basic_block.simps[simp del]
 
@@ -151,7 +151,7 @@ definition reg_block :: "pos_inst list \<Rightarrow> bool" where
 
 definition reg_vertex :: "vertex \<Rightarrow> bool" where
 "reg_vertex v = (case v_ty v of
-No \<Rightarrow> reg_block (butlast (v_insts v))
+Terminal \<Rightarrow> reg_block (butlast (v_insts v))
 | _ \<Rightarrow> reg_block (v_insts v))"
 
 definition reg_basic_blocks :: "basic_blocks \<Rightarrow> bool" where
@@ -175,7 +175,7 @@ definition wf_blocks:: "basic_blocks \<Rightarrow> bool" where
   0 \<le> n \<and> n < 2 ^ 256) \<and>
 (block_lookup c n = Some (insts, Next) \<longrightarrow>
 	 insts \<noteq> []) \<and>
-(block_lookup c n = Some (insts, No) \<longrightarrow>
+(block_lookup c n = Some (insts, Terminal) \<longrightarrow>
 	 insts \<noteq> [] \<and> last_no insts)
 )"
 
@@ -382,7 +382,7 @@ apply(simp split: reg_inst_splits if_splits; fastforce)
 done
 
 lemma block_no:
-"(n, insts, No) \<in> set (aux_basic_block ys bl) \<Longrightarrow>
+"(n, insts, Terminal) \<in> set (aux_basic_block ys bl) \<Longrightarrow>
  reg_block bl \<Longrightarrow>
  insts \<noteq> [] \<and> last_no insts"
 apply(induction ys arbitrary:bl)

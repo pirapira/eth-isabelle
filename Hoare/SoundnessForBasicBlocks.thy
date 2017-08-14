@@ -1672,7 +1672,7 @@ lemma stop_after_no_continue:
 "insts = (vctx_pc x,i)#xs \<Longrightarrow>
 last_no insts \<Longrightarrow>
 seq_block insts \<Longrightarrow>
-reg_vertex (m, insts, No) \<Longrightarrow>
+reg_vertex (m, insts, Terminal) \<Longrightarrow>
 \<forall>a b. (a,b)\<in> (set insts) \<longrightarrow>
    (program_content (cctx_program co_ctx) a = Some b \<or>
    program_content (cctx_program co_ctx) a = None \<and> b = Misc STOP) \<Longrightarrow>
@@ -1718,8 +1718,8 @@ done
 lemma blocks_no_sem_t:
 " triple_seq pre insts post \<Longrightarrow>
 	 wf_blocks blocks \<Longrightarrow>
-	 block_lookup blocks (v_ind (n, insts, No)) =
-	 Some (snd (n, insts, No)) \<Longrightarrow>
+	 block_lookup blocks (v_ind (n, insts, Terminal)) =
+	 Some (snd (n, insts, Terminal)) \<Longrightarrow>
 	 triple_sem_t pre (blocks_insts blocks) post"
  apply(simp add: triple_sem_t_def; clarsimp)
  apply(insert pc_before_seq[where n=n and pre=pre and insts=insts and post=post]; simp)
@@ -1737,7 +1737,7 @@ lemma blocks_no_sem_t:
  apply(clarsimp)
  apply(drule spec2[where x=n and y=insts])
  apply(erule conjE)
- apply(drule spec[where x=No])
+ apply(drule spec[where x=Terminal])
  apply(drule mp, assumption)
  apply(drule conjunct2, drule conjunct2, drule conjunct2, drule conjunct1, simp, erule conjE)
  apply(simp add: sep_code_code_sep_wf)
