@@ -17,12 +17,12 @@ dispatch2_hash :: "32 word"
 where
 "dispatch2_hash == 0x8cd5b077"
 
-lemmas blocks_simps = build_blocks_def byteListInt_def find_block_def extract_indexes_def build_vertices_def
+lemmas blocks_simps = build_blocks_def byteListInt_def find_block_def blocks_indexes_def build_basic_blocks_def
  aux_basic_block.simps add_address_def block_pt_def
 
 value "parse_bytecode ''90''"
 
-value"blocks_list (build_blocks (parse_bytecode ''60606040526000357c0100000000000000000000000000000000000000000000000000000000900463ffffffff1680633ecb5edf1460475780638cd5b07714607b575b600080fd5b3415605157600080fd5b6065600480803590602001909190505060a1565b6040518082815260200191505060405180910390f35b3415608557600080fd5b608b60ad565b6040518082815260200191505060405180910390f35b6000600190505b919050565b6000600290505b905600a165627a7a72305820c9cf1e9d83721f6f9afecea62b7e868d98502ee8556dcaf6abb24acb8bc0d9fb0029''))"
+value"block_lookup (build_blocks (parse_bytecode ''60606040526000357c0100000000000000000000000000000000000000000000000000000000900463ffffffff1680633ecb5edf1460475780638cd5b07714607b575b600080fd5b3415605157600080fd5b6065600480803590602001909190505060a1565b6040518082815260200191505060405180910390f35b3415608557600080fd5b608b60ad565b6040518082815260200191505060405180910390f35b6000600190505b919050565b6000600290505b905600a165627a7a72305820c9cf1e9d83721f6f9afecea62b7e868d98502ee8556dcaf6abb24acb8bc0d9fb0029''))"
 
 definition insts where
 "insts \<equiv>
@@ -48,59 +48,7 @@ definition insts where
   Unknown 178, Unknown 74, Unknown 203, Dup 02, Unknown 192, Unknown 217, Unknown 251, Misc STOP, Unknown 41]"
 
 definition blocks where
-"blocks =
-\<lparr>blocks_indexes = [0, 56, 66, 71, 77, 81, 101, 123, 129, 133, 139, 161, 168, 173, 180, 183, 184, 226],
-    blocks_list = map_of [(0, [(0, Stack (PUSH_N [96])), (2, Stack (PUSH_N [64])), (4, Memory MSTORE), (5, Stack (PUSH_N [0])),
-            (7, Stack CALLDATALOAD),
-            (8, Stack (PUSH_N
-                        [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-                         0])),
-            (38, Swap 0), (39, Arith DIV), (40, Stack (PUSH_N [255, 255, 255, 255])), (45, Bits inst_AND),
-            (46, Dup 0), (47, Stack (PUSH_N [62, 203, 94, 223])), (52, Arith inst_EQ),
-            (53, Stack (PUSH_N [71]))],
-        Jumpi),
-       (56, [(56, Dup 0), (57, Stack (PUSH_N [140, 213, 176, 119])), (62, Arith inst_EQ),
-             (63, Stack (PUSH_N [123]))],
-        Jumpi),
-       (66, [(66, Pc JUMPDEST), (67, Stack (PUSH_N [0])), (69, Dup 0), (70, Unknown 253)], No),
-       (71, [(71, Pc JUMPDEST), (72, Info CALLVALUE), (73, Arith ISZERO), (74, Stack (PUSH_N [81]))], Jumpi),
-       (77, [(77, Stack (PUSH_N [0])), (79, Dup 0), (80, Unknown 253)], No),
-       (81, [(81, Pc JUMPDEST), (82, Stack (PUSH_N [101])), (84, Stack (PUSH_N [4])), (86, Dup 0), (87, Dup 0),
-             (88, Stack CALLDATALOAD), (89, Swap 0), (90, Stack (PUSH_N [32])), (92, Arith ADD), (93, Swap 0),
-             (94, Swap 1), (95, Swap 0), (96, Stack POP), (97, Stack POP), (98, Stack (PUSH_N [161]))],
-        Jump),
-       (101, [(101, Pc JUMPDEST), (102, Stack (PUSH_N [64])), (104, Memory MLOAD), (105, Dup 0), (106, Dup 2),
-              (107, Dup 1), (108, Memory MSTORE), (109, Stack (PUSH_N [32])), (111, Arith ADD), (112, Swap 1),
-              (113, Stack POP), (114, Stack POP), (115, Stack (PUSH_N [64])), (117, Memory MLOAD),
-              (118, Dup 0), (119, Swap 1), (120, Arith SUB), (121, Swap 0), (122, Misc RETURN)],
-        No),
-       (123, [(123, Pc JUMPDEST), (124, Info CALLVALUE), (125, Arith ISZERO), (126, Stack (PUSH_N [133]))],
-        Jumpi),
-       (129, [(129, Stack (PUSH_N [0])), (131, Dup 0), (132, Unknown 253)], No),
-       (133, [(133, Pc JUMPDEST), (134, Stack (PUSH_N [139])), (136, Stack (PUSH_N [173]))], Jump),
-       (139, [(139, Pc JUMPDEST), (140, Stack (PUSH_N [64])), (142, Memory MLOAD), (143, Dup 0), (144, Dup 2),
-              (145, Dup 1), (146, Memory MSTORE), (147, Stack (PUSH_N [32])), (149, Arith ADD), (150, Swap 1),
-              (151, Stack POP), (152, Stack POP), (153, Stack (PUSH_N [64])), (155, Memory MLOAD),
-              (156, Dup 0), (157, Swap 1), (158, Arith SUB), (159, Swap 0), (160, Misc RETURN)],
-        No),
-       (161, [(161, Pc JUMPDEST), (162, Stack (PUSH_N [0])), (164, Stack (PUSH_N [1])), (166, Swap 0),
-              (167, Stack POP)],
-        Next),
-       (168, [(168, Pc JUMPDEST), (169, Swap 1), (170, Swap 0), (171, Stack POP)], Jump),
-       (173, [(173, Pc JUMPDEST), (174, Stack (PUSH_N [0])), (176, Stack (PUSH_N [2])), (178, Swap 0),
-              (179, Stack POP)],
-        Next),
-       (180, [(180, Pc JUMPDEST), (181, Swap 0)], Jump), (183, [(183, Misc STOP)], No),
-       (184, [(184, Log LOG1), (185, Stack (PUSH_N [98, 122, 122, 114, 48, 88])), (192, Arith SHA3),
-              (193, Unknown 201), (194, Unknown 207), (195, Unknown 30), (196, Swap 13), (197, Dup 3),
-              (198, Stack (PUSH_N
-                            [31, 111, 154, 254, 206, 166, 43, 126, 134, 141, 152, 80, 46, 232, 85, 109, 202,
-                             246, 171])),
-              (218, Unknown 178), (219, Unknown 74), (220, Unknown 203), (221, Dup 02), (222, Unknown 192),
-              (223, Unknown 217), (224, Unknown 251), (225, Misc STOP)],
-        No),
-       (226, [(226, Unknown 41)], No)],
-    all_blocks =
+"blocks ==
       [(0, [(0, Stack (PUSH_N [96])), (2, Stack (PUSH_N [64])), (4, Memory MSTORE), (5, Stack (PUSH_N [0])),
             (7, Stack CALLDATALOAD),
             (8, Stack (PUSH_N
@@ -150,7 +98,7 @@ definition blocks where
               (218, Unknown 178), (219, Unknown 74), (220, Unknown 203), (221, Dup 02), (222, Unknown 192),
               (223, Unknown 217), (224, Unknown 251), (225, Misc STOP)],
         No),
-       (226, [(226, Unknown 41)], Next)]\<rparr>"
+       (226, [(226, Unknown 41)], Next)]"
 context
 notes if_split[ split del ] sep_fun_simps[simp del]
 gas_value_simps[simp add] pure_emp_simps[simp add]
@@ -765,30 +713,35 @@ apply(block_vcg)
 apply(sep_cancel)+
 done
 
-definition return_action' ::"32 word \<Rightarrow> w256 \<Rightarrow> contract_action" where
-"return_action' z x = 
-  (if z = dispatch1_hash then ContractReturn (word_rsplit (x))
+definition return_action' ::"32 word  \<Rightarrow> contract_action" where
+"return_action' z = 
+  (if z = dispatch1_hash then ContractReturn (word_rsplit (1::w256))
   else (if z = dispatch2_hash then ContractReturn (word_rsplit (2:: w256))
   else ContractFail [ShouldNotHappen]))"
 
 
 lemma verify_dispatcher:
+notes
+  bit_mask_rev[simp add]
+shows
 "\<exists>r. triple 
-  (program_counter 0 ** stack_height 0 ** (sent_data (word_rsplit (z::32 word)::byte list)) ** sent_value 1 **
+  (program_counter 0 ** stack_height 0 ** (sent_data (word_rsplit (z::32 word)::byte list)) ** sent_value 0 **
    memory_usage 0 ** continuing ** gas_pred 3000 ** memory (word_rcat [64::byte]) (word_rcat [x::byte]::256 word) **
    memory (word_rcat [96::byte]) (word_rcat [y::byte]::256 word))
   blocks
-  (action (return_action' z 1) ** r)"
+  (action (return_action' z) ** r)"
 apply(simp add: return_action'_def blocks_def triple_def dispatch1_hash_def dispatch2_hash_def)
 apply(split if_split, rule conjI)
  apply(rule impI, rule exI)
  apply((block_vcg)+)[1]
  apply(sep_cancel)+
+apply(clarsimp simp add: dispatch2_hash_def)
 apply(split if_split, rule conjI)
  apply(rule impI, rule exI)
  apply((block_vcg)+)[1]
  apply(sep_cancel)+
-apply(rule impI, rule exI)
+apply(clarsimp simp add: dispatch2_hash_def)
+apply(rule exI)
 apply((block_vcg; bit_mask_solve?)+)[1]
 apply(sep_cancel)+
 sorry
@@ -799,8 +752,8 @@ definition return_action:: "(32 word \<Rightarrow> contract_action option) \<Rig
  | Some a \<Rightarrow> a)"
 
 lemma unspec_contract:
-"(z = dispatch1_hash \<longrightarrow> triple_blocks blocks (program_counter 71 \<and>* restx) (71, the (blocks_list blocks 71)) (action xx \<and>* restbx)) \<Longrightarrow>
-(z = dispatch2_hash \<longrightarrow> triple_blocks blocks (program_counter 123 \<and>* resty) (123, the (blocks_list blocks 123)) (action yy \<and>* restby)) \<Longrightarrow> 
+"(z = dispatch1_hash \<longrightarrow> triple_blocks blocks (program_counter 71 \<and>* restx) (71, the (block_lookup blocks 71)) (action xx \<and>* restbx)) \<Longrightarrow>
+(z = dispatch2_hash \<longrightarrow> triple_blocks blocks (program_counter 123 \<and>* resty) (123, the (block_lookup blocks 123)) (action yy \<and>* restby)) \<Longrightarrow> 
 \<exists>rest. 
  triple
   (program_counter 0 ** stack_height 0 ** (sent_data (word_rsplit (z::32 word)::byte list)) ** sent_value 0 **

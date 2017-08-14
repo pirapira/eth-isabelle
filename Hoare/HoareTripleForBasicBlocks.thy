@@ -483,7 +483,7 @@ inductive triple_blocks :: "basic_blocks \<Rightarrow> pred \<Rightarrow> vertex
 | blocks_next :
   "\<lbrakk>triple_seq pre insts (program_counter i \<and>* q);
     i = n + inst_size_list insts;
-    blocks_list blocks i = Some (bi, ti);
+    block_lookup blocks i = Some (bi, ti);
     triple_blocks blocks (program_counter i \<and>* q) (i, bi, ti) post\<rbrakk> \<Longrightarrow>
    triple_blocks blocks pre (n, insts, Next) post"
 | blocks_jump :
@@ -493,7 +493,7 @@ inductive triple_blocks :: "basic_blocks \<Rightarrow> pred \<Rightarrow> vertex
        memory_usage m \<and>* stack_height (Suc h) \<and>*
        stack h (word_of_int dest::256 word) \<and>*
        continuing \<and>* rest);
-    blocks_list blocks dest = Some (bi, ti);
+    block_lookup blocks dest = Some (bi, ti);
     bi = (dest, Pc JUMPDEST) # bbi;
     triple_blocks blocks
       (program_counter dest \<and>* gas_pred (g - Gmid) \<and>*
@@ -510,9 +510,9 @@ inductive triple_blocks :: "basic_blocks \<Rightarrow> pred \<Rightarrow> vertex
        continuing \<and>* memory_usage m \<and>*
        program_counter (n + inst_size_list insts) \<and>* rest));
     j = n + 1 + inst_size_list insts;
-    blocks_list blocks dest = Some (bi, ti);
+    block_lookup blocks dest = Some (bi, ti);
     bi = (dest, Pc JUMPDEST) # bbi;
-    blocks_list blocks j = Some (bj, tj);
+    block_lookup blocks j = Some (bj, tj);
     r = (stack_height h \<and>* gas_pred (g - Ghigh) \<and>*
          continuing \<and>* memory_usage m \<and>* rest);
     (cond \<noteq> 0 \<Longrightarrow> triple_blocks blocks (r \<and>* program_counter dest) (dest, bi, ti) post);
@@ -522,7 +522,7 @@ inductive triple_blocks :: "basic_blocks \<Rightarrow> pred \<Rightarrow> vertex
   "triple_blocks blocks \<langle>False\<rangle> i post"
 
 definition triple :: "pred \<Rightarrow> basic_blocks \<Rightarrow> pred \<Rightarrow> bool" where
-"triple pre blocks post = triple_blocks blocks pre (hd (all_blocks blocks)) post"
+"triple pre blocks post = triple_blocks blocks pre (hd blocks) post"
 
 lemma blocks_jumpi_uint:
 "\<lbrakk>  triple_seq pre insts
@@ -533,9 +533,9 @@ lemma blocks_jumpi_uint:
        continuing \<and>* memory_usage m \<and>*
        program_counter (n + inst_size_list insts) \<and>* rest));
     j = n + 1 + inst_size_list insts;
-    blocks_list blocks (uint dest) = Some (bi, ti);
+    block_lookup blocks (uint dest) = Some (bi, ti);
     bi = (uint dest, Pc JUMPDEST) # bbi;
-    blocks_list blocks j = Some (bj, tj);
+    block_lookup blocks j = Some (bj, tj);
     r = (stack_height h \<and>* gas_pred (g - Ghigh) \<and>*
          continuing \<and>* memory_usage m \<and>* rest);
     (cond \<noteq> 0 \<Longrightarrow> triple_blocks blocks (r \<and>* program_counter (uint dest)) (uint dest, bi, ti) post);
@@ -554,7 +554,7 @@ lemma blocks_jump_uint :
        memory_usage m \<and>* stack_height (Suc h) \<and>*
        stack h dest \<and>*
        continuing \<and>* rest);
-    blocks_list blocks (uint dest) = Some (bi, ti);
+    block_lookup blocks (uint dest) = Some (bi, ti);
     bi = (uint dest, Pc JUMPDEST) # bbi;
     triple_blocks blocks
       (program_counter (uint dest) \<and>* gas_pred (g - Gmid) \<and>*

@@ -6,7 +6,7 @@ begin
 lemmas evm_fun_simps = 
   stack_inst_code.simps inst_size_def inst_code.simps 
 
-lemmas blocks_simps = build_blocks_def byteListInt_def find_block_def extract_indexes_def build_vertices_def
+lemmas blocks_simps = build_blocks_def byteListInt_def find_block_def blocks_indexes_def build_basic_blocks_def
  aux_basic_block.simps add_address_def block_pt_def
 
 lemmas word_rcat_simps = word_rcat_def bin_rcat_def
@@ -128,13 +128,12 @@ thm triple_blocks.intros
 lemma
  "\<exists>rest. triple_blocks c
 (continuing ** stack_height 0 ** program_counter 0 ** gas_pred 1000 ** memory_usage 0)
-(0,the (blocks_list c 0))
+(0,the (block_lookup c 0))
 (stack 0 (word_rcat [2::byte]) ** rest)"
  apply(unfold c_val)
  apply (simp)
  apply(rule exI)
   apply triple_vcg
-sorry
 done
 
 (* Same example but we put an unknown value and an if in the post condition *)
@@ -150,7 +149,7 @@ schematic_goal c2_val:
 lemma
  " \<exists>rest0 restn0. triple_blocks (c2 cond)
 (continuing ** stack_height 0 ** program_counter 0 ** gas_pred 1000 ** memory_usage 0)
-(0, the (blocks_list (c2 cond) 0))
+(0, the (block_lookup (c2 cond) 0))
 (if word_rcat [cond] = (0::256 word) then stack 0 (word_rcat [1::byte]) ** restn0 else stack 0 (word_rcat [2::byte]) ** rest0)
 "
 apply(unfold c2_val)
@@ -158,7 +157,6 @@ apply (simp)
 apply(rule exI)+
 apply(triple_vcg)
 done
-sorry
 
 (* Same example as the previous one but with the unknown value as a precondition *)
 
@@ -166,7 +164,7 @@ lemma
  "\<exists>rest. triple_blocks (c2 cond)
 (continuing ** stack_height 0 ** program_counter 0 ** gas_pred 1000 ** memory_usage 0 **
  \<langle> (word_rcat [cond] \<noteq> (0::256 word)) \<rangle>)
-(0,the (blocks_list (c2 cond) 0))
+(0,the (block_lookup (c2 cond) 0))
 (stack 0 (word_rcat [2::byte]) ** rest )
 "
 apply(unfold c2_val)
@@ -174,7 +172,6 @@ apply (simp)
 apply(rule exI)
 apply(triple_vcg)
 done
-sorry
 
 (* Example with a Jump and a Next block*)
 
@@ -189,7 +186,7 @@ schematic_goal c4_val:
 lemma
  "\<exists>rest. triple_blocks c4
 (continuing ** stack_height 0 ** program_counter 0 ** gas_pred 1000 ** memory_usage 0)
-(0, the (blocks_list c4 0))
+(0, the (block_lookup c4 0))
 (stack 0 (word_rcat [1::byte]) ** stack_height (Suc (Suc 0)) ** stack 1 (word_rcat [2::byte]) ** rest)
 "
 apply(unfold c4_val)
@@ -197,7 +194,6 @@ apply (simp)
 apply(rule exI)
 apply(triple_vcg)
 done
-sorry
 end
 
 end

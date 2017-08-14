@@ -67,3 +67,4 @@
   | Swap _ => XXX
   | Storage SLOAD =>
   | Storage SSTORE =>
+  | Unknown => X
