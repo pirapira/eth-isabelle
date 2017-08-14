@@ -1686,6 +1686,7 @@ reg_vertex (m, insts, No) \<Longrightarrow>
 	apply(thin_tac "(\<And>i x xs. False \<Longrightarrow> _ x i xs \<Longrightarrow> _ x i xs \<Longrightarrow> _ x i xs \<Longrightarrow> \<forall>v. _ x i xs v)")
   apply(simp add: last_no_def)
 	apply(case_tac i; simp)
+   apply(simp add: program_sem.simps instruction_simps next_state_def split: if_splits)
 	apply(case_tac x13; simp)
 		apply(simp add: program_sem.simps instruction_simps stop_def next_state_def split: if_splits)
     apply(case_tac "program_content (cctx_program co_ctx) (vctx_pc x)";
