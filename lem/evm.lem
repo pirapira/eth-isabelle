@@ -1902,7 +1902,7 @@ declare termination_argument program_sem = automatic
 
 
 val program_sem_t: constant_ctx -> network -> instruction_result -> instruction_result
-let rec program_sem_t c net p =
+let rec ~{coq} program_sem_t c net p =
   match p with
   | InstructionToEnvironment _ _ _ -> p
   | InstructionContinue v ->
