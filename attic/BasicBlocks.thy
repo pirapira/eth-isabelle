@@ -117,9 +117,7 @@ fun aux_basic_block :: "pos_inst list \<Rightarrow> pos_inst list \<Rightarrow> 
     else (bl_pt, block, Next) # (aux_basic_block tl1 [i]))
   | Pc JUMP \<Rightarrow>(bl_pt, block, Jump) # ( aux_basic_block tl1 [])
   | Pc JUMPI \<Rightarrow>(bl_pt, block, Jumpi) # ( aux_basic_block tl1 [])
-  | Misc RETURN \<Rightarrow>(bl_pt, block @ [i], Terminal) # ( aux_basic_block tl1 [])
-  | Misc SUICIDE \<Rightarrow>(bl_pt, block @ [i], Terminal) # ( aux_basic_block tl1 [])
-  | Misc STOP \<Rightarrow>(bl_pt, block @ [i], Terminal) # ( aux_basic_block tl1 [])
+  | Misc _ \<Rightarrow>(bl_pt, block @ [i], Terminal) # ( aux_basic_block tl1 [])
   | Unknown a \<Rightarrow> (bl_pt, block @ [i], Terminal) # ( aux_basic_block tl1 [])
   | _ \<Rightarrow> aux_basic_block tl1 (block@[i])))"
 declare aux_basic_block.simps[simp del]
@@ -139,10 +137,7 @@ fun reg_inst :: "inst \<Rightarrow> bool" where
  "reg_inst (Pc JUMP) = False"
 | "reg_inst (Pc JUMPI) = False"
 |"reg_inst (Pc _) = True"
-|"reg_inst (Misc STOP) = False"
-|"reg_inst (Misc RETURN) = False"
-|"reg_inst (Misc SUICIDE) = False"
-|"reg_inst (Misc _) = True"
+|"reg_inst (Misc _) = False"
 |"reg_inst (Unknown a) = False"
 |"reg_inst _ = True"
 
@@ -164,7 +159,7 @@ fun seq_block :: "pos_inst list \<Rightarrow> bool" where
 declare seq_block.simps[simp del]
 
 definition last_no::"pos_inst list \<Rightarrow> bool" where
-"last_no insts == snd (last insts) \<in> {Misc STOP, Misc RETURN, Misc SUICIDE} \<or> (\<exists>a. snd (last insts) = Unknown a)"
+"last_no insts == (\<exists>a. snd (last insts) = Misc a) \<or> (\<exists>a. snd (last insts) = Unknown a)"
 
 definition wf_blocks:: "basic_blocks \<Rightarrow> bool" where
 "wf_blocks c == 
@@ -232,8 +227,7 @@ apply(subgoal_tac "(n, b, t) \<in> set
   apply(simp split: pc_inst.splits if_splits add: inst_size_def inst_code.simps;
 				erule disjE, rule_tac x="(a,Pc x9) # insts" in exI, rule_tac x=block in exI,
 				simp add: aux_basic_block.simps Let_def, fastforce)
- apply(simp split: misc_inst.splits if_splits add: inst_size_def inst_code.simps;
-				erule disjE, rule_tac x="(a,Misc x13) # insts" in exI, rule_tac x=block in exI,
+ apply(erule disjE, rule_tac x="(a,Misc x13) # insts" in exI, rule_tac x=block in exI,
 				simp add: aux_basic_block.simps Let_def, fastforce)
 apply(assumption)
 done
@@ -473,9 +467,9 @@ apply(simp add: aux_basic_block.simps Let_def)
 apply(case_tac "reg_inst (snd a) \<and> snd a \<noteq> Pc JUMPDEST")
  apply(simp split: reg_inst_splits)
  apply(drule conjunct1; rule conjI, clarsimp)
- apply(rule conjI; rule allI; clarify; rule conjI)
-  apply(clarsimp)+
- apply(rule conjI; clarsimp)
+ apply(rule conjI)
+  apply(rule allI; clarify; rule conjI; clarsimp)
+ apply(clarsimp)
 apply(case_tac "snd a = Pc JUMPDEST"; clarsimp)
  apply(simp split: if_splits)
  apply(drule_tac x="[(a, Pc JUMPDEST)]" in meta_spec)

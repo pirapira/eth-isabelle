@@ -1664,8 +1664,6 @@ apply(case_tac x2; simp add: instruction_simps)
 		apply(rename_tac y; case_tac y; clarsimp; simp add: instruction_simps split:list.splits; clarsimp)
 	 apply(simp add: instruction_simps split:list.splits option.splits; clarsimp)
 	apply(rename_tac y; case_tac y; simp add: instruction_simps split:list.splits; clarsimp)
- apply(rename_tac y; case_tac y; clarsimp)
-		 apply(simp add: instruction_simps Let_def split:list.splits if_splits; clarsimp)+
 done
 
 lemma stop_after_no_continue:
@@ -1687,12 +1685,9 @@ reg_vertex (m, insts, Terminal) \<Longrightarrow>
   apply(simp add: last_no_def)
 	apply(case_tac i; simp)
    apply(simp add: program_sem.simps instruction_simps next_state_def split: if_splits)
-	apply(case_tac x13; simp)
-		apply(simp add: program_sem.simps instruction_simps stop_def next_state_def split: if_splits)
-    apply(case_tac "program_content (cctx_program co_ctx) (vctx_pc x)";
-          simp add: program_sem.simps instruction_simps  stop_def split: option.splits if_splits)
-	 apply(simp add: program_sem.simps instruction_simps next_state_def split: if_splits list.splits)
-	apply(simp add: program_sem.simps instruction_simps next_state_def split: if_splits list.splits)
+  apply(erule disjE)
+   apply(case_tac x13; simp add: program_sem.simps instruction_simps stop_def next_state_def split: if_splits option.splits list.splits)
+  apply(simp add: program_sem.simps instruction_simps stop_def next_state_def split: if_splits option.splits list.splits)
  apply(drule subst[OF program_sem.simps(2), where P="\<lambda>u. u = _"])
  apply(simp add: instruction_simps next_state_def)
  apply(drule_tac x="vctx_pc x" and y=i in spec2, simp, drule conjunct1)
