@@ -30,12 +30,12 @@ begin
 
 (* Example with a Jumpi and a No block *)
 
-definition c where
-"c = build_blocks [ Stack (PUSH_N [1]), Stack (PUSH_N [8]), Pc JUMPI, Stack (PUSH_N [1]), Misc STOP, Pc JUMPDEST, Stack (PUSH_N [2]), Misc STOP]"
+definition ex1 where
+"ex1 = build_blocks [ Stack (PUSH_N [1]), Stack (PUSH_N [8]), Pc JUMPI, Stack (PUSH_N [1]), Misc STOP, Pc JUMPDEST, Stack (PUSH_N [2]), Misc STOP]"
 
-schematic_goal c_val:
- " c = ?p"
- by(simp add: c_def  word_rcat_simps Let_def dropWhile.simps  blocks_simps next_i_def
+schematic_goal ex1_val:
+ " ex1 = ?p"
+ by(simp add: ex1_def  word_rcat_simps Let_def dropWhile.simps  blocks_simps next_i_def
   split:if_splits nat.splits option.splits )
 
 lemmas strengthen_insts =
@@ -126,11 +126,11 @@ method triple_vcg =
 thm triple_blocks.intros
 (* For a jumpif that can be solved statically, it works *)
 lemma
- "\<exists>rest. triple_blocks c
+ "\<exists>rest. triple_blocks ex1
 (continuing ** stack_height 0 ** program_counter 0 ** gas_pred 1000 ** memory_usage 0)
-(0,the (block_lookup c 0))
+(0,the (block_lookup ex1 0))
 (stack 0 (word_rcat [2::byte]) ** rest)"
- apply(unfold c_val)
+ apply(unfold ex1_val)
  apply (simp)
  apply(rule exI)
   apply triple_vcg
@@ -138,21 +138,21 @@ done
 
 (* Same example but we put an unknown value and an if in the post condition *)
 (* For a jumpif where we don't know at all which branch to follow, it works *)
-definition c2 where
-"c2 x = build_blocks [ Stack (PUSH_N [x]), Stack (PUSH_N [8]), Pc JUMPI, Stack (PUSH_N [1]), Misc STOP, Pc JUMPDEST, Stack (PUSH_N [2]), Misc STOP]"
+definition ex2 where
+"ex2 x = build_blocks [ Stack (PUSH_N [x]), Stack (PUSH_N [8]), Pc JUMPI, Stack (PUSH_N [1]), Misc STOP, Pc JUMPDEST, Stack (PUSH_N [2]), Misc STOP]"
 
-schematic_goal c2_val:
- " c2 x = ?p"
- by(simp add: c2_def  word_rcat_simps Let_def dropWhile.simps blocks_simps next_i_def
+schematic_goal ex2_val:
+ " ex2 x = ?p"
+ by(simp add: ex2_def  word_rcat_simps Let_def dropWhile.simps blocks_simps next_i_def
   split:if_splits nat.splits option.splits )
 
 lemma
- " \<exists>rest0 restn0. triple_blocks (c2 cond)
+ " \<exists>rest0 restn0. triple_blocks (ex2 cond)
 (continuing ** stack_height 0 ** program_counter 0 ** gas_pred 1000 ** memory_usage 0)
-(0, the (block_lookup (c2 cond) 0))
+(0, the (block_lookup (ex2 cond) 0))
 (if word_rcat [cond] = (0::256 word) then stack 0 (word_rcat [1::byte]) ** restn0 else stack 0 (word_rcat [2::byte]) ** rest0)
 "
-apply(unfold c2_val)
+apply(unfold ex2_val)
 apply (simp)
 apply(rule exI)+
 apply(triple_vcg)
@@ -161,13 +161,13 @@ done
 (* Same example as the previous one but with the unknown value as a precondition *)
 
 lemma
- "\<exists>rest. triple_blocks (c2 cond)
+ "\<exists>rest. triple_blocks (ex2 cond)
 (continuing ** stack_height 0 ** program_counter 0 ** gas_pred 1000 ** memory_usage 0 **
  \<langle> (word_rcat [cond] \<noteq> (0::256 word)) \<rangle>)
-(0,the (block_lookup (c2 cond) 0))
+(0,the (block_lookup (ex2 cond) 0))
 (stack 0 (word_rcat [2::byte]) ** rest )
 "
-apply(unfold c2_val)
+apply(unfold ex2_val)
 apply (simp)
 apply(rule exI)
 apply(triple_vcg)
@@ -175,21 +175,21 @@ done
 
 (* Example with a Jump and a Next block*)
 
-definition c4 where
-"c4 = build_blocks [ Stack (PUSH_N [1]), Stack (PUSH_N [5]), Pc JUMP, Pc JUMPDEST, Stack (PUSH_N [2]), Pc JUMPDEST, Misc STOP]"
+definition ex3 where
+"ex3 = build_blocks [ Stack (PUSH_N [1]), Stack (PUSH_N [5]), Pc JUMP, Pc JUMPDEST, Stack (PUSH_N [2]), Pc JUMPDEST, Misc STOP]"
 
-schematic_goal c4_val:
- " c4  = ?p"
- by(simp add: c4_def  word_rcat_simps Let_def dropWhile.simps blocks_simps next_i_def
+schematic_goal ex3_val:
+ " ex3  = ?p"
+ by(simp add: ex3_def  word_rcat_simps Let_def dropWhile.simps blocks_simps next_i_def
   split:if_splits nat.splits option.splits )
 
 lemma
- "\<exists>rest. triple_blocks c4
+ "\<exists>rest. triple_blocks ex3
 (continuing ** stack_height 0 ** program_counter 0 ** gas_pred 1000 ** memory_usage 0)
-(0, the (block_lookup c4 0))
+(0, the (block_lookup ex3 0))
 (stack 0 (word_rcat [1::byte]) ** stack_height (Suc (Suc 0)) ** stack 1 (word_rcat [2::byte]) ** rest)
 "
-apply(unfold c4_val)
+apply(unfold ex3_val)
 apply (simp)
 apply(rule exI)
 apply(triple_vcg)

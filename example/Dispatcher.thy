@@ -22,83 +22,43 @@ lemmas blocks_simps = build_blocks_def byteListInt_def find_block_def blocks_ind
 
 value "parse_bytecode ''90''"
 
-value"block_lookup (build_blocks (parse_bytecode ''60606040526000357c0100000000000000000000000000000000000000000000000000000000900463ffffffff1680633ecb5edf1460475780638cd5b07714607b575b600080fd5b3415605157600080fd5b6065600480803590602001909190505060a1565b6040518082815260200191505060405180910390f35b3415608557600080fd5b608b60ad565b6040518082815260200191505060405180910390f35b6000600190505b919050565b6000600290505b905600a165627a7a72305820c9cf1e9d83721f6f9afecea62b7e868d98502ee8556dcaf6abb24acb8bc0d9fb0029''))"
+value"(parse_bytecode ''60606040526000357c0100000000000000000000000000000000000000000000000000000000900463ffffffff1680633ecb5edf1460475780638cd5b07714607b575b600080fd5b3415605157600080fd5b6065600480803590602001909190505060a1565b6040518082815260200191505060405180910390f35b3415608557600080fd5b608b60ad565b6040518082815260200191505060405180910390f35b6000600190505b919050565b6000600290505b905600a165627a7a72305820c9cf1e9d83721f6f9afecea62b7e868d98502ee8556dcaf6abb24acb8bc0d9fb0029'')"
 
-definition insts where
-"insts \<equiv>
-[Stack (PUSH_N [96]), Stack (PUSH_N [64]), Memory MSTORE, Stack (PUSH_N [0]), Stack CALLDATALOAD,
+definition insts_ex where
+"insts_ex == [Stack (PUSH_N [0x60]), Stack (PUSH_N [0x40]), Memory MSTORE, Stack (PUSH_N [0]), Stack CALLDATALOAD,
   Stack (PUSH_N [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]),
-  Swap 0, Arith DIV, Stack (PUSH_N [255, 255, 255, 255]), Bits inst_AND, Dup 0,
-  Stack (PUSH_N [62, 203, 94, 223]), Arith inst_EQ, Stack (PUSH_N [71]), Pc JUMPI, Dup 0,
-  Stack (PUSH_N [140, 213, 176, 119]), Arith inst_EQ, Stack (PUSH_N [123]), Pc JUMPI, Pc JUMPDEST,
-  Stack (PUSH_N [0]), Dup 0, Unknown 253, Pc JUMPDEST, Info CALLVALUE, Arith ISZERO, Stack (PUSH_N [81]),
-  Pc JUMPI, Stack (PUSH_N [0]), Dup 0, Unknown 253, Pc JUMPDEST, Stack (PUSH_N [101]), Stack (PUSH_N [4]),
-  Dup 0, Dup 0, Stack CALLDATALOAD, Swap 0, Stack (PUSH_N [32]), Arith ADD, Swap 0, Swap 1, Swap 0, Stack POP,
-  Stack POP, Stack (PUSH_N [161]), Pc JUMP, Pc JUMPDEST, Stack (PUSH_N [64]), Memory MLOAD, Dup 0, Dup 2,
-  Dup 1, Memory MSTORE, Stack (PUSH_N [32]), Arith ADD, Swap 1, Stack POP, Stack POP, Stack (PUSH_N [64]),
-  Memory MLOAD, Dup 0, Swap 1, Arith SUB, Swap 0, Misc RETURN, Pc JUMPDEST, Info CALLVALUE, Arith ISZERO,
-  Stack (PUSH_N [133]), Pc JUMPI, Stack (PUSH_N [0]), Dup 0, Unknown 253, Pc JUMPDEST, Stack (PUSH_N [139]),
-  Stack (PUSH_N [173]), Pc JUMP, Pc JUMPDEST, Stack (PUSH_N [64]), Memory MLOAD, Dup 0, Dup 2, Dup 1,
-  Memory MSTORE, Stack (PUSH_N [32]), Arith ADD, Swap 1, Stack POP, Stack POP, Stack (PUSH_N [64]),
-  Memory MLOAD, Dup 0, Swap 1, Arith SUB, Swap 0, Misc RETURN, Pc JUMPDEST, Stack (PUSH_N [0]),
-  Stack (PUSH_N [1]), Swap 0, Stack POP, Pc JUMPDEST, Swap 1, Swap 0, Stack POP, Pc JUMP, Pc JUMPDEST,
-  Stack (PUSH_N [0]), Stack (PUSH_N [2]), Swap 0, Stack POP, Pc JUMPDEST, Swap 0, Pc JUMP, Misc STOP, Log LOG1,
-  Stack (PUSH_N [98, 122, 122, 114, 48, 88]), Arith SHA3, Unknown 201, Unknown 207, Unknown 30, Swap 13, Dup 3,
-  Stack (PUSH_N [31, 111, 154, 254, 206, 166, 43, 126, 134, 141, 152, 80, 46, 232, 85, 109, 202, 246, 171]),
-  Unknown 178, Unknown 74, Unknown 203, Dup 02, Unknown 192, Unknown 217, Unknown 251, Misc STOP, Unknown 41]"
+  Swap 0, Arith DIV, Stack (PUSH_N [0xFF, 0xFF, 0xFF, 0xFF]), Bits inst_AND, Dup 0,
+  Stack (PUSH_N [0x3E, 0xCB, 0x5E, 0xDF]), Arith inst_EQ, Stack (PUSH_N [0x47]), Pc JUMPI, Dup 0,
+  Stack (PUSH_N [0x8C, 0xD5, 0xB0, 0x77]), Arith inst_EQ, Stack (PUSH_N [0x7B]), Pc JUMPI, Pc JUMPDEST,
+  Stack (PUSH_N [0]), Dup 0, Unknown 0xFD, Pc JUMPDEST, Info CALLVALUE, Arith ISZERO,
+  Stack (PUSH_N [0x51]), Pc JUMPI, Stack (PUSH_N [0]), Dup 0, Unknown 0xFD, Pc JUMPDEST,
+  Stack (PUSH_N [0x65]), Stack (PUSH_N [4]), Dup 0, Dup 0, Stack CALLDATALOAD, Swap 0,
+  Stack (PUSH_N [0x20]), Arith ADD, Swap 0, Swap 1, Swap 0, Stack POP, Stack POP, Stack (PUSH_N [0xA1]),
+  Pc JUMP, Pc JUMPDEST, Stack (PUSH_N [0x40]), Memory MLOAD, Dup 0, Dup 2, Dup 1, Memory MSTORE,
+  Stack (PUSH_N [0x20]), Arith ADD, Swap 1, Stack POP, Stack POP, Stack (PUSH_N [0x40]), Memory MLOAD,
+  Dup 0, Swap 1, Arith SUB, Swap 0, Misc RETURN, Pc JUMPDEST, Info CALLVALUE, Arith ISZERO,
+  Stack (PUSH_N [0x85]), Pc JUMPI, Stack (PUSH_N [0]), Dup 0, Unknown 0xFD, Pc JUMPDEST,
+  Stack (PUSH_N [0x8B]), Stack (PUSH_N [0xAD]), Pc JUMP, Pc JUMPDEST, Stack (PUSH_N [0x40]), Memory MLOAD,
+  Dup 0, Dup 2, Dup 1, Memory MSTORE, Stack (PUSH_N [0x20]), Arith ADD, Swap 1, Stack POP, Stack POP,
+  Stack (PUSH_N [0x40]), Memory MLOAD, Dup 0, Swap 1, Arith SUB, Swap 0, Misc RETURN, Pc JUMPDEST,
+  Stack (PUSH_N [0]), Stack (PUSH_N [1]), Swap 0, Stack POP, Pc JUMPDEST, Swap 1, Swap 0, Stack POP,
+  Pc JUMP, Pc JUMPDEST, Stack (PUSH_N [0]), Stack (PUSH_N [2]), Swap 0, Stack POP, Pc JUMPDEST, Swap 0,
+  Pc JUMP, Misc STOP, Log LOG1, Stack (PUSH_N [0x62, 0x7A, 0x7A, 0x72, 0x30, 0x58]), Arith SHA3,
+  Unknown 0xC9, Unknown 0xCF, Unknown 0x1E, Swap 0xD, Dup 3,
+  Stack (PUSH_N
+          [0x1F, 0x6F, 0x9A, 0xFE, 0xCE, 0xA6, 0x2B, 0x7E, 0x86, 0x8D, 0x98, 0x50, 0x2E, 0xE8, 0x55, 0x6D,
+           0xCA, 0xF6, 0xAB]),
+  Unknown 0xB2, Unknown 0x4A, Unknown 0xCB, Dup 0xB, Unknown 0xC0, Unknown 0xD9, Unknown 0xFB, Misc STOP,
+  Unknown 0x29]"
 
-definition blocks where
-"blocks ==
-      [(0, [(0, Stack (PUSH_N [96])), (2, Stack (PUSH_N [64])), (4, Memory MSTORE), (5, Stack (PUSH_N [0])),
-            (7, Stack CALLDATALOAD),
-            (8, Stack (PUSH_N
-                        [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-                         0])),
-            (38, Swap 0), (39, Arith DIV), (40, Stack (PUSH_N [255, 255, 255, 255])), (45, Bits inst_AND),
-            (46, Dup 0), (47, Stack (PUSH_N [62, 203, 94, 223])), (52, Arith inst_EQ),
-            (53, Stack (PUSH_N [71]))],
-        Jumpi),
-       (56, [(56, Dup 0), (57, Stack (PUSH_N [140, 213, 176, 119])), (62, Arith inst_EQ),
-             (63, Stack (PUSH_N [123]))],
-        Jumpi),
-       (66, [(66, Pc JUMPDEST), (67, Stack (PUSH_N [0])), (69, Dup 0), (70, Unknown 253)], Next),
-       (71, [(71, Pc JUMPDEST), (72, Info CALLVALUE), (73, Arith ISZERO), (74, Stack (PUSH_N [81]))], Jumpi),
-       (77, [(77, Stack (PUSH_N [0])), (79, Dup 0), (80, Unknown 253)], Next),
-       (81, [(81, Pc JUMPDEST), (82, Stack (PUSH_N [101])), (84, Stack (PUSH_N [4])), (86, Dup 0), (87, Dup 0),
-             (88, Stack CALLDATALOAD), (89, Swap 0), (90, Stack (PUSH_N [32])), (92, Arith ADD), (93, Swap 0),
-             (94, Swap 1), (95, Swap 0), (96, Stack POP), (97, Stack POP), (98, Stack (PUSH_N [161]))],
-        Jump),
-       (101, [(101, Pc JUMPDEST), (102, Stack (PUSH_N [64])), (104, Memory MLOAD), (105, Dup 0), (106, Dup 2),
-              (107, Dup 1), (108, Memory MSTORE), (109, Stack (PUSH_N [32])), (111, Arith ADD), (112, Swap 1),
-              (113, Stack POP), (114, Stack POP), (115, Stack (PUSH_N [64])), (117, Memory MLOAD),
-              (118, Dup 0), (119, Swap 1), (120, Arith SUB), (121, Swap 0), (122, Misc RETURN)],
-        No),
-       (123, [(123, Pc JUMPDEST), (124, Info CALLVALUE), (125, Arith ISZERO), (126, Stack (PUSH_N [133]))],
-        Jumpi),
-       (129, [(129, Stack (PUSH_N [0])), (131, Dup 0), (132, Unknown 253)], Next),
-       (133, [(133, Pc JUMPDEST), (134, Stack (PUSH_N [139])), (136, Stack (PUSH_N [173]))], Jump),
-       (139, [(139, Pc JUMPDEST), (140, Stack (PUSH_N [64])), (142, Memory MLOAD), (143, Dup 0), (144, Dup 2),
-              (145, Dup 1), (146, Memory MSTORE), (147, Stack (PUSH_N [32])), (149, Arith ADD), (150, Swap 1),
-              (151, Stack POP), (152, Stack POP), (153, Stack (PUSH_N [64])), (155, Memory MLOAD),
-              (156, Dup 0), (157, Swap 1), (158, Arith SUB), (159, Swap 0), (160, Misc RETURN)],
-        No),
-       (161, [(161, Pc JUMPDEST), (162, Stack (PUSH_N [0])), (164, Stack (PUSH_N [1])), (166, Swap 0),
-              (167, Stack POP)],
-        Next),
-       (168, [(168, Pc JUMPDEST), (169, Swap 1), (170, Swap 0), (171, Stack POP)], Jump),
-       (173, [(173, Pc JUMPDEST), (174, Stack (PUSH_N [0])), (176, Stack (PUSH_N [2])), (178, Swap 0),
-              (179, Stack POP)],
-        Next),
-       (180, [(180, Pc JUMPDEST), (181, Swap 0)], Jump), (183, [(183, Misc STOP)], No),
-       (184, [(184, Log LOG1), (185, Stack (PUSH_N [98, 122, 122, 114, 48, 88])), (192, Arith SHA3),
-              (193, Unknown 201), (194, Unknown 207), (195, Unknown 30), (196, Swap 13), (197, Dup 3),
-              (198, Stack (PUSH_N
-                            [31, 111, 154, 254, 206, 166, 43, 126, 134, 141, 152, 80, 46, 232, 85, 109, 202,
-                             246, 171])),
-              (218, Unknown 178), (219, Unknown 74), (220, Unknown 203), (221, Dup 02), (222, Unknown 192),
-              (223, Unknown 217), (224, Unknown 251), (225, Misc STOP)],
-        No),
-       (226, [(226, Unknown 41)], Next)]"
+definition blocks_ex where
+"blocks_ex == build_blocks insts_ex"
+
+schematic_goal blocks_ex_val:
+ " blocks_ex  = ?p"
+ by(simp add: ex3_def insts_ex_def  word_rcat_simps Let_def dropWhile.simps blocks_simps next_i_def
+  split:if_splits nat.splits option.splits )
+
 context
 notes if_split[ split del ] sep_fun_simps[simp del]
 gas_value_simps[simp add] pure_emp_simps[simp add]
@@ -261,6 +221,8 @@ notes
   M_def[simp add]
   Cmem_def[simp add]
   memory_range.simps[simp del]
+  blocks_ex_def[simp add]
+  insts_ex_def[simp add]
 begin
 
 lemma spec_fun1:
@@ -270,9 +232,9 @@ triple
 program_counter 0 ** stack_height 0 ** (sent_data (word_rsplit (0x3ecb5edf::32 word))) ** sent_value 0 **
    memory_usage 0 ** continuing ** gas_pred 3000 ** memory (word_rcat [64::byte]) (word_rcat [x::byte]::256 word) **
    memory (word_rcat [96::byte]) (word_rcat [y::byte]::256 word))
-  blocks
+  blocks_ex
   (action (ContractReturn (word_rsplit (1:: w256))) ** r)"
-apply (simp add: blocks_def triple_def)
+apply (simp add: triple_def blocks_simps)
 apply(rule exI)
 apply(block_vcg)
 apply(block_vcg)
@@ -290,9 +252,9 @@ triple
 program_counter 0 ** stack_height 0 ** (sent_data (word_rsplit (0x8cd5b077::32 word))) ** sent_value 0 **
    memory_usage 0 ** continuing ** gas_pred 3000 ** memory (word_rcat [64::byte]) (word_rcat [x::byte]::256 word) **
    memory (word_rcat [96::byte]) (word_rcat [y::byte]::256 word))
-  blocks
+  blocks_ex
   (action (ContractReturn (word_rsplit (2:: w256))) ** r)"
-apply (simp add: blocks_def triple_def)
+apply (simp add: blocks_simps triple_def)
 apply(rule exI)
 apply(block_vcg)
 apply(block_vcg)
@@ -703,9 +665,9 @@ triple
 program_counter 0 ** stack_height 0 ** (sent_data (word_rsplit (z::32 word)::byte list)) ** sent_value 0 **
    memory_usage 0 ** continuing ** gas_pred 3000 ** memory (word_rcat [64::byte]) (word_rcat [x::byte]::256 word) **
    memory (word_rcat [96::byte]) (word_rcat [y::byte]::256 word))
-  blocks
+  blocks_ex
   (action (ContractFail [ShouldNotHappen]) ** r)"
-apply (simp add: blocks_def triple_def dispatch1_hash_def dispatch2_hash_def)
+apply (simp add: blocks_simps triple_def dispatch1_hash_def dispatch2_hash_def)
 apply(rule exI)
 apply(block_vcg; bit_mask_solve)
 apply(block_vcg; bit_mask_solve)
@@ -728,9 +690,9 @@ shows
   (program_counter 0 ** stack_height 0 ** (sent_data (word_rsplit (z::32 word)::byte list)) ** sent_value 0 **
    memory_usage 0 ** continuing ** gas_pred 3000 ** memory (word_rcat [64::byte]) (word_rcat [x::byte]::256 word) **
    memory (word_rcat [96::byte]) (word_rcat [y::byte]::256 word))
-  blocks
+  blocks_ex
   (action (return_action' z) ** r)"
-apply(simp add: return_action'_def blocks_def triple_def dispatch1_hash_def dispatch2_hash_def)
+apply(simp add: return_action'_def blocks_simps triple_def dispatch1_hash_def dispatch2_hash_def)
 apply(split if_split, rule conjI)
  apply(rule impI, rule exI)
  apply((block_vcg)+)[1]
@@ -744,7 +706,7 @@ apply(clarsimp simp add: dispatch2_hash_def)
 apply(rule exI)
 apply((block_vcg; bit_mask_solve?)+)[1]
 apply(sep_cancel)+
-sorry
+done
 
 definition return_action:: "(32 word \<Rightarrow> contract_action option) \<Rightarrow> 32 word \<Rightarrow> contract_action" where
 "return_action m w = (case m w of 
@@ -759,15 +721,12 @@ lemma unspec_contract:
   (program_counter 0 ** stack_height 0 ** (sent_data (word_rsplit (z::32 word)::byte list)) ** sent_value 0 **
    memory_usage 0 ** continuing ** gas_pred 3000 ** memory (word_rcat [64::byte]) (word_rcat [m64::byte]::256 word) **
    memory (word_rcat [96::byte]) (word_rcat [m96::byte]::256 word))
-  blocks
+  blocks_ex
   (action (return_action (map_of [(dispatch1_hash, xx), (dispatch2_hash, yy)]) z) \<and>* rest) "
 apply (simp add: dispatch1_hash_def dispatch2_hash_def)
 apply(rule exI)
-apply(subst blocks_def, simp add: triple_def)
-apply(block_vcg)
-apply(case_tac "z=dispatch1_hash")
- apply(simp add: dispatch1_hash_def word_rcat_simps bin_cat_def)
-oops
+	apply(simp add: triple_def blocks_ex_def)
+		oops
 
 end
 end
