@@ -415,14 +415,16 @@ end
 (* There are sixteen instructions for duplicating a stack element.  These instructions take *)
 (* a stack element and duplicate it on top of the stack. *)
 
-type dup_inst = byte
+type nibble = word4
+
+type dup_inst = nibble
 
 val dup_inst_code : dup_inst -> byte
 let dup_inst_code m =
-  (m + 0X80)
+  (word8FromInt (word4ToUInt m) + 0X80)
 
 val dup_inst_numbers : dup_inst -> stack_numbers
-let dup_inst_numbers m = (word8ToUInt m, word8ToUInt m + 1)
+let dup_inst_numbers m = (word4ToUInt m, word4ToUInt m + 1)
 
 (* subsection {* Memory Operations *} *)
 
@@ -531,15 +533,15 @@ let stack_inst_numbers inst = match inst with
 | CALLDATALOAD -> (1, 1)
 end
 
-type swap_inst = byte
+type swap_inst = nibble
 
 val swap_inst_code : swap_inst -> byte
 let swap_inst_code m =
-  (m + 0X90)
+  (word8FromInt (word4ToUInt m) + 0X90)
 
 val swap_inst_numbers : swap_inst -> stack_numbers
 let swap_inst_numbers m =
-(word8ToUInt m + 1, word8ToUInt m + 1)
+(word4ToUInt m + 1, word4ToUInt m + 1)
 
 (* subsection {* Logging Instructions *} *)
 
@@ -1430,8 +1432,8 @@ let pop v c = match v.vctx_stack with
 end
 
 (* The DUP instructions: *)
-val general_dup : nat -> variable_ctx -> constant_ctx -> instruction_result
-let general_dup n v c = match List.index v.vctx_stack n with
+val general_dup : nibble -> variable_ctx -> constant_ctx -> instruction_result
+let general_dup n v c = match List.index v.vctx_stack (word4ToNat n) with
   | Nothing -> instruction_failure_result v [TooShortStack]
   | Just duplicated -> InstructionContinue (vctx_advance_pc c <| v with vctx_stack = duplicated :: v.vctx_stack |>)
 end
@@ -1747,7 +1749,7 @@ let instruction_sem v c inst net =
   | Misc CALL -> call net v c
   | Misc RETURN -> ret v c
   | Misc STOP -> stop v c
-  | Dup n -> general_dup (word8ToNat n - 1) v c
+  | Dup n -> general_dup n v c
   | Stack POP -> pop v c
   | Info GASLIMIT -> stack_0_1_op v c v.vctx_block.block_gaslimit
   | Arith inst_GT -> stack_2_1_op v c (fun a b -> if word256UGT a b then 1 else 0)
@@ -1838,7 +1840,7 @@ let instruction_sem v c inst net =
   | Log LOG2 -> log 2 v c
   | Log LOG3 -> log 3 v c
   | Log LOG4 -> log 4 v c
-  | Swap n -> swap (word8ToNat n - 1) v c
+  | Swap n -> swap (word4ToNat n) v c
   | Misc CREATE -> create v c
   | Misc CALLCODE -> callcode net v c
   | Misc SUICIDE -> suicide v c
