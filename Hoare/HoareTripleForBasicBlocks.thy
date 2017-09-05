@@ -395,22 +395,6 @@ inductive triple_inst_info :: "pred \<Rightarrow> pos_inst \<Rightarrow> pred \<
        stack_height (Suc h) \<and>* gas_pred (g - Gbase) \<and>*
        stack h w \<and>* rest)"
 
-definition new_log_entry :: "address \<Rightarrow> w256 list \<Rightarrow> byte list \<Rightarrow> log_entry"
-where
-"new_log_entry addr topics data = \<lparr>log_addr = addr, log_topics = topics, log_data = data \<rparr>"
-
-inductive triple_inst_log :: "pred \<Rightarrow> pos_inst \<Rightarrow> pred \<Rightarrow> bool" where
- inst_log0:
-    "triple_inst_log
-    (\<langle>h\<le> 1022 \<and> g \<ge> (Glog + Glogdata * (uint u)) \<and> m \<ge> 0 \<and> length lst = unat u\<rangle> \<and>*
-     program_counter n \<and>* gas_pred g \<and>* memory_usage m \<and>* memory_range v lst \<and>*
-     stack h u \<and>* stack (Suc h) v \<and>* stack_height (Suc (Suc h)) \<and>*
-     log_number l \<and>* continuing \<and>* this_account addr \<and>* rest)
-    (n, Log LOG0)
-    (program_counter (n+1) \<and>* gas_pred (g - (Glog + Glogdata * (uint u))) \<and>* memory_usage m \<and>*
-     stack_height h \<and>* log_number (Suc l) \<and>* logged l (new_log_entry addr [] lst) \<and>*
-     memory_range v lst \<and>* continuing \<and>* this_account addr \<and>* rest)"
-
 inductive triple_inst :: "pred \<Rightarrow> pos_inst \<Rightarrow> pred \<Rightarrow> bool" where
   inst_arith :
     "triple_inst_arith p (n, Arith i) q \<Longrightarrow> triple_inst p (n, Arith i) q"
@@ -418,8 +402,6 @@ inductive triple_inst :: "pred \<Rightarrow> pos_inst \<Rightarrow> pred \<Right
     "triple_inst_bits p (n, Bits i) q \<Longrightarrow> triple_inst p (n, Bits i) q"
 | inst_info :
     "triple_inst_info p (n, Info i) q \<Longrightarrow> triple_inst p (n, Info i) q"
-| inst_log :
-    "triple_inst_log p (n, Log i) q \<Longrightarrow> triple_inst p (n, Log i) q"
 | inst_memory :
     "triple_inst_memory p (n, Memory i) q \<Longrightarrow> triple_inst p (n, Memory i) q"
 | inst_misc :
@@ -440,19 +422,27 @@ inductive triple_inst :: "pred \<Rightarrow> pos_inst \<Rightarrow> pred \<Right
 			 memory_usage m \<and>* continuing \<and>* rest)"
 | inst_dup :
     "triple_inst
-      (\<langle> h \<le> 1023 \<and> unat n < h \<and> g \<ge> Gverylow\<rangle> \<and>*
-       stack_height h \<and>* stack (h - (unat n) - 1) w \<and>*
-       memory_usage m \<and>* program_counter k \<and>*
-       gas_pred g \<and>* continuing \<and>* rest )
-      (k, Dup n)
-      (program_counter (k + 1) \<and>* gas_pred (g - Gverylow) \<and>*
-       stack_height (Suc h) \<and>* stack (h - (unat n) - 1) w \<and>* stack h w \<and>*
-       memory_usage m \<and>* continuing \<and>* rest )"
+        (\<langle> h \<le> 1023 \<and> unat n < h \<and> Gverylow \<le> g \<and> 0 < m\<rangle> \<and>*
+         stack_height h \<and>*
+         stack (h - unat n - 1) w \<and>*
+         memory_usage m \<and>*
+         program_counter k \<and>*
+         gas_pred g \<and>* continuing \<and>* rest)
+        (k, Dup n)
+        (program_counter (k + 1) \<and>*
+         gas_pred (g - Gverylow) \<and>*
+         stack_height (Suc h) \<and>*
+         stack (h - unat n - 1) w \<and>*
+         stack h w \<and>*
+         memory_usage m \<and>* continuing \<and>* rest)"
 | inst_unknown :
-    "triple_inst
-      (program_counter k \<and>* rest)
-      (k, Unknown i)
-      (program_counter k \<and>* action (ContractFail [ShouldNotHappen]) \<and>* rest)"
+    "triple_inst 
+(\<langle> h \<le> 1024 \<and> 0 \<le> g \<and> 0 < m\<rangle> \<and>*
+program_counter k \<and>* stack_height h \<and>* gas_pred g \<and>* memory_usage m \<and>* continuing \<and>* rest)
+        (k, Unknown i)
+        (program_counter k \<and>*
+         action (ContractFail [ShouldNotHappen]) \<and>* stack_height h \<and>* gas_pred g \<and>* memory_usage m \<and>* not_continuing \<and>*
+         rest)"
 | inst_strengthen_pre:
     "triple_inst p i q \<Longrightarrow> (\<And>s. r s \<Longrightarrow> p s) \<Longrightarrow> triple_inst r i q"
 | inst_false_pre:
