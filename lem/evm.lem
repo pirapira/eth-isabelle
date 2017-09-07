@@ -80,18 +80,22 @@ let get_byte position w =
 
 (* log256floor takes a logarithm (base 256) of an integer and takes floor *)
 
+val log2_nat : natural -> natural
+declare hol target_rep function log2_nat = `LOG2`
+
 val log2 : integer -> integer
-let rec log2 x =
+let rec {isabelle; ocaml} log2 x =
   if x <= 1 then 0
   else 1 + log2 (x / 2)
 declare coq target_rep function log2 = `Z.log2`
+let {hol} log2 x = integerFromNatural (log2_nat (naturalFromInteger x))
 declare termination_argument log2 = automatic
 
 val log256floor : integer -> integer
-let rec {isabelle; hol; ocaml} log256floor x =
+let rec {isabelle; ocaml} log256floor x =
   if x <= 255 then 0
   else 1 + log256floor (x / 256)
-let {coq} log256floor x = log2 x / 8
+let {coq;hol} log256floor x = (log2 (x : integer) : integer) / (8 : integer)
 declare termination_argument log256floor = automatic
 
 val word_exp : integer -> natural -> integer
@@ -1603,7 +1607,7 @@ val thirdComponentOfC : inst -> w256 -> w256 -> w256 -> w256 -> bool -> w256 -> 
 let thirdComponentOfC i s0 s1 s2 s3 recipient_empty orig_val new_val remaining_gas net = fun memu_extra ->
   match i with
   | Storage SSTORE -> Csstore orig_val new_val
-  | Arith EXP -> Gexp + if s1 = 0 then 0 else Gexpbyte net * (1 + log256floor (uint s1))
+  | Arith EXP -> Gexp + if s1 = 0 then 0 else Gexpbyte net * (1 + log256floor (uint s1 : integer))
   | Memory CALLDATACOPY -> Gverylow + Gcopy * ((uint s2 + 31) / 32)
   | Memory CODECOPY -> Gverylow + Gcopy * ((uint s2 + 31) / 32)
   | Memory EXTCODECOPY -> Gextcode net + Gcopy * ((uint s3 + 31) / 32)
