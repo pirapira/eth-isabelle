@@ -402,6 +402,10 @@ lemma gas_elm_not_constant :
 apply(simp add: constant_ctx_as_set_def program_as_set_def)
 done
 
+lemma contract_action_elm_not_constant:
+	"ContractActionElm a \<notin> constant_ctx_as_set co_ctx"
+apply(simp add: constant_ctx_as_set_def program_as_set_def)
+done
 
 lemma code_elm_not_variable[simp] :
  "CodeElm c \<notin> variable_ctx_as_set v"
@@ -1213,6 +1217,7 @@ lemmas not_constant_simps =
   memory_usage_elm_not_constant
   pc_elm_not_constant
   gas_elm_not_constant
+  contract_action_elm_not_constant
   balance_not_constant
   sent_value_not_constant
   sent_data_not_constant
@@ -3298,6 +3303,7 @@ stack_height_elm_not_constant[simp]
 memory_elm_not_constant[simp]
 pc_elm_not_constant[simp]
 gas_elm_not_constant[simp]
+contract_action_elm_not_constant[simp]
 code_elm_not_variable[simp]
 this_account_elm_not_variable[simp]
 rev_append[simp]
