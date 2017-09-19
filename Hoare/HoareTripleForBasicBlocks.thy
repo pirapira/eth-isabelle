@@ -373,7 +373,7 @@ inductive triple_inst_memory :: "pred \<Rightarrow> pos_inst \<Rightarrow> pred 
     "triple_inst_memory
       (\<langle> h \<le> 1022 \<and> g \<ge> Gverylow - Cmem memu + Cmem (M memu memaddr 32) \<and> memu \<ge> 0 \<and>
         length (word_rsplit old_v::byte list) = unat (32::w256) \<and>
-        length (word_rsplit v::byte list) = unat (32::w256)\<rangle> \<and>*
+        length (word_rsplit v::byte list) = unat (32::w256) \<and> memaddr \<le> -32\<rangle> \<and>*
        stack (h+1) memaddr \<and>* stack h v \<and>* stack_height (h+2) \<and>*
        program_counter n \<and>* memory_usage memu \<and>*
        memory memaddr old_v \<and>* gas_pred g \<and>* continuing \<and>* rest)

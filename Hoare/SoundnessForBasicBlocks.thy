@@ -1402,6 +1402,91 @@ method after_byte =
        apply (uniq_state_elm_quasi)
        			 apply(case_tac "ha=Suc h"; simp)*)
 
+value "-1::w256"
+lemma
+"MemoryElm (h, v) \<in> memory_range_elms memaddr xs \<Longrightarrow> memaddr + of_nat (length xs) \<le> -1 \<Longrightarrow>  
+memaddr \<le> h"
+  oops
+lemma memaddr_no_overflow:
+ "Suc (unat (memaddr::w256) + v) \<le> unat (- 1::w256) \<Longrightarrow> 0 < v  \<Longrightarrow> memaddr \<le> memaddr + 1"    
+  by unat_arith
+    
+lemma memory_range_elms_le:
+"MemoryElm (h, v) \<in> memory_range_elms memaddr xs \<Longrightarrow> unat memaddr + length xs \<le> unat (-1::w256) \<Longrightarrow>  
+memaddr \<le> h"
+  apply(induct xs arbitrary:v h memaddr, simp)
+  apply clarsimp
+  apply(erule disjE, clarsimp)
+  apply(case_tac "xs = []", clarsimp)
+  apply (drule meta_spec)+
+  apply(drule meta_mp, assumption)
+  apply simp
+  apply (drule meta_mp)
+  apply(subst unat_plus_simple[THEN iffD1])
+  apply (erule memaddr_no_overflow, simp)
+  apply simp+
+  apply (drule memaddr_no_overflow, simp)    
+  apply simp
+done    
+
+lemma memory_range_elms_uniq_stateelm:
+"unat memaddr + length xs \<le> unat (-1::w256) \<Longrightarrow>  
+ MemoryElm (h, v) \<in> memory_range_elms memaddr xs  \<longrightarrow> 
+    (\<forall>v'. MemoryElm (h, v') \<in> memory_range_elms memaddr xs \<longrightarrow> v' = v)"
+  apply (induct xs arbitrary: memaddr)
+  apply clarsimp
+  apply clarsimp
+  apply(case_tac "xs = []")
+  apply clarsimp
+  apply (rule conjI; clarsimp)
+  apply(drule memory_range_elms_le)
+  apply(subst unat_plus_simple[THEN iffD1])   
+  apply (erule memaddr_no_overflow, simp)
+  apply simp+
+  apply (drule memaddr_no_overflow, simp)    
+  apply simp
+  apply(rule conjI, clarsimp)
+ apply(drule memory_range_elms_le)
+  apply(subst unat_plus_simple[THEN iffD1])   
+  apply (erule memaddr_no_overflow, simp)
+  apply simp+
+  apply (drule memaddr_no_overflow, simp)    
+  apply simp
+  apply clarsimp
+  apply(drule_tac x="memaddr + 1" in meta_spec, simp)
+    apply (drule meta_mp)
+  apply(subst unat_plus_simple[THEN iffD1])   
+  apply (erule memaddr_no_overflow, simp)
+  apply simp+
+  done
+    
+lemma memory_range_elms_same_addr:
+ "MemoryElm (a, v) \<in> memory_range_elms memaddr xs \<Longrightarrow> length xs \<le> length zs \<Longrightarrow>
+       \<exists>v'. MemoryElm (a, v') \<in> memory_range_elms memaddr zs"
+  sorry
+    
+lemma
+  "memory_range_elms memaddr xs = {x. \<forall>a. unat a < length xs \<and> x = MemoryElm (memaddr + a, xs ! unat a)}"
+  apply (induct rule:memory_range_elms.induct)
+  apply clarsimp
+  apply clarsimp
+  apply (subst insert_Collect)
+  apply (rule Set.Collect_eqI)
+  apply (case_tac "x \<noteq> MemoryElm (begin, a)" ; clarsimp)
+
+  apply (rule iffI)
+  apply clarsimp
+    oops
+
+lemma "memory_range_elms memaddr (word_rsplit (old_v::w256)) \<subseteq> s \<Longrightarrow>
+ (\<forall>h v. MemoryElm (h, v) \<in> s \<longrightarrow> (\<forall>v'. MemoryElm (h, v') \<in> s \<longrightarrow> v' = v)) \<Longrightarrow>
+   \<forall>a v. MemoryElm (a, v) \<in> s \<and>  a \<ge> memaddr \<and> a \<le> memaddr + 32 \<longrightarrow> MemoryElm (a, v) \<in> memory_range_elms memaddr (word_rsplit old_v)"
+  apply clarsimp
+  apply (drule_tac x=a and y=v in spec2)
+  apply (drule (1) mp)
+    find_theorems name:memory_range
+  oops
+    
 lemma pc_after_inst:
 notes
   if_split[split del]
@@ -1410,7 +1495,8 @@ shows
 \<exists>s. pre s \<and> uniq_stateelm s \<Longrightarrow>
 \<exists>q. post = (program_counter (n + inst_size i) ** q) \<and>
     (\<exists>s0. (program_counter (n + inst_size i) ** q) s0 \<and> uniq_stateelm s0)"
- apply(induct rule: triple_inst.induct; clarsimp)
+
+  apply(induct rule: triple_inst.induct; clarsimp)
  					 apply(erule triple_inst_arith.cases; clarsimp)
  		(*MUL*)
            apply(find_q_pc_after_inst)
@@ -1622,7 +1708,7 @@ apply(find_q_pc_after_inst)
         (*MSTORE*)
         apply(find_q_pc_after_inst)
         apply(simp add: memory_def)
-    		apply(rule_tac x="(s - {GasElm g} - {PcElm n} - {StackElm (Suc h,memaddr)} -
+    		apply(rule_tac x="(s - {GasElm g} - {PcElm n} - {StackElm (Suc h,memaddr)} - {StackElm (h,v)} -
 					{MemoryUsageElm memu} - {StackHeightElm (Suc (Suc h))} -
 					(memory_range_elms memaddr (word_rsplit old_v))) \<union>
           {GasElm (g - Gverylow + Cmem memu - Cmem (M memu memaddr 32))} \<union>
@@ -1669,12 +1755,28 @@ apply(find_q_pc_after_inst)
     			 apply(drule_tac x="a - memaddr" and y="word_rsplit old_v" in meta_spec2)
     			 apply(drule_tac x=memaddr in meta_spec)
     			 apply(simp)
-    			apply(simp add: uniq_stateelm_simps)
-    		 apply(subst subset_iff)
-    		 apply(rule allI, rule impI, simp)
-    apply(clarsimp simp add: memory_range_elms_set_simps)
-  sorry
+  apply(simp add: uniq_stateelm_simps)    
+  apply clarsimp
+  apply(simp add: uniq_stateelm_simps memory_range_elms_set_simps)        
+  apply (rule conjI[rotated])+
+    prefer 2
+  apply clarsimp
+  apply (rule conjI) apply clarsimp
+    
+  apply (drule_tac zs="word_rsplit old_v" in  memory_range_elms_same_addr, simp)
+  apply clarify
+  apply (drule (1) subsetD)
+  apply (drule_tac x=ha and y=v'a in spec2, fastforce)
+  apply clarsimp
+  apply (rule conjI, clarsimp)
 
+  apply (drule_tac zs="word_rsplit old_v" in  memory_range_elms_same_addr, simp)
+  apply clarify
+  apply (drule (1) subsetD)
+  apply (drule_tac x=ha and y=v'a in spec2, fastforce)
+
+    (* use memory_range_elms_uniq_stateelm *)
+oops
        apply(auto simp add: uniq_stateelm_def)[1]
           					apply(auto simp add: uniq_stateelm_def)[1]
     apply (uniq_state_elm_quasi)
@@ -1882,7 +1984,7 @@ apply(simp add: pure_def)
   apply(rule_tac x=s in exI; rule conjI; simp)
   apply(assumption)
 apply(simp add: pure_def)
-done
+done *)
 
 lemma triple_seq_empty_case[OF _ refl] :
 "triple_seq q xs r \<Longrightarrow> xs = [] \<Longrightarrow>
@@ -1908,8 +2010,8 @@ insts \<noteq> [] \<Longrightarrow>
 seq_block insts \<Longrightarrow>
 reg_block insts \<Longrightarrow>
  m = n + inst_size_list insts"
- apply(induction arbitrary:n post rule:triple_seq.induct)
-    apply(simp)
+  apply(induction arbitrary:n post rule:triple_seq.induct)
+    apply(clarsimp)
     apply(case_tac xs; clarsimp)
      apply(drule triple_seq_empty_case'; clarsimp)
      apply(simp add: reg_block_def seq_block.simps)
