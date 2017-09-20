@@ -689,7 +689,7 @@ shows
 "triple_inst_sem
   (\<langle> h \<le> 1022 \<and> g \<ge> Gverylow - Cmem memu + Cmem (M memu memaddr 32) \<and> memu \<ge> 0 \<and>
     length (word_rsplit old_v::byte list) = unat (32::w256) \<and>
-    length (word_rsplit v::byte list) = unat (32::w256)\<rangle> \<and>*
+    length (word_rsplit v::byte list) = unat (32::w256) \<and> memaddr \<le> -32\<rangle> \<and>*
    stack (h+1) memaddr \<and>* stack h v \<and>* stack_height (h+2) \<and>*
    program_counter n \<and>* memory_usage memu \<and>*
    memory memaddr old_v \<and>* gas_pred g \<and>* continuing \<and>* rest)
@@ -823,7 +823,6 @@ notes
   if_split[split del]
 shows
   "triple_inst p i q \<Longrightarrow> triple_inst_sem p i q"
-  sorry
   apply(induction rule:triple_inst.induct)
       apply(erule triple_inst_arith.cases; clarsimp)
                        apply(inst_sound_set_eq, set_solve)
@@ -854,7 +853,7 @@ shows
   				 apply(inst_sound_set_eq, set_solve)
    					 apply(erule triple_inst_memory.cases; clarsimp)
   					  apply(rule inst_mload_sound[simplified])
-  					 apply(rule inst_mstore_sound[simplified])
+             apply(rule inst_mstore_sound[simplified])
   					apply(erule triple_inst_misc.cases; clarsimp)
   					 apply(rule inst_stop_sem)
   					apply(rule inst_return_sem)
@@ -1310,26 +1309,6 @@ u = v"
 apply(simp add: uniq_stateelm_def)
 			done
 				
-lemma
-	"length old_v < 2^256 \<Longrightarrow>
-	 length v = length old_v \<Longrightarrow>
-	 memory_range_elms m old_v \<subseteq> s \<Longrightarrow>
-	 MemoryElm (a, b) \<in> s \<Longrightarrow>
-	 MemoryElm (a, b) \<notin> memory_range_elms m old_v \<Longrightarrow>
-   MemoryElm (a, b) \<in> memory_range_elms m v \<Longrightarrow>
-	 False"
-	apply(insert memory_elms_not_in_range[where lst="old_v" and a=a and m=m and x=b])
-	apply(drule meta_mp, assumption)
-	apply(drule iffD1, assumption)
-	apply(subst (asm) de_Morgan_conj)
-	 apply(insert iffD2[OF memory_elms_in_range])
-	 apply(drule_tac x=v and y=a in meta_spec2)
-	 apply(drule_tac x=b and y=m in meta_spec2)
-	apply(erule disjE)
-		apply(clarsimp)
-	  apply(clarsimp)
-	sorry
-
 method uniq_state_elm_quasi=
  (simp add: uniq_stateelm_def),
  (rule conjI, fastforce),
@@ -1463,29 +1442,13 @@ lemma memory_range_elms_uniq_stateelm:
 lemma memory_range_elms_same_addr:
  "MemoryElm (a, v) \<in> memory_range_elms memaddr xs \<Longrightarrow> length xs \<le> length zs \<Longrightarrow>
        \<exists>v'. MemoryElm (a, v') \<in> memory_range_elms memaddr zs"
-  sorry
-    
-lemma
-  "memory_range_elms memaddr xs = {x. \<forall>a. unat a < length xs \<and> x = MemoryElm (memaddr + a, xs ! unat a)}"
-  apply (induct rule:memory_range_elms.induct)
-  apply clarsimp
-  apply clarsimp
-  apply (subst insert_Collect)
-  apply (rule Set.Collect_eqI)
-  apply (case_tac "x \<noteq> MemoryElm (begin, a)" ; clarsimp)
-
-  apply (rule iffI)
-  apply clarsimp
-    oops
-
-lemma "memory_range_elms memaddr (word_rsplit (old_v::w256)) \<subseteq> s \<Longrightarrow>
- (\<forall>h v. MemoryElm (h, v) \<in> s \<longrightarrow> (\<forall>v'. MemoryElm (h, v') \<in> s \<longrightarrow> v' = v)) \<Longrightarrow>
-   \<forall>a v. MemoryElm (a, v) \<in> s \<and>  a \<ge> memaddr \<and> a \<le> memaddr + 32 \<longrightarrow> MemoryElm (a, v) \<in> memory_range_elms memaddr (word_rsplit old_v)"
-  apply clarsimp
-  apply (drule_tac x=a and y=v in spec2)
-  apply (drule (1) mp)
-    find_theorems name:memory_range
-  oops
+  apply (induct xs arbitrary:memaddr zs ; clarsimp)
+  apply (erule disjE; clarsimp)
+  apply(case_tac zs, simp)
+  apply fastforce
+  apply(case_tac zs, simp)
+  apply fastforce
+  done
     
 lemma pc_after_inst:
 notes
