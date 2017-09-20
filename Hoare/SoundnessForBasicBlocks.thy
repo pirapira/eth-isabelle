@@ -1408,11 +1408,11 @@ lemma
 memaddr \<le> h"
   oops
 lemma memaddr_no_overflow:
- "Suc (unat (memaddr::w256) + v) \<le> unat (- 1::w256) \<Longrightarrow> 0 < v  \<Longrightarrow> memaddr \<le> memaddr + 1"    
+ "unat (memaddr::w256) + v \<le> unat (- 1::w256) \<Longrightarrow> 0 < v  \<Longrightarrow> memaddr \<le> memaddr + 1"    
   by unat_arith
     
 lemma memory_range_elms_le:
-"MemoryElm (h, v) \<in> memory_range_elms memaddr xs \<Longrightarrow> unat memaddr + length xs \<le> unat (-1::w256) \<Longrightarrow>  
+"MemoryElm (h, v) \<in> memory_range_elms memaddr xs \<Longrightarrow> unat memaddr + length xs - 1 \<le> unat (-1::w256) \<Longrightarrow>  
 memaddr \<le> h"
   apply(induct xs arbitrary:v h memaddr, simp)
   apply clarsimp
@@ -1430,7 +1430,7 @@ memaddr \<le> h"
 done    
 
 lemma memory_range_elms_uniq_stateelm:
-"unat memaddr + length xs \<le> unat (-1::w256) \<Longrightarrow>  
+"unat memaddr + length xs - 1 \<le> unat (-1::w256) \<Longrightarrow>  
  MemoryElm (h, v) \<in> memory_range_elms memaddr xs  \<longrightarrow> 
     (\<forall>v'. MemoryElm (h, v') \<in> memory_range_elms memaddr xs \<longrightarrow> v' = v)"
   apply (induct xs arbitrary: memaddr)
@@ -1774,16 +1774,41 @@ apply(find_q_pc_after_inst)
   apply clarify
   apply (drule (1) subsetD)
   apply (drule_tac x=ha and y=v'a in spec2, fastforce)
+  apply clarsimp
+  apply (erule (1) memory_range_elms_uniq_stateelm[rule_format,rotated])
+  apply simp
+  apply (subst (asm) word_le_nat_alt)
+  apply (drule add_le_mono[where i="31" and j="31", OF le_refl, where l="unat (- 32)"])
+    
+  apply(erule le_trans)
+  apply(subgoal_tac "31 + unat(-32 ::w256) = unat(-32 ::w256) + unat(31 :: w256)")
+  apply(erule_tac t="31 + unat(-32 ::w256)" in ssubst)
+  apply(subst unat_plus_simple[THEN iffD1, THEN sym])   
+  apply (rule word_le_plus_either)
+  apply (rule disjI1)
+  apply simp
+  apply (subgoal_tac "(- 32::w256) + 31 = -1")
+  apply simp
+  apply simp
+  apply simp
+  apply simp
+    
 
-    (* use memory_range_elms_uniq_stateelm *)
-oops
-       apply(auto simp add: uniq_stateelm_def)[1]
-          					apply(auto simp add: uniq_stateelm_def)[1]
-    apply (uniq_state_elm_quasi)
-  apply(case_tac "ha=Suc h"; simp)
-    		 defer 
-        apply(find_q_pc_after_inst)
-        defer
+  apply(auto simp add: uniq_stateelm_def)[1]
+  apply clarsimp
+  apply (rule conjI)
+  apply clarsimp
+  apply (case_tac "ha = h"; clarsimp)  
+  apply (case_tac "ha = Suc h"; clarsimp)
+  apply clarsimp
+  apply clarsimp
+  apply clarsimp
+  apply (rule conjI; clarsimp)
+  apply clarsimp
+  apply (rule conjI; clarsimp)
+  apply clarsimp
+  apply (rule conjI; clarsimp)
+    
     (**Pc**)
   	    apply(erule triple_inst_pc.cases; clarsimp)
       apply(find_q_pc_after_inst)
@@ -1880,111 +1905,8 @@ apply(rule_tac x="(s - {PcElm n} - {GasElm g} -
    	  apply(drule meta_mp)
   apply(rule_tac x=s in exI; rule conjI; simp)
   apply(assumption)
-apply(simp add: pure_def)
-  oops
-    apply (uniq_state_elm_quasi)
-  apply(case_tac "ha=Suc h"; simp)
-           apply(rule  Set.equalityI)
-             prefer 2
-            apply(auto)[1]
-           apply(simp add: Set.subset_iff, clarify)
-           apply(rule conjI)
-            apply(rule notI; drule only_one_pc; simp)
-           apply(rule conjI, rule notI,simp add: uniq_stateelm_def)+
-           apply(rule notI; drule only_one_gas; simp)
-          apply (uniq_state_elm_quasi)
-          apply(case_tac "ha=Suc h"; simp)
-         apply(find_q_pc_after_inst)
-          apply(rule_tac x="(s - {PcElm n} - {StackHeightElm (Suc (Suc (Suc h)))} - {StackElm (Suc (Suc h), u)} -
-             {StackElm (Suc h, v)} - {StackElm (h, w)} - {GasElm g}) \<union> {StackElm (h, arith_3_1 ia u v w)} \<union>
-             {GasElm (g-Gmid)} \<union> {StackHeightElm (Suc h)} \<union> {PcElm (n+1)} " in exI) 
-         apply(sep_simp simp: program_counter_sep gas_pred_sep stack_sep stack_height_sep pure_sep, (erule conjE)?)+
-         apply(clarsimp simp add: gas_value_simps)
-         apply(rule conjI)
-          apply(erule_tac P="_ \<and>* _" in back_subst)
-          apply(auto simp add: uniq_stateelm_def)[1]
-         apply (uniq_state_elm_quasi)
-         apply(thin_tac "\<forall>v. StackHeightElm v \<in> _ \<longrightarrow> _ v")
-         apply(case_tac "ha=(Suc h)"; simp)
-         apply(case_tac "ha=Suc(Suc h)"; simp)
-        apply(find_q_pc_after_inst)
-        apply(rule_tac x="(s - {GasElm g} - {PcElm n} - {StackElm (h, w)}) \<union> 
-          {PcElm (n + inst_size (Arith ISZERO))} \<union>
-          {StackElm (h, iszero_stack w)} \<union> {GasElm (g - Gverylow)} " in exI)
-        apply(easy_case_pc_after_inst)
-       apply(erule triple_inst_bits.cases; clarsimp)
-        apply(find_q_pc_after_inst)
-        apply(rule_tac x="(s - {GasElm g} - {PcElm n} - {StackElm (h, w)}) \<union> 
-           {PcElm (n + 1)} \<union>
-           {StackElm (h, NOT w)} \<union> {GasElm (g - Gverylow)} " in exI)
-        apply(easy_case_pc_after_inst)
-       apply(find_q_pc_after_inst)
-       apply(rule_tac x="(s - {PcElm n} - {StackHeightElm (Suc (Suc h))} -
-             {StackElm (Suc h, v)} - {StackElm (h, w)} - {GasElm g}) \<union> {StackElm (h, bits_2_1_verylow ia v w)} \<union>
-             {GasElm (g-Gverylow)} \<union> {StackHeightElm (Suc h)} \<union> {PcElm (n+1)}" in exI)
-       apply(clarsimp simp add: gas_value_simps evm_sep)
-       apply(rule conjI)
-        apply(erule_tac P=rest in back_subst)
-        apply(auto simp add: uniq_stateelm_def)[1]
-       apply (uniq_state_elm_quasi)
-       apply(case_tac "ha=Suc h"; simp)
-      apply(erule triple_inst_misc.cases; clarsimp)
-     apply(erule triple_inst_pc.cases; clarsimp)
-      apply(find_q_pc_after_inst)
-      apply(rule_tac x="(s - {GasElm g} - {PcElm n}) \<union> {GasElm (g - Gjumpdest)} \<union>
-          {PcElm (n + 1)}" in exI)
-      apply(easy_case_pc_after_inst)
-     apply(find_q_pc_after_inst)
-     apply(rule_tac x="(s - {GasElm g} - {PcElm n} - {StackHeightElm h}) \<union>
-          {StackHeightElm (Suc h)} \<union> {GasElm (g - Gbase)} \<union> {StackElm (h, word_of_int n)} \<union>
-          {PcElm (n + 1)}" in exI)
-     apply(easy_case_pc_after_inst)
-    apply(erule triple_inst_stack.cases; clarsimp)
-     apply(clarsimp simp add: inst_size_simps pure_sep)
-     apply(find_q_pc_after_inst)
-     apply(rule_tac x="(s - {GasElm g} - {PcElm n} -
-          {StackHeightElm h}) \<union> {GasElm (g - Gverylow)} \<union> {StackElm (h, word_rcat lst)} \<union>
-          { StackHeightElm (Suc h)} \<union> {PcElm (n + (1 + int (length lst)))}" in exI)
-     apply(easy_case_pc_after_inst)
-    apply(find_q_pc_after_inst)
-    apply(rule_tac x="(s - {GasElm g} - {PcElm n} -
-          {StackHeightElm (Suc h)} - {StackElm (h, w)}) \<union> {GasElm (g - Gbase)} \<union>
-          { StackHeightElm h} \<union> {PcElm (n + 1)}" in exI)
-    apply(clarsimp simp add: gas_value_simps evm_sep)
-    apply(rule conjI)
-     apply(erule_tac P=rest in back_subst)
-     apply(auto simp add: uniq_stateelm_def)[1]
-    apply(simp add: uniq_stateelm_def)
-    apply(rule conjI, fastforce)
-    apply(rule conjI, fastforce)
-    apply(rule conjI, fastforce)
-    apply(rule conjI, fastforce)
-    apply(rule allI, rule conjI; clarsimp)
-    apply(case_tac "ha=h"; clarsimp)
-   apply(find_q_pc_after_inst)
-   apply(rule_tac x="(s - {PcElm n} - {GasElm g} -
-             {StackElm (h - Suc 0, w)} - {StackElm (h - Suc (Suc (unat na)), v)}) \<union> 
-             {StackElm (h - Suc 0, v)} \<union> {StackElm (h - Suc (Suc (unat na)), w)} \<union>
-             {GasElm (g-Gverylow)} \<union> {PcElm (n+1)}" in exI)
-   apply(clarsimp simp add: gas_value_simps evm_sep)
-   apply(rule conjI, arith)
-   apply(rule conjI)
-    apply(erule_tac P=rest in back_subst)
-    apply(auto simp add: uniq_stateelm_def)[1]
-   apply (simp add: uniq_stateelm_def)
-   apply(rule conjI, fastforce)
-   apply(rule conjI, fastforce)
-   apply(rule conjI)
-    apply(clarsimp)
-    apply(rule conjI, fastforce)
-    apply(rule conjI; clarsimp)
-    apply(rule conjI; clarsimp)
-   apply(fastforce)
-  apply(drule meta_mp)
-  apply(rule_tac x=s in exI; rule conjI; simp)
-  apply(assumption)
-apply(simp add: pure_def)
-done *)
+  apply(simp add: pure_def)
+  done
 
 lemma triple_seq_empty_case[OF _ refl] :
 "triple_seq q xs r \<Longrightarrow> xs = [] \<Longrightarrow>
