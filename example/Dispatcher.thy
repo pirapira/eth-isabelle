@@ -212,7 +212,7 @@ rule blocks_no
 method block_vcg=
 ((blocks_rule_vcg; (rule refl)?), triple_seq_vcg),
 (sep_imp_solve; simp?)+,
-(simp_all add: word_rcat_simps bin_cat_def)
+(simp_all add: word_rcat_simps bin_cat_def)?
 
 context
 notes
