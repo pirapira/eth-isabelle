@@ -118,9 +118,15 @@ let format_transaction (t : transaction) : Easy_format.t =
     ] in
   List (("{", ",", "}", list), lst)
 
+(* rlp_of_transaction returns the keccak hash of the rlp encoding of a transaction *)
+let hash_of_transaction (t : transaction) : Secp256k1.buffer =
+  let rlp : byte list = rlp_of_transaction t in
+  let hash : byte list = Keccak.keccak' rlp in
+  failwith "hash_of_transaction: how to convert a byte list into a buffer?"
+
 let sender_of_transaction (t : transaction) : Evm.address =
   let ctx = Secp256k1.(Context.create [Verify]) in
-  let msg = failwith  "msg" in (* wow, it looks like I need to implement RLP! *)
+  let msg = hash_of_transaction t in (* wow, it looks like I need to implement RLP! *)
   let sign = failwith "sign" in
   let recovered = Secp256k1.RecoverableSign.recover ctx sign msg in
   failwith "sender_of_transaction"
