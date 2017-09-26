@@ -510,7 +510,10 @@ inductive triple_blocks :: "basic_blocks \<Rightarrow> pred \<Rightarrow> vertex
    triple_blocks blocks pre (n, insts, Jumpi) post"
 | blocks_false_pre:
   "triple_blocks blocks \<langle>False\<rangle> i post"
-
+| blocks_strengthen_pre:
+  "triple_blocks blocks p f q \<Longrightarrow>
+   (\<And>s. r s \<Longrightarrow> p s) \<Longrightarrow>
+   triple_blocks blocks r f q"
 definition triple :: "pred \<Rightarrow> basic_blocks \<Rightarrow> pred \<Rightarrow> bool" where
 "triple pre blocks post = triple_blocks blocks pre (hd blocks) post"
 
