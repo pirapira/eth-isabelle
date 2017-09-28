@@ -118,10 +118,12 @@ let format_transaction (t : transaction) : Easy_format.t =
     ] in
   List (("{", ",", "}", list), lst)
 
+let rlp_of_transaction = failwith "rlp_of_transaction"
+
 (* rlp_of_transaction returns the keccak hash of the rlp encoding of a transaction *)
 let hash_of_transaction (t : transaction) : Secp256k1.buffer =
-  let rlp : byte list = rlp_of_transaction t in
-  let hash : byte list = Keccak.keccak' rlp in
+  let rlp : Keccak.byte list = rlp_of_transaction t in
+  let hash : Keccak.byte list = Keccak.keccak' rlp in
   failwith "hash_of_transaction: how to convert a byte list into a buffer?"
 
 let sender_of_transaction (t : transaction) : Evm.address =
