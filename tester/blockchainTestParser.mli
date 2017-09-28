@@ -36,6 +36,8 @@ type transaction =
   ; transactionValue : Big_int.big_int
   }
 
+val rlp_of_transaction : transaction -> Keccak.byte list
+
 val parse_transaction : json -> transaction
 
 val format_transaction : transaction -> Easy_format.t

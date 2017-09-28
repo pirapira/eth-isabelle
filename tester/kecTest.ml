@@ -29,6 +29,8 @@ let () =
     ; transactionS = zero (* dummy: not signed yet *)
     ; transactionV = zero (* dummy: not signed yet *)
     } in
+  let hex_to_byte_list = failwith "hex_to_byte_list" in
+  let () = assert (BlockchainTestParser.rlp_of_transaction t = hex_to_byte_list "0xdc80808094944400f4b88ac9589a0f17ed4671da26bddb668b8203e880") in
 
   (* from ~/src/cpp-ethereum2/test/unittests/libdevcrypto/crypto.cpp *)
   (* Transaction(u256 const& _value, u256 const& _gasPrice, u256 const& _gas, Address const& _dest,                      bytes const& _data, u256 const& _nonce, Secret const& _secret): *)
