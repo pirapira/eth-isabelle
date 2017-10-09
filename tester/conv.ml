@@ -95,6 +95,27 @@ let rec hex_str_of_bl_inner (acc : string) (bs : Word8.word8 list) : string =
 let hex_string_of_byte_list (prefix : string) (bs : Word8.word8 list) : string =
   prefix^(hex_str_of_bl_inner "" bs)
 
+let rec be_byte_list_of_big_int_compact_inner (ret : Word8.word8 list) b =
+  if Big_int.(eq_big_int zero_big_int b) then ret
+  else
+    let (q, r) = Big_int.quomod_big_int b (Big_int.big_int_of_int 256) in
+    be_byte_list_of_big_int_compact_inner (byte_of_big_int r :: ret) b
+
+let be_byte_list_of_big_int_compact (b : Big_int.big_int) =
+  be_byte_list_of_big_int_compact_inner [] b
+
+let be_byte_list_of_big_int (target_len : int) (b : Big_int.big_int) =
+  let lst : Word8.word8 list = be_byte_list_of_big_int_compact b in
+  let lstlen = List.length lst in
+  let () = assert (lstlen <= target_len) in
+  let pad_len = target_len - lstlen in
+  let byte_zero = byte_of_big_int Big_int.zero_big_int in
+  let pad = BatList.make pad_len byte_zero in
+  pad @ lst
+
+let be_byte_list_of_address (w : Word256.word256) : Word8.word8 list =
+  be_byte_list_of_big_int 20 (big_int_of_word256 w)
+
 let format_quad_as_list
       (act : Evm.contract_action)
       (stashed_opt : (Nat_big_num.num * Nat_big_num.num) option) : Easy_format.t list =
