@@ -30,3 +30,14 @@ session "deed" = "HOL" +
   document_files
     "root.tex"
 
+session "simplewallet" = "HOL" +
+  options [document = pdf, document_output = "simplewallet"]
+  sessions
+    "HOL-Library"
+    "HOL-Word"
+  theories [document = false]
+    "lem/Evm"
+  theories
+  document_files (in simple_wallet_document)
+    "root.tex"
+
