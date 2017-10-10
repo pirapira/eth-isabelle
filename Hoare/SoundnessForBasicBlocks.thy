@@ -348,33 +348,35 @@ shows
    memory memaddr v \<and>* memory_usage (M memu memaddr 32) \<and>*
    gas_pred (g - Gverylow + Cmem memu - Cmem (M memu memaddr 32)) \<and>*
    continuing \<and>* rest)"
-apply(simp add: triple_inst_sem_def program_sem.simps as_set_simps instruction_sem_def)
-	apply(clarify)
-apply(simp add: memory_def)
-apply(sep_simp simp: pure_sep)
-apply(sep_simp simp: evm_sep; simp)
-apply(simp add: memory_range_sep)
+  apply(simp add: triple_inst_sem_def program_sem.simps as_set_simps instruction_sem_def)
+  apply(clarify)
+  apply(simp add: memory_def)
+  apply(sep_simp simp: pure_sep)
+  apply(sep_simp simp: evm_sep; simp)
+  apply(simp add: memory_range_sep)
 	apply(simp split: instruction_result.splits)
 	apply(simp add: stateelm_means_simps stateelm_equiv_simps)
  	apply(simp add: memory_range_elms_set_simps)
 	apply(cut_tac memory_range_elms_cut_memory[where lst="word_rsplit v"])
 	apply(drule spec2[where x=memaddr and y=32]; simp)
-		apply(drule mp, assumption)
-apply(simp add: vctx_next_instruction_def)
-apply(clarsimp)
-apply(simp add: instruction_simps vctx_stack_default_def del: Cmem_def M_def)
+  apply(drule mp, assumption)
+  apply(simp add: vctx_next_instruction_def)
+  apply(clarsimp)
+  apply(simp add: instruction_simps)
+  apply (unfold Let_def)
+  apply (simp add: max_absorb2)
 	apply((sep_simp simp: evm_sep)+)
-apply(simp add: variable_context_pc_change)
-apply(simp add: read_word_from_bytes_def unat_bintrunc byte_list_fill_right_def word_rcat_rsplit)
+  apply(simp add: variable_context_pc_change)
+  apply(simp add: read_word_from_bytes_def unat_bintrunc byte_list_fill_right_def word_rcat_rsplit)
 	apply(simp add: stateelm_means_simps stateelm_equiv_simps)
-apply(simp add: memory_range_elms_set_simps)
+  apply(simp add: memory_range_elms_set_simps)
 	apply(rule conjI)
-apply(erule_tac P="(_ \<and>* _)" in back_subst)
-	 apply(set_solve)
-	apply(clarsimp)
-	 apply(simp add: memory_range_elms_set_simps)
-	  apply(fastforce)
-done
+   apply(erule_tac P="(_ \<and>* _)" in back_subst)
+  apply(set_solve)
+ 	apply(clarsimp)
+	apply(simp add: memory_range_elms_set_simps)
+	apply(fastforce)
+ done
 
 	(*MSTORE*)
 lemma store_list_mem_gt:
@@ -706,7 +708,7 @@ apply(sep_simp simp: pure_sep)
 	apply(simp add: stateelm_means_simps stateelm_equiv_simps)
 apply(simp add: vctx_next_instruction_def)
 apply(clarsimp simp add: rev_nth)
-apply(simp add: instruction_simps vctx_stack_default_def del: Cmem_def M_def)
+apply(simp add: instruction_simps Let_def max_absorb2)
 apply(subst conj_commute, rule context_conjI)
 	apply(simp add: memory_range_elms_set_simps)
 	apply(simp add: store_word_memory_def memory_range_elms_in_vctx)
@@ -764,7 +766,7 @@ shows
  				apply(simp add: memory_range_sep memory_range_elms_set_simps)
  apply(clarify)
  apply(clarsimp)
- 			apply(simp add: instruction_simps)
+ 			apply(simp add: instruction_simps Let_def max_absorb2)
  				apply(simp add: stateelm_means_simps stateelm_equiv_simps)
  				apply(simp add: vctx_returned_bytes_def memory_range_elms_cut_memory)
  apply(rule conjI)
@@ -802,7 +804,7 @@ apply(sep_simp simp: evm_sep; simp)
 apply(simp split: instruction_result.splits)
 apply(simp add: stateelm_means_simps stateelm_equiv_simps)
 apply(simp add: vctx_next_instruction_def)
-apply(clarsimp simp add: instruction_simps)
+apply(clarsimp simp add: instruction_simps Let_def max_absorb2)
 apply((sep_simp simp: evm_sep)+)
 apply(simp add: stateelm_means_simps stateelm_equiv_simps)
 			apply(simp add: rev_lookup)
@@ -813,7 +815,6 @@ apply(simp add: stateelm_means_simps stateelm_equiv_simps)
 			 apply(rule conjI)
 			  apply(simp add: short_rev_append rev_nth)
 			  apply(arith)
-				find_theorems name:comm "_\<and>_"
 			apply(erule_tac P="(_ \<and>* _)" in back_subst)
 apply(set_solve)
 				done
@@ -947,7 +948,7 @@ lemma program_sem_t_exec_continue_1:
   program_sem_t co_ctx net presult"
  apply(case_tac presult)
    apply(simp add: program_sem.simps next_state_def)
-   apply(insert program_sem_no_gas_not_continuing)[1]
+   apply(insert program_sem_t_no_gas_not_continuing)[1]
    apply(drule_tac x=x1 and y=co_ctx in meta_spec2)
    apply(drule_tac x=net in meta_spec)
    apply(simp split: option.splits)
@@ -1044,13 +1045,13 @@ lemma code_code_sep_:
          (pos, i) \<in> Q \<and> (pos, i) \<notin> P} = {}")
 		 apply(simp add: subset_minus)[1]
 		apply(auto)[1]
-	 apply(auto simp add: subset_minus diff_diff_union code_decomp Un_commute)[1]
+	 apply(auto simp add: subset_minus set_diff_eq  code_decomp Un_commute)[1]
 	apply(subgoal_tac "{CodeElm (pos, i) |pos i.
      (pos, i) \<in> Q \<and> (pos, i) \<notin> P} \<subseteq> {CodeElm (pos, i) |pos i.
      (pos, i) \<in> Q}")
 	 apply(auto)[1]
 	apply(auto)[1]
- apply(auto simp add: subset_minus diff_diff_union code_decomp Un_commute)
+ apply(auto simp add: subset_minus set_diff_eq code_decomp Un_commute)
 done
 
 lemma code_code_sep:
@@ -2689,8 +2690,15 @@ lemma triple_soundness_aux:
 		apply(simp add: blocks_next_sem_t)
 	 apply(simp add: blocks_jump_sem_t sep_lc)
   apply(simp add: blocks_jumpi_sem_t sep_lc)
- apply(simp add: triple_sem_t_def pure_sep)
-done
+  apply(simp add: triple_sem_t_def pure_sep)
+  apply (clarsimp simp add: triple_sem_t_def sep_lc pure_sep)
+  apply (drule spec)
+  apply (drule spec)
+  apply (drule_tac x=rest in spec)
+  apply (drule mp)
+   apply (sep_cancel)+
+   apply simp+
+ done
 
 lemma blocks_insts_eq_add_address:
 "set (add_address bytecode) = blocks_insts (build_blocks bytecode)"
