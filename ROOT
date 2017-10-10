@@ -36,8 +36,9 @@ session "simplewallet" = "HOL" +
     "HOL-Library"
     "HOL-Word"
   theories [document = false]
-    "lem/Evm"
+    "Hoare/Hoare"
   theories
+    "example/SimpleWallet"
   document_files (in simple_wallet_document)
     "root.tex"
 
