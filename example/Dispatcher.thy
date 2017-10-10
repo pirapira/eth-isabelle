@@ -51,6 +51,11 @@ definition insts_ex where
   Unknown 0xB2, Unknown 0x4A, Unknown 0xCB, Dup 0xB, Unknown 0xC0, Unknown 0xD9, Unknown 0xFB, Misc STOP,
   Unknown 0x29]"
 
+lemma
+ "parse_bytecode ''60606040526000357c0100000000000000000000000000000000000000000000000000000000900463ffffffff1680633ecb5edf1460475780638cd5b07714607b575b600080fd5b3415605157600080fd5b6065600480803590602001909190505060a1565b6040518082815260200191505060405180910390f35b3415608557600080fd5b608b60ad565b6040518082815260200191505060405180910390f35b6000600190505b919050565b6000600290505b905600a165627a7a72305820c9cf1e9d83721f6f9afecea62b7e868d98502ee8556dcaf6abb24acb8bc0d9fb0029'' = insts_ex"
+  unfolding insts_ex_def
+  by eval
+
 definition blocks_ex where
 "blocks_ex == build_blocks insts_ex"
 
@@ -65,33 +70,6 @@ gas_value_simps[simp add] pure_emp_simps[simp add]
 evm_fun_simps[simp add] sep_lc[simp del] sep_conj_first[simp add]
 pure_false_simps[simp add] iszero_stack_def[simp add]
 begin
-
-lemma aux1:
-"(word_of_int (bin_rcat 8 [62, 203, 94, 223]) ::w256)=
-    word_of_int (bin_rcat 8 [255, 255, 255, 255]) AND
-    (if word_of_int
-         (bin_rcat 8
-           [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-            0, 0, 0, 0, 0, 0, 0, 0, 0, 0]) =
-        (0::w256)
-     then word_of_int 0
-     else word_of_int
-           (uint
-             (read_word_from_bytes
-               (unat (word_of_int (bin_rcat 8 [0])))
-               (word_rsplit dispatch1_hash)) div
-            uint
-             (word_of_int
-               (bin_rcat 8
-                 [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-                  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0])::w256)))"
-apply(split if_splits)
- apply(simp add: bin_rcat_def bin_cat_def)
-unfolding read_word_from_bytes_def dispatch1_hash_def
-apply simp
-apply (simp add: byte_list_fill_right_def)
-apply (simp add: word_rcat_def bin_rcat_def bin_cat_def  )
-done
 
 lemma stack_height_not_stack:
 "stack n m s \<Longrightarrow> \<not> stack_height h s"
@@ -224,46 +202,6 @@ notes
   blocks_ex_def[simp add]
   insts_ex_def[simp add]
 begin
-
-lemma spec_fun1:
-"\<exists>r.
-triple 
-  (
-program_counter 0 ** stack_height 0 ** (sent_data (word_rsplit (0x3ecb5edf::32 word))) ** sent_value 0 **
-   memory_usage 0 ** continuing ** gas_pred 3000 ** memory (word_rcat [64::byte]) (word_rcat [x::byte]::256 word) **
-   memory (word_rcat [96::byte]) (word_rcat [y::byte]::256 word))
-  blocks_ex
-  (action (ContractReturn (word_rsplit (1:: w256))) ** r)"
-apply (simp add: triple_def blocks_simps)
-apply(rule exI)
-apply(block_vcg)
-apply(block_vcg)
-apply(block_vcg)
-apply(block_vcg)
-apply(block_vcg)
-apply(block_vcg)
-apply(sep_cancel)+
-done
-
-lemma spec_fun2:
-"\<exists>r.
-triple 
-  (
-program_counter 0 ** stack_height 0 ** (sent_data (word_rsplit (0x8cd5b077::32 word))) ** sent_value 0 **
-   memory_usage 0 ** continuing ** gas_pred 3000 ** memory (word_rcat [64::byte]) (word_rcat [x::byte]::256 word) **
-   memory (word_rcat [96::byte]) (word_rcat [y::byte]::256 word))
-  blocks_ex
-  (action (ContractReturn (word_rsplit (2:: w256))) ** r)"
-apply (simp add: blocks_simps triple_def)
-apply(rule exI)
-apply(block_vcg)
-apply(block_vcg)
-apply(block_vcg)
-apply(block_vcg)
-	apply(block_vcg)
-	apply(block_vcg)+
-apply(sep_cancel)+
-done
 
 lemma length_word_rsplit_4:
 "length (word_rsplit (x::32 word)::byte list) = 4"
@@ -467,19 +405,7 @@ definition bit_mask :: "32 word \<Rightarrow> 256 word" where
           [0::byte, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
            0, 0, 0, 0, 0, 0, 0, 0])::w256) div
       26959946667150639794667015087019630673637144422540572481103610249216)"
-find_theorems word_rsplit
-lemma
-	"z \<noteq> 0 \<Longrightarrow>
-	 word_rsplit (z::32 word) = [a, b, d, e::byte] \<Longrightarrow>
-	 a \<noteq> 0 \<or> b \<noteq> 0 \<or> d \<noteq> 0 \<or> e \<noteq> 0"
-	apply(simp add: word_rsplit_def)
-		apply(simp add: bin_rsplit_def bin_last_def bin_rest_def)
-	oops
-	value "(2^32::32word)"
-lemma word_rsplit_upt:
-  "\<lbrakk> size x = len_of TYPE('a :: len) * n; n \<noteq> 0 \<rbrakk>
-    \<Longrightarrow> word_rsplit x = map (\<lambda>i. ucast (x >> i * len_of TYPE ('a)) :: 'a word) (rev [0 ..< n])"
-sorry
+
 lemma w:
  "  word_rsplit w = sw \<Longrightarrow>
   \<forall>k m. k < length sw \<longrightarrow> m < size (hd sw) \<longrightarrow>
@@ -516,19 +442,6 @@ apply (simp add: word_size)
 apply (word_bitwise)
 apply ((rule conjI)?, erule list0_x, simp)+
 done
-
-lemma "(x::32 word) AND y = y AND x"
-oops
-
-value "(0xffffffff::256 word) !! 32"
-
-lemma
-"n < 256 \<Longrightarrow> n \<ge> (8* length zs) \<Longrightarrow>  \<not>(word_rcat (zs::byte list)::w256) !! n"
-apply(induction zs arbitrary: n)
- apply(simp add: word_rcat_simps )
-apply(simp add: word_rcat_def)
-apply(simp add: bin_rcat_def)
-sorry
 
 lemma word_rcat_nul_bits:
 "n \<ge> 32 \<Longrightarrow>  \<not>((word_rcat ([a,b,d,e]::byte list))::w256) !! n"
@@ -653,9 +566,14 @@ method bit_mask_solve=
 
 lemmas bit_mask_rev = sym[OF bit_mask_def]
 
+definition return_action' ::"32 word  \<Rightarrow> contract_action" where
+"return_action' z = 
+  (if z = dispatch1_hash then ContractReturn (word_rsplit (1::w256))
+  else (if z = dispatch2_hash then ContractReturn (word_rsplit (2:: w256))
+  else ContractFail [ShouldNotHappen]))"
+
 lemma spec_fail:
-notes
-  bit_mask_rev[simp add]
+notes bit_mask_rev[simp add]
 shows
 "z \<noteq> dispatch1_hash \<Longrightarrow>
 z \<noteq> dispatch2_hash \<Longrightarrow>
@@ -674,13 +592,46 @@ apply(block_vcg; bit_mask_solve)
 apply(block_vcg)
 apply(sep_cancel)+
 done
+    
+lemma spec_fun1:
+"\<exists>r.
+triple 
+  (
+program_counter 0 ** stack_height 0 ** (sent_data (word_rsplit (0x3ecb5edf::32 word))) ** sent_value 0 **
+   memory_usage 0 ** continuing ** gas_pred 3000 ** memory (word_rcat [64::byte]) (word_rcat [x::byte]::256 word) **
+   memory (word_rcat [96::byte]) (word_rcat [y::byte]::256 word))
+  blocks_ex
+  (action (ContractReturn (word_rsplit (1:: w256))) ** r)"
+apply (simp add: triple_def blocks_simps)
+apply(rule exI)
+apply(block_vcg)
+apply(block_vcg)
+apply(block_vcg)
+apply(block_vcg)
+apply(block_vcg)
+apply(block_vcg)
+apply(sep_cancel)+
+done
 
-definition return_action' ::"32 word  \<Rightarrow> contract_action" where
-"return_action' z = 
-  (if z = dispatch1_hash then ContractReturn (word_rsplit (1::w256))
-  else (if z = dispatch2_hash then ContractReturn (word_rsplit (2:: w256))
-  else ContractFail [ShouldNotHappen]))"
-
+lemma spec_fun2:
+"\<exists>r.
+triple 
+  (
+program_counter 0 ** stack_height 0 ** (sent_data (word_rsplit (0x8cd5b077::32 word))) ** sent_value 0 **
+   memory_usage 0 ** continuing ** gas_pred 3000 ** memory (word_rcat [64::byte]) (word_rcat [x::byte]::256 word) **
+   memory (word_rcat [96::byte]) (word_rcat [y::byte]::256 word))
+  blocks_ex
+  (action (ContractReturn (word_rsplit (2:: w256))) ** r)"
+apply (simp add: blocks_simps triple_def)
+apply(rule exI)
+apply(block_vcg)
+apply(block_vcg)
+apply(block_vcg)
+apply(block_vcg)
+	apply(block_vcg)
+	apply(block_vcg)+
+apply(sep_cancel)+
+done
 
 lemma verify_dispatcher:
 notes
