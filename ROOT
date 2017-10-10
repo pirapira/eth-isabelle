@@ -1,4 +1,4 @@
-session "deed" = "HOL-Library" +
+session "deed" = "HOL" +
   options [document = pdf, document_output = "output"]
   sessions
     "HOL-Library"
