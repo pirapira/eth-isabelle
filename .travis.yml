@@ -34,9 +34,9 @@ before_install:
 - make || echo "failure expected"
 - cd ..
 - export PATH=./lemdir:$PATH
-- wget https://isabelle.in.tum.de/dist/Isabelle2016-1_app.tar.gz
-- tar xf Isabelle2016-1_app.tar.gz
-- export PATH=./Isabelle2016-1/bin:$PATH
+- wget https://isabelle.in.tum.de/dist/Isabelle2017_app.tar.gz
+- tar xf Isabelle2017_app.tar.gz
+- export PATH=./Isabelle2017/bin:$PATH
 # - git clone git://github.com/HOL-Theorem-Prover/HOL.git
 # - cd HOL
 # - echo 'val polymllibdir = "/usr/local/lib"' > tools-poly/poly-includes.ML
