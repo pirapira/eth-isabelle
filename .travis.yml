@@ -6,7 +6,7 @@ cache:
 sudo: required
 before_install:
 - sudo apt-get -qq update
-- sudo apt-get -qq install libgmp3-dev
+- sudo apt-get -qq install libgmp3-dev texlive-latex-recommended
 # - git clone https://github.com/polyml/polyml.git
 # - cd polyml
 # - git checkout v5.6
