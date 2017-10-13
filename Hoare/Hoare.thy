@@ -5,7 +5,6 @@ imports Main
  "../sep_algebra/EvmSep"
  "../sep_algebra/Sep_Tactics"
  "~~/src/HOL/Eisbach/Eisbach"
- "../attic/Apply_Trace_Cmd"
 begin
 
 lemma not_at_least_one :
