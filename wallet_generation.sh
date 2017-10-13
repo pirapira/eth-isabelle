@@ -1,1 +1,1 @@
-isabelle build -d . simplewallet
+isabelle build -v -d . simplewallet
