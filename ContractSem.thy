@@ -16,7 +16,7 @@
 
 theory ContractSem
 
-imports Main "~~/src/HOL/Word/Word" "./lem/Evm"
+imports Main "HOL-Word.Word" "./lem/Evm"
 (* If ./lem/Evm is missing, try executing `make lem-thy` *)
 
 begin
