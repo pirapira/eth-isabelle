@@ -118,7 +118,27 @@ let format_transaction (t : transaction) : Easy_format.t =
     ] in
   List (("{", ",", "}", list), lst)
 
-let rlp_of_transaction = failwith "rlp_of_transaction"
+let nonce_as_rlp_obj = failwith "nonce_as_rlp_obj"
+let gas_price_as_rlp_obj = failwith "gas_price_as_rlp_obj"
+let gas_limit_as_rlp_obj = failwith "gas_limit_as_rlp_obj"
+let to_as_rlp_obj = failwith "to_as_rlp_obj"
+let value_as_rlp_obj = failwith "value_as_rlp_obj"
+let w_as_rlp_obj = failwith "w_as_rlp_obj"
+let r_as_rlp_obj = failwith "r_as_rlp_obj"
+let s_as_rlp_obj = failwith "s_as_rlp_obj"
+
+let rlp_of_transaction (t : transaction) =
+  Conv.byte_list_of_rope
+    (Rlp.encode
+       (RlpList
+          [ nonce_as_rlp_obj t
+          ; gas_price_as_rlp_obj t
+          ; gas_limit_as_rlp_obj t
+          ; to_as_rlp_obj t
+          ; value_as_rlp_obj t
+          ; w_as_rlp_obj t
+          ; r_as_rlp_obj t
+          ; s_as_rlp_obj t]))
 
 (* rlp_of_transaction returns the keccak hash of the rlp encoding of a transaction *)
 let hash_of_transaction (t : transaction) : Secp256k1.buffer =

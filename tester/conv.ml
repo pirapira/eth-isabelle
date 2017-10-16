@@ -77,6 +77,8 @@ let string_of_address (addr : Word160.word160) : string =
   let str = BatBig_int.to_string_in_hexa b in
   pad_left_string '0' 40 str
 
+let byte_list_of_rope = failwith "byte_list_of_rope"
+
 let rec byte_list_of_hex_string (s : string) =
   if BatString.left s 2 = "0x" then byte_list_of_hex_string (BatString.tail s 2)
   else if String.length s < 2 then []
