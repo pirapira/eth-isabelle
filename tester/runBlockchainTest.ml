@@ -32,17 +32,17 @@ let test_one_case (path : string) (case_name, test) =
     let diff_found = ref false in
     List.iter (fun (a,cmp, storage_list) ->
       let acc = state a in
-      if acc.Block.account_balance0 <> cmp.Block.account_balance0 then begin
-        Printf.printf "address %s has balance %s, but it should be %s!\n%!" (Conv.string_of_address a) (Conv.decimal_of_word256 acc.Block.account_balance0)
-         (Conv.decimal_of_word256 cmp.Block.account_balance0);
+      if acc.Block.block_account_balance <> cmp.Block.block_account_balance then begin
+        Printf.printf "address %s has balance %s, but it should be %s!\n%!" (Conv.string_of_address a) (Conv.decimal_of_word256 acc.Block.block_account_balance)
+         (Conv.decimal_of_word256 cmp.Block.block_account_balance);
         diff_found := true
       end;
-      if acc.Block.account_nonce <> cmp.Block.account_nonce then begin
-        Printf.printf "address %s has nonce %s, but it should be %s!\n%!" (Conv.string_of_address a) (Conv.decimal_of_word256 acc.Block.account_nonce)
-         (Conv.decimal_of_word256 cmp.Block.account_nonce);
+      if acc.Block.block_account_nonce <> cmp.Block.block_account_nonce then begin
+        Printf.printf "address %s has nonce %s, but it should be %s!\n%!" (Conv.string_of_address a) (Conv.decimal_of_word256 acc.Block.block_account_nonce)
+         (Conv.decimal_of_word256 cmp.Block.block_account_nonce);
          diff_found := true
       end;
-      List.iter (StateTestLib.compare_storage diff_found a acc.Block.account_storage0) storage_list) post_st;
+      List.iter (StateTestLib.compare_storage diff_found a acc.Block.block_account_storage) storage_list) post_st;
     (if !diff_found then () else ())
   with SkipTest ->
     Printf.printf "...... skipping %s\n" case_name
