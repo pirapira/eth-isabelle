@@ -11,7 +11,7 @@
 section "More Lemmas on Division"
 
 theory More_Divides
-imports "~~/src/HOL/Main"
+imports Main
 begin
 
 lemma div_mult_le:

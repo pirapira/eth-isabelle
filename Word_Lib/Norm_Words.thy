@@ -11,7 +11,7 @@
 section "Normalising Word Numerals"
 
 theory Norm_Words
-imports "Signed_Words"
+imports Signed_Words
 begin
 
 text \<open>

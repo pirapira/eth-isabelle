@@ -2055,7 +2055,6 @@ apply(case_tac presult)
   apply(erule disjE, clarsimp)+
    apply(case_tac "idx < length list"; simp add: short_rev_append)
   apply(clarsimp)
-   apply(rename_tac x; drule_tac x=x in spec, simp)
   apply(erule disjE, clarsimp)+
   apply(clarsimp)
 apply(simp add: as_set_simps)
@@ -2274,7 +2273,6 @@ lemma jumpi_sem_zero:
   apply(erule disjE, clarsimp)+
    apply(case_tac "idx < length t"; simp add: short_rev_append)
   apply(clarsimp)
-   apply(rename_tac x; drule_tac x=x in spec, simp)
   apply(erule disjE, clarsimp)+
   apply(clarsimp)
 apply(sep_simp simp:continuing_sep)
@@ -2343,7 +2341,6 @@ lemma jumpi_sem_non_zero:
   apply(erule disjE, clarsimp)+
    apply(case_tac "idx < length t"; simp add: short_rev_append)
   apply(clarsimp)
-   apply(rename_tac x; drule_tac x=x in spec, simp)
   apply(erule disjE, clarsimp)+
   apply(clarsimp)
 apply(sep_simp simp: continuing_sep)

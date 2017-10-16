@@ -70,7 +70,6 @@ lemma thirdComponentOfC_gt_0:
   0 < thirdComponentOfC  i s0 s1 s2 s3 recipient_empty orig_val new_val remaining_gas net mmu_extra"
   unfolding thirdComponentOfC_def
   apply (case_tac i ; simp add: gas_simps del: Cextra_def )
-            apply fastforce
            apply (case_tac x2; simp add: gas_simps)
           apply (case_tac x3; simp add: gas_simps )
          apply (case_tac x4 ; simp add: gas_simps)

@@ -496,9 +496,8 @@ lemma word_rcat_rsplit_max: "(word_rcat [a,b,d,e::byte]::w256) \<le> mask 32"
 apply(subst le_mask_iff)
   apply (rule word_eqI)
  apply (subst nth_shiftr)
- apply(simp add: word_size)
- apply(rule word_rcat_nul_bits)
-apply(simp)
+  apply(simp add: word_size)
+  apply(simp add: word_rcat_nul_bits)
 done
 
 lemma
