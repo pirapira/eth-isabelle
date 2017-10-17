@@ -94,7 +94,7 @@ let run_tr tr state block net =
    | Unimplemented -> raise Skip
    | a ->
      if debug_mode then debug_state a;
-     do_run (next net a) in
+     do_run (step net a) in
   let fi = do_run res in
   if debug_mode then begin
     prerr_endline ("Bal " ^ w256dec (fi.f_state tr.tr_from).block_account_balance);

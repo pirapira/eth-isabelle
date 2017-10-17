@@ -13,16 +13,16 @@ datatype global_element =
 
 type_synonym global_pred = "global_element set \<Rightarrow> bool"
 
-definition state_as_set :: "(address \<Rightarrow> account) \<Rightarrow> global_element set" where
-"state_as_set st = {AccountStorage a p e | a p e. e = account_storage0 (st a) p}"
+definition state_as_set :: "(address \<Rightarrow> block_account) \<Rightarrow> global_element set" where
+"state_as_set st = {AccountStorage a p e | a p e. e = block_account_storage (st a) p}"
 
-definition backup_as_set :: "(address \<Rightarrow> account) \<Rightarrow> global_element set" where
-"backup_as_set st = {BackupStorage a p e | a p e. e = account_storage0 (st a) p}"
+definition backup_as_set :: "(address \<Rightarrow> block_account) \<Rightarrow> global_element set" where
+"backup_as_set st = {BackupStorage a p e | a p e. e = block_account_storage (st a) p}"
 
-definition sstorage_as_set :: "nat \<Rightarrow> (address \<Rightarrow> account) \<Rightarrow> global_element set" where
-"sstorage_as_set n st = {SavedStorage n a p e | a p e. e = account_storage0 (st a) p}"
+definition sstorage_as_set :: "nat \<Rightarrow> (address \<Rightarrow> block_account) \<Rightarrow> global_element set" where
+"sstorage_as_set n st = {SavedStorage n a p e | a p e. e = block_account_storage (st a) p}"
 
-definition saved_as_set :: "nat \<Rightarrow> (address\<Rightarrow>account) \<Rightarrow> constant_ctx \<Rightarrow>
+definition saved_as_set :: "nat \<Rightarrow> (address\<Rightarrow>block_account) \<Rightarrow> constant_ctx \<Rightarrow>
   variable_ctx \<Rightarrow> stack_hint \<Rightarrow> global_element set" where
 "saved_as_set n st c v hint =
     sstorage_as_set n st \<union> SavedState n ` contexts_as_set v c"
@@ -40,9 +40,9 @@ fun global_as_set :: "global_state \<Rightarrow> global_element set" where
     backup_as_set (g_orig g) \<union>
     saved_stack_as_set (g_stack g)"
 
-fun iter :: "nat \<Rightarrow> global_state \<Rightarrow> global_state" where
-"iter 0 x = x"
-| "iter (Suc n) x = next0 (iter n x)"
+fun iter :: "network \<Rightarrow> nat \<Rightarrow> global_state \<Rightarrow> global_state" where
+"iter net 0 x = x"
+| "iter net (Suc n) x = step net (iter net n x)"
 
 fun good_context :: "global_state \<Rightarrow> bool" where
 "good_context (Continue g) = no_assertion (g_cctx g)"

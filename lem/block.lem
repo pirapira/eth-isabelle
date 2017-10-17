@@ -386,7 +386,7 @@ let create_account n_state new_addr bytes =
 
 let calc_address addr nonce = w256_to_address (keccak (RLP (Node [RLP_address addr; RLP_w256 nonce])))
 
-let next net = function
+let step net = function
  | Finished st -> Finished st
  | Unimplemented -> Unimplemented
  | Continue global ->
