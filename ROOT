@@ -37,7 +37,7 @@ session "simplewallet" = "HOL" +
     "HOL-Word"
   theories [document = false]
     "Hoare/Hoare"
-    "Hoare/HoareWithInvariant"
+    "HoareWithInvariant/HoareWithInvariant"
   theories
     "example/SimpleWallet"
   document_files (in simple_wallet_document)
