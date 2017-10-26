@@ -1394,13 +1394,9 @@ apply(simp add:cut_memory_aux.simps)
 
 apply(simp add:cut_memory_aux.simps)
 apply(cases "unat (n + 1)")
-apply(simp)
+  apply(simp)
 apply(subst (asm) my_unat_suc)
-apply(simp add:cut_memory_aux.simps)
-apply(auto)
-apply(subst cut_memory_aux)
-apply(auto)
-done
+by(auto simp add:cut_memory_aux.simps)
 
 lemma cut_memory_tail:
   "cut_memory b (n + 1) m = a # lst \<Longrightarrow> cut_memory (b + 1) n m = lst"
