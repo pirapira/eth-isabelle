@@ -58,5 +58,6 @@ script:
 - sh compile.sh
 - ./runVmTest.native 89
 - cd -
+- isabelle version
 - make simplewallet
 
