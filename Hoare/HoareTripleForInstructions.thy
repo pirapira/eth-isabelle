@@ -1316,22 +1316,21 @@ lemma sep_action_sep :
 
 lemma iota0_non_empty_aux:
   "\<forall> b x len lst a.
-    len \<le> l \<longrightarrow>
+    len \<le> l \<longrightarrow>                     
     iota0 b len (lst @ [a]) = a # iota0 b len lst"
-apply(induction l)
- apply(simp add: iota0.simps)
-apply(auto simp add: iota0.simps)
-apply(case_tac "len = Suc l")
- apply clarsimp
- apply(simp add: iota0.simps)
- apply(drule_tac x = "b + 1" in spec)
- apply(drule_tac x = l in spec)
- apply simp
- apply(drule_tac x = "b # lst" in spec)
- apply(drule_tac x = "a" in spec)
- apply simp
-apply simp
-done
+  apply(induction l)
+    apply(simp add: iota0.simps)
+  apply(simp add: iota0.simps)
+  apply(rule allI)
+  apply(rule allI)
+  apply(case_tac "len = Suc l"; auto)
+  apply(drule_tac x = "b + 1" in spec)
+  apply(drule_tac x = l in spec)
+  apply simp
+  apply(drule_tac x = "b # lst" in spec)
+  apply(drule_tac x = "a" in spec)
+  by(simp add: iota0.simps)  
+
 
 lemma iota0_non_empty_aux':
   "\<forall> b x len lst a l.
