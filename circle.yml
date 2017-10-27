@@ -16,7 +16,7 @@ dependencies:
     - mv tmp $HOME/.circlerc
     - cat $HOME/.circlerc
     - sudo apt-get -qq update
-    - sudo apt-get -qq install libgmp3-dev
+    - sudo apt-get -qq install libgmp3-dev texlive-latex-recommended
     - wget https://raw.github.com/ocaml/opam/master/shell/opam_installer.sh -O - | sudo sh -s /usr/local/bin
     - export OPAMJOBS=1
     - opam init -y --comp=4.04.1
