@@ -1,7 +1,6 @@
 dist: trusty
 cache:
   directories:
-  - $HOME/.isabelle
   - $HOME/.opam
 sudo: required
 before_install:
@@ -59,5 +58,6 @@ script:
 - sh compile.sh
 - ./runVmTest.native 89
 - cd -
+- isabelle version
 - make simplewallet
 

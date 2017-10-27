@@ -12,7 +12,7 @@ This repository contains
 * some example verified contracts in `example`
 * a parser that parses hex code and emits an Isabelle/HOL expression representing the program `parser/hexparser.rb`
 
-When you see `\<Rightarrow>` in the source, try using the [Isabelle2016-1](https://isabelle.in.tum.de/index.html) interface.  There you see `⇒` instead.
+When you see `\<Rightarrow>` in the source, try using the [Isabelle2017](https://isabelle.in.tum.de/index.html) interface.  There you see `⇒` instead.
 
 ## Lem?
 
@@ -20,7 +20,7 @@ When you see `\<Rightarrow>` in the source, try using the [Isabelle2016-1](https
 
 ## Prerequisites
 
-* [Isabelle2016-1](https://isabelle.in.tum.de/installation.html)
+* [Isabelle2017](https://isabelle.in.tum.de/installation.html)
 * [lem](http://www.cl.cam.ac.uk/~pes20/lem/built-doc/lem-manual.html#installation)
 * [OCaml](http://www.ocaml.org/) 4.02.3
 * [opam](https://opam.ocaml.org/) 1.2.2
@@ -34,7 +34,7 @@ First translate the Lem definitions into Isabelle/HOL:
 $ make lem-thy
 ```
 
-Then, use Isabelle2016-1 to open `./examples/AlwaysFail.thy`.  The prerequisite Isabelle/HOL files are automatically opened.
+Then, use Isabelle2017 to open `./examples/AlwaysFail.thy`.  The prerequisite Isabelle/HOL files are automatically opened.
 
 ## How to run VM tests and state tests
 
