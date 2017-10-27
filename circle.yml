@@ -46,3 +46,4 @@ test:
     - make lem-hol
     - make lem-coq
     - (cd lem && make)
+    - make simplewallet
