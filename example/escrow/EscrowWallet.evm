@@ -1,0 +1,310 @@
+    /* "escrow.sol":24:544  contract EscrowWallet {... */
+  mstore(0x40, 0x60)
+    /* "escrow.sol":107:251  function EscrowWallet(address _from, address _to) public {... */
+  jumpi(tag_1, iszero(callvalue))
+  0x0
+  dup1
+  revert
+tag_1:
+  mload(0x40)
+  0x40
+  dup1
+  bytecodeSize
+  dup4
+  codecopy
+  dup2
+  add
+  0x40
+  mstore
+  dup1
+  dup1
+  mload
+  swap1
+  0x20
+  add
+  swap1
+  swap2
+  swap1
+  dup1
+  mload
+  swap1
+  0x20
+  add
+  swap1
+  swap2
+  swap1
+  pop
+  pop
+    /* "escrow.sol":185:190  _from */
+  dup2
+    /* "escrow.sol":178:182  from */
+  0x0
+  dup1
+    /* "escrow.sol":178:190  from = _from */
+  0x100
+  exp
+  dup2
+  sload
+  dup2
+  0xffffffffffffffffffffffffffffffffffffffff
+  mul
+  not
+  and
+  swap1
+  dup4
+  0xffffffffffffffffffffffffffffffffffffffff
+  and
+  mul
+  or
+  swap1
+  sstore
+  pop
+    /* "escrow.sol":209:212  _to */
+  dup1
+    /* "escrow.sol":204:206  to */
+  0x1
+  0x0
+    /* "escrow.sol":204:212  to = _to */
+  0x100
+  exp
+  dup2
+  sload
+  dup2
+  0xffffffffffffffffffffffffffffffffffffffff
+  mul
+  not
+  and
+  swap1
+  dup4
+  0xffffffffffffffffffffffffffffffffffffffff
+  and
+  mul
+  or
+  swap1
+  sstore
+  pop
+    /* "escrow.sol":234:244  msg.sender */
+  caller
+    /* "escrow.sol":226:231  owner */
+  0x2
+  0x0
+    /* "escrow.sol":226:244  owner = msg.sender */
+  0x100
+  exp
+  dup2
+  sload
+  dup2
+  0xffffffffffffffffffffffffffffffffffffffff
+  mul
+  not
+  and
+  swap1
+  dup4
+  0xffffffffffffffffffffffffffffffffffffffff
+  and
+  mul
+  or
+  swap1
+  sstore
+  pop
+    /* "escrow.sol":107:251  function EscrowWallet(address _from, address _to) public {... */
+  pop
+  pop
+    /* "escrow.sol":24:544  contract EscrowWallet {... */
+  dataSize(sub_0)
+  dup1
+  dataOffset(sub_0)
+  0x0
+  codecopy
+  0x0
+  return
+stop
+
+sub_0: assembly {
+        /* "escrow.sol":24:544  contract EscrowWallet {... */
+      mstore(0x40, 0x60)
+      calldataload(0x0)
+      0x100000000000000000000000000000000000000000000000000000000
+      swap1
+      div
+      0xffffffff
+      and
+      dup1
+      0x1b9265b8
+      eq
+      tag_2
+      jumpi
+      dup1
+      0x590e1ae3
+      eq
+      tag_3
+      jumpi
+      dup1
+      0x8f9595d4
+      eq
+      tag_4
+      jumpi
+      0x0
+      dup1
+      revert
+        /* "escrow.sol":448:542  function pay() public {... */
+    tag_2:
+      jumpi(tag_5, iszero(callvalue))
+      0x0
+      dup1
+      revert
+    tag_5:
+      tag_6
+      jump(tag_7)
+    tag_6:
+      stop
+        /* "escrow.sol":343:442  function refund() public {... */
+    tag_3:
+      jumpi(tag_8, iszero(callvalue))
+      0x0
+      dup1
+      revert
+    tag_8:
+      tag_9
+      jump(tag_10)
+    tag_9:
+      stop
+        /* "escrow.sol":257:337  function addfund() payable public  {... */
+    tag_4:
+      tag_11
+      jump(tag_12)
+    tag_11:
+      stop
+        /* "escrow.sol":448:542  function pay() public {... */
+    tag_7:
+        /* "escrow.sol":503:508  owner */
+      0x2
+      0x0
+      swap1
+      sload
+      swap1
+      0x100
+      exp
+      swap1
+      div
+      0xffffffffffffffffffffffffffffffffffffffff
+      and
+        /* "escrow.sol":489:508  msg.sender == owner */
+      0xffffffffffffffffffffffffffffffffffffffff
+      and
+        /* "escrow.sol":489:499  msg.sender */
+      caller
+        /* "escrow.sol":489:508  msg.sender == owner */
+      0xffffffffffffffffffffffffffffffffffffffff
+      and
+      eq
+        /* "escrow.sol":480:509  require (msg.sender == owner) */
+      iszero
+      iszero
+      tag_14
+      jumpi
+      0x0
+      dup1
+      revert
+    tag_14:
+        /* "escrow.sol":532:534  to */
+      0x1
+      0x0
+      swap1
+      sload
+      swap1
+      0x100
+      exp
+      swap1
+      div
+      0xffffffffffffffffffffffffffffffffffffffff
+      and
+        /* "escrow.sol":519:535  selfdestruct(to) */
+      0xffffffffffffffffffffffffffffffffffffffff
+      and
+      selfdestruct
+        /* "escrow.sol":343:442  function refund() public {... */
+    tag_10:
+        /* "escrow.sol":401:406  owner */
+      0x2
+      0x0
+      swap1
+      sload
+      swap1
+      0x100
+      exp
+      swap1
+      div
+      0xffffffffffffffffffffffffffffffffffffffff
+      and
+        /* "escrow.sol":387:406  msg.sender == owner */
+      0xffffffffffffffffffffffffffffffffffffffff
+      and
+        /* "escrow.sol":387:397  msg.sender */
+      caller
+        /* "escrow.sol":387:406  msg.sender == owner */
+      0xffffffffffffffffffffffffffffffffffffffff
+      and
+      eq
+        /* "escrow.sol":378:407  require (msg.sender == owner) */
+      iszero
+      iszero
+      tag_16
+      jumpi
+      0x0
+      dup1
+      revert
+    tag_16:
+        /* "escrow.sol":430:434  from */
+      0x0
+      dup1
+      swap1
+      sload
+      swap1
+      0x100
+      exp
+      swap1
+      div
+      0xffffffffffffffffffffffffffffffffffffffff
+      and
+        /* "escrow.sol":417:435  selfdestruct(from) */
+      0xffffffffffffffffffffffffffffffffffffffff
+      and
+      selfdestruct
+        /* "escrow.sol":257:337  function addfund() payable public  {... */
+    tag_12:
+        /* "escrow.sol":325:329  from */
+      0x0
+      dup1
+      swap1
+      sload
+      swap1
+      0x100
+      exp
+      swap1
+      div
+      0xffffffffffffffffffffffffffffffffffffffff
+      and
+        /* "escrow.sol":311:329  msg.sender == from */
+      0xffffffffffffffffffffffffffffffffffffffff
+      and
+        /* "escrow.sol":311:321  msg.sender */
+      caller
+        /* "escrow.sol":311:329  msg.sender == from */
+      0xffffffffffffffffffffffffffffffffffffffff
+      and
+      eq
+        /* "escrow.sol":302:330  require (msg.sender == from) */
+      iszero
+      iszero
+      tag_18
+      jumpi
+      0x0
+      dup1
+      revert
+    tag_18:
+        /* "escrow.sol":257:337  function addfund() payable public  {... */
+      jump	// out
+
+    auxdata: 0xa165627a7a72305820cd7938db5bada113de91ec979b4dca8fdcb3c616a00562a67f5c288a71c479d10029
+}
