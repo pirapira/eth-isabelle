@@ -19,102 +19,73 @@ tag_1:
   dup1
   dup1
   mload
+  swap2
   swap1
   0x20
   add
-  swap1
-  swap2
-  swap1
   dup1
   mload
-  swap1
-  0x20
-  add
-  swap1
-  swap2
-  swap1
-  pop
-  pop
-    /* "escrow.sol":185:190  _from */
-  dup2
     /* "escrow.sol":178:182  from */
   0x0
-  dup1
     /* "escrow.sol":178:190  from = _from */
-  0x100
-  exp
-  dup2
-  sload
-  dup2
-  0xffffffffffffffffffffffffffffffffffffffff
-  mul
-  not
-  and
-  swap1
-  dup4
-  0xffffffffffffffffffffffffffffffffffffffff
-  and
-  mul
-  or
-  swap1
-  sstore
-  pop
-    /* "escrow.sol":209:212  _to */
   dup1
-    /* "escrow.sol":204:206  to */
-  0x1
-  0x0
-    /* "escrow.sol":204:212  to = _to */
-  0x100
-  exp
-  dup2
   sload
-  dup2
-  0xffffffffffffffffffffffffffffffffffffffff
-  mul
-  not
-  and
+  not(sub(exp(0x2, 0xa0), 0x1))
   swap1
-  dup4
-  0xffffffffffffffffffffffffffffffffffffffff
+  dup2
   and
-  mul
+  sub(exp(0x2, 0xa0), 0x1)
+  swap7
+  dup8
+  and
+  or
+  dup3
+  sstore
+  0x1
+    /* "escrow.sol":204:212  to = _to */
+  dup1
+  sload
+  dup3
+  and
+  swap4
+  dup8
+  and
+  swap4
+  swap1
+  swap4
   or
   swap1
+  swap3
   sstore
-  pop
-    /* "escrow.sol":234:244  msg.sender */
-  caller
     /* "escrow.sol":226:231  owner */
   0x2
-  0x0
     /* "escrow.sol":226:244  owner = msg.sender */
-  0x100
-  exp
-  dup2
+  dup1
   sload
-  dup2
-  0xffffffffffffffffffffffffffffffffffffffff
-  mul
-  not
-  and
   swap1
-  dup4
-  0xffffffffffffffffffffffffffffffffffffffff
+  swap3
   and
-  mul
+    /* "escrow.sol":234:244  msg.sender */
+  caller
+    /* "escrow.sol":226:244  owner = msg.sender */
+  swap1
+  swap6
+  and
+  swap5
+  swap1
+  swap5
   or
   swap1
   sstore
-  pop
-    /* "escrow.sol":107:251  function EscrowWallet(address _from, address _to) public {... */
-  pop
   pop
     /* "escrow.sol":24:544  contract EscrowWallet {... */
   dataSize(sub_0)
-  dup1
+  swap2
+  dup3
+  swap2
+  pop
   dataOffset(sub_0)
-  0x0
+  swap1
   codecopy
   0x0
   return
@@ -123,14 +94,10 @@ stop
 sub_0: assembly {
         /* "escrow.sol":24:544  contract EscrowWallet {... */
       mstore(0x40, 0x60)
-      calldataload(0x0)
-      0x100000000000000000000000000000000000000000000000000000000
-      swap1
-      div
-      0xffffffff
-      and
-      dup1
+      jumpi(tag_1, lt(calldatasize, 0x4))
+      and(div(calldataload(0x0), 0x100000000000000000000000000000000000000000000000000000000), 0xffffffff)
       0x1b9265b8
+      dup2
       eq
       tag_2
       jumpi
@@ -144,6 +111,7 @@ sub_0: assembly {
       eq
       tag_4
       jumpi
+    tag_1:
       0x0
       dup1
       revert
@@ -165,42 +133,30 @@ sub_0: assembly {
       dup1
       revert
     tag_8:
-      tag_9
+      tag_6
       jump(tag_10)
-    tag_9:
-      stop
         /* "escrow.sol":257:337  function addfund() payable public  {... */
     tag_4:
-      tag_11
+      tag_6
       jump(tag_12)
-    tag_11:
-      stop
         /* "escrow.sol":448:542  function pay() public {... */
     tag_7:
         /* "escrow.sol":503:508  owner */
-      0x2
-      0x0
-      swap1
-      sload
-      swap1
-      0x100
-      exp
-      swap1
-      div
-      0xffffffffffffffffffffffffffffffffffffffff
-      and
-        /* "escrow.sol":489:508  msg.sender == owner */
-      0xffffffffffffffffffffffffffffffffffffffff
-      and
+      sload(0x2)
         /* "escrow.sol":489:499  msg.sender */
       caller
-        /* "escrow.sol":489:508  msg.sender == owner */
+        /* "escrow.sol":503:508  owner */
       0xffffffffffffffffffffffffffffffffffffffff
+        /* "escrow.sol":489:508  msg.sender == owner */
+      swap1
+      dup2
       and
+        /* "escrow.sol":503:508  owner */
+      swap2
+      and
+        /* "escrow.sol":489:508  msg.sender == owner */
       eq
         /* "escrow.sol":480:509  require (msg.sender == owner) */
-      iszero
-      iszero
       tag_14
       jumpi
       0x0
@@ -208,47 +164,27 @@ sub_0: assembly {
       revert
     tag_14:
         /* "escrow.sol":532:534  to */
-      0x1
-      0x0
-      swap1
-      sload
-      swap1
-      0x100
-      exp
-      swap1
-      div
-      0xffffffffffffffffffffffffffffffffffffffff
-      and
+      and(0xffffffffffffffffffffffffffffffffffffffff, sload(0x1))
         /* "escrow.sol":519:535  selfdestruct(to) */
-      0xffffffffffffffffffffffffffffffffffffffff
-      and
       selfdestruct
         /* "escrow.sol":343:442  function refund() public {... */
     tag_10:
         /* "escrow.sol":401:406  owner */
-      0x2
-      0x0
-      swap1
-      sload
-      swap1
-      0x100
-      exp
-      swap1
-      div
-      0xffffffffffffffffffffffffffffffffffffffff
-      and
-        /* "escrow.sol":387:406  msg.sender == owner */
-      0xffffffffffffffffffffffffffffffffffffffff
-      and
+      sload(0x2)
         /* "escrow.sol":387:397  msg.sender */
       caller
-        /* "escrow.sol":387:406  msg.sender == owner */
+        /* "escrow.sol":401:406  owner */
       0xffffffffffffffffffffffffffffffffffffffff
+        /* "escrow.sol":387:406  msg.sender == owner */
+      swap1
+      dup2
       and
+        /* "escrow.sol":401:406  owner */
+      swap2
+      and
+        /* "escrow.sol":387:406  msg.sender == owner */
       eq
         /* "escrow.sol":378:407  require (msg.sender == owner) */
-      iszero
-      iszero
       tag_16
       jumpi
       0x0
@@ -256,47 +192,27 @@ sub_0: assembly {
       revert
     tag_16:
         /* "escrow.sol":430:434  from */
-      0x0
-      dup1
-      swap1
-      sload
-      swap1
-      0x100
-      exp
-      swap1
-      div
-      0xffffffffffffffffffffffffffffffffffffffff
-      and
+      and(0xffffffffffffffffffffffffffffffffffffffff, sload(0x0))
         /* "escrow.sol":417:435  selfdestruct(from) */
-      0xffffffffffffffffffffffffffffffffffffffff
-      and
       selfdestruct
         /* "escrow.sol":257:337  function addfund() payable public  {... */
     tag_12:
         /* "escrow.sol":325:329  from */
-      0x0
-      dup1
-      swap1
-      sload
-      swap1
-      0x100
-      exp
-      swap1
-      div
-      0xffffffffffffffffffffffffffffffffffffffff
-      and
-        /* "escrow.sol":311:329  msg.sender == from */
-      0xffffffffffffffffffffffffffffffffffffffff
-      and
+      sload(0x0)
         /* "escrow.sol":311:321  msg.sender */
       caller
-        /* "escrow.sol":311:329  msg.sender == from */
+        /* "escrow.sol":325:329  from */
       0xffffffffffffffffffffffffffffffffffffffff
+        /* "escrow.sol":311:329  msg.sender == from */
+      swap1
+      dup2
       and
+        /* "escrow.sol":325:329  from */
+      swap2
+      and
+        /* "escrow.sol":311:329  msg.sender == from */
       eq
         /* "escrow.sol":302:330  require (msg.sender == from) */
-      iszero
-      iszero
       tag_18
       jumpi
       0x0
@@ -306,5 +222,5 @@ sub_0: assembly {
         /* "escrow.sol":257:337  function addfund() payable public  {... */
       jump	// out
 
-    auxdata: 0xa165627a7a72305820cd7938db5bada113de91ec979b4dca8fdcb3c616a00562a67f5c288a71c479d10029
+    auxdata: 0xa165627a7a723058207bd2ee8051b098c799df41466599cd311e376fd36372f2becec08fe494ba3cc10029
 }

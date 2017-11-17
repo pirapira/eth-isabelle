@@ -394,6 +394,17 @@ inductive triple_inst_info :: "pred \<Rightarrow> pos_inst \<Rightarrow> pred \<
        continuing \<and>* memory_usage m \<and>* sent_value w \<and>*
        stack_height (Suc h) \<and>* gas_pred (g - Gbase) \<and>*
        stack h w \<and>* rest)"
+ |  inst_calldatasize:
+    "triple_inst_info
+      (\<langle> h \<le> 1023 \<and> Gbase \<le> g \<and> m \<ge> 0\<rangle> \<and>*
+       continuing \<and>* program_counter n \<and>*
+       memory_usage m \<and>* stack_height h \<and>* sent_data data \<and>*
+       gas_pred g \<and>* rest)
+      (n, Info CALLDATASIZE)
+      (program_counter (n + 1) \<and>*
+       continuing \<and>* memory_usage m \<and>* sent_data data \<and>*
+       stack_height (Suc h) \<and>* gas_pred (g - Gbase) \<and>*
+       stack h (word256FromNat (length data)) \<and>* rest)"
 
 inductive triple_inst :: "pred \<Rightarrow> pos_inst \<Rightarrow> pred \<Rightarrow> bool" where
   inst_arith :

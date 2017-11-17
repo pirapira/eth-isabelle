@@ -570,7 +570,7 @@ definition return_action' ::"32 word  \<Rightarrow> contract_action" where
   (if z = dispatch1_hash then ContractReturn (word_rsplit (1::w256))
   else (if z = dispatch2_hash then ContractReturn (word_rsplit (2:: w256))
   else ContractFail [ShouldNotHappen]))"
-
+(*
 lemma spec_fail:
 notes bit_mask_rev[simp add]
 shows
@@ -657,6 +657,7 @@ apply(rule exI)
 apply((block_vcg; bit_mask_solve?)+)[1]
 apply(sep_cancel)+
 done
-
+*)
+end
 end
 end
