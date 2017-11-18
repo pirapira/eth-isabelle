@@ -214,30 +214,54 @@ lemma address_mask_ucast:
   apply (simp add: mask_def)
   done
 
+lemma ucast_and_w256_drop:
+ "((ucast (w::address))::w256) && 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF = ucast w"
+  by word_bitwise
+
+definition
+  bytestr_to_w256 :: "byte list \<Rightarrow> w256"  where
+ "bytestr_to_w256 \<equiv> word_rcat"
+
+lemma hash_diff:
+  "ucast (hash::32 word) = (0x1B9265B8::w256) \<Longrightarrow>
+         hash = 0x1B9265B8 "
+  by word_bitwise
+
+method sep_imp_solve2 =
+(clarsimp?),
+(rule conjI),
+  (clarsimp simp add: )?,
+  order_sep_conj?,
+  (sep_cancel, simp?)+,
+  (erule instantiate_emp)?,
+(fastforce simp add:word_rcat_simps)?
+
 theorem verify_escrow_return:
 notes
   bit_mask_rev[simp add]
   address_mask_ucast[simp] address_mask_ucast[simplified word_bool_alg.conj.commute, simp]
+  ucast_and_w256_drop[simp]
   addfund_hash_def[simp] refund_hash_def[simp] pay_hash_def[simp]
   word_bool_alg.conj.commute[simp]
+  length_word_rsplit_4[simp]
 assumes blk_num[simp]: "bn > 2463000"
 and net[simp]: "at_least_eip150 net"
 shows
 "\<exists>r. triple 
   (program_counter 0 ** stack_height 0 ** (sent_data (word_rsplit (hash::32 word)::byte list))
    ** sent_value v ** caller sender ** blk_num bn **
-   memory_usage 0 ** continuing ** gas_pred 3000
+   memory_usage 0 ** continuing ** gas_pred 100000
    ** storage 0 (ucast from)
    ** storage 1 (ucast to)
    ** storage 2 (ucast owner)
    ** account_existence a b 
-   ** memory (word_rcat [64::byte]) (word_rcat [x::byte]::256 word) **
-   memory (word_rcat [96::byte]) (word_rcat [y::byte]::256 word))
+   ** memory (word_rcat [64::byte]) (bytestr_to_w256 [x]) **
+   memory (word_rcat [96::byte]) (bytestr_to_w256 [y]))
   blocks_escrow (action (return_action sender from to owner hash v) ** r)"
   apply (insert blk_num[simplified word_less_nat_alt] net)
   apply (simp add:blocks_escrow_simp)
   apply(simp add: return_action_def blocks_simps triple_def )
-apply(split if_split, rule conjI)
+  apply(split if_split, rule conjI)
    apply(rule impI, ((erule conjE)+)?, rule exI)
    apply((block_vcg)+)[1]
   apply (rule net)
@@ -251,136 +275,52 @@ apply(split if_split, rule conjI)
    apply((block_vcg)+)[1]
   apply (rule net)
    apply (rule conjI, (sep_cancel, clarsimp?)+, simp)+
-   apply (simp)+
+    apply (simp)+
   apply((block_vcg)+)[1]
   apply (rule net)
-   apply (rule conjI, (sep_cancel, clarsimp?)+, simp)+
-      apply ((rule conjI, sep_cancel+, simp?))+
-   apply (simp)+
-   apply sep_cancel
-   apply (simp)
-   apply clarsimp
-
-     apply(split if_split, rule conjI )
-   apply(rule impI, ((erule conjE)+)?, rule exI)
-   apply((block_vcg)+)[1]
+  apply (rule conjI, (sep_cancel, clarsimp?)+, simp)+
+  apply (rule conjI, (sep_cancel, clarsimp?)+)
   apply (rule net)
-   apply (rule conjI, (sep_cancel, clarsimp?)+, simp)+
-   apply (simp)+
-  apply((block_vcg)+)[1]
-  apply (rule net)
-   apply (rule conjI, (sep_cancel, clarsimp?)+, simp)+
-      apply ((rule conjI, sep_cancel+, simp?))+
-   apply (simp)+
-   apply sep_cancel
-   apply (simp)
-   apply clarsimp
-
-   apply(rule exI)
-   apply((block_vcg)+)[1]
-   apply sep_cancel
-   apply((block_vcg)+)[1]
-
-  apply (rule net)
-   apply (rule conjI, (sep_cancel, clarsimp?)+, simp)+
-   apply (simp)+
-  apply((block_vcg)+)[1]
-  apply (rule net)
-   apply (rule conjI, (sep_cancel, clarsimp?)+, simp)+
-      apply ((rule conjI, sep_cancel+, simp?))+
-   apply (simp)+
-   apply sep_cancel
-   apply (simp)
-   apply clarsimp
-  
-  
-  apply((block_vcg)+)[1]
-   apply (rule conjI[OF _ net])
-   using blk_num apply (unat_arith)
-   apply (rule conjI, (sep_cancel, clarsimp?)+, simp)+
-      apply ((rule conjI, sep_cancel+, simp?))+
-     apply (simp add: address_mask_ucast[simplified word_bool_alg.conj.commute])
-   using address_mask_ucast
-   apply (simp)+
-   apply((block_vcg)+)[1]
-               apply (rule conjI)
-  using blk_num
-                apply (unat_arith)
-                apply (rule net)
-apply (rule conjI, (sep_cancel, clarsimp?)+, simp)+
-
-  
-  find_theorems wordAND name:commu
-   apply((block_vcg)+)[1]
-               apply (rule conjI)
-  using blk_num
-                apply (unat_arith)
-                apply (rule net)
-apply (rule conjI, (sep_cancel, clarsimp?)+, simp)+
-      apply (rule conjI)
-  apply sep_cancel+
+  apply (sep_cancel)
   apply simp
-  apply (simp add: address_mask_ucast)
-  apply sep_cancel
-    apply (simp add: word_bool_alg.conj.commute)
-  apply (clarsimp simp: refund_hash_def pay_hash_def)
-apply(split if_split, rule conjI )
-   apply(rule impI, ((erule conjE)+)?, rule exI)
-
-   apply((block_vcg)+)[1]
-
-               apply (rule conjI)
-  using blk_num
-                apply (unat_arith)
-                apply (rule net)
-apply (rule conjI, (sep_cancel, clarsimp?)+, simp)+
-   apply((block_vcg)+)[1]
-               apply (rule conjI)
-  using blk_num
-                apply (unat_arith)
-                apply (rule net)
-apply (rule conjI, (sep_cancel, clarsimp?)+, simp)+
-     apply (rule conjI, sep_cancel)
-      apply (sep_cancel)+
-     apply clarsimp
-  apply (clarsimp simp: address_mask_ucast)
-  apply sep_cancel
-    apply (simp add: word_bool_alg.conj.commute)
-
-  apply clarsimp
-
-   apply(rule exI)
+  apply(rule impI, ((erule conjE)+)?, rule exI)
   apply((block_vcg)+)[1]
-  apply clarsimp
-   apply (clarsimp simp: length_word_rsplit_4)
+  apply (rule net)
+  apply (rule conjI, (sep_cancel, clarsimp?)+, simp)+
   apply((block_vcg)+)[1]
+  apply (rule net)
+  apply (rule conjI, (sep_cancel, clarsimp?)+, simp)+
+  apply (rule conjI, (sep_cancel)+)+
   apply simp
-               apply (rule conjI)
-  using blk_num
-                apply (unat_arith)
-                apply (rule net)
-                apply (rule conjI, (sep_cancel, clarsimp?)+, simp)+
+  apply (rule net)
+  apply (clarsimp simp:  split:if_split_asm)+
+  apply (drule ucast_up_inj, simp+)
+  apply (simp add: eval_bit_mask)
+  apply (split if_split)
+  apply (rule conjI; clarsimp)
+  apply sep_cancel
+  apply (simp add: hash_diff)
   apply((block_vcg)+)[1]
-
-     apply (rule conjI, sep_cancel)
-      apply (sep_cancel)+
-     apply clarsimp
-  apply (clarsimp simp: address_mask_ucast)
-
+  apply (clarsimp simp:  split:if_split_asm)+
+  apply (simp add: eval_bit_mask)
+  apply (split if_split)
+  apply (rule conjI; clarsimp)
   apply sep_cancel+
+  apply (simp add: hash_diff)
+(* I think the problem is that we need to add the REVERT instruction to the program logic *)
 
-apply(split if_split, rule conjI)
-   apply(rule impI, ((erule conjE)+)?, rule exI)
+  oops
 
-    
-    apply (simp add: word_bool_alg.conj.commute)
+lemma
+  "ucast (hash::32 word) = (v::w256) \<Longrightarrow> v < 2^32 \<Longrightarrow>
+         hash = (ucast v) "
 
-   apply((block_vcg)+)[1]
-   apply sep_cancel
-
-   apply sep_cancel
-  apply sep_cancel+
-
+  apply (simp add: ucast_def)
+  
+  apply (rule sym)
+  apply (rule word_uint.Rep_inverse')
+  apply (simp add: word_uint.Rep_inverse)
+  apply unat_arith
   oops
   oops
 end

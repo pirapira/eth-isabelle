@@ -9,12 +9,20 @@ lemmas evm_fun_simps =
 lemmas blocks_simps = build_blocks_def byteListInt_def find_block_def blocks_indexes_def build_basic_blocks_def
  aux_basic_block.simps add_address_def block_pt_def
 
-lemmas word_rcat_simps = word_rcat_def bin_rcat_def
+lemma word_rcat_fixed_simps:
+  fixes x::byte
+  shows
+ "(word_rcat (x#xs) :: w256) =  word_of_int (bin_rcat 8 (map uint (x#xs)))"
+ "(word_rcat (x#xs) :: 160 word) =  word_of_int (bin_rcat 8 (map uint (x#xs)))"
+  by (simp add: word_rcat_def)+
+
+lemmas word_rcat_simps = word_rcat_fixed_simps bin_rcat_def
+
 
 lemmas pure_emp_simps = pure_def pure_sep emp_def emp_sep zero_set_def
 
 lemma word_rcat_eq: "word_rcat [x] = x"
-   by (simp add: word_rcat_simps)
+  by (simp add: word_rcat_def bin_rcat_def)
 
 lemma pure_false_simps:
 "(\<langle> False \<rangle> \<and>* R) = \<langle> False \<rangle>"

@@ -345,12 +345,12 @@ inductive triple_inst_misc :: "pred \<Rightarrow> pos_inst \<Rightarrow> pred \<
       program_counter n \<and>* rest)"
 | inst_suicide :
     "triple_inst_misc
-      (\<langle> h \<le> 1024 \<and> 0 \<le> g \<and> m \<ge> 0\<rangle> \<and>* continuing \<and>* memory_usage m \<and>*
-       program_counter n \<and>* stack_height (Suc h) \<and>* gas_pred g  \<and>* stack h addr  \<and>* rest)
+      (\<langle> h \<le> 1024 \<and> 0 \<le> g \<and> m \<ge> 0 \<and> at_least_eip150 net\<rangle> \<and>* continuing \<and>* memory_usage m \<and>*
+       program_counter n \<and>* stack_height (Suc h) \<and>* gas_pred g  \<and>* stack h (ucast addr)  \<and>* rest)
       (n, Misc SUICIDE)
       (stack_height h \<and>* not_continuing \<and>* memory_usage m \<and>*
-       program_counter n \<and>* action (ContractSuicide (ucast addr)) \<and>*
-       gas_pred g \<and>* rest)"
+       program_counter n \<and>* action (ContractSuicide addr) \<and>*
+       gas_pred (g  - (Gsuicide net)) \<and>* rest)"
 
 definition memory :: "w256 \<Rightarrow> w256 \<Rightarrow> state_element set_pred" where
 "memory ind w = memory_range ind (word_rsplit w)"
