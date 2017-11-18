@@ -223,9 +223,10 @@ definition
  "bytestr_to_w256 \<equiv> word_rcat"
 
 lemma hash_diff:
-  "ucast (hash::32 word) = (0x1B9265B8::w256) \<Longrightarrow>
-         hash = 0x1B9265B8 "
-  by word_bitwise
+  "ucast (hash::32 word) = (0x1B9265B8::w256) \<Longrightarrow> hash = 0x1B9265B8 "
+  "ucast (hash::32 word) = (0x590E1AE3::w256) \<Longrightarrow> hash = 0x590E1AE3 "
+  "ucast (hash::32 word) = (0x8f9595d4::w256) \<Longrightarrow> hash = 0x8f9595d4 "
+  by word_bitwise+
 
 method sep_imp_solve2 =
 (clarsimp?),
@@ -246,6 +247,8 @@ notes
   length_word_rsplit_4[simp]
 assumes blk_num[simp]: "bn > 2463000"
 and net[simp]: "at_least_eip150 net"
+and from_neq_to: "from \<noteq> to"
+and from_neq_owner: "from \<noteq> owner"
 shows
 "\<exists>r. triple 
   (program_counter 0 ** stack_height 0 ** (sent_data (word_rsplit (hash::32 word)::byte list))
@@ -282,8 +285,9 @@ shows
   apply (rule conjI, (sep_cancel, clarsimp?)+)
   apply (rule net)
   apply (sep_cancel)
-  apply simp
-  apply(rule impI, ((erule conjE)+)?, rule exI)
+   apply simp
+  apply(split if_split, rule conjI )
+  apply((rule impI)+, ((erule conjE)+)?, rule exI)
   apply((block_vcg)+)[1]
   apply (rule net)
   apply (rule conjI, (sep_cancel, clarsimp?)+, simp)+
@@ -294,20 +298,141 @@ shows
   apply simp
   apply (rule net)
   apply (clarsimp simp:  split:if_split_asm)+
-  apply (drule ucast_up_inj, simp+)
-  apply (simp add: eval_bit_mask)
-  apply (split if_split)
-  apply (rule conjI; clarsimp)
-  apply sep_cancel
-  apply (simp add: hash_diff)
-  apply((block_vcg)+)[1]
-  apply (clarsimp simp:  split:if_split_asm)+
-  apply (simp add: eval_bit_mask)
-  apply (split if_split)
-  apply (rule conjI; clarsimp)
-  apply sep_cancel+
-  apply (simp add: hash_diff)
-(* I think the problem is that we need to add the REVERT instruction to the program logic *)
+    apply sep_cancel+
+   apply simp
+  using from_neq_to from_neq_owner
+  apply (clarsimp)
+  apply (case_tac "v = 0" ; clarsimp)
+  apply (case_tac "sender = owner"; clarsimp)
+  apply (case_tac "hash \<in> {pay_hash, refund_hash, addfund_hash}")
+  apply (case_tac "from \<noteq> sender"; clarsimp)
+  apply(rule exI)
+  apply((block_vcg| rule net)+)[1]
+  apply (rule conjI, (sep_cancel, clarsimp?)+, simp)+
+  apply (simp add: hash_diff eval_bit_mask)+
+  apply (clarsimp split:if_splits simp:word_rcat_simps bin_cat_def hash_diff)
+    apply(((blocks_rule_vcg; (rule refl)?), triple_seq_vcg))
+  apply(clarsimp?, ((((sep_cancel, clarsimp?)+)|simp add:word_rcat_simps|rule conjI)+)[1])
+  apply(clarsimp?, ((((sep_cancel, clarsimp?)+)|simp add:word_rcat_simps|rule conjI)+)[1])
+  apply(clarsimp?, ((((sep_cancel, clarsimp?)+)|simp add:word_rcat_simps|rule conjI)+)[1])
+  apply((block_vcg| rule net)+)[1]
+  apply(clarsimp?, ((((sep_cancel, clarsimp?)+)|simp add:word_rcat_simps|rule conjI)+)[1])
+  apply (drule ucast_up_inj; simp)
+  apply (clarsimp split:if_splits simp:word_rcat_simps bin_cat_def hash_diff)
+  apply(((blocks_rule_vcg; (rule refl)?), triple_seq_vcg))
+  apply(clarsimp?, ((((sep_cancel, clarsimp?)+)|simp add:word_rcat_simps|rule conjI)+)[1])+
+  apply (rule exI)
+  apply((block_vcg| rule net)+)[1]
+  apply (clarsimp split:if_splits simp:hash_diff eval_bit_mask)
+  apply (clarsimp split:if_splits simp:hash_diff eval_bit_mask)
+  apply (clarsimp split:if_splits simp:hash_diff eval_bit_mask)
+  apply (clarsimp split:if_splits simp:hash_diff eval_bit_mask)
+  apply (clarsimp split:if_splits simp:hash_diff eval_bit_mask)
+  apply (clarsimp split:if_splits simp:hash_diff eval_bit_mask)
+  apply (clarsimp split:if_splits simp:hash_diff eval_bit_mask)
+  apply (clarsimp split:if_splits simp:hash_diff eval_bit_mask)
+  apply (clarsimp split:if_splits simp:hash_diff eval_bit_mask)
+  apply (clarsimp split:if_splits simp:hash_diff eval_bit_mask)
+  apply (split if_split ; simp add:hash_diff eval_bit_mask)
+  apply (split if_split_asm ; simp add:hash_diff eval_bit_mask)
+  apply (split if_split_asm ; simp add:hash_diff eval_bit_mask)
+  apply (split if_split_asm ; simp add:hash_diff eval_bit_mask)
+  apply (split if_split_asm ; simp add:hash_diff eval_bit_mask)
+  apply((block_vcg| rule net)+)[1]
+  apply (clarsimp simp:hash_diff eval_bit_mask)
+  apply (clarsimp split:if_splits simp:hash_diff eval_bit_mask)
+  apply (clarsimp split:if_splits simp:hash_diff eval_bit_mask)
+  apply (clarsimp split:if_splits simp:hash_diff eval_bit_mask)
+  apply (clarsimp split:if_splits simp:hash_diff eval_bit_mask)
+  apply (clarsimp split:if_splits simp:hash_diff eval_bit_mask)
+  apply (clarsimp split:if_splits simp:hash_diff eval_bit_mask)
+  apply (clarsimp split:if_splits simp:hash_diff eval_bit_mask)
+  apply (clarsimp split:if_splits simp:hash_diff eval_bit_mask)
+  apply (clarsimp split:if_splits simp:hash_diff eval_bit_mask)
+  apply (clarsimp split:if_splits simp:hash_diff eval_bit_mask)
+  apply (split if_split_asm ; simp add:hash_diff eval_bit_mask)
+  apply (split if_split_asm ; simp add:hash_diff eval_bit_mask)
+  apply (split if_split_asm ; simp add:hash_diff eval_bit_mask)
+  apply (split if_split_asm ; simp add:hash_diff eval_bit_mask)
+  apply((block_vcg| rule net)+)[1]
+  apply (split if_split_asm ; simp add:hash_diff eval_bit_mask)
+  apply (split if_split_asm ; simp add:hash_diff eval_bit_mask)
+  apply (split if_split_asm ; simp add:hash_diff eval_bit_mask)
+  apply (split if_split_asm ; simp add:hash_diff eval_bit_mask)
+  apply (split if_split_asm ; simp add:hash_diff eval_bit_mask)
+  apply (split if_split_asm ; simp add:hash_diff eval_bit_mask)
+  apply (split if_split_asm ; simp add:hash_diff eval_bit_mask)
+  apply (split if_split_asm ; simp add:hash_diff eval_bit_mask)
+  apply (split if_split_asm ; simp add:hash_diff eval_bit_mask)
+  apply (split if_split_asm ; simp add:hash_diff eval_bit_mask)
+  apply (split if_split_asm ; simp add:hash_diff eval_bit_mask)
+  apply (split if_split_asm ; simp add:hash_diff eval_bit_mask)
+  apply (split if_split_asm ; simp add:hash_diff eval_bit_mask)
+  apply (split if_split_asm ; simp add:hash_diff eval_bit_mask)
+  apply((block_vcg| rule net)+)[1]
+  apply(clarsimp?, ((((sep_cancel, clarsimp?)+)|simp add:word_rcat_simps|rule conjI)+)[1])+
+  apply (case_tac "hash \<in> {refund_hash,pay_hash,addfund_hash}"; simp)
+  apply ( erule disjE)+
+  apply (rule exI)
+  apply((block_vcg| rule net)+)[1]
+  apply(clarsimp?, ((((sep_cancel, clarsimp?)+)|simp add:word_rcat_simps|rule conjI)+)[1])+
+  apply (split if_split_asm ; simp add:hash_diff eval_bit_mask)+
+  apply (drule ucast_up_inj; simp)
+  apply (split if_split_asm ; simp add:hash_diff eval_bit_mask)+
+  apply((block_vcg| rule net)+)[1]
+  apply(clarsimp?, ((((sep_cancel, clarsimp?)+)|simp add:word_rcat_simps|rule conjI)+)[1])+
+  apply (rule exI)
+  apply((block_vcg| rule net)+)[1]
+  apply(clarsimp?, ((((sep_cancel, clarsimp?)+)|simp add:word_rcat_simps|rule conjI)+)[1])+
+  apply (split if_split_asm ; simp add:hash_diff eval_bit_mask)+
+  apply (drule ucast_up_inj; simp)
+  apply (split if_split_asm ; simp add:hash_diff eval_bit_mask)+
+  apply((block_vcg| rule net)+)[1]
+  apply(clarsimp?, ((((sep_cancel, clarsimp?)+)|simp add:word_rcat_simps|rule conjI)+)[1])+
+  apply (split if_split_asm ; simp add:hash_diff eval_bit_mask)+
+  apply((block_vcg| rule net)+)[1]
+  apply(clarsimp?, ((((sep_cancel, clarsimp?)+)|simp add:word_rcat_simps|rule conjI)+)[1])+
+  apply (split if_split_asm ; simp add:hash_diff eval_bit_mask)
+  apply (split if_split_asm ; simp add:hash_diff eval_bit_mask)
+  apply (erule disjE; (drule ucast_up_inj; simp) )
+  apply (split if_split_asm ; simp add:hash_diff eval_bit_mask)
+  apply (split if_split_asm ; simp add:hash_diff eval_bit_mask)
+  apply (erule disjE)
+  apply (clarsimp dest:  ucast_up_inj )
+  apply (clarsimp dest:  ucast_up_inj )
+  apply (split if_split_asm ; simp add:hash_diff eval_bit_mask)
+  apply (erule disjE)
+  apply (clarsimp dest:  ucast_up_inj )
+  apply (clarsimp dest:  ucast_up_inj )
+  apply((block_vcg| rule net)+)[1]
+  apply(clarsimp?, ((((sep_cancel, clarsimp?)+)|simp add:word_rcat_simps|rule conjI)+)[1])+
+  apply (split if_split_asm ; simp add:hash_diff eval_bit_mask)
+  apply (drule  ucast_up_inj; simp )
+  apply((block_vcg| rule net)+)[1]
+  apply(clarsimp?, ((((sep_cancel, clarsimp?)+)|simp add:word_rcat_simps|rule conjI)+)[1])+
+  apply (split if_split_asm ; simp add:hash_diff eval_bit_mask)
+  apply (split if_split_asm ; simp add:hash_diff eval_bit_mask)
+  apply (split if_split_asm ; simp add:hash_diff eval_bit_mask)
+  apply (split if_split_asm ; simp add:hash_diff eval_bit_mask)
+  apply (split if_split_asm ; simp add:hash_diff eval_bit_mask)
+  apply (split if_split_asm ; simp add:hash_diff eval_bit_mask)
+  apply (split if_split_asm ; simp add:hash_diff eval_bit_mask)
+  apply (split if_split_asm ; simp add:hash_diff eval_bit_mask)
+  apply (split if_split_asm ; simp add:hash_diff eval_bit_mask)
+  apply((block_vcg| rule net)+)[1]
+  apply(clarsimp?, ((((sep_cancel, clarsimp?)+)|simp add:word_rcat_simps|rule conjI)+)[1])+
+  apply (split if_split_asm ; simp add:hash_diff eval_bit_mask)
+  apply (split if_split_asm ; simp add:hash_diff eval_bit_mask)
+  apply (split if_split_asm ; simp add:hash_diff eval_bit_mask)
+  apply((block_vcg| rule net)+)[1]
+  apply (split if_split_asm ; simp add:hash_diff eval_bit_mask)
+  apply(clarsimp?, ((((sep_cancel, clarsimp?)+)|simp add:word_rcat_simps|rule conjI)+)[1])+
+  apply (split if_split_asm ; simp add:hash_diff eval_bit_mask)+
+  apply((block_vcg| rule net)+)[1]
+  apply(clarsimp?, ((((sep_cancel, clarsimp?)+)|simp add:word_rcat_simps|rule conjI)+)[1])+
+  
+  apply((block_vcg| rule net)+)[1]
+  oops
 
   oops
 
