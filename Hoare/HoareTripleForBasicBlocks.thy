@@ -343,6 +343,14 @@ inductive triple_inst_misc :: "pred \<Rightarrow> pos_inst \<Rightarrow> pred \<
       action (ContractReturn lst) \<and>* gas_pred (g - (Cmem (M m u v) - Cmem m)) \<and>*
       stack (Suc h) u \<and>* stack h v \<and>* memory_range u lst \<and>*
       program_counter n \<and>* rest)"
+| inst_suicide :
+    "triple_inst_misc
+      (\<langle> h \<le> 1024 \<and> 0 \<le> g \<and> m \<ge> 0\<rangle> \<and>* continuing \<and>* memory_usage m \<and>*
+       program_counter n \<and>* stack_height (Suc h) \<and>* gas_pred g  \<and>* stack h addr  \<and>* rest)
+      (n, Misc SUICIDE)
+      (stack_height h \<and>* not_continuing \<and>* memory_usage m \<and>*
+       program_counter n \<and>* action (ContractSuicide (ucast addr)) \<and>*
+       gas_pred g \<and>* rest)"
 
 definition memory :: "w256 \<Rightarrow> w256 \<Rightarrow> state_element set_pred" where
 "memory ind w = memory_range ind (word_rsplit w)"
@@ -382,6 +390,19 @@ inductive triple_inst_memory :: "pred \<Rightarrow> pos_inst \<Rightarrow> pred 
        gas_pred (g - Gverylow + Cmem memu - Cmem (M memu memaddr 32)) \<and>*
        memory_usage (M memu memaddr 32) \<and>* continuing \<and>* rest)"
 
+inductive triple_inst_storage :: "pred \<Rightarrow> pos_inst \<Rightarrow> pred \<Rightarrow> bool" where
+ inst_sload :
+    "triple_inst_storage
+      (\<langle> h \<le> 1023 \<and> unat bn \<ge> 2463000 \<and> at_least_eip150 net\<rangle>
+       \<and>* block_number_pred bn \<and>* stack_height (h + 1)
+       \<and>* stack h idx
+       \<and>* program_counter k \<and>* storage idx w \<and>* gas_pred g \<and>*  account_existence c existence
+       \<and>* continuing \<and>* rest)
+      (k, Storage SLOAD)
+      (block_number_pred bn \<and>* stack_height (h + 1) \<and>* stack h w
+       \<and>* program_counter (k + 1) \<and>* storage idx w \<and>* gas_pred (g - Gsload net)
+       \<and>*  account_existence c existence \<and>* continuing \<and>* rest)"
+
 inductive triple_inst_info :: "pred \<Rightarrow> pos_inst \<Rightarrow> pred \<Rightarrow> bool" where
  inst_callvalue:
     "triple_inst_info
@@ -405,6 +426,17 @@ inductive triple_inst_info :: "pred \<Rightarrow> pos_inst \<Rightarrow> pred \<
        continuing \<and>* memory_usage m \<and>* sent_data data \<and>*
        stack_height (Suc h) \<and>* gas_pred (g - Gbase) \<and>*
        stack h (word256FromNat (length data)) \<and>* rest)"
+| inst_caller:
+    "triple_inst_info
+      (\<langle> h \<le> 1023 \<and> Gbase \<le> g \<and> m \<ge> 0\<rangle> \<and>*
+       continuing \<and>* program_counter n \<and>*
+       memory_usage m \<and>* stack_height h \<and>* caller c \<and>*
+       gas_pred g \<and>* rest)
+      (n, Info CALLER)
+      (program_counter (n + 1) \<and>*
+       continuing \<and>* memory_usage m \<and>* caller c \<and>*
+       stack_height (Suc h) \<and>* gas_pred (g - Gbase) \<and>*
+       stack h (ucast c) \<and>* rest)"
 
 inductive triple_inst :: "pred \<Rightarrow> pos_inst \<Rightarrow> pred \<Rightarrow> bool" where
   inst_arith :
@@ -415,6 +447,8 @@ inductive triple_inst :: "pred \<Rightarrow> pos_inst \<Rightarrow> pred \<Right
     "triple_inst_info p (n, Info i) q \<Longrightarrow> triple_inst p (n, Info i) q"
 | inst_memory :
     "triple_inst_memory p (n, Memory i) q \<Longrightarrow> triple_inst p (n, Memory i) q"
+| inst_storage :
+    "triple_inst_storage p (n, Storage i) q \<Longrightarrow> triple_inst p (n, Storage i) q"
 | inst_misc :
     "triple_inst_misc p (n, Misc i) q \<Longrightarrow> triple_inst p (n, Misc i) q"
 | inst_pc :
