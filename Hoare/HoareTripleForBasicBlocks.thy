@@ -23,26 +23,26 @@ imports "HoareTripleForInstructions"
 begin
 type_synonym pred = "(state_element set \<Rightarrow> bool)"
 
-definition triple_inst_sem :: "pred \<Rightarrow> pos_inst \<Rightarrow> pred \<Rightarrow> bool" where
-"triple_inst_sem pre inst post ==
-    \<forall>co_ctx presult rest stopper n.
+definition triple_inst_sem :: "network \<Rightarrow> pred \<Rightarrow> pos_inst \<Rightarrow> pred \<Rightarrow> bool" where
+"triple_inst_sem n pre inst post ==
+    \<forall>co_ctx presult rest stopper.
      (pre \<and>* code {inst} \<and>* rest) (instruction_result_as_set co_ctx presult) \<longrightarrow>
       ((post \<and>* code {inst} \<and>* rest) (instruction_result_as_set co_ctx
           (program_sem stopper co_ctx 1 n presult)))"
 
-definition triple_seq_sem :: "pred \<Rightarrow> pos_inst list \<Rightarrow> pred \<Rightarrow> bool" where
-"triple_seq_sem pre insts post ==
-    \<forall>co_ctx presult rest stopper n.
+definition triple_seq_sem :: "network \<Rightarrow> pred \<Rightarrow> pos_inst list \<Rightarrow> pred \<Rightarrow> bool" where
+"triple_seq_sem n pre insts post ==
+    \<forall>co_ctx presult rest stopper.
      (pre \<and>* code (set insts) \<and>* rest) (instruction_result_as_set co_ctx presult) \<longrightarrow>
       ((post \<and>* code (set insts) \<and>* rest) (instruction_result_as_set co_ctx
           (program_sem stopper co_ctx (length insts) n presult)))"
 
-definition triple_sem_t :: "pred \<Rightarrow> pos_inst set \<Rightarrow> pred \<Rightarrow> bool" where
-"triple_sem_t  pre insts post ==
-    \<forall> co_ctx presult rest net (stopper::instruction_result \<Rightarrow> unit).
+definition triple_sem_t :: "network \<Rightarrow> pred \<Rightarrow> pos_inst set \<Rightarrow> pred \<Rightarrow> bool" where
+"triple_sem_t n pre insts post ==
+    \<forall> co_ctx presult rest (stopper::instruction_result \<Rightarrow> unit).
        (pre ** code insts ** rest) (instruction_result_as_set co_ctx presult) \<longrightarrow>
        ((post ** code insts ** rest) (instruction_result_as_set co_ctx
-            (program_sem_t co_ctx net presult))) "
+            (program_sem_t co_ctx n presult))) "
 
 (* We define here the program logic for BLOCKSs *)
 (* We start with Hoare triples valid for the execution of one instruction *)
@@ -323,9 +323,9 @@ inductive triple_inst_stack :: "pred \<Rightarrow> pos_inst \<Rightarrow> pred \
        stack h (read_word_from_bytes (unat u) lst) \<and>*
        gas_pred (g - Gverylow) \<and>* rest)"
 
-inductive triple_inst_misc :: "pred \<Rightarrow> pos_inst \<Rightarrow> pred \<Rightarrow> bool" where
+inductive triple_inst_misc :: "network \<Rightarrow> pred \<Rightarrow> pos_inst \<Rightarrow> pred \<Rightarrow> bool" where
  inst_stop :
-    "triple_inst_misc
+    "triple_inst_misc net
       (\<langle> h \<le> 1024 \<and> 0 \<le> g \<and> m \<ge> 0\<rangle> \<and>* continuing \<and>* memory_usage m \<and>*
        program_counter n \<and>* stack_height h \<and>* gas_pred g \<and>* rest)
       (n, Misc STOP)
@@ -333,7 +333,7 @@ inductive triple_inst_misc :: "pred \<Rightarrow> pos_inst \<Rightarrow> pred \<
        program_counter n \<and>* action (ContractReturn []) \<and>*
        gas_pred g \<and>* rest)"
 |inst_return :
-    "triple_inst_misc
+    "triple_inst_misc net
      (\<langle> h \<le> 1022 \<and> m \<ge> 0 \<and> length lst = unat v \<and> (Cmem (M m u v) - Cmem m) \<le> g \<rangle> \<and>*
       continuing \<and>* memory_usage m \<and>* memory_range u lst \<and>*
       program_counter n \<and>* stack_height (Suc (Suc h)) \<and>* gas_pred g \<and>*
@@ -344,13 +344,14 @@ inductive triple_inst_misc :: "pred \<Rightarrow> pos_inst \<Rightarrow> pred \<
       stack (Suc h) u \<and>* stack h v \<and>* memory_range u lst \<and>*
       program_counter n \<and>* rest)"
 | inst_suicide :
-    "triple_inst_misc
-      (\<langle> h \<le> 1024 \<and> 0 \<le> g \<and> m \<ge> 0 \<and> at_least_eip150 net\<rangle> \<and>* continuing \<and>* memory_usage m \<and>*
-       program_counter n \<and>* stack_height (Suc h) \<and>* gas_pred g  \<and>* stack h (ucast addr)  \<and>* rest)
-      (n, Misc SUICIDE)
-      (stack_height h \<and>* not_continuing \<and>* memory_usage m \<and>*
-       program_counter n \<and>* action (ContractSuicide addr) \<and>*
-       gas_pred (g  - (Gsuicide net)) \<and>* rest)"
+    "triple_inst_misc net
+    (\<langle> h \<le> 1024 \<and> Csuicide (\<not> existence) net \<le> g \<and> 0 \<le> m \<and> at_least_eip150 net\<rangle> \<and>*
+     continuing \<and>* account_existence addr existence \<and>* memory_usage m \<and>*
+     program_counter n \<and>* stack_height (Suc h) \<and>* gas_pred g \<and>* stack h (ucast addr) \<and>* rest)
+    (n, Misc SUICIDE)
+    (stack_height (Suc h) \<and>* stack h (ucast addr) \<and>*
+     not_continuing \<and>*  account_existence addr existence \<and>* memory_usage m \<and>*
+     program_counter n \<and>* action (ContractSuicide addr) \<and>* gas_pred (g - Csuicide (\<not> existence) net) \<and>* rest)"
 
 definition memory :: "w256 \<Rightarrow> w256 \<Rightarrow> state_element set_pred" where
 "memory ind w = memory_range ind (word_rsplit w)"
@@ -390,10 +391,10 @@ inductive triple_inst_memory :: "pred \<Rightarrow> pos_inst \<Rightarrow> pred 
        gas_pred (g - Gverylow + Cmem memu - Cmem (M memu memaddr 32)) \<and>*
        memory_usage (M memu memaddr 32) \<and>* continuing \<and>* rest)"
 
-inductive triple_inst_storage :: "pred \<Rightarrow> pos_inst \<Rightarrow> pred \<Rightarrow> bool" where
+inductive triple_inst_storage :: "network \<Rightarrow> pred \<Rightarrow> pos_inst \<Rightarrow> pred \<Rightarrow> bool" where
  inst_sload :
-    "triple_inst_storage
-      (\<langle> h \<le> 1023 \<and> unat bn \<ge> 2463000 \<and> at_least_eip150 net\<rangle>
+    "triple_inst_storage net
+      (\<langle> h \<le> 1023 \<and> unat bn \<ge> 2463000 \<and> at_least_eip150 net \<and> g \<ge> Gsload net\<rangle>
        \<and>* block_number_pred bn \<and>* stack_height (h + 1)
        \<and>* stack h idx
        \<and>* program_counter k \<and>* storage idx w \<and>* gas_pred g \<and>*  account_existence c existence
@@ -438,25 +439,25 @@ inductive triple_inst_info :: "pred \<Rightarrow> pos_inst \<Rightarrow> pred \<
        stack_height (Suc h) \<and>* gas_pred (g - Gbase) \<and>*
        stack h (ucast c) \<and>* rest)"
 
-inductive triple_inst :: "pred \<Rightarrow> pos_inst \<Rightarrow> pred \<Rightarrow> bool" where
+inductive triple_inst :: "network \<Rightarrow> pred \<Rightarrow> pos_inst \<Rightarrow> pred \<Rightarrow> bool" where
   inst_arith :
-    "triple_inst_arith p (n, Arith i) q \<Longrightarrow> triple_inst p (n, Arith i) q"
+    "triple_inst_arith p (n, Arith i) q \<Longrightarrow> triple_inst net p (n, Arith i) q"
 | inst_bits :
-    "triple_inst_bits p (n, Bits i) q \<Longrightarrow> triple_inst p (n, Bits i) q"
+    "triple_inst_bits p (n, Bits i) q \<Longrightarrow> triple_inst net p (n, Bits i) q"
 | inst_info :
-    "triple_inst_info p (n, Info i) q \<Longrightarrow> triple_inst p (n, Info i) q"
+    "triple_inst_info p (n, Info i) q \<Longrightarrow> triple_inst net p (n, Info i) q"
 | inst_memory :
-    "triple_inst_memory p (n, Memory i) q \<Longrightarrow> triple_inst p (n, Memory i) q"
+    "triple_inst_memory p (n, Memory i) q \<Longrightarrow> triple_inst net p (n, Memory i) q"
 | inst_storage :
-    "triple_inst_storage p (n, Storage i) q \<Longrightarrow> triple_inst p (n, Storage i) q"
+    "triple_inst_storage net p (n, Storage i) q \<Longrightarrow> triple_inst net p (n, Storage i) q"
 | inst_misc :
-    "triple_inst_misc p (n, Misc i) q \<Longrightarrow> triple_inst p (n, Misc i) q"
+    "triple_inst_misc net p (n, Misc i) q \<Longrightarrow> triple_inst net p (n, Misc i) q"
 | inst_pc :
-    "triple_inst_pc p (n, Pc i) q \<Longrightarrow> triple_inst p (n, Pc i) q"
+    "triple_inst_pc p (n, Pc i) q \<Longrightarrow> triple_inst net p (n, Pc i) q"
 | inst_stack :
-    "triple_inst_stack p (n, Stack i) q \<Longrightarrow> triple_inst p (n, Stack i) q"
+    "triple_inst_stack p (n, Stack i) q \<Longrightarrow> triple_inst net p (n, Stack i) q"
 | inst_swap :
-		"triple_inst
+		"triple_inst net
 			(\<langle> h \<le> 1023 \<and> Suc (unat n) \<le> h \<and> g \<ge> Gverylow \<and> m \<ge> 0\<rangle> \<and>*
 			 stack_height (Suc h) \<and>* stack h w \<and>* stack (h - (unat n) - 1) v \<and>*
 			 program_counter k \<and>* gas_pred g \<and>* memory_usage m \<and>*
@@ -466,7 +467,7 @@ inductive triple_inst :: "pred \<Rightarrow> pos_inst \<Rightarrow> pred \<Right
 			 stack_height (Suc h) \<and>* stack h v \<and>* stack (h - (unat n) - 1) w \<and>*
 			 memory_usage m \<and>* continuing \<and>* rest)"
 | inst_dup :
-    "triple_inst
+    "triple_inst net
         (\<langle> h \<le> 1023 \<and> unat n < h \<and> Gverylow \<le> g \<and> 0 < m\<rangle> \<and>*
          stack_height h \<and>*
          stack (h - unat n - 1) w \<and>*
@@ -481,7 +482,7 @@ inductive triple_inst :: "pred \<Rightarrow> pos_inst \<Rightarrow> pred \<Right
          stack h w \<and>*
          memory_usage m \<and>* continuing \<and>* rest)"
 | inst_unknown :
-    "triple_inst 
+    "triple_inst net
 (\<langle> h \<le> 1024 \<and> 0 \<le> g \<and> 0 < m\<rangle> \<and>*
 program_counter k \<and>* stack_height h \<and>* gas_pred g \<and>* memory_usage m \<and>* continuing \<and>* rest)
         (k, Unknown i)
@@ -489,40 +490,40 @@ program_counter k \<and>* stack_height h \<and>* gas_pred g \<and>* memory_usage
          action (ContractFail [ShouldNotHappen]) \<and>* stack_height h \<and>* gas_pred g \<and>* memory_usage m \<and>* not_continuing \<and>*
          rest)"
 | inst_strengthen_pre:
-    "triple_inst p i q \<Longrightarrow> (\<And>s. r s \<Longrightarrow> p s) \<Longrightarrow> triple_inst r i q"
+    "triple_inst net p i q \<Longrightarrow> (\<And>s. r s \<Longrightarrow> p s) \<Longrightarrow> triple_inst net r i q"
 | inst_false_pre:
-    "triple_inst \<langle>False\<rangle> i post"
+    "triple_inst net \<langle>False\<rangle> i post"
 
 (* We define here the program logic for BLOCKSs *)
 (* We start with Hoare triples valid for the execution of one instruction *)
 
-inductive triple_seq :: "pred \<Rightarrow> pos_inst list \<Rightarrow> pred \<Rightarrow> bool" where
+inductive triple_seq :: "network \<Rightarrow> pred \<Rightarrow> pos_inst list \<Rightarrow> pred \<Rightarrow> bool" where
   seq_inst :
-  "\<lbrakk>triple_inst pre x q;
-    triple_seq q xs post \<rbrakk> \<Longrightarrow>
-   triple_seq pre (x#xs) post"
+  "\<lbrakk>triple_inst net pre x q;
+    triple_seq net q xs post \<rbrakk> \<Longrightarrow>
+   triple_seq net pre (x#xs) post"
 | seq_empty:
   "(\<And>s. pre s \<Longrightarrow> post s) \<Longrightarrow>
-   triple_seq pre [] post"
+   triple_seq net pre [] post"
 | seq_strengthen_pre:
-  "triple_seq p xs q \<Longrightarrow>
+  "triple_seq net p xs q \<Longrightarrow>
    (\<And>s. r s \<Longrightarrow> p s) \<Longrightarrow>
-   triple_seq r xs q"
+   triple_seq net r xs q"
 | seq_false_pre:
-  "triple_seq \<langle>False\<rangle> xs post"
+  "triple_seq net \<langle>False\<rangle> xs post"
 
-inductive triple_blocks :: "basic_blocks \<Rightarrow> pred \<Rightarrow> vertex \<Rightarrow> pred \<Rightarrow> bool" where
+inductive triple_blocks :: "network \<Rightarrow> basic_blocks \<Rightarrow> pred \<Rightarrow> vertex \<Rightarrow> pred \<Rightarrow> bool" where
   blocks_no :
-  "triple_seq pre insts post \<Longrightarrow>
-   triple_blocks blocks pre (n, insts, Terminal) post"
+  "triple_seq net pre insts post \<Longrightarrow>
+   triple_blocks net blocks pre (n, insts, Terminal) post"
 | blocks_next :
-  "\<lbrakk>triple_seq pre insts (program_counter i \<and>* q);
+  "\<lbrakk>triple_seq net pre insts (program_counter i \<and>* q);
     i = n + inst_size_list insts;
     block_lookup blocks i = Some (bi, ti);
-    triple_blocks blocks (program_counter i \<and>* q) (i, bi, ti) post\<rbrakk> \<Longrightarrow>
-   triple_blocks blocks pre (n, insts, Next) post"
+    triple_blocks net blocks (program_counter i \<and>* q) (i, bi, ti) post\<rbrakk> \<Longrightarrow>
+   triple_blocks net blocks pre (n, insts, Next) post"
 | blocks_jump :
-  "\<lbrakk>triple_seq pre insts
+  "\<lbrakk>triple_seq net pre insts
       (\<langle> h \<le> 1023 \<and> Gmid \<le> g \<and> m \<ge> 0\<rangle> \<and>*
        program_counter (n + inst_size_list insts) \<and>* gas_pred g \<and>*
        memory_usage m \<and>* stack_height (Suc h) \<and>*
@@ -530,14 +531,14 @@ inductive triple_blocks :: "basic_blocks \<Rightarrow> pred \<Rightarrow> vertex
        continuing \<and>* rest);
     block_lookup blocks dest = Some (bi, ti);
     bi = (dest, Pc JUMPDEST) # bbi;
-    triple_blocks blocks
+    triple_blocks net blocks
       (program_counter dest \<and>* gas_pred (g - Gmid) \<and>*
        memory_usage m \<and>* stack_height h \<and>*
        continuing \<and>* rest)
       (dest, bi, ti) post\<rbrakk> \<Longrightarrow>
-   triple_blocks blocks pre (n, insts, Jump) post"
+   triple_blocks net blocks pre (n, insts, Jump) post"
 | blocks_jumpi :
-  "\<lbrakk>  triple_seq pre insts
+  "\<lbrakk>  triple_seq net pre insts
       ((\<langle> h \<le> 1022  \<and> Ghigh \<le> g \<and> m \<ge> 0\<rangle> \<and>*
        stack_height (Suc (Suc h)) \<and>*
        stack (Suc h) (word_of_int dest::256 word) \<and>*
@@ -550,20 +551,20 @@ inductive triple_blocks :: "basic_blocks \<Rightarrow> pred \<Rightarrow> vertex
     block_lookup blocks j = Some (bj, tj);
     r = (stack_height h \<and>* gas_pred (g - Ghigh) \<and>*
          continuing \<and>* memory_usage m \<and>* rest);
-    (cond \<noteq> 0 \<Longrightarrow> triple_blocks blocks (r \<and>* program_counter dest) (dest, bi, ti) post);
-    (cond = 0 \<Longrightarrow> triple_blocks blocks (r \<and>* program_counter j) (j, bj, tj) post)\<rbrakk> \<Longrightarrow>
-   triple_blocks blocks pre (n, insts, Jumpi) post"
+    (cond \<noteq> 0 \<Longrightarrow> triple_blocks net blocks (r \<and>* program_counter dest) (dest, bi, ti) post);
+    (cond = 0 \<Longrightarrow> triple_blocks net blocks (r \<and>* program_counter j) (j, bj, tj) post)\<rbrakk> \<Longrightarrow>
+   triple_blocks net blocks pre (n, insts, Jumpi) post"
 | blocks_false_pre:
-  "triple_blocks blocks \<langle>False\<rangle> i post"
+  "triple_blocks net blocks \<langle>False\<rangle> i post"
 | blocks_strengthen_pre:
-  "triple_blocks blocks p f q \<Longrightarrow>
+  "triple_blocks net blocks p f q \<Longrightarrow>
    (\<And>s. r s \<Longrightarrow> p s) \<Longrightarrow>
-   triple_blocks blocks r f q"
-definition triple :: "pred \<Rightarrow> basic_blocks \<Rightarrow> pred \<Rightarrow> bool" where
-"triple pre blocks post = triple_blocks blocks pre (hd blocks) post"
+   triple_blocks net blocks r f q"
+definition triple :: "network \<Rightarrow> pred \<Rightarrow> basic_blocks \<Rightarrow> pred \<Rightarrow> bool" where
+"triple net pre blocks post = triple_blocks net blocks pre (hd blocks) post"
 
 lemma blocks_jumpi_uint:
-"\<lbrakk>  triple_seq pre insts
+"\<lbrakk>  triple_seq net pre insts
       ((\<langle> h \<le> 1022  \<and> Ghigh \<le> g \<and> m \<ge> 0\<rangle> \<and>*
        stack_height (Suc (Suc h)) \<and>*
        stack (Suc h) dest \<and>*
@@ -576,9 +577,9 @@ lemma blocks_jumpi_uint:
     block_lookup blocks j = Some (bj, tj);
     r = (stack_height h \<and>* gas_pred (g - Ghigh) \<and>*
          continuing \<and>* memory_usage m \<and>* rest);
-    (cond \<noteq> 0 \<Longrightarrow> triple_blocks blocks (r \<and>* program_counter (uint dest)) (uint dest, bi, ti) post);
-    (cond = 0 \<Longrightarrow> triple_blocks blocks (r \<and>* program_counter j) (j, bj, tj) post)\<rbrakk> \<Longrightarrow>
-   triple_blocks blocks pre (n, insts, Jumpi) post"
+    (cond \<noteq> 0 \<Longrightarrow> triple_blocks net blocks (r \<and>* program_counter (uint dest)) (uint dest, bi, ti) post);
+    (cond = 0 \<Longrightarrow> triple_blocks net blocks (r \<and>* program_counter j) (j, bj, tj) post)\<rbrakk> \<Longrightarrow>
+   triple_blocks net blocks pre (n, insts, Jumpi) post"
 apply(rule blocks_jumpi)
 defer
 apply(assumption)+
@@ -586,7 +587,7 @@ apply(simp)
 done
 
 lemma blocks_jump_uint :
-  "\<lbrakk>triple_seq pre insts
+  "\<lbrakk>triple_seq net pre insts
       (\<langle> h \<le> 1023 \<and> Gmid \<le> g \<and> m \<ge> 0\<rangle> \<and>*
        program_counter (n + inst_size_list insts) \<and>* gas_pred g \<and>*
        memory_usage m \<and>* stack_height (Suc h) \<and>*
@@ -594,12 +595,12 @@ lemma blocks_jump_uint :
        continuing \<and>* rest);
     block_lookup blocks (uint dest) = Some (bi, ti);
     bi = (uint dest, Pc JUMPDEST) # bbi;
-    triple_blocks blocks
+    triple_blocks net blocks
       (program_counter (uint dest) \<and>* gas_pred (g - Gmid) \<and>*
        memory_usage m \<and>* stack_height h \<and>*
        continuing \<and>* rest)
       (uint dest, bi, ti) post\<rbrakk> \<Longrightarrow>
-   triple_blocks blocks pre (n, insts, Jump) post"
+   triple_blocks net blocks pre (n, insts, Jump) post"
 by(rule blocks_jump; simp)
 
 lemma inst_return_memory :
