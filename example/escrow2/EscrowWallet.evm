@@ -1,0 +1,291 @@
+    /* "escrow2.sol":24:702  contract EscrowWallet {... */
+  mstore(0x40, 0x60)
+    /* "escrow2.sol":127:352  function EscrowWallet(address _from, address _to, uint256 _amount) public {... */
+  jumpi(tag_1, iszero(callvalue))
+  0x0
+  dup1
+  revert
+tag_1:
+  mload(0x40)
+  0x60
+  dup1
+  bytecodeSize
+  dup4
+  codecopy
+  dup2
+  add
+  0x40
+  mstore
+  dup1
+  dup1
+  mload
+  swap2
+  swap1
+  0x20
+  add
+  dup1
+  mload
+  swap2
+  swap1
+  0x20
+  add
+  dup1
+  mload
+    /* "escrow2.sol":224:230  amount */
+  sload(0x3)
+    /* "escrow2.sol":127:352  function EscrowWallet(address _from, address _to, uint256 _amount) public {... */
+  swap1
+  swap3
+  pop
+    /* "escrow2.sol":233:234  0 */
+  0x0
+    /* "escrow2.sol":224:234  amount > 0 */
+  swap1
+  gt
+  swap1
+  pop
+    /* "escrow2.sol":215:235  require (amount > 0) */
+  tag_4
+  jumpi
+  0x0
+  dup1
+  revert
+tag_4:
+    /* "escrow2.sol":249:253  from */
+  0x0
+    /* "escrow2.sol":249:261  from = _from */
+  dup1
+  sload
+  sub(exp(0x2, 0xa0), 0x1)
+  swap5
+  dup6
+  and
+  not(sub(exp(0x2, 0xa0), 0x1))
+  swap2
+  dup3
+  and
+  or
+  swap1
+  swap2
+  sstore
+  0x1
+    /* "escrow2.sol":275:283  to = _to */
+  dup1
+  sload
+  swap4
+  dup6
+  and
+  swap4
+  dup3
+  and
+  swap4
+  swap1
+  swap4
+  or
+  swap1
+  swap3
+  sstore
+    /* "escrow2.sol":297:302  owner */
+  0x2
+    /* "escrow2.sol":297:315  owner = msg.sender */
+  dup1
+  sload
+    /* "escrow2.sol":305:315  msg.sender */
+  caller
+    /* "escrow2.sol":297:315  owner = msg.sender */
+  swap1
+  swap5
+  and
+  swap4
+  swap1
+  swap3
+  and
+  swap3
+  swap1
+  swap3
+  or
+  swap1
+  sstore
+    /* "escrow2.sol":329:335  amount */
+  0x3
+    /* "escrow2.sol":329:345  amount = _amount */
+  sstore
+    /* "escrow2.sol":24:702  contract EscrowWallet {... */
+  dataSize(sub_0)
+  dup1
+  dataOffset(sub_0)
+  0x0
+  codecopy
+  0x0
+  return
+stop
+
+sub_0: assembly {
+        /* "escrow2.sol":24:702  contract EscrowWallet {... */
+      mstore(0x40, 0x60)
+      jumpi(tag_1, lt(calldatasize, 0x4))
+      and(div(calldataload(0x0), 0x100000000000000000000000000000000000000000000000000000000), 0xffffffff)
+      0x1b9265b8
+      dup2
+      eq
+      tag_2
+      jumpi
+      dup1
+      0x590e1ae3
+      eq
+      tag_3
+      jumpi
+      dup1
+      0x8f9595d4
+      eq
+      tag_4
+      jumpi
+    tag_1:
+      0x0
+      dup1
+      revert
+        /* "escrow2.sol":606:700  function pay() public {... */
+    tag_2:
+      jumpi(tag_5, iszero(callvalue))
+      0x0
+      dup1
+      revert
+    tag_5:
+      tag_6
+      jump(tag_7)
+    tag_6:
+      stop
+        /* "escrow2.sol":501:600  function refund() public {... */
+    tag_3:
+      jumpi(tag_8, iszero(callvalue))
+      0x0
+      dup1
+      revert
+    tag_8:
+      tag_6
+      jump(tag_10)
+        /* "escrow2.sol":358:495  function addfund() payable public  {... */
+    tag_4:
+      tag_6
+      jump(tag_12)
+        /* "escrow2.sol":606:700  function pay() public {... */
+    tag_7:
+        /* "escrow2.sol":661:666  owner */
+      sload(0x2)
+        /* "escrow2.sol":647:657  msg.sender */
+      caller
+        /* "escrow2.sol":661:666  owner */
+      0xffffffffffffffffffffffffffffffffffffffff
+        /* "escrow2.sol":647:666  msg.sender == owner */
+      swap1
+      dup2
+      and
+        /* "escrow2.sol":661:666  owner */
+      swap2
+      and
+        /* "escrow2.sol":647:666  msg.sender == owner */
+      eq
+        /* "escrow2.sol":638:667  require (msg.sender == owner) */
+      tag_14
+      jumpi
+      0x0
+      dup1
+      revert
+    tag_14:
+        /* "escrow2.sol":690:692  to */
+      and(0xffffffffffffffffffffffffffffffffffffffff, sload(0x1))
+        /* "escrow2.sol":677:693  selfdestruct(to) */
+      selfdestruct
+        /* "escrow2.sol":501:600  function refund() public {... */
+    tag_10:
+        /* "escrow2.sol":559:564  owner */
+      sload(0x2)
+        /* "escrow2.sol":545:555  msg.sender */
+      caller
+        /* "escrow2.sol":559:564  owner */
+      0xffffffffffffffffffffffffffffffffffffffff
+        /* "escrow2.sol":545:564  msg.sender == owner */
+      swap1
+      dup2
+      and
+        /* "escrow2.sol":559:564  owner */
+      swap2
+      and
+        /* "escrow2.sol":545:564  msg.sender == owner */
+      eq
+        /* "escrow2.sol":536:565  require (msg.sender == owner) */
+      tag_16
+      jumpi
+      0x0
+      dup1
+      revert
+    tag_16:
+        /* "escrow2.sol":588:592  from */
+      and(0xffffffffffffffffffffffffffffffffffffffff, sload(0x0))
+        /* "escrow2.sol":575:593  selfdestruct(from) */
+      selfdestruct
+        /* "escrow2.sol":358:495  function addfund() payable public  {... */
+    tag_12:
+        /* "escrow2.sol":421:422  0 */
+      0x0
+        /* "escrow2.sol":412:418  amount */
+      sload(0x3)
+        /* "escrow2.sol":412:422  amount > 0 */
+      gt
+        /* "escrow2.sol":412:445  amount > 0 && msg.value == amount */
+      dup1
+      iszero
+      tag_18
+      jumpi
+      pop
+        /* "escrow2.sol":439:445  amount */
+      sload(0x3)
+        /* "escrow2.sol":426:435  msg.value */
+      callvalue
+        /* "escrow2.sol":426:445  msg.value == amount */
+      eq
+        /* "escrow2.sol":412:445  amount > 0 && msg.value == amount */
+    tag_18:
+        /* "escrow2.sol":412:467  amount > 0 && msg.value == amount && msg.sender == from */
+      dup1
+      iszero
+      tag_19
+      jumpi
+      pop
+        /* "escrow2.sol":463:467  from */
+      sload(0x0)
+        /* "escrow2.sol":449:459  msg.sender */
+      caller
+        /* "escrow2.sol":463:467  from */
+      0xffffffffffffffffffffffffffffffffffffffff
+        /* "escrow2.sol":449:467  msg.sender == from */
+      swap1
+      dup2
+      and
+        /* "escrow2.sol":463:467  from */
+      swap2
+      and
+        /* "escrow2.sol":449:467  msg.sender == from */
+      eq
+        /* "escrow2.sol":412:467  amount > 0 && msg.value == amount && msg.sender == from */
+    tag_19:
+        /* "escrow2.sol":403:468  require (amount > 0 && msg.value == amount && msg.sender == from) */
+      iszero
+      iszero
+      tag_20
+      jumpi
+      0x0
+      dup1
+      revert
+    tag_20:
+        /* "escrow2.sol":487:488  0 */
+      0x0
+        /* "escrow2.sol":478:484  amount */
+      0x3
+        /* "escrow2.sol":478:488  amount = 0 */
+      sstore
+        /* "escrow2.sol":358:495  function addfund() payable public  {... */
+      jump	// out
+
+    auxdata: 0xa165627a7a72305820629d81bfc4f4b93d45c4a23ece82e54d086d3412bb0f9a65747d991d091292610029
+}
