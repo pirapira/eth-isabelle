@@ -41,7 +41,7 @@ Compiled with:
 
 
 *)
-value"(parse_bytecode ''6060604052600436106100565763ffffffff7c01000000000000000000000000000000000000000000000000000000006000350416631b9265b8811461005b578063590e1ae3146100705780638f9595d414610083575b600080fd5b341561006657600080fd5b61006e61008b565b005b341561007b57600080fd5b61006e6100ce565b61006e610111565b6002543373ffffffffffffffffffffffffffffffffffffffff9081169116146100b357600080fd5b60015473ffffffffffffffffffffffffffffffffffffffff16ff5b6002543373ffffffffffffffffffffffffffffffffffffffff9081169116146100f657600080fd5b60005473ffffffffffffffffffffffffffffffffffffffff16ff5b6000543373ffffffffffffffffffffffffffffffffffffffff90811691161461013957600080fd5b5600a165627a7a723058207bd2ee8051b098c799df41466599cd311e376fd36372f2becec08fe494ba3cc10029'')"
+value"(parse_bytecode ''6060604052600436106100565763ffffffff7c01000000000000000000000000000000000000000000000000000000006000350416631b9265b8811461005b578063590e1ae3146100705780638f9595d414610083575b600080fd5b341561006657600080fd5b61006e61008b565b005b341561007b57600080fd5b61006e6100ce565b61006e610111565b6002543373ffffffffffffffffffffffffffffffffffffffff9081169116146100b357600080fd5b60015473ffffffffffffffffffffffffffffffffffffffff16ff5b6002543373ffffffffffffffffffffffffffffffffffffffff9081169116146100f657600080fd5b60005473ffffffffffffffffffffffffffffffffffffffff16ff5b60003411801561013c57506000543373ffffffffffffffffffffffffffffffffffffffff9081169116145b151561014757600080fd5b5600a165627a7a7230582042e50839f6b362829e3a909e36d9b74b844a99ec99d3c9b1d94feddfa1215f1b0029'')"
 
 definition insts_ex where
 "insts_ex == [Stack (PUSH_N [0x60]), Stack (PUSH_N [0x40]), Memory MSTORE, Stack (PUSH_N [4]), Info CALLDATASIZE,
@@ -74,26 +74,28 @@ definition insts_ex where
   Stack (PUSH_N
           [0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
            0xFF, 0xFF, 0xFF, 0xFF]),
-  Bits inst_AND, Misc SUICIDE, Pc JUMPDEST, Stack (PUSH_N [0]), Storage SLOAD, Info CALLER,
+  Bits inst_AND, Misc SUICIDE, Pc JUMPDEST, Stack (PUSH_N [0]), Info CALLVALUE, Arith inst_GT, Dup 0,
+  Arith ISZERO, Stack (PUSH_N [1, 0x3C]), Pc JUMPI, Stack POP, Stack (PUSH_N [0]), Storage SLOAD, Info CALLER,
   Stack (PUSH_N
           [0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
            0xFF, 0xFF, 0xFF, 0xFF]),
-  Swap 0, Dup 1, Bits inst_AND, Swap 1, Bits inst_AND, Arith inst_EQ, Stack (PUSH_N [1, 0x39]), Pc JUMPI,
-  Stack (PUSH_N [0]), Dup 0, Unknown 0xFD, Pc JUMPDEST, Pc JUMP, Misc STOP, Log LOG1,
-  Stack (PUSH_N [0x62, 0x7A, 0x7A, 0x72, 0x30, 0x58]), Arith SHA3,
-  Stack (PUSH_N
-          [0xD2, 0xEE, 0x80, 0x51, 0xB0, 0x98, 0xC7, 0x99, 0xDF, 0x41, 0x46, 0x65, 0x99, 0xCD, 0x31, 0x1E,
-           0x37, 0x6F, 0xD3, 0x63, 0x72, 0xF2, 0xBE, 0xCE, 0xC0, 0x8F, 0xE4, 0x94]),
-  Unknown 0xBA, Memory EXTCODECOPY, Unknown 0xC1, Misc STOP, Unknown 0x29]"
-(* 135 instructions *)
+  Swap 0, Dup 1, Bits inst_AND, Swap 1, Bits inst_AND, Arith inst_EQ, Pc JUMPDEST, Arith ISZERO, Arith ISZERO,
+  Stack (PUSH_N [1, 0x47]), Pc JUMPI, Stack (PUSH_N [0]), Dup 0, Unknown 0xFD, Pc JUMPDEST, Pc JUMP,
+  Misc STOP, Log LOG1, Stack (PUSH_N [0x62, 0x7A, 0x7A, 0x72, 0x30, 0x58]), Arith SHA3, Info TIMESTAMP,
+  Unknown 0xE5, Arith ADDMOD, Memory CODECOPY, Unknown 0xF6, Unknown 0xB3, Stack (PUSH_N [0x82, 0x9E, 0x3A]),
+  Swap 0, Swap 0xE, Info CALLDATASIZE, Unknown 0xD9, Unknown 0xB7, Unknown 0x4B, Dup 4, Unknown 0x4A, Swap 9,
+  Unknown 0xEC, Swap 9, Unknown 0xD3, Unknown 0xC9, Unknown 0xB1, Unknown 0xD9, Unknown 0x4F, Unknown 0xED,
+  Unknown 0xDF, Log LOG1, Unknown 0x21, Unknown 0x5F, Unknown 0x1B, Misc STOP, Unknown 0x29]"
+value "length insts_ex"
+(* 171 instructions *)
 
 lemma
- "parse_bytecode ''6060604052600436106100565763ffffffff7c01000000000000000000000000000000000000000000000000000000006000350416631b9265b8811461005b578063590e1ae3146100705780638f9595d414610083575b600080fd5b341561006657600080fd5b61006e61008b565b005b341561007b57600080fd5b61006e6100ce565b61006e610111565b6002543373ffffffffffffffffffffffffffffffffffffffff9081169116146100b357600080fd5b60015473ffffffffffffffffffffffffffffffffffffffff16ff5b6002543373ffffffffffffffffffffffffffffffffffffffff9081169116146100f657600080fd5b60005473ffffffffffffffffffffffffffffffffffffffff16ff5b6000543373ffffffffffffffffffffffffffffffffffffffff90811691161461013957600080fd5b5600a165627a7a723058207bd2ee8051b098c799df41466599cd311e376fd36372f2becec08fe494ba3cc10029'' = insts_ex"
+ "parse_bytecode ''6060604052600436106100565763ffffffff7c01000000000000000000000000000000000000000000000000000000006000350416631b9265b8811461005b578063590e1ae3146100705780638f9595d414610083575b600080fd5b341561006657600080fd5b61006e61008b565b005b341561007b57600080fd5b61006e6100ce565b61006e610111565b6002543373ffffffffffffffffffffffffffffffffffffffff9081169116146100b357600080fd5b60015473ffffffffffffffffffffffffffffffffffffffff16ff5b6002543373ffffffffffffffffffffffffffffffffffffffff9081169116146100f657600080fd5b60005473ffffffffffffffffffffffffffffffffffffffff16ff5b60003411801561013c57506000543373ffffffffffffffffffffffffffffffffffffffff9081169116145b151561014757600080fd5b5600a165627a7a7230582042e50839f6b362829e3a909e36d9b74b844a99ec99d3c9b1d94feddfa1215f1b0029'' = insts_ex"
   unfolding insts_ex_def
   by eval
 
 definition "blocks_escrow == build_blocks insts_ex"
-
+value "blocks_escrow"
 lemma blocks_escrow_simp:
  "blocks_escrow = [(0, [(0, Stack (PUSH_N [0x60])), (2, Stack (PUSH_N [0x40])), (4, Memory MSTORE), (5, Stack (PUSH_N [4])),
        (7, Info CALLDATASIZE), (8, Arith inst_LT), (9, Stack (PUSH_N [0, 0x56]))],
@@ -150,23 +152,36 @@ lemma blocks_escrow_simp:
                         0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF])),
          (271, Bits inst_AND), (272, Misc SUICIDE)],
    Terminal),
-  (273, [(273, Pc JUMPDEST), (274, Stack (PUSH_N [0])), (276, Storage SLOAD), (277, Info CALLER),
-         (278, Stack (PUSH_N
+  (273, [(273, Pc JUMPDEST), (274, Stack (PUSH_N [0])), (276, Info CALLVALUE), (277, Arith inst_GT),
+         (278, Dup 0), (279, Arith ISZERO), (280, Stack (PUSH_N [1, 0x3C]))],
+   Jumpi),
+  (284, [(284, Stack POP), (285, Stack (PUSH_N [0])), (287, Storage SLOAD), (288, Info CALLER),
+         (289, Stack (PUSH_N
                        [0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
                         0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF])),
-         (299, Swap 0), (300, Dup 1), (301, Bits inst_AND), (302, Swap 1), (303, Bits inst_AND),
-         (304, Arith inst_EQ), (305, Stack (PUSH_N [1, 0x39]))],
+         (310, Swap 0), (311, Dup 1), (312, Bits inst_AND), (313, Swap 1), (314, Bits inst_AND),
+         (315, Arith inst_EQ)],
+   Next),
+  (316, [(316, Pc JUMPDEST), (317, Arith ISZERO), (318, Arith ISZERO), (319, Stack (PUSH_N [1, 0x47]))],
    Jumpi),
-  (309, [(309, Stack (PUSH_N [0])), (311, Dup 0), (312, Unknown 0xFD)], Terminal),
-  (313, [(313, Pc JUMPDEST)], Jump), (315, [(315, Misc STOP)], Terminal),
-  (316, [(316, Log LOG1), (317, Stack (PUSH_N [0x62, 0x7A, 0x7A, 0x72, 0x30, 0x58])), (324, Arith SHA3),
-         (325, Stack (PUSH_N
-                       [0xD2, 0xEE, 0x80, 0x51, 0xB0, 0x98, 0xC7, 0x99, 0xDF, 0x41, 0x46, 0x65, 0x99, 0xCD,
-                        0x31, 0x1E, 0x37, 0x6F, 0xD3, 0x63, 0x72, 0xF2, 0xBE, 0xCE, 0xC0, 0x8F, 0xE4, 0x94])),
-         (354, Unknown 0xBA)],
+  (323, [(323, Stack (PUSH_N [0])), (325, Dup 0), (326, Unknown 0xFD)], Terminal),
+  (327, [(327, Pc JUMPDEST)], Jump), (329, [(329, Misc STOP)], Terminal),
+  (330, [(330, Log LOG1), (331, Stack (PUSH_N [0x62, 0x7A, 0x7A, 0x72, 0x30, 0x58])), (338, Arith SHA3),
+         (339, Info TIMESTAMP), (340, Unknown 0xE5)],
    Terminal),
-  (355, [(355, Memory EXTCODECOPY), (356, Unknown 0xC1)], Terminal), (357, [(357, Misc STOP)], Terminal),
-  (358, [(358, Unknown 0x29)], Terminal)]"
+  (341, [(341, Arith ADDMOD), (342, Memory CODECOPY), (343, Unknown 0xF6)], Terminal),
+  (344, [(344, Unknown 0xB3)], Terminal),
+  (345, [(345, Stack (PUSH_N [0x82, 0x9E, 0x3A])), (349, Swap 0), (350, Swap 0xE), (351, Info CALLDATASIZE),
+         (352, Unknown 0xD9)],
+   Terminal),
+  (353, [(353, Unknown 0xB7)], Terminal), (354, [(354, Unknown 0x4B)], Terminal),
+  (355, [(355, Dup 4), (356, Unknown 0x4A)], Terminal), (357, [(357, Swap 9), (358, Unknown 0xEC)], Terminal),
+  (359, [(359, Swap 9), (360, Unknown 0xD3)], Terminal), (361, [(361, Unknown 0xC9)], Terminal),
+  (362, [(362, Unknown 0xB1)], Terminal), (363, [(363, Unknown 0xD9)], Terminal),
+  (364, [(364, Unknown 0x4F)], Terminal), (365, [(365, Unknown 0xED)], Terminal),
+  (366, [(366, Unknown 0xDF)], Terminal), (367, [(367, Log LOG1), (368, Unknown 0x21)], Terminal),
+  (369, [(369, Unknown 0x5F)], Terminal), (370, [(370, Unknown 0x1B)], Terminal),
+  (371, [(371, Misc STOP)], Terminal), (372, [(372, Unknown 0x29)], Terminal)]"
   by eval
 
 definition addfund_hash :: "32 word"  where
@@ -180,7 +195,7 @@ definition refund_hash :: "32 word"  where
 
 definition return_action ::"address \<Rightarrow> address \<Rightarrow> address \<Rightarrow> address \<Rightarrow> 32 word \<Rightarrow> w256 \<Rightarrow> contract_action" where
   "return_action sender from to owner hash v = 
- (if hash = addfund_hash \<and> sender = from  \<and> v \<noteq> 0then
+ (if hash = addfund_hash \<and> sender = from  \<and> v > 0 then
     ContractReturn []
   else if hash = refund_hash \<and> sender = owner \<and> v = 0 then
     ContractSuicide from
@@ -312,21 +327,234 @@ shows
   apply (clarsimp split:if_splits simp:word_rcat_simps bin_cat_def hash_diff)
 (*1*)
   apply (clarsimp)
-  apply (case_tac "v = 0 \<and> hash = addfund_hash"; clarsimp)
+(*  apply (case_tac "v = 0 \<and> hash = addfund_hash"; clarsimp)
   apply (rule exI)
   apply(((((blocks_rule_vcg; (rule refl)?), triple_seq_vcg)); sep_imp_solve2?)+)[1]
   apply (sep_imp_solve2|solves \<open>simp\<close>)+
-(*1*)
+  apply(((((blocks_rule_vcg; (rule refl)?), triple_seq_vcg)); sep_imp_solve2?)+)[1]
+  apply (sep_imp_solve2|solves \<open>simp\<close>)+
+  apply (clarsimp split:if_splits simp:word_rcat_simps bin_cat_def hash_diff)
+  apply (clarsimp split:if_splits simp:word_rcat_simps bin_cat_def hash_diff)
+  apply(((((blocks_rule_vcg; (rule refl)?), triple_seq_vcg)); sep_imp_solve2?)+)[1]
+  apply (sep_imp_solve2|solves \<open>simp\<close>)+
+  apply (clarsimp split:if_splits simp:word_rcat_simps bin_cat_def hash_diff)
+  apply (clarsimp split:if_splits simp:word_rcat_simps bin_cat_def hash_diff)
+  apply(((((blocks_rule_vcg; (rule refl)?), triple_seq_vcg)); sep_imp_solve2?)+)[1]
+  apply (sep_imp_solve2|solves \<open>simp\<close>)+
+  apply (clarsimp split:if_splits simp:word_rcat_simps bin_cat_def hash_diff)
+  apply(((((blocks_rule_vcg; (rule refl)?), triple_seq_vcg)); sep_imp_solve2?)+)[1]
+  apply (sep_imp_solve2|solves \<open>simp\<close>)+
   apply (clarsimp)
-  apply (case_tac "v \<noteq> 0 \<and> hash = addfund_hash \<and> sender \<noteq> from"; clarsimp)
+  apply (clarsimp split:if_splits simp:word_rcat_simps bin_cat_def hash_diff)
+  apply (rule conjI; rule refl)
+  apply(((((blocks_rule_vcg; (rule refl)?), triple_seq_vcg)); sep_imp_solve2?)+)[1]
+  apply (clarsimp simp:word_rcat_simps bin_cat_def hash_diff)
+  apply (sep_imp_solve2|solves \<open>simp\<close>)+
+  apply (clarsimp simp:word_rcat_simps bin_cat_def hash_diff)
+  apply (sep_imp_solve2|solves \<open>simp\<close>)+
+  apply (clarsimp simp:word_rcat_simps bin_cat_def hash_diff)
+  apply (rule conjI; rule refl)
+  apply (clarsimp split: if_split_asm simp:word_rcat_simps bin_cat_def hash_diff)
+  apply(((((blocks_rule_vcg; (rule refl)?), triple_seq_vcg)); sep_imp_solve2?)+)[1]
+  apply (sep_imp_solve2|solves \<open>simp\<close>)+
+  apply(((((blocks_rule_vcg; (rule refl)?), triple_seq_vcg)); sep_imp_solve2?)+)[1]
+  apply (sep_imp_solve2|solves \<open>simp\<close>)+
+  apply (clarsimp simp:word_rcat_simps bin_cat_def hash_diff)
+*)
+(*1*)
+  apply (case_tac "hash = addfund_hash \<and> sender \<noteq> from")
+  apply (erule conjE)+
+  apply clarsimp
+  apply (rule exI)
+  apply(((((blocks_rule_vcg; (rule refl)?), triple_seq_vcg)); sep_imp_solve2?)+)[1]
+  apply (sep_imp_solve2|solves \<open>simp\<close>)+
+  apply(((((blocks_rule_vcg; (rule refl)?), triple_seq_vcg)); sep_imp_solve2?)+)[1]
+  apply (sep_imp_solve2|solves \<open>simp\<close>)+
+  apply (clarsimp split: if_split_asm simp:word_rcat_simps bin_cat_def hash_diff)
+  apply (clarsimp split: if_split_asm simp:word_rcat_simps bin_cat_def hash_diff)
+  apply(((((blocks_rule_vcg; (rule refl)?), triple_seq_vcg)); sep_imp_solve2?)+)[1]
+  apply (sep_imp_solve2|solves \<open>simp\<close>)+
+  apply (clarsimp split: if_split_asm simp:word_rcat_simps bin_cat_def hash_diff)
+  apply (clarsimp split: if_split_asm simp:word_rcat_simps bin_cat_def hash_diff)
+  apply(((((blocks_rule_vcg; (rule refl)?), triple_seq_vcg)); sep_imp_solve2?)+)[1]
+  apply (sep_imp_solve2|solves \<open>simp\<close>)+
+  apply (clarsimp split: if_split_asm simp:word_rcat_simps bin_cat_def hash_diff)
+  apply(((((blocks_rule_vcg; (rule refl)?), triple_seq_vcg)); sep_imp_solve2?)+)[1]
+  apply (sep_imp_solve2|solves \<open>simp\<close>)+
+  apply (clarsimp simp:word_rcat_simps bin_cat_def hash_diff)
+  apply (rule conjI; rule refl)
+  apply(((((blocks_rule_vcg; (rule refl)?), triple_seq_vcg)); sep_imp_solve2?)+)[1]
+  apply (clarsimp simp:word_rcat_simps bin_cat_def hash_diff)
+  apply (sep_imp_solve2|solves \<open>simp\<close>)+
+  apply (clarsimp simp:word_rcat_simps bin_cat_def hash_diff)
+  apply (sep_imp_solve2|solves \<open>simp\<close>)+
+  apply (clarsimp simp:word_rcat_simps bin_cat_def hash_diff)
+  apply (rule conjI; rule refl)
+  apply (clarsimp simp:word_rcat_simps bin_cat_def hash_diff)
+  apply(((((blocks_rule_vcg; (rule refl)?), triple_seq_vcg)); sep_imp_solve2?)+)[1]
+  apply (clarsimp simp:word_rcat_simps bin_cat_def hash_diff)
+  apply (sep_imp_solve2|solves \<open>simp\<close>)+
+  apply (clarsimp simp:word_rcat_simps bin_cat_def hash_diff)
+  apply (rule conjI; rule refl)
+  apply (clarsimp simp:word_rcat_simps bin_cat_def hash_diff)
+  apply(((((blocks_rule_vcg; (rule refl)?), triple_seq_vcg)); sep_imp_solve2?)+)[1]
+  apply (clarsimp simp:word_rcat_simps bin_cat_def hash_diff)
+  apply (clarsimp split: if_split_asm simp:word_rcat_simps bin_cat_def hash_diff)
+  apply (sep_imp_solve2|solves \<open>simp\<close>)+
+  apply (clarsimp split: if_split_asm simp:word_rcat_simps bin_cat_def hash_diff)
+  apply(((((blocks_rule_vcg; (rule refl)?), triple_seq_vcg)); sep_imp_solve2?)+)[1]
+  apply (sep_imp_solve2|solves \<open>simp\<close>)+
+  apply(((((blocks_rule_vcg; (rule refl)?), triple_seq_vcg)); sep_imp_solve2?)+)[1]
+  apply (sep_imp_solve2|solves \<open>simp\<close>)+
+  apply (clarsimp simp:word_rcat_simps bin_cat_def hash_diff)
+  apply (rule conjI; rule refl)
+  apply (clarsimp split: if_split_asm simp:word_rcat_simps bin_cat_def hash_diff)
+  apply (clarsimp split: if_split_asm simp:word_rcat_simps bin_cat_def hash_diff)
+  apply(((((blocks_rule_vcg; (rule refl)?), triple_seq_vcg)); sep_imp_solve2?)+)[1]
+  apply (clarsimp simp:word_rcat_simps bin_cat_def hash_diff)
+  apply(clarsimp?, ((((sep_cancel, clarsimp?)+)|simp add:word_rcat_simps|rule conjI)+)[1])
+  oops
+(*1*)
+  apply (case_tac "v \<le> 0 \<and> hash = addfund_hash"; clarsimp)
+  apply (rule exI)
+  apply(((((blocks_rule_vcg; (rule refl)?), triple_seq_vcg)); sep_imp_solve2?)+)[1]
+  apply (sep_imp_solve2|solves \<open>simp\<close>)+
+  apply(((((blocks_rule_vcg; (rule refl)?), triple_seq_vcg)); sep_imp_solve2?)+)[1]
+  apply (sep_imp_solve2|solves \<open>simp\<close>)+
+  apply (clarsimp split: if_split_asm simp:word_rcat_simps bin_cat_def hash_diff)
+  apply (clarsimp split: if_split_asm simp:word_rcat_simps bin_cat_def hash_diff)
+  apply(((((blocks_rule_vcg; (rule refl)?), triple_seq_vcg)); sep_imp_solve2?)+)[1]
+  apply (sep_imp_solve2|solves \<open>simp\<close>)+
+  apply (clarsimp split: if_split_asm simp:word_rcat_simps bin_cat_def hash_diff)
+  apply (clarsimp split: if_split_asm simp:word_rcat_simps bin_cat_def hash_diff)
+  apply(((((blocks_rule_vcg; (rule refl)?), triple_seq_vcg)); sep_imp_solve2?)+)[1]
+  apply (sep_imp_solve2|solves \<open>simp\<close>)+
+  apply (clarsimp split: if_split_asm simp:word_rcat_simps bin_cat_def hash_diff)
+  apply(((((blocks_rule_vcg; (rule refl)?), triple_seq_vcg)); sep_imp_solve2?)+)[1]
+  apply (sep_imp_solve2|solves \<open>simp\<close>)+
+  apply (clarsimp simp:word_rcat_simps bin_cat_def hash_diff)
+  apply (rule conjI; rule refl)
+  apply(((((blocks_rule_vcg; (rule refl)?), triple_seq_vcg)); sep_imp_solve2?)+)[1]
+  apply (clarsimp simp:word_rcat_simps bin_cat_def hash_diff)
+  apply (sep_imp_solve2|solves \<open>simp\<close>)+
+  apply (clarsimp simp:word_rcat_simps bin_cat_def hash_diff)
+  apply (sep_imp_solve2|solves \<open>simp\<close>)+
+  apply (clarsimp simp:word_rcat_simps bin_cat_def hash_diff)
+  apply (rule conjI; rule refl)
+  apply (clarsimp simp:word_rcat_simps bin_cat_def hash_diff)
+  apply(((((blocks_rule_vcg; (rule refl)?), triple_seq_vcg)); sep_imp_solve2?)+)[1]
+  apply (clarsimp simp:word_rcat_simps bin_cat_def hash_diff)
+  apply (sep_imp_solve2|solves \<open>simp\<close>)+
+  apply (clarsimp simp:word_rcat_simps bin_cat_def hash_diff)
+  apply (rule conjI; rule refl)
+  apply (clarsimp simp:word_rcat_simps bin_cat_def hash_diff)
+  apply(((((blocks_rule_vcg; (rule refl)?), triple_seq_vcg)); sep_imp_solve2?)+)[1]
+  apply (sep_imp_solve2|solves \<open>simp\<close>)+
+  apply (clarsimp split: if_split_asm simp:word_rcat_simps bin_cat_def hash_diff)
+
+-- stuck here not sure why
 (*1*)
   apply (case_tac "v \<noteq> 0 \<and> hash = pay_hash"; clarsimp)
-(*1*)
-  apply (case_tac "v = 0 \<and> hash = pay_hash \<and> sender \<noteq> owner"; clarsimp)
+  apply (rule exI)
+  apply(((((blocks_rule_vcg; (rule refl)?), triple_seq_vcg)); sep_imp_solve2?)+)[1]
+  apply (sep_imp_solve2|solves \<open>simp\<close>)+
+  apply(((((blocks_rule_vcg; (rule refl)?), triple_seq_vcg)); sep_imp_solve2?)+)[1]
+  apply (sep_imp_solve2|solves \<open>simp\<close>)+
+  apply (clarsimp split: if_split_asm simp:word_rcat_simps bin_cat_def hash_diff)
+  apply(((((blocks_rule_vcg; (rule refl)?), triple_seq_vcg)); sep_imp_solve2?)+)[1]
+  apply (sep_imp_solve2|solves \<open>simp\<close>)+
+  apply(((((blocks_rule_vcg; (rule refl)?), triple_seq_vcg)); sep_imp_solve2?)+)[1]
+  apply (sep_imp_solve2|solves \<open>simp\<close>)+
+  apply (clarsimp split: if_split_asm simp:word_rcat_simps bin_cat_def hash_diff)
 (*1*)
   apply (case_tac "v \<noteq> 0 \<and> hash = refund_hash"; clarsimp)
+  apply (rule exI)
+  apply(((((blocks_rule_vcg; (rule refl)?), triple_seq_vcg)); sep_imp_solve2?)+)[1]
+  apply (sep_imp_solve2|solves \<open>simp\<close>)+
+  apply(((((blocks_rule_vcg; (rule refl)?), triple_seq_vcg)); sep_imp_solve2?)+)[1]
+  apply (sep_imp_solve2|solves \<open>simp\<close>)+
+  apply (clarsimp split: if_split_asm simp:word_rcat_simps bin_cat_def hash_diff)
+  apply (clarsimp split: if_split_asm simp:word_rcat_simps bin_cat_def hash_diff)
+  apply(((((blocks_rule_vcg; (rule refl)?), triple_seq_vcg)); sep_imp_solve2?)+)[1]
+  apply (sep_imp_solve2|solves \<open>simp\<close>)+
+  apply (clarsimp split: if_split_asm simp:word_rcat_simps bin_cat_def hash_diff)
+  apply(((((blocks_rule_vcg; (rule refl)?), triple_seq_vcg)); sep_imp_solve2?)+)[1]
+  apply (sep_imp_solve2|solves \<open>simp\<close>)+
+  apply(((((blocks_rule_vcg; (rule refl)?), triple_seq_vcg)); sep_imp_solve2?)+)[1]
+  apply (sep_imp_solve2|solves \<open>simp\<close>)+
+  apply (clarsimp split: if_split_asm simp:word_rcat_simps bin_cat_def hash_diff)
+(*1*)
+  apply (case_tac "v = 0 \<and> hash = pay_hash \<and> sender \<noteq> owner"; clarsimp)
+  apply (rule exI)
+  apply(((((blocks_rule_vcg; (rule refl)?), triple_seq_vcg)); sep_imp_solve2?)+)[1]
+  apply (sep_imp_solve2|solves \<open>simp\<close>)+
+  apply (clarsimp split: if_split_asm simp:word_rcat_simps bin_cat_def hash_diff)
+  apply(((((blocks_rule_vcg; (rule refl)?), triple_seq_vcg)); sep_imp_solve2?)+)[1]
+  apply (sep_imp_solve2|solves \<open>simp\<close>)+
+  apply (clarsimp split: if_split_asm simp:word_rcat_simps bin_cat_def hash_diff)
+  apply(((((blocks_rule_vcg; (rule refl)?), triple_seq_vcg)); sep_imp_solve2?)+)[1]
+  apply (sep_imp_solve2|solves \<open>simp\<close>)+
+  apply(((((blocks_rule_vcg; (rule refl)?), triple_seq_vcg)); sep_imp_solve2?)+)[1]
+  apply (sep_imp_solve2|solves \<open>simp\<close>)+
+  apply(((((blocks_rule_vcg; (rule refl)?), triple_seq_vcg)); sep_imp_solve2?)+)[1]
+  apply (sep_imp_solve2|solves \<open>simp\<close>)+
+  apply (clarsimp split: if_split_asm simp:word_rcat_simps bin_cat_def hash_diff)
+  apply (clarsimp split: if_split_asm simp:word_rcat_simps bin_cat_def hash_diff)
+  apply(((((blocks_rule_vcg; (rule refl)?), triple_seq_vcg)); sep_imp_solve2?)+)[1]
+  apply (sep_imp_solve2|solves \<open>simp\<close>)+
+  apply (clarsimp split: if_split_asm simp:word_rcat_simps bin_cat_def hash_diff)
 (*1*)
   apply (case_tac "v = 0 \<and> hash = refund_hash \<and> sender \<noteq> owner"; clarsimp)
+  apply (rule exI)
+  apply(((((blocks_rule_vcg; (rule refl)?), triple_seq_vcg)); sep_imp_solve2?)+)[1]
+  apply (sep_imp_solve2|solves \<open>simp\<close>)+
+  apply (clarsimp split: if_split_asm simp:word_rcat_simps bin_cat_def hash_diff)
+  apply(((((blocks_rule_vcg; (rule refl)?), triple_seq_vcg)); sep_imp_solve2?)+)[1]
+  apply (sep_imp_solve2|solves \<open>simp\<close>)+
+  apply (clarsimp split: if_split_asm simp:word_rcat_simps bin_cat_def hash_diff)
+  apply (clarsimp split: if_split_asm simp:word_rcat_simps bin_cat_def hash_diff)
+  apply(((((blocks_rule_vcg; (rule refl)?), triple_seq_vcg)); sep_imp_solve2?)+)[1]
+  apply (sep_imp_solve2|solves \<open>simp\<close>)+
+  apply (clarsimp split: if_split_asm simp:word_rcat_simps bin_cat_def hash_diff)
+  apply(((((blocks_rule_vcg; (rule refl)?), triple_seq_vcg)); sep_imp_solve2?)+)[1]
+  apply (sep_imp_solve2|solves \<open>simp\<close>)+
+  apply(((((blocks_rule_vcg; (rule refl)?), triple_seq_vcg)); sep_imp_solve2?)+)[1]
+  apply (sep_imp_solve2|solves \<open>simp\<close>)+
+  apply (clarsimp split: if_split_asm simp:word_rcat_simps bin_cat_def hash_diff)
+  apply(((((blocks_rule_vcg; (rule refl)?), triple_seq_vcg)); sep_imp_solve2?)+)[1]
+  apply (sep_imp_solve2|solves \<open>simp\<close>)+
+  apply (clarsimp split: if_split_asm simp:word_rcat_simps bin_cat_def hash_diff)
+  apply (clarsimp split: if_split_asm simp:word_rcat_simps bin_cat_def hash_diff)
+  apply(((((blocks_rule_vcg; (rule refl)?), triple_seq_vcg)); sep_imp_solve2?)+)[1]
+  apply (clarsimp split: if_split_asm simp:word_rcat_simps bin_cat_def hash_diff)
+  apply (sep_imp_solve2|solves \<open>simp\<close>)+
+  apply (clarsimp split: if_split_asm simp:word_rcat_simps bin_cat_def hash_diff)
+(*1*)
+  apply (rule exI)
+  apply(((((blocks_rule_vcg; (rule refl)?), triple_seq_vcg))))
+  apply (sep_imp_solve2|solves \<open>simp\<close>)
+  oops
+lemma
+notes
+  bit_mask_rev[simp add]
+  address_mask_ucast[simp] address_mask_ucast[simplified word_bool_alg.conj.commute, simp]
+  ucast_and_w256_drop[simp]
+  addfund_hash_def[simp] refund_hash_def[simp] pay_hash_def[simp]
+  word_bool_alg.conj.commute[simp]
+  length_word_rsplit_4[simp]
+  ucast_160_upto_256_eq[simp]
+
+shows
+ "sender = owner \<longrightarrow> hash = 0x1B9265B8 \<longrightarrow> v \<noteq> 0 \<Longrightarrow>
+    sender = owner \<longrightarrow> hash = 0x590E1AE3 \<longrightarrow> v \<noteq> 0 \<Longrightarrow>
+    sender = from \<longrightarrow> hash = 0x8F9595D4 \<longrightarrow> v = 0 \<Longrightarrow>
+    hash = 0x8F9595D4 \<longrightarrow> v = 0 \<or> sender = from \<Longrightarrow>
+    v = 0 \<or> hash \<noteq> 0x1B9265B8 \<Longrightarrow>
+    v = 0 \<or> hash \<noteq> 0x590E1AE3 \<Longrightarrow>
+    hash = 0x1B9265B8 \<longrightarrow> v = 0 \<longrightarrow> sender = owner \<Longrightarrow>
+    hash = 0x590E1AE3 \<longrightarrow> v = 0 \<longrightarrow> sender = owner \<Longrightarrow> hash \<notin> {pay_hash, refund_hash, addfund_hash}"
+  apply clarsimp
+  apply blast
 (*
    apply(split if_split, rule conjI)
   apply (clarsimp)
