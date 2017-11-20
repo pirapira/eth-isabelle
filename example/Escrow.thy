@@ -263,14 +263,15 @@ notes
 assumes blk_num: "bn > 2463000"
 and net: "at_least_eip150 net"
 shows
-"\<exists>r. triple 
+"\<exists>r. triple net
   (program_counter 0 ** stack_height 0 ** (sent_data (word_rsplit (hash::32 word)::byte list))
    ** sent_value v ** caller sender ** blk_num bn **
    memory_usage 0 ** continuing ** gas_pred 100000
    ** storage 0 (ucast from)
    ** storage 1 (ucast to)
    ** storage 2 (ucast owner)
-   ** account_existence a b 
+   ** account_existence from from_ex 
+   ** account_existence to to_ex 
    ** memory (word_rcat [64::byte]) (bytestr_to_w256 [x]) **
    memory (word_rcat [96::byte]) (bytestr_to_w256 [y]))
   blocks_escrow (action (return_action sender from to owner hash v) ** r)"
@@ -302,9 +303,12 @@ shows
    apply (sep_imp_solve2|solves \<open>simp\<close>)+
    apply(((((blocks_rule_vcg; (rule refl)?), triple_seq_vcg)); sep_imp_solve2?)+)[1]
    apply (sep_imp_solve2|solves \<open>simp\<close>)+
-   apply (clarsimp simp add:word_rcat_simps bin_cat_def)
+   apply (clarsimp simp add:word_rcat_simps bin_cat_def Csuicide_def)
+   apply ( solves \<open>(clarsimp?, ((((sep_cancel, clarsimp?)+)|clarsimp split: if_split |rule conjI)+)[1])\<close>)
+   apply (clarsimp split:if_splits simp:word_rcat_simps bin_cat_def hash_diff)
+   apply(((((blocks_rule_vcg; (rule refl)?), triple_seq_vcg)); sep_imp_solve2?)+)[1]
    apply (sep_imp_solve2|solves \<open>simp\<close>)+
-  apply (clarsimp split:if_splits simp:word_rcat_simps bin_cat_def hash_diff)
+   apply (clarsimp split:if_splits simp:word_rcat_simps bin_cat_def hash_diff)
 (*1*)
   apply(split if_split, rule conjI)
   apply (clarsimp)
@@ -322,9 +326,11 @@ shows
   apply (sep_imp_solve2|solves \<open>simp\<close>)+
   apply(((((blocks_rule_vcg; (rule refl)?), triple_seq_vcg)); sep_imp_solve2?)+)[1]
   apply (sep_imp_solve2|solves \<open>simp\<close>)+
-  apply (clarsimp split:if_splits simp:word_rcat_simps bin_cat_def hash_diff)
-  apply (sep_imp_solve2|solves \<open>simp\<close>)+
-  apply (clarsimp split:if_splits simp:word_rcat_simps bin_cat_def hash_diff)
+  apply (clarsimp simp add:word_rcat_simps bin_cat_def Csuicide_def)
+  apply ( solves \<open>(clarsimp?, ((((sep_cancel, clarsimp?)+)|clarsimp split: if_split |rule conjI)+)[1])\<close>)
+  apply (clarsimp)
+  apply (clarsimp)
+  apply (clarsimp split:if_splits simp:word_rcat_simps bin_cat_def hash_diff Csuicide_def)
 (*1*)
   apply (clarsimp)
   apply (case_tac " hash = pay_hash"; clarsimp)

@@ -604,7 +604,7 @@ lemma blocks_jump_uint :
 by(rule blocks_jump; simp)
 
 lemma inst_return_memory :
-    "triple_inst_misc
+    "triple_inst_misc net
      (\<langle> h \<le> 1022 \<and> m \<ge> 0 \<and> length (word_rsplit lst::byte list) = unat v \<and> (Cmem (M m u v) - Cmem m) \<le> g \<rangle> \<and>*
       continuing \<and>* memory_usage m \<and>* memory u lst \<and>*
       program_counter n \<and>* stack_height (Suc (Suc h)) \<and>* gas_pred g \<and>*

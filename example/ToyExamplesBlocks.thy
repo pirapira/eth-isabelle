@@ -138,7 +138,7 @@ method triple_vcg =
 thm triple_blocks.intros
 (* For a jumpif that can be solved statically, it works *)
 lemma
- "\<exists>rest. triple_blocks ex1
+ "\<exists>rest. triple_blocks net ex1
 (continuing ** stack_height 0 ** program_counter 0 ** gas_pred 1000 ** memory_usage 0)
 (0,the (block_lookup ex1 0))
 (stack 0 (word_rcat [2::byte]) ** rest)"
@@ -159,7 +159,7 @@ schematic_goal ex2_val:
   split:if_splits nat.splits option.splits )
 
 lemma
- " \<exists>rest0 restn0. triple_blocks (ex2 cond)
+ " \<exists>rest0 restn0. triple_blocks net (ex2 cond)
 (continuing ** stack_height 0 ** program_counter 0 ** gas_pred 1000 ** memory_usage 0)
 (0, the (block_lookup (ex2 cond) 0))
 (if word_rcat [cond] = (0::256 word) then stack 0 (word_rcat [1::byte]) ** restn0 else stack 0 (word_rcat [2::byte]) ** rest0)
@@ -173,7 +173,7 @@ done
 (* Same example as the previous one but with the unknown value as a precondition *)
 
 lemma
- "\<exists>rest. triple_blocks (ex2 cond)
+ "\<exists>rest. triple_blocks net (ex2 cond)
 (continuing ** stack_height 0 ** program_counter 0 ** gas_pred 1000 ** memory_usage 0 **
  \<langle> (word_rcat [cond] \<noteq> (0::256 word)) \<rangle>)
 (0,the (block_lookup (ex2 cond) 0))
@@ -196,7 +196,7 @@ schematic_goal ex3_val:
   split:if_splits nat.splits option.splits )
 
 lemma
- "\<exists>rest. triple_blocks ex3
+ "\<exists>rest. triple_blocks net ex3
 (continuing ** stack_height 0 ** program_counter 0 ** gas_pred 1000 ** memory_usage 0)
 (0, the (block_lookup ex3 0))
 (stack 0 (word_rcat [1::byte]) ** stack_height (Suc (Suc 0)) ** stack 1 (word_rcat [2::byte]) ** rest)
