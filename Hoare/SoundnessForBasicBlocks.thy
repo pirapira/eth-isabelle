@@ -17,7 +17,7 @@
 theory "SoundnessForBasicBlocks"
 
 imports "HoareTripleForBasicBlocks"
-
+"../Word_Lib/Word_Lemmas"
 begin
 
 lemmas instruction_simps =
@@ -31,9 +31,9 @@ instruction_sem_def
 (* Soundness proof for instruction rules *)
 
 lemma inst_strengthen_pre_sem:
-  assumes  "triple_inst_sem P c Q"
+  assumes  "triple_inst_sem n P c Q"
   and      "(\<forall> s. R s \<longrightarrow> P s)"
-  shows    " triple_inst_sem R c Q"
+  shows    " triple_inst_sem n R c Q"
   using assms(1)
   apply (simp add: triple_inst_sem_def)
   apply(clarify)
@@ -47,7 +47,7 @@ lemma inst_strengthen_pre_sem:
 done
 
 lemma inst_false_pre_sem:
-  "triple_inst_sem \<langle>False\<rangle> i q"
+  "triple_inst_sem n \<langle>False\<rangle> i q"
 by(simp add: triple_inst_sem_def sep_basic_simps pure_def)
 
 method inst_sound_set_eq uses simp =
@@ -80,7 +80,7 @@ apply(auto simp add: as_set_simps)
 *)
 
 lemma inst_stop_sem:
-"triple_inst_sem
+"triple_inst_sem net
   (\<langle> h \<le> 1024 \<and> 0 \<le> g \<and> m \<ge> 0\<rangle> \<and>* continuing \<and>* memory_usage m  \<and>* program_counter n \<and>* stack_height h \<and>* gas_pred g \<and>* rest)
   (n, Misc STOP)
   (stack_height h \<and>* not_continuing \<and>* memory_usage m \<and>* program_counter n \<and>* action (ContractReturn []) \<and>* gas_pred g \<and>* rest )"
@@ -195,7 +195,7 @@ lemma inst_swap_sound:
 notes
   if_split[split del]
 shows
-"triple_inst_sem
+"triple_inst_sem net
         (\<langle> h \<le> 1023 \<and>
            Suc (unat n) \<le> h \<and> Gverylow \<le> g \<and> 0 \<le> m \<rangle> \<and>*
          stack_height (Suc h) \<and>*
@@ -247,7 +247,6 @@ apply(rule conjI)
  		 		apply(case_tac "pair = length t - Suc (unat n)")
  		 apply(simp)
  		apply(clarsimp)
- (* apply(case_tac pair; simp add: stateelm_equiv_simps) *)
  		apply(case_tac "Suc (unat n) = length t")
  		 apply(clarsimp simp add: min_def short_rev_append)
  		 apply(simp add: rev_take rev_append_eq)
@@ -260,8 +259,8 @@ apply(rule conjI)
  		 apply(simp)
  		apply(simp add: rev_nth not_less nth_append split: if_splits)
 apply(arith)
-done
-		
+  done
+
 		lemma variable_context_pc_change:
 "variable_ctx_as_set (x1\<lparr>vctx_pc := vctx_pc x1 + 1\<rparr>) = insert (PcElm (vctx_pc x1 + 1)) (variable_ctx_as_set x1) - {PcElm (vctx_pc x1)}"
 by (auto simp add: as_set_simps)
@@ -286,7 +285,7 @@ lemma memory_elm_in_memory_range_elms':
                 \<lparr>vctx_pc := p \<rparr>) =
    (x \<in> variable_ctx_as_set x1)"
    by (auto simp: as_set_simps dest: memory_range_elms_all)
-	
+
 lemmas memory_range_elms_set_simps=
 	memory_range_elms_in_c
 	memory_range_in_minus_balance_as
@@ -333,12 +332,12 @@ lemmas memory_range_elms_set_simps=
 	memory_elm_in_memory_range_elms'
 	memory_range_elms_all
 	memory_range_pc_update
-	
+
 lemma inst_mload_sound :
 notes
   unat_bintrunc[simp del]
 shows
-"triple_inst_sem
+"triple_inst_sem net
   (\<langle> h \<le> 1023  \<and> g \<ge> Gverylow - Cmem memu + Cmem (M memu memaddr 32) \<and> memu \<ge> 0 \<and>
     length (word_rsplit v::byte list) = unat (32::w256)\<rangle> \<and>*
    stack h memaddr \<and>* stack_height (Suc h) \<and>* program_counter n \<and>*   
@@ -688,7 +687,7 @@ lemma inst_mstore_sound :
 notes
   unat_bintrunc[simp del]
 shows
-"triple_inst_sem
+"triple_inst_sem net
   (\<langle> h \<le> 1022 \<and> g \<ge> Gverylow - Cmem memu + Cmem (M memu memaddr 32) \<and> memu \<ge> 0 \<and>
     length (word_rsplit old_v::byte list) = unat (32::w256) \<and>
     length (word_rsplit v::byte list) = unat (32::w256) \<and> memaddr \<le> -32\<rangle> \<and>*
@@ -737,12 +736,12 @@ apply(simp add: memory_range_elms_set_simps)
 	apply(case_tac x; clarsimp simp add: stateelm_means_simps stateelm_equiv_simps)
 	apply(simp add: short_rev_append)
 	done
-		
+
 lemma inst_return_sem :
 notes
   if_split[split del]
 shows
-  "triple_inst_sem
+  "triple_inst_sem net
     (\<langle> h \<le> 1022 \<and> m \<ge> 0 \<and> length lst = unat v \<and> (Cmem (M m u v) - Cmem m) \<le> g \<rangle> \<and>*
      continuing \<and>* memory_usage m \<and>* memory_range u lst \<and>*
      program_counter n \<and>* stack_height (Suc (Suc h)) \<and>* gas_pred g \<and>*
@@ -782,9 +781,9 @@ shows
   			apply(clarsimp)
   		apply(simp add: stateelm_means_simps stateelm_equiv_simps)
   done
-  	
+
   	lemma inst_dup_sound:
-"triple_inst_sem
+"triple_inst_sem net
         (\<langle> h \<le> 1023 \<and> unat n < h \<and> Gverylow \<le> g \<and> 0 < m\<rangle> \<and>*
          stack_height h \<and>*
          stack (h - unat n - 1) w \<and>*
@@ -817,15 +816,43 @@ apply(simp add: stateelm_means_simps stateelm_equiv_simps)
 			  apply(arith)
 			apply(erule_tac P="(_ \<and>* _)" in back_subst)
 apply(set_solve)
-				done
-  	
+      done
+
+
+lemma inst_suicide_sem:
+ "triple_inst_sem net
+  (\<langle> h \<le> 1024 \<and> Csuicide (\<not> existence) net \<le> g \<and> 0 \<le> m \<and> at_least_eip150 net\<rangle> \<and>*
+   continuing \<and>* account_existence addr existence \<and>* memory_usage m \<and>*
+   program_counter n \<and>* stack_height (Suc h) \<and>* gas_pred g \<and>* stack h (ucast addr) \<and>* rest)
+  (n, Misc SUICIDE)
+  (stack_height (Suc h) \<and>* stack h (ucast addr) \<and>*
+   not_continuing \<and>*  account_existence addr existence \<and>* memory_usage m \<and>*
+   program_counter n \<and>* action (ContractSuicide addr) \<and>* gas_pred (g - Csuicide (\<not> existence) net) \<and>* rest)"
+  apply(simp add: triple_inst_sem_def program_sem.simps as_set_simps)
+  apply(clarify)
+  apply(sep_simp simp: evm_sep; simp)
+  apply(simp split: instruction_result.splits)
+  apply(simp add: stateelm_means_simps stateelm_equiv_simps)
+  apply(simp add: vctx_next_instruction_def)
+  apply(clarsimp simp add: instruction_simps)
+  apply(simp add:  vctx_recipient_def vctx_next_instruction_default_def vctx_next_instruction_def)
+  apply(subgoal_tac "ucast (ucast addr::w256) = addr")
+   apply(simp)
+   apply((sep_simp simp: evm_sep)+)
+   apply(simp add: stateelm_means_simps stateelm_equiv_simps)
+   apply(erule_tac P="(_ \<and>* _)" in back_subst)
+   apply(set_solve)
+  apply(subst ucast_ucast_mask)
+  apply(simp add: mask_def)
+ done
+
 lemma triple_inst_soundness:
 notes
   if_split[split del]
 shows
-  "triple_inst p i q \<Longrightarrow> triple_inst_sem p i q"
+  "triple_inst net p i q \<Longrightarrow> triple_inst_sem net p i q"
   apply(induction rule:triple_inst.induct)
-      apply(erule triple_inst_arith.cases; clarsimp)
+              apply(erule triple_inst_arith.cases; clarsimp)
                        apply(inst_sound_set_eq, set_solve)
                       apply(split if_split, rule conjI, rule impI)
                       apply(inst_sound_set_eq, set_solve)+
@@ -851,13 +878,18 @@ shows
              apply(inst_sound_set_eq, set_solve)
             apply(inst_sound_set_eq, set_solve)
            apply(erule triple_inst_info.cases; clarsimp)
-  				 apply(inst_sound_set_eq, set_solve)
-   					 apply(erule triple_inst_memory.cases; clarsimp)
+              apply(inst_sound_set_eq, set_solve)
+             apply(inst_sound_set_eq simp: datasize_def, set_solve)
+            apply(inst_sound_set_eq, set_solve)
+           apply(erule triple_inst_memory.cases; clarsimp)
   					  apply(rule inst_mload_sound[simplified])
-             apply(rule inst_mstore_sound[simplified])
+  				 apply(rule inst_mstore_sound[simplified])
+        apply(erule triple_inst_storage.cases; clarsimp)
+          apply(inst_sound_set_eq, set_solve)
   					apply(erule triple_inst_misc.cases; clarsimp)
   					 apply(rule inst_stop_sem)
-  					apply(rule inst_return_sem)
+  				  apply(rule inst_return_sem)
+           apply(rule inst_suicide_sem)
     apply(erule triple_inst_pc.cases; clarsimp)
      apply(inst_sound_set_eq, set_solve)
     apply(inst_sound_set_eq, set_solve)
@@ -875,36 +907,34 @@ done
 (* Soundness proof for triple_seq rules *)
 
 lemma inst_seq_eq:
-"triple_inst P i Q \<Longrightarrow> triple_seq_sem P [i] Q"
+"triple_inst net P i Q \<Longrightarrow> triple_seq_sem net P [i] Q"
  apply(drule triple_inst_soundness)
  apply(simp add: triple_inst_sem_def triple_seq_sem_def)
 done
 
 lemma seq_compose_soundness:
-"triple_seq_sem P xs R \<Longrightarrow> triple_seq_sem R ys Q \<Longrightarrow> triple_seq_sem P (xs@ys) Q "
+"triple_seq_sem net P xs R \<Longrightarrow> triple_seq_sem net R ys Q \<Longrightarrow> triple_seq_sem net P (xs@ys) Q "
  apply(simp (no_asm) add: triple_seq_sem_def)
  apply clarsimp
  apply(subst (asm) triple_seq_sem_def[where pre=P])
  apply clarsimp
- apply(rename_tac co_ctx presult rest stopper net)
+ apply(rename_tac co_ctx presult rest stopper)
  apply(drule_tac x = "co_ctx" in spec)
  apply(drule_tac x = "presult" in spec)
  apply(drule_tac x = "code ((set ys) - (set xs)) ** rest" in spec)
  apply(simp add: code_more sep_conj_commute sep_conj_left_commute)
  apply(drule_tac x = stopper in spec)
- apply(drule_tac x = "net" in spec)
  apply(clarsimp simp add: triple_seq_sem_def)
  apply(drule_tac x = "co_ctx" in spec)
  apply(drule_tac x = "program_sem stopper co_ctx (length xs) net presult" in spec)
  apply(drule_tac x = "code ((set xs) - (set ys)) ** rest" in spec)
  apply(simp add: code_more sep_conj_commute sep_conj_left_commute code_union_comm)
  apply(drule_tac x = stopper in spec)
- apply(drule_tac x = "net" in spec)
  apply(simp add: execution_continue)
 done
 
 lemma triple_seq_empty:
-"(\<And>s. pre s \<longrightarrow> post s) \<Longrightarrow> triple_seq_sem pre [] post"
+"(\<And>s. pre s \<longrightarrow> post s) \<Longrightarrow> triple_seq_sem net pre [] post"
  apply (simp add: triple_seq_sem_def program_sem.simps imp_sepL)
  apply(clarify)
  apply(drule allI)
@@ -912,9 +942,9 @@ lemma triple_seq_empty:
 done
 
 lemma seq_strengthen_pre_sem:
-  assumes  "triple_seq_sem P c Q"
+  assumes  "triple_seq_sem net P c Q"
   and      "(\<forall> s. R s \<longrightarrow> P s)"
-  shows    " triple_seq_sem R c Q"
+  shows    " triple_seq_sem net R c Q"
   using assms(1)
   apply (simp add: triple_seq_sem_def)
   apply(clarify)
@@ -928,7 +958,7 @@ lemma seq_strengthen_pre_sem:
 done
 
 lemma triple_seq_soundness:
-"triple_seq P xs Q \<Longrightarrow> triple_seq_sem P xs Q"
+"triple_seq net P xs Q \<Longrightarrow> triple_seq_sem net P xs Q"
  apply(induction rule: triple_seq.induct)
     apply(drule inst_seq_eq)
     apply(rename_tac pre x q xs post)
@@ -976,9 +1006,9 @@ done
 
 (* Define the semantic of triple_blocks using program_sem_t and prove it sound *)
 
-definition triple_blocks_sem_t :: "basic_blocks \<Rightarrow> pred \<Rightarrow> vertex \<Rightarrow> pred \<Rightarrow> bool" where
-"triple_blocks_sem_t c pre v post ==
-    \<forall> co_ctx presult rest net (stopper::instruction_result \<Rightarrow> unit).
+definition triple_blocks_sem_t :: "network \<Rightarrow> basic_blocks \<Rightarrow> pred \<Rightarrow> vertex \<Rightarrow> pred \<Rightarrow> bool" where
+"triple_blocks_sem_t net c pre v post ==
+    \<forall> co_ctx presult rest (stopper::instruction_result \<Rightarrow> unit).
         wf_blocks c \<longrightarrow>
         block_lookup c (v_ind v) = Some (snd v) \<longrightarrow>
        (pre ** code (blocks_insts c) ** rest) (instruction_result_as_set co_ctx presult) \<longrightarrow>
@@ -1118,16 +1148,16 @@ lemma blocks_next_sem_t:
 " wf_blocks blocks \<Longrightarrow>
  block_lookup blocks n = Some (insts, Next) \<Longrightarrow>
  block_lookup blocks (n + inst_size_list insts) = Some (bi, ti) \<Longrightarrow>
- triple_seq pre insts	(program_counter (n + inst_size_list insts) \<and>* q) \<Longrightarrow>
- triple_sem_t 
+ triple_seq net pre insts	(program_counter (n + inst_size_list insts) \<and>* q) \<Longrightarrow>
+ triple_sem_t net
 	(program_counter (n + inst_size_list insts) \<and>* q)
 	(blocks_insts blocks) post \<Longrightarrow>
- triple_sem_t pre (blocks_insts blocks) post"
+ triple_sem_t net pre (blocks_insts blocks) post"
  apply(drule triple_seq_soundness)
  apply(simp only: triple_seq_sem_def triple_sem_t_def)
  apply(rule allI)+
  apply(clarify)
- apply(rename_tac co_ctx presult rest net stopper)
+ apply(rename_tac co_ctx presult rest stopper)
  apply(drule_tac x = "co_ctx" in spec)+
  apply(drule_tac x = "(program_sem stopper co_ctx (length insts) net presult)" in spec)
  apply(drule_tac x = "rest" in spec)
@@ -1135,11 +1165,9 @@ lemma blocks_next_sem_t:
  apply(drule_tac x = "code (blocks_insts blocks - set insts) \<and>* rest" in spec)
  apply(simp add: sep_code_code_sep_wf)
  apply(drule_tac x = "stopper" in spec)
- apply(drule_tac x = "net" in spec)
  apply(sep_select_asm 4, sep_select_asm 4)
  apply(simp add: code_code_sep_wf)
  apply(sep_select_asm 3, sep_select_asm 3, simp)
- apply(drule_tac x = "net" in spec)
  apply (erule_tac P="(post \<and>* code (blocks_insts blocks) \<and>* rest)" in back_subst)
  apply(subst program_sem_t_exec_continue )
  apply(simp)
@@ -1455,7 +1483,7 @@ lemma pc_after_inst:
 notes
   if_split[split del]
 shows
-"triple_inst pre x post \<Longrightarrow> x = (n, i) \<Longrightarrow> reg_inst i \<Longrightarrow>
+"triple_inst net pre x post \<Longrightarrow> x = (n, i) \<Longrightarrow> reg_inst i \<Longrightarrow>
 \<exists>s. pre s \<and> uniq_stateelm s \<Longrightarrow>
 \<exists>q. post = (program_counter (n + inst_size i) ** q) \<and>
     (\<exists>s0. (program_counter (n + inst_size i) ** q) s0 \<and> uniq_stateelm s0)"
@@ -1641,28 +1669,40 @@ apply(after_arith_if)
              {GasElm (g-Gverylow)} \<union> {StackHeightElm (Suc h)} \<union> {PcElm (n+1)}" in exI)
       apply(after_byte)
     (**INFO**)
-    		 apply(erule triple_inst_info.cases; clarsimp)
+    		  apply(erule triple_inst_info.cases; clarsimp)
     (*CALLVALUE*)
-apply(find_q_pc_after_inst)
-     apply(rule_tac x="(s - {GasElm g} - {PcElm n} - {StackHeightElm h}) \<union>
+            apply(find_q_pc_after_inst)
+            apply(rule_tac x="(s - {GasElm g} - {PcElm n} - {StackHeightElm h}) \<union>
           {StackHeightElm (Suc h)} \<union> {GasElm (g - Gbase)} \<union> {StackElm (h, w)} \<union>
           {PcElm (n + 1)}" in exI)
-         apply(easy_case_pc_after_inst)
+            apply(easy_case_pc_after_inst)
+    (*CALLDATASIZE*)
+           apply(find_q_pc_after_inst)
+           apply(rule_tac x="(s - {GasElm g} - {PcElm n} - {StackHeightElm h}) \<union>
+        {StackHeightElm (Suc h)} \<union> {GasElm (g - Gbase)} \<union> {StackElm (h, word256FromNat (length data))} \<union>
+          {PcElm (n + 1)}" in exI)
+           apply(easy_case_pc_after_inst)
+    (*CALLDATASIZE*)
+           apply(find_q_pc_after_inst)
+           apply(rule_tac x="(s - {GasElm g} - {PcElm n} - {StackHeightElm h}) \<union>
+        {StackHeightElm (Suc h)} \<union> {GasElm (g - Gbase)} \<union> {StackElm (h, ucast c)} \<union>
+          {PcElm (n + 1)}" in exI)
+           apply(easy_case_pc_after_inst)
     (**Memory**)
     		apply(erule triple_inst_memory.cases; clarsimp)
     (*MLOAD*)
     		 apply(find_q_pc_after_inst)
-    apply(rule_tac x="(s - {GasElm g} - {PcElm n} - {StackElm (h,memaddr)} - {MemoryUsageElm memu}) \<union>
+         apply(rule_tac x="(s - {GasElm g} - {PcElm n} - {StackElm (h,memaddr)} - {MemoryUsageElm memu}) \<union>
           {GasElm (g - Gverylow + Cmem memu - Cmem (M memu memaddr 32))} \<union>
 					{StackElm (h, v)} \<union> {MemoryUsageElm (M memu memaddr 32)} \<union>
           {PcElm (n + 1)}" in exI)
-                apply(sep_simp simp: program_counter_sep memory_usage_sep gas_pred_sep stack_sep stack_height_sep pure_sep, (erule conjE)?)+
+          apply(sep_simp simp: program_counter_sep memory_usage_sep gas_pred_sep stack_sep stack_height_sep pure_sep, (erule conjE)?)+
           apply(clarsimp simp add: gas_value_simps)
           apply(rule conjI)
           apply(erule_tac P="_ \<and>* _" in back_subst)
       		 apply(rule  Set.equalityI)
            apply(simp add: Set.subset_iff, clarify)
-        apply(rule conjI)
+          apply(rule conjI)
             apply(rule notI; drule only_one_pc; simp)
             			 apply(rule conjI, rule notI,simp add: uniq_stateelm_def)
             		 apply(rule conjI, rule notI; simp add: uniq_stateelm_def)
@@ -1685,12 +1725,6 @@ apply(find_q_pc_after_inst)
     		 apply(subst subset_iff)
     		 apply(rule allI, rule impI)
     		 apply(simp)
-(*     		 apply(subgoal_tac "t \<in> memory_range_elms memaddr (word_rsplit v)")
-    			 prefer 2 apply(simp)
-    		 apply(drule memory_elm_in_memory_range_elms)
-    		 apply(clarsimp)
-    		 apply(erule notE)
-    		 apply(simp add: Set.subset_iff) *)
     		apply(rule conjI)
     		 apply(erule_tac P="_ \<and>* _" in back_subst)
          apply(rule  Set.equalityI, subst subset_iff)
@@ -1741,38 +1775,29 @@ apply(find_q_pc_after_inst)
   apply clarsimp
   apply (erule (1) memory_range_elms_uniq_stateelm[rule_format,rotated])
   apply simp
-  apply (subst (asm) word_le_nat_alt)
-  apply (drule add_le_mono[where i="31" and j="31", OF le_refl, where l="unat (- 32)"])
-    
-  apply(erule le_trans)
-  apply(subgoal_tac "31 + unat(-32 ::w256) = unat(-32 ::w256) + unat(31 :: w256)")
-  apply(erule_tac t="31 + unat(-32 ::w256)" in ssubst)
-  apply(subst unat_plus_simple[THEN iffD1, THEN sym])   
-  apply (rule word_le_plus_either)
-  apply (rule disjI1)
-  apply simp
-  apply (subgoal_tac "(- 32::w256) + 31 = -1")
-  apply simp
-  apply simp
-  apply simp
-  apply simp
-    
-
-  apply(auto simp add: uniq_stateelm_def)[1]
-  apply clarsimp
-  apply (rule conjI)
-  apply clarsimp
-  apply (case_tac "ha = h"; clarsimp)  
-  apply (case_tac "ha = Suc h"; clarsimp)
-  apply clarsimp
-  apply clarsimp
-  apply clarsimp
-  apply (rule conjI; clarsimp)
-  apply clarsimp
-  apply (rule conjI; clarsimp)
-  apply clarsimp
-  apply (rule conjI; clarsimp)
-    
+               apply (subst (asm) word_le_nat_alt)
+               apply(thin_tac "\<forall>v. _v")+
+  apply(thin_tac "(_ \<and>*_) _")
+  apply (drule add_le_mono[where i="31" and j="31" and l="unat _", OF le_refl]) 
+               apply(erule le_trans)
+               apply(subgoal_tac "unat (0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFE0::w256) = unat (-32::w256)"; simp)
+               apply(subgoal_tac "unat (0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF::w256) = unat (-1::w256)")
+                apply(simp)
+               apply(subst unat_arith_simps(3)[symmetric], simp)
+              apply(rule allI, rule conjI; clarsimp)
+             apply(rule allI, rule conjI; clarsimp)
+             apply(case_tac "ha = Suc h"; clarsimp)
+             apply(case_tac "ha = h"; clarsimp)
+            apply(rule allI, rule allI, clarsimp)
+           apply(rule allI, rule conjI; clarsimp)
+          apply(rule allI, rule conjI; clarsimp)
+         apply(rule allI, rule conjI; clarsimp)
+    (**Storage**)
+        apply(erule triple_inst_storage.cases; clarsimp)
+        apply(find_q_pc_after_inst)
+        apply(rule_tac x="(s - {GasElm g} - {PcElm n} - {StackElm (h,idx)}) \<union> {GasElm (g - Gsload neta)} \<union>
+          {PcElm (n + 1)} \<union> {StackElm (h,w)}" in exI)
+        apply(easy_case_pc_after_inst)
     (**Pc**)
   	    apply(erule triple_inst_pc.cases; clarsimp)
       apply(find_q_pc_after_inst)
@@ -1873,7 +1898,7 @@ apply(rule_tac x="(s - {PcElm n} - {GasElm g} -
   done
 
 lemma triple_seq_empty_case[OF _ refl] :
-"triple_seq q xs r \<Longrightarrow> xs = [] \<Longrightarrow>
+"triple_seq net q xs r \<Longrightarrow> xs = [] \<Longrightarrow>
  \<exists>q'. (\<forall>s. q s \<longrightarrow> q' s) \<and> (\<forall>s. q' s \<longrightarrow> r s)"
   apply(induct rule: triple_seq.induct, simp_all)
 apply(rule_tac x=post in exI, simp)
@@ -1883,12 +1908,12 @@ apply(simp add: pure_def)
 done
 
 lemma triple_seq_empty_case' :
-"triple_seq q [] r \<Longrightarrow>
+"triple_seq net q [] r \<Longrightarrow>
  (\<forall>s. q s \<longrightarrow> r s)"
 by(drule triple_seq_empty_case, fastforce)
 
 lemma pc_after_seq:
-" triple_seq pre insts post' \<Longrightarrow>
+" triple_seq net pre insts post' \<Longrightarrow>
 \<exists>s. pre s \<and> uniq_stateelm s \<Longrightarrow>
 \<forall>s. post' s = (program_counter m \<and>* post) s \<Longrightarrow>
 fst (hd insts) = n \<Longrightarrow>
@@ -2063,14 +2088,14 @@ done
 lemma blocks_jump_sem_t:
 "block_lookup blocks dest = Some (bi, ti) \<Longrightarrow>
  bi = (dest, Pc JUMPDEST) # bbi \<Longrightarrow>
- triple_seq pre insts
+ triple_seq net pre insts
 	(program_counter (n + inst_size_list insts) \<and>*
 	 gas_pred g \<and>*
 	 memory_usage m \<and>*
 	 stack_height (Suc h) \<and>*
 	 stack h (word_of_int dest) \<and>*
 	 \<langle> h \<le> 1023 \<and> Gmid \<le> g \<and> 0 \<le> m \<rangle> \<and>* continuing \<and>* rest) \<Longrightarrow>
-	triple_sem_t
+	triple_sem_t net
 	 (program_counter dest \<and>*
 		gas_pred (g - Gmid) \<and>*
 		memory_usage m \<and>* stack_height h \<and>* continuing \<and>* rest)
@@ -2078,18 +2103,17 @@ lemma blocks_jump_sem_t:
  wf_blocks blocks \<Longrightarrow>
  build_blocks bytecode = blocks \<Longrightarrow>
  block_lookup blocks (v_ind (n, insts, Jump)) = Some (snd (n, insts, Jump)) \<Longrightarrow>
- triple_sem_t pre (blocks_insts blocks) post"
+ triple_sem_t net pre (blocks_insts blocks) post"
  apply(simp only: triple_sem_t_def; clarify)
  apply(drule_tac x=co_ctx and y="(program_sem stopper co_ctx (Suc (length insts)) net presult)" in spec2)
- apply(drule_tac x=resta and y=net in spec2)
- apply(drule_tac x=stopper in spec)
+ apply(drule_tac x=resta and y=stopper in spec2)
  apply(case_tac "insts")
   apply(cut_tac q=pre and r="(program_counter (n + inst_size_list insts) \<and>*
          gas_pred g \<and>*
          memory_usage m \<and>*
          stack_height (Suc h) \<and>*
          stack h (word_of_int dest) \<and>*
-         \<langle> h \<le> 1023 \<and> Gmid \<le> g \<and> 0 \<le> m \<rangle> \<and>* continuing \<and>* rest)"
+         \<langle> h \<le> 1023 \<and> Gmid \<le> g \<and> 0 \<le> m \<rangle> \<and>* continuing \<and>* rest)" and net=net
         in triple_seq_empty_case')
    apply(clarsimp)
   apply(drule mp)
@@ -2118,7 +2142,7 @@ lemma blocks_jump_sem_t:
  apply(thin_tac "_ = _ # _")
  apply(drule triple_seq_soundness)
  apply(simp only: triple_seq_sem_def)
- apply(rename_tac co_ctx presult resta net stopper a list)
+ apply(rename_tac co_ctx presult resta stopper a list)
  apply(drule_tac x = "co_ctx" in spec)
  apply(drule_tac x = "presult" and y = "code (blocks_insts blocks - set insts) \<and>* resta" in spec2)
  apply(erule impE)
@@ -2126,7 +2150,7 @@ lemma blocks_jump_sem_t:
 	apply(erule impE)
 	 apply(cut_tac p=pre and n=n and insts="insts" and ty=Jump and r=resta and s="instruction_result_as_set co_ctx presult"
         in sep_code_code_sep_wf[where blocks=blocks]; simp)
-	apply(drule_tac x = "stopper" and y= net in spec2)
+	apply(drule_tac x = "stopper" in spec)
 	apply(insert code_code_sep_wf[where blocks=blocks and n=n and insts="insts" and ty=Jump]; simp)
 	apply(thin_tac "\<And>r s. _ r s = _ r s")
    apply(cut_tac co_ctx=co_ctx and stopper=stopper and insts=insts and net=net and
@@ -2351,7 +2375,7 @@ lemma blocks_jumpi_sem_t:
 "block_lookup blocks dest = Some ((dest, Pc JUMPDEST) # bbi, ti) \<Longrightarrow>
  bi = (dest, Pc JUMPDEST) # bbi \<Longrightarrow>
  block_lookup blocks (n + 1 + inst_size_list insts) = Some (bj, tj) \<Longrightarrow>
- triple_seq pre insts
+ triple_seq net pre insts
 	(continuing \<and>* gas_pred g \<and>* memory_usage m \<and>*
 	 stack h cond \<and>* stack_height (Suc (Suc h)) \<and>*
 	 program_counter (n + inst_size_list insts) \<and>*
@@ -2360,13 +2384,13 @@ lemma blocks_jumpi_sem_t:
  r = (continuing \<and>* memory_usage m \<and>*
 			stack_height h \<and>* gas_pred (g - Ghigh) \<and>* rest) \<Longrightarrow>
  (cond \<noteq> 0 \<Longrightarrow>
-	triple_sem_t
+	triple_sem_t net
 	 ((continuing \<and>* memory_usage m \<and>*
 		 stack_height h \<and>* gas_pred (g - Ghigh) \<and>* rest) \<and>*
 		program_counter dest)
 	 (blocks_insts blocks) post) \<Longrightarrow>
  (cond = 0 \<Longrightarrow>
-	triple_sem_t
+	triple_sem_t net
 	 ((continuing \<and>* memory_usage m \<and>*
 		 stack_height h \<and>* gas_pred (g - Ghigh) \<and>* rest) \<and>*
 		program_counter (n + 1 + inst_size_list insts))
@@ -2374,7 +2398,7 @@ lemma blocks_jumpi_sem_t:
  wf_blocks blocks \<Longrightarrow>
  build_blocks bytecode = blocks \<Longrightarrow>
  block_lookup blocks n = Some (insts, Jumpi) \<Longrightarrow>
- triple_sem_t pre (blocks_insts blocks) post"
+ triple_sem_t net pre (blocks_insts blocks) post"
  apply(simp only: triple_sem_t_def; clarify)
  apply(case_tac "insts")
   apply(case_tac "cond = 0"; clarify)
@@ -2391,7 +2415,7 @@ lemma blocks_jumpi_sem_t:
          program_counter n \<and>*
          stack (Suc h) (word_of_int dest) \<and>*
          \<langle> h \<le> 1022 \<and> Ghigh \<le> g \<and> 0 \<le> m \<rangle> \<and>*
-         rest)"
+         rest)" and net=net
         in triple_seq_empty_case')
      apply(clarsimp)
     apply(drule_tac P=pre in sep_conj_imp, assumption)
@@ -2399,7 +2423,6 @@ lemma blocks_jumpi_sem_t:
          m=m and restb=rest and rest=resta and bytecode=bytecode and co_ctx=co_ctx
          in jumpi_sem_zero; simp add: sep_lc)
     apply(simp add: sep_lc)
-   apply(drule_tac x=net in spec)
    apply(simp add: program_sem_t_exec_continue)
   apply(clarsimp)
   apply(drule_tac x=co_ctx in spec; drule_tac x="(program_sem (\<lambda>x. ()) co_ctx (Suc 0) net presult)" in spec)
@@ -2413,7 +2436,7 @@ lemma blocks_jumpi_sem_t:
          program_counter n \<and>*
          stack (Suc h) (word_of_int dest) \<and>*
          \<langle> h \<le> 1022 \<and> Ghigh \<le> g \<and> 0 \<le> m \<rangle> \<and>*
-         rest)"
+         rest)" and net=net
         in triple_seq_empty_case')
     apply(clarsimp)
    apply(drule_tac P=pre in sep_conj_imp, assumption)
@@ -2421,7 +2444,6 @@ lemma blocks_jumpi_sem_t:
          m=m and restb=rest and rest=resta
          in jumpi_sem_non_zero; simp add: sep_lc)
    apply(simp add: sep_lc)
-  apply(drule_tac x=net in spec)
   apply(simp add: program_sem_t_exec_continue)
  apply(cut_tac m="n + inst_size_list insts" and n=n
 			 and post=" (continuing \<and>*
@@ -2446,10 +2468,10 @@ lemma blocks_jumpi_sem_t:
  apply(thin_tac "_ = _ # _")
  apply(drule triple_seq_soundness)
  apply(simp only: triple_seq_sem_def; clarify)
- apply(rename_tac co_ctx presult resta net stopper a b list)
+ apply(rename_tac co_ctx presult resta stopper a b list)
  apply(drule_tac x = "co_ctx" and y=presult in spec2)
  apply(drule_tac x = "code (blocks_insts blocks - set insts) \<and>* resta" in spec)
- apply(drule_tac x = "stopper" and y=net in spec2)
+ apply(drule_tac x = "stopper" in spec)
  apply(clarsimp)
  apply(erule impE)
   apply(cut_tac iffD2[OF sep_code_code_sep_wf[where insts=insts]]; simp)
@@ -2476,7 +2498,6 @@ lemma blocks_jumpi_sem_t:
   in jumpi_sem_zero; simp add: sep_lc)
 		apply(simp add: sep_lc)
 	 apply(simp add: execution_continue)
-   apply(drule_tac x = "net" in spec)
    apply(simp add: program_sem_t_exec_continue)
   apply(sep_simp simp:program_counter_sep)
  apply(drule_tac x = "co_ctx" in spec)
@@ -2490,7 +2511,6 @@ lemma blocks_jumpi_sem_t:
   in jumpi_sem_non_zero; simp add: sep_conj_commute sep_conj_left_commute)
    apply(sep_simp simp: program_counter_sep; simp)
 	apply(simp add: execution_continue)
- apply(drule_tac x = "net" in spec)
  apply (erule_tac P="post \<and>* code (blocks_insts (build_blocks bytecode)) \<and>* resta" in back_subst)
  apply(subst program_sem_t_exec_continue; simp)
 done
@@ -2501,7 +2521,7 @@ lemma program_sem_to_environment:
  by(induction k; simp add: program_sem.simps next_state_def)
 
 lemma pc_before_inst:
-"triple_inst pre x post \<Longrightarrow>
+"triple_inst net pre x post \<Longrightarrow>
 x = (n, i) \<Longrightarrow>
 pre s \<and> uniq_stateelm s \<Longrightarrow>
 PcElm n \<in> s"
@@ -2509,7 +2529,8 @@ PcElm n \<in> s"
             apply(erule triple_inst_arith.cases; clarsimp; sep_simp simp: pure_sep sep_fun_simps; simp)
            apply(erule triple_inst_bits.cases; clarsimp; sep_simp simp: pure_sep sep_fun_simps; simp)
           apply(erule triple_inst_info.cases; clarsimp; sep_simp simp: pure_sep sep_fun_simps; simp)
-        apply(erule triple_inst_memory.cases; clarsimp; sep_simp simp: pure_sep sep_fun_simps; simp)
+         apply(erule triple_inst_memory.cases; clarsimp; sep_simp simp: pure_sep sep_fun_simps; simp)
+        apply(erule triple_inst_storage.cases; clarsimp; sep_simp simp: pure_sep sep_fun_simps; simp)
        apply(erule triple_inst_misc.cases; clarsimp; sep_simp simp: pure_sep sep_fun_simps; simp)
       apply(erule triple_inst_pc.cases; clarsimp; sep_simp simp: pure_sep sep_fun_simps; simp)
      apply(erule triple_inst_stack.cases; clarsimp; sep_simp simp: pure_sep sep_fun_simps; simp)
@@ -2518,7 +2539,7 @@ PcElm n \<in> s"
 done
 
 lemma pc_before_seq:
-"triple_seq pre insts post \<Longrightarrow>
+"triple_seq net pre insts post \<Longrightarrow>
 fst (hd insts) = n \<Longrightarrow>
 insts \<noteq> [] \<Longrightarrow>
 pre s \<and> uniq_stateelm s \<Longrightarrow>
@@ -2609,21 +2630,21 @@ reg_vertex (m, insts, Terminal) \<Longrightarrow>
 done
 
 lemma blocks_no_sem_t:
-" triple_seq pre insts post \<Longrightarrow>
+" triple_seq net pre insts post \<Longrightarrow>
 	 wf_blocks blocks \<Longrightarrow>
 	 block_lookup blocks (v_ind (n, insts, Terminal)) =
 	 Some (snd (n, insts, Terminal)) \<Longrightarrow>
-	 triple_sem_t pre (blocks_insts blocks) post"
+	 triple_sem_t net pre (blocks_insts blocks) post"
  apply(simp add: triple_sem_t_def; clarsimp)
- apply(insert pc_before_seq[where n=n and pre=pre and insts=insts and post=post]; simp)
+ apply(insert pc_before_seq[where n=n and pre=pre and insts=insts and post=post and net=net]; simp)
  apply(drule triple_seq_soundness)
  apply(simp add: triple_seq_sem_def)
- apply(rename_tac co_ctx presult rest net)
+ apply(rename_tac co_ctx presult rest)
  apply(drule_tac x = co_ctx in spec)
  apply(drule_tac x = presult and y = "code (blocks_insts blocks - set insts) \<and>* rest" in spec2)
  apply(drule mp)
  apply(simp add: sep_code_code_sep_wf)
- apply(drule_tac x="\<lambda>x. ()" and y=net in spec2)
+ apply(drule_tac x="\<lambda>x. ()" in spec)
  apply(subgoal_tac "wf_blocks blocks")
   prefer 2 apply(assumption)
  apply(subst (asm) wf_blocks_def)
@@ -2677,11 +2698,11 @@ lemma blocks_no_sem_t:
 done
 
 lemma triple_soundness_aux:
-"triple_blocks blocks pre v post \<Longrightarrow>
+"triple_blocks net blocks pre v post \<Longrightarrow>
  wf_blocks blocks \<Longrightarrow>
  build_blocks bytecode = blocks \<Longrightarrow>
  block_lookup blocks (v_ind v) = Some (snd v) \<Longrightarrow>
- triple_sem_t pre (blocks_insts blocks) post"
+ triple_sem_t net pre (blocks_insts blocks) post"
  apply(induction rule: triple_blocks.induct)
 		 apply(simp add: blocks_no_sem_t)
 		apply(simp add: blocks_next_sem_t)
@@ -2710,8 +2731,9 @@ lemma aux_bb_not_Nil:
 apply(induction xs arbitrary: ys x; clarsimp)
  apply(simp add: aux_basic_block.simps Let_def)
  apply(case_tac "reg_inst b \<and> b \<noteq> Pc JUMPDEST")
-	apply(simp split: reg_inst_splits; case_tac "(ys @ [(a,b)])"; simp add: aux_basic_block.simps)
- apply(simp split: reg_inst_splits if_splits add: aux_basic_block.simps)
+    apply(simp split: reg_inst_splits; case_tac "(ys @ [(a,b)])"; simp add: aux_basic_block.simps)
+   apply(split reg_inst_splits if_splits; simp add: aux_basic_block.simps)
+  apply(case_tac x9; simp split:if_splits add: aux_basic_block.simps)
 apply(drule subst[OF aux_basic_block.simps(3), where P="\<lambda>u. u = []"])
 apply(simp add: Let_def split: list.splits reg_inst_splits)
 apply(simp split: if_splits)
@@ -2720,8 +2742,8 @@ done
 theorem triple_soundness:
 "bytecode \<noteq> [] \<Longrightarrow>
 fst (last (add_address bytecode)) < 2 ^ 256 \<Longrightarrow>
-triple pre (build_blocks bytecode) post \<Longrightarrow>
-triple_sem_t pre (set (add_address bytecode)) post"
+triple net pre (build_blocks bytecode) post \<Longrightarrow>
+triple_sem_t net pre (set (add_address bytecode)) post"
  apply(simp add: triple_def blocks_insts_eq_add_address)
  apply(subst triple_soundness_aux)
 		 apply(simp)
