@@ -289,11 +289,27 @@ shows
                  ** storage 3 (return_amount sender from to amount hash v)** r)"
   apply (insert blk_num[simplified word_less_nat_alt] net)
   apply (simp add:blocks_escrow_simp)
-  apply(simp add: return_action_def blocks_simps triple_def )
-  apply(split if_split, rule conjI)
-   apply(rule impI, ((erule conjE)+)?, rule exI)
-   apply((block_vcg)+)[1]
-   apply (sep_imp_solve2)
+  apply(simp add: return_action_def return_amount_def blocks_simps triple_def )
+  apply(split if_split, rule conjI)+
+   apply((rule impI)+, ((erule conjE)+)?, rule exI)
+    apply(((((blocks_rule_vcg; (rule refl)?), triple_seq_vcg)); sep_imp_solve2?)+)[1]
+   apply (sep_imp_solve2)+
+  apply (clarsimp split:if_splits simp:word_rcat_simps bin_cat_def hash_diff)
+    apply(((((blocks_rule_vcg; (rule refl)?), triple_seq_vcg)); sep_imp_solve2?)+)[1]
+   apply (sep_imp_solve2)+
+  apply (clarsimp split:if_splits simp:word_rcat_simps bin_cat_def hash_diff)
+  apply (clarsimp split:if_splits simp:word_rcat_simps bin_cat_def hash_diff)
+    apply(((((blocks_rule_vcg; (rule refl)?), triple_seq_vcg)); sep_imp_solve2?)+)[1]
+   apply (sep_imp_solve2)+
+  apply (clarsimp split:if_splits simp:word_rcat_simps bin_cat_def hash_diff)
+  apply (clarsimp split:if_splits simp:word_rcat_simps bin_cat_def hash_diff)
+    apply(((((blocks_rule_vcg; (rule refl)?), triple_seq_vcg)); sep_imp_solve2?)+)[1]
+   apply (sep_imp_solve2)+
+  apply (clarsimp split:if_splits simp:word_rcat_simps bin_cat_def hash_diff)
+    apply(((((blocks_rule_vcg; (rule refl)?), triple_seq_vcg)); sep_imp_solve2?)+)[1]
+   apply (sep_imp_solve2)+
+   apply (simp)
+  apply (clarsimp split:if_splits simp:word_rcat_simps bin_cat_def hash_diff)
   apply(split if_split, rule conjI)
    apply (clarsimp)
   apply (rule exI)
@@ -309,9 +325,21 @@ shows
    apply(((((blocks_rule_vcg; (rule refl)?), triple_seq_vcg)); sep_imp_solve2?)+)[1]
    apply (sep_imp_solve2)+
    apply (simp)
+  apply (clarsimp split:if_splits simp:word_rcat_simps bin_cat_def hash_diff)
+  apply (rule conjI; rule refl)
    apply(((((blocks_rule_vcg; (rule refl)?), triple_seq_vcg)); sep_imp_solve2?)+)[1]
+  apply (clarsimp simp:word_rcat_simps bin_cat_def hash_diff)
    apply (sep_imp_solve2)+
+  apply (clarsimp simp:word_rcat_simps bin_cat_def hash_diff)
+   apply (sep_imp_solve2)+
+   apply (simp)
+  apply (clarsimp split:if_splits simp:word_rcat_simps bin_cat_def hash_diff)
+   apply (simp)
+   apply (simp)
    apply(((((blocks_rule_vcg; (rule refl)?), triple_seq_vcg)); sep_imp_solve2?)+)[1]
+  apply (clarsimp simp:word_rcat_simps bin_cat_def hash_diff)
+   apply (sep_imp_solve2|solves \<open>simp\<close>)+
+  apply (clarsimp simp:word_rcat_simps bin_cat_def hash_diff)
    apply (sep_imp_solve2|solves \<open>simp\<close>)+
    apply(((((blocks_rule_vcg; (rule refl)?), triple_seq_vcg)); sep_imp_solve2?)+)[1]
    apply (sep_imp_solve2|solves \<open>simp\<close>)+
