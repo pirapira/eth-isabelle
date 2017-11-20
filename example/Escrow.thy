@@ -18,7 +18,7 @@ contract EscrowWallet {
     }
 
     function addfund() payable public  {
-        require (msg.sender == from);
+        require (msg.value > 0 && msg.sender == from);
     }
 
     function refund() public {
