@@ -24,7 +24,7 @@ lemmas gas_simps = Gverylow_def Glow_def Gmid_def Gbase_def Gzero_def Glogtopic_
     Gbalance_def Gsload_def Gsreset_def Gsset_def Gjumpdest_def Ghigh_def
     Glogdata_def  Glog_def Gcreate_def Ccall_def 
     Cgascap_def Cextra_def Gnewaccount_def Cxfer_def Cnew_def
-    Gcall_def Gcallvalue_def 
+    Gcall_def Gcallvalue_def Csstore_def Csuicide_def
 
 
 lemma log256floor_ge_0:

@@ -410,11 +410,11 @@ inductive triple_inst_storage :: "network \<Rightarrow> pred \<Rightarrow> pos_i
            \<and>* stack (h + 1) idx
            \<and>* stack h new
            \<and>* program_counter n \<and>* storage idx old
-           \<and>* gas_pred g \<and>* continuing)
+           \<and>* gas_pred g \<and>* continuing  \<and>* rest)
           (n, Storage SSTORE)
           (program_counter (n + 1) \<and>* stack_height h
            \<and>* storage idx new \<and>*
-           gas_pred (g - Csstore old new) \<and>* continuing)"
+           gas_pred (g - Csstore old new) \<and>* continuing  \<and>* rest)"
 
 inductive triple_inst_info :: "pred \<Rightarrow> pos_inst \<Rightarrow> pred \<Rightarrow> bool" where
  inst_callvalue:

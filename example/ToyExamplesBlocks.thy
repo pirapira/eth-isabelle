@@ -16,7 +16,7 @@ lemma word_rcat_fixed_simps:
  "(word_rcat (x#xs) :: 160 word) =  word_of_int (bin_rcat 8 (map uint (x#xs)))"
   by (simp add: word_rcat_def)+
 
-lemmas word_rcat_simps = word_rcat_fixed_simps bin_rcat_def
+lemmas word_rcat_simps = word_rcat_fixed_simps bin_rcat_def bin_cat_def
 
 
 lemmas pure_emp_simps = pure_def pure_sep emp_def emp_sep zero_set_def

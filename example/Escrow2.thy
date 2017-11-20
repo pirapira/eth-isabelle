@@ -4,39 +4,40 @@ imports
   Dispatcher
 begin
 (*
-contract EscrowWallet {
+pragma solidity ^0.4.0;
+contract Escrow {
 
-    address from;
-    address to;
-    address owner;
+    address buyer;
+    address seller;
+    address arbiter;
     uint256 amount;
 
-    function EscrowWallet(address _from, address _to, uint256 _amount) public {
+    function Escrow(address _buyer, address _seller, uint256 _amount) public {
             require (amount > 0);
-            from = _from;
-            to = _to;
-            owner = msg.sender;
+            buyer = _buyer;
+            seller = _seller;
+            arbiter = msg.sender;
             amount = _amount;
     }
 
     function addfund() payable public  {
-        require (amount > 0 && msg.value == amount && msg.sender == from);
+        require (amount > 0 && msg.value == amount && msg.sender == buyer);
         amount = 0;
     }
 
     function refund() public {
-        require (msg.sender == owner);
-        selfdestruct(from);
+        require (msg.sender == arbiter);
+        selfdestruct(buyer);
     }
 
     function pay() public {
-        require (msg.sender == owner);
-        selfdestruct(to);
+        require (msg.sender == arbiter);
+        selfdestruct(seller);
     }
 }
 
 Compiled with:
- solc --optimize --overwrite -o escrow --bin-runtime --asm --hashes escrow.sol
+ solc --optimize --overwrite -o escrow2 --bin-runtime --asm --hashes escrow2.sol
 
 8f9595d4: addfund()
 1b9265b8: pay()
@@ -200,19 +201,19 @@ definition refund_hash :: "32 word"  where
  "refund_hash = 0x590e1ae3"
 
 definition return_action ::"address \<Rightarrow> address \<Rightarrow> address \<Rightarrow> address \<Rightarrow> w256 \<Rightarrow> 32 word \<Rightarrow> w256 \<Rightarrow> contract_action" where
-  "return_action sender from to owner amount hash v = 
- (if hash = addfund_hash \<and> sender = from  \<and> v = amount \<and> amount > 0 then
+  "return_action sender buyer seller arbiter amount hash v = 
+ (if hash = addfund_hash \<and> sender = buyer  \<and> v = amount \<and> amount > 0 then
     ContractReturn []
-  else if hash = refund_hash \<and> sender = owner \<and> v = 0 then
-    ContractSuicide from
-  else if hash = pay_hash \<and> sender = owner \<and> v = 0 then
-    ContractSuicide to
+  else if hash = refund_hash \<and> sender = arbiter \<and> v = 0 then
+    ContractSuicide buyer
+  else if hash = pay_hash \<and> sender = arbiter \<and> v = 0 then
+    ContractSuicide seller
   else
     ContractFail [ShouldNotHappen])"
 
 definition return_amount ::"address \<Rightarrow> address \<Rightarrow> address  \<Rightarrow> w256 \<Rightarrow> 32 word \<Rightarrow> w256 \<Rightarrow> w256" where
-  "return_amount sender from to amount hash v = 
-  (if hash = addfund_hash \<and> sender = from \<and> v = amount \<and> amount > 0 then 0 else amount)"
+  "return_amount sender buyer seller amount hash v = 
+  (if hash = addfund_hash \<and> sender = buyer \<and> v = amount \<and> amount > 0 then 0 else amount)"
 
 context
 notes
@@ -222,7 +223,7 @@ notes
   Cmem_def[simp add]
   memory_range.simps[simp del]
  if_split[ split del ] sep_fun_simps[simp del]
-gas_value_simps[simp add] pure_emp_simps[simp add]
+gas_value_simps[simp add] gas_simps[simp] pure_emp_simps[simp add]
 evm_fun_simps[simp add] sep_lc[simp del] sep_conj_first[simp add]
 pure_false_simps[simp add] iszero_stack_def[simp add]
 word256FromNat_def[simp add]
@@ -258,8 +259,20 @@ lemma ucast_160_upto_256_eq:
   by (drule ucast_up_inj; simp)
 
 method sep_imp_solve2 uses simp =
- solves \<open>(clarsimp?, ((((sep_cancel, clarsimp?)+)|simp add:simp|rule conjI)+)[1])\<close>
- | solves \<open>(clarsimp?, ((((sep_cancel, clarsimp?)+)|simp add:simp word_rcat_simps|rule conjI)+)[1])\<close>
+   solves \<open>rule conjI; rule refl\<close>
+ | solves \<open>simp\<close>
+ | solves \<open>(clarsimp?, ((((sep_cancel, clarsimp?)+)|simp add:simp|rule conjI)+)[1])\<close>
+ | solves \<open>(clarsimp?, ((((sep_cancel, clarsimp?)+)|(clarsimp split:if_split simp: simp)|rule conjI)+)[1])\<close>
+ | solves \<open>(clarsimp split:if_splits simp:word_rcat_simps) ; sep_imp_solve2 \<close>
+
+method split_conds =
+ (split if_split_asm; clarsimp simp add: word_rcat_simps)?
+
+method block_vcg2=
+  split_conds,
+  ((blocks_rule_vcg; (rule refl)?), triple_seq_vcg),
+  (sep_imp_solve2)+,
+  (solves \<open>split_conds\<close>)?
 
 theorem verify_escrow_return:
 notes
@@ -270,6 +283,8 @@ notes
   word_bool_alg.conj.commute[simp]
   length_word_rsplit_4[simp]
   ucast_160_upto_256_eq[simp]
+  hash_diff[simp]
+  eval_bit_mask[simp]
 assumes blk_num: "bn > 2463000"
 and net: "at_least_eip150 net"
 shows
@@ -277,269 +292,179 @@ shows
   (program_counter 0 ** stack_height 0 ** (sent_data (word_rsplit hash::byte list))
    ** sent_value v ** caller sender ** blk_num bn **
    memory_usage 0 ** continuing ** gas_pred 100000
-   ** storage 0 (ucast from)
-   ** storage 1 (ucast to)
-   ** storage 2 (ucast owner)
+   ** storage 0 (ucast buyer)
+   ** storage 1 (ucast seller)
+   ** storage 2 (ucast arbiter)
    ** storage 3 amount
-   ** account_existence from from_ex 
-   ** account_existence to to_ex 
+   ** account_existence buyer buyer_ex 
+   ** account_existence seller seller_ex 
    ** memory (word_rcat [64::byte]) (bytestr_to_w256 [x]) **
    memory (word_rcat [96::byte]) (bytestr_to_w256 [y]))
-  blocks_escrow (action (return_action sender from to owner amount hash v)
-                 ** storage 3 (return_amount sender from to amount hash v)** r)"
+  blocks_escrow (action (return_action sender buyer seller arbiter amount hash v)
+                 ** storage 0 (ucast buyer)
+                 ** storage 1 (ucast seller)
+                 ** storage 2 (ucast arbiter)
+                 ** storage 3 (return_amount sender buyer seller amount hash v)** r)"
   apply (insert blk_num[simplified word_less_nat_alt] net)
   apply (simp add:blocks_escrow_simp)
   apply(simp add: return_action_def return_amount_def blocks_simps triple_def )
   apply(split if_split, rule conjI)+
    apply((rule impI)+, ((erule conjE)+)?, rule exI)
-    apply(((((blocks_rule_vcg; (rule refl)?), triple_seq_vcg)); sep_imp_solve2?)+)[1]
-   apply (sep_imp_solve2)+
-  apply (clarsimp split:if_splits simp:word_rcat_simps bin_cat_def hash_diff)
-    apply(((((blocks_rule_vcg; (rule refl)?), triple_seq_vcg)); sep_imp_solve2?)+)[1]
-   apply (sep_imp_solve2)+
-  apply (clarsimp split:if_splits simp:word_rcat_simps bin_cat_def hash_diff)
-  apply (clarsimp split:if_splits simp:word_rcat_simps bin_cat_def hash_diff)
-    apply(((((blocks_rule_vcg; (rule refl)?), triple_seq_vcg)); sep_imp_solve2?)+)[1]
-   apply (sep_imp_solve2)+
-  apply (clarsimp split:if_splits simp:word_rcat_simps bin_cat_def hash_diff)
-  apply (clarsimp split:if_splits simp:word_rcat_simps bin_cat_def hash_diff)
-    apply(((((blocks_rule_vcg; (rule refl)?), triple_seq_vcg)); sep_imp_solve2?)+)[1]
-   apply (sep_imp_solve2)+
-  apply (clarsimp split:if_splits simp:word_rcat_simps bin_cat_def hash_diff)
-    apply(((((blocks_rule_vcg; (rule refl)?), triple_seq_vcg)); sep_imp_solve2?)+)[1]
-   apply (sep_imp_solve2)+
-   apply (simp)
-  apply (clarsimp split:if_splits simp:word_rcat_simps bin_cat_def hash_diff)
-  apply(split if_split, rule conjI)
+   apply ((block_vcg2)[1])
+   apply ((block_vcg2)[1])
+   apply ((block_vcg2)[1])
+   apply ((block_vcg2)[1])
+   apply ((block_vcg2)[1])
+   apply ((block_vcg2)[1])
+   apply ((block_vcg2)[1])
+   apply ((block_vcg2)[1])
+   apply ((block_vcg2)[1])
+   apply ((block_vcg2)[1])
+   apply ((block_vcg2)[1])
+   apply ((block_vcg2)[1])
+   apply ((block_vcg2)[1])
+  apply (split_conds)
+(* 1*)
+  apply (clarsimp)+
+  apply(split if_split, rule conjI)+
+  apply(safe; clarsimp)
+  apply( clarsimp)
+  apply(rule exI)
+   apply ((block_vcg2)[1])
+   apply ((block_vcg2)[1])
+   apply ((block_vcg2)[1])
+   apply ((block_vcg2)[1])
+   apply ((block_vcg2)[1])
+   apply ((block_vcg2)[1])
+   apply ((block_vcg2)[1])
+   apply ((block_vcg2)[1])
+   apply ((block_vcg2)[1])
+   apply (clarsimp split: if_split_asm simp: word_rcat_simps)
+  apply (clarsimp)+
+  apply(split if_split, rule conjI)+
+  apply(safe; clarsimp)
+  apply( clarsimp)
+  apply(rule exI)
+   apply ((block_vcg2)[1])
+   apply ((block_vcg2)[1])
+   apply ((block_vcg2)[1])
+   apply ((block_vcg2)[1])
+   apply ((block_vcg2)[1])
+   apply ((block_vcg2)[1])
    apply (clarsimp)
-  apply (rule exI)
-    apply(((((blocks_rule_vcg; (rule refl)?), triple_seq_vcg)); sep_imp_solve2?)+)[1]
-   apply (sep_imp_solve2)+
-    apply(((((blocks_rule_vcg; (rule refl)?), triple_seq_vcg)); sep_imp_solve2?)+)[1]
-   apply (sep_imp_solve2)+
-   apply((block_vcg)+)[1]
-  apply (clarsimp split:if_splits simp:word_rcat_simps bin_cat_def hash_diff)
-   apply(((((blocks_rule_vcg; (rule refl)?), triple_seq_vcg)); sep_imp_solve2?)+)[1]
-   apply (sep_imp_solve2)+
-  apply (clarsimp split:if_splits simp:word_rcat_simps bin_cat_def hash_diff)
-   apply(((((blocks_rule_vcg; (rule refl)?), triple_seq_vcg)); sep_imp_solve2?)+)[1]
-   apply (sep_imp_solve2)+
-   apply (simp)
-  apply (clarsimp split:if_splits simp:word_rcat_simps bin_cat_def hash_diff)
-  apply (rule conjI; rule refl)
-   apply(((((blocks_rule_vcg; (rule refl)?), triple_seq_vcg)); sep_imp_solve2?)+)[1]
-  apply (clarsimp simp:word_rcat_simps bin_cat_def hash_diff)
-   apply (sep_imp_solve2)+
-  apply (clarsimp simp:word_rcat_simps bin_cat_def hash_diff)
-   apply (sep_imp_solve2)+
-   apply (simp)
-  apply (clarsimp split:if_splits simp:word_rcat_simps bin_cat_def hash_diff)
-   apply (simp)
-   apply (simp)
-   apply(((((blocks_rule_vcg; (rule refl)?), triple_seq_vcg)); sep_imp_solve2?)+)[1]
-  apply (clarsimp simp:word_rcat_simps bin_cat_def hash_diff)
-   apply (sep_imp_solve2|solves \<open>simp\<close>)+
-  apply (clarsimp simp:word_rcat_simps bin_cat_def hash_diff)
-   apply (sep_imp_solve2|solves \<open>simp\<close>)+
-   apply(((((blocks_rule_vcg; (rule refl)?), triple_seq_vcg)); sep_imp_solve2?)+)[1]
-   apply (sep_imp_solve2|solves \<open>simp\<close>)+
-   apply (clarsimp simp add:word_rcat_simps bin_cat_def Csuicide_def)
-   apply ( solves \<open>(clarsimp?, ((((sep_cancel, clarsimp?)+)|clarsimp split: if_split |rule conjI)+)[1])\<close>)
-   apply (clarsimp split:if_splits simp:word_rcat_simps bin_cat_def hash_diff)
-   apply(((((blocks_rule_vcg; (rule refl)?), triple_seq_vcg)); sep_imp_solve2?)+)[1]
-   apply (sep_imp_solve2|solves \<open>simp\<close>)+
-   apply (clarsimp split:if_splits simp:word_rcat_simps bin_cat_def hash_diff)
+   apply (rule conjI)
+   apply (clarsimp simp: word_rcat_simps)
+ (* write simp rules to put stack in first pos *)
+  apply (sep_select 7)
+   apply (sep_cancel)+
+   apply (clarsimp split: if_split simp: word_rcat_simps)
+   apply (split_conds)
+   apply (sep_cancel)+
+   apply ((block_vcg2)[1])
+   apply ((block_vcg2)[1])
+   apply (split_conds)
 (*1*)
-  apply(split if_split, rule conjI)
-  apply (clarsimp)
-  apply (rule exI)
-   apply(((((blocks_rule_vcg; (rule refl)?), triple_seq_vcg)); sep_imp_solve2?)+)[1]
-   apply (sep_imp_solve2|solves \<open>simp\<close>)+
-  apply(((((blocks_rule_vcg; (rule refl)?), triple_seq_vcg)); sep_imp_solve2?)+)[1]
-  apply (sep_imp_solve2|solves \<open>simp\<close>)+
-  apply (clarsimp split:if_splits simp:word_rcat_simps bin_cat_def hash_diff)
-  apply(((((blocks_rule_vcg; (rule refl)?), triple_seq_vcg)); sep_imp_solve2?)+)[1]
-  apply (sep_imp_solve2|solves \<open>simp\<close>)+
-  apply(((((blocks_rule_vcg; (rule refl)?), triple_seq_vcg)); sep_imp_solve2?)+)[1]
-  apply (sep_imp_solve2|solves \<open>simp\<close>)+
-  apply(((((blocks_rule_vcg; (rule refl)?), triple_seq_vcg)); sep_imp_solve2?)+)[1]
-  apply (sep_imp_solve2|solves \<open>simp\<close>)+
-  apply(((((blocks_rule_vcg; (rule refl)?), triple_seq_vcg)); sep_imp_solve2?)+)[1]
-  apply (sep_imp_solve2|solves \<open>simp\<close>)+
-  apply (clarsimp simp add:word_rcat_simps bin_cat_def Csuicide_def)
-  apply ( solves \<open>(clarsimp?, ((((sep_cancel, clarsimp?)+)|clarsimp split: if_split |rule conjI)+)[1])\<close>)
-  apply (clarsimp)
-  apply (clarsimp)
-  apply (clarsimp split:if_splits simp:word_rcat_simps bin_cat_def hash_diff Csuicide_def)
-(*1*)
-  apply (clarsimp)
+  apply (clarsimp split: if_split )
+  apply (rule conjI; clarsimp)
   apply (case_tac " hash = pay_hash"; clarsimp)
   apply (case_tac "v \<noteq> 0"; clarsimp)
-  apply (rule exI)
-  apply(((((blocks_rule_vcg; (rule refl)?), triple_seq_vcg)); sep_imp_solve2?)+)[1]
-  apply (sep_imp_solve2|solves \<open>simp\<close>)+
-  apply(((((blocks_rule_vcg; (rule refl)?), triple_seq_vcg)); sep_imp_solve2?)+)[1]
-  apply (sep_imp_solve2|solves \<open>simp\<close>)+
-  apply (clarsimp split: if_split_asm simp:word_rcat_simps bin_cat_def hash_diff)
-  apply(((((blocks_rule_vcg; (rule refl)?), triple_seq_vcg)); sep_imp_solve2?)+)[1]
-  apply (sep_imp_solve2|solves \<open>simp\<close>)+
-  apply(((((blocks_rule_vcg; (rule refl)?), triple_seq_vcg)); sep_imp_solve2?)+)[1]
-  apply (sep_imp_solve2|solves \<open>simp\<close>)+
-  apply (clarsimp split: if_split_asm simp:word_rcat_simps bin_cat_def hash_diff)
-  (*2*)
-  apply (rule exI)
-  apply(((((blocks_rule_vcg; (rule refl)?), triple_seq_vcg)); sep_imp_solve2?)+)[1]
-  apply (sep_imp_solve2|solves \<open>simp\<close>)+
-  apply(((((blocks_rule_vcg; (rule refl)?), triple_seq_vcg)); sep_imp_solve2?)+)[1]
-  apply (sep_imp_solve2|solves \<open>simp\<close>)+
-  apply (clarsimp split: if_split_asm simp:word_rcat_simps bin_cat_def hash_diff)
-  apply(((((blocks_rule_vcg; (rule refl)?), triple_seq_vcg)); sep_imp_solve2?)+)[1]
-  apply (sep_imp_solve2|solves \<open>simp\<close>)+
-  apply(((((blocks_rule_vcg; (rule refl)?), triple_seq_vcg)); sep_imp_solve2?)+)[1]
-  apply (sep_imp_solve2|solves \<open>simp\<close>)+
-  apply(((((blocks_rule_vcg; (rule refl)?), triple_seq_vcg)); sep_imp_solve2?)+)[1]
-  apply (sep_imp_solve2|solves \<open>simp\<close>)+
-  apply (clarsimp split: if_split_asm simp:word_rcat_simps bin_cat_def hash_diff)
-  apply (clarsimp split: if_split_asm simp:word_rcat_simps bin_cat_def hash_diff)
-  apply(((((blocks_rule_vcg; (rule refl)?), triple_seq_vcg)); sep_imp_solve2?)+)[1]
-  apply (sep_imp_solve2|solves \<open>simp\<close>)+
-  apply (clarsimp split: if_split_asm simp:word_rcat_simps bin_cat_def hash_diff)
+   apply (rule exI)
+   apply ((block_vcg2)[1])
+   apply ((block_vcg2)[1])
+   apply ((block_vcg2)[1])
+   apply ((block_vcg2)[1])
+   apply (clarsimp split: if_split_asm simp: word_rcat_simps)
+  apply(rule exI)
+   apply ((block_vcg2)[1])
+   apply ((block_vcg2)[1])
+   apply ((block_vcg2)[1])
+   apply ((block_vcg2)[1])
+   apply ((block_vcg2)[1])
+   apply ((block_vcg2)[1])
+   apply ((block_vcg2)[1])
+   apply (split_conds)
 (*1*)
   apply (case_tac " hash = refund_hash"; clarsimp)
   apply (case_tac "v \<noteq> 0"; clarsimp)
-  apply (rule exI)
-  apply(((((blocks_rule_vcg; (rule refl)?), triple_seq_vcg)); sep_imp_solve2?)+)[1]
-  apply (sep_imp_solve2|solves \<open>simp\<close>)+
-  apply(((((blocks_rule_vcg; (rule refl)?), triple_seq_vcg)); sep_imp_solve2?)+)[1]
-  apply (sep_imp_solve2|solves \<open>simp\<close>)+
-  apply (clarsimp split: if_split_asm simp:word_rcat_simps bin_cat_def hash_diff)
-  apply(((((blocks_rule_vcg; (rule refl)?), triple_seq_vcg)); sep_imp_solve2?)+)[1]
-  apply (sep_imp_solve2|solves \<open>simp\<close>)+
-  apply(((((blocks_rule_vcg; (rule refl)?), triple_seq_vcg)); sep_imp_solve2?)+)[1]
-  apply (sep_imp_solve2|solves \<open>simp\<close>)+
-  apply (clarsimp split: if_split_asm simp:word_rcat_simps bin_cat_def hash_diff)
-  apply(((((blocks_rule_vcg; (rule refl)?), triple_seq_vcg)); sep_imp_solve2?)+)[1]
-  apply (sep_imp_solve2|solves \<open>simp\<close>)+
-  apply (clarsimp split: if_split_asm simp:word_rcat_simps bin_cat_def hash_diff)
-  (*2*)
-  apply (rule exI)
-  apply(((((blocks_rule_vcg; (rule refl)?), triple_seq_vcg)); sep_imp_solve2?)+)[1]
-  apply (sep_imp_solve2|solves \<open>simp\<close>)+
-  apply (clarsimp split: if_split_asm simp:word_rcat_simps bin_cat_def hash_diff)
-  apply(((((blocks_rule_vcg; (rule refl)?), triple_seq_vcg)); sep_imp_solve2?)+)[1]
-  apply (sep_imp_solve2|solves \<open>simp\<close>)+
-  apply (clarsimp split: if_split_asm simp:word_rcat_simps bin_cat_def hash_diff)
-  apply (clarsimp split: if_split_asm simp:word_rcat_simps bin_cat_def hash_diff)
-  apply(((((blocks_rule_vcg; (rule refl)?), triple_seq_vcg)); sep_imp_solve2?)+)[1]
-  apply (sep_imp_solve2|solves \<open>simp\<close>)+
-  apply (clarsimp split: if_split_asm simp:word_rcat_simps bin_cat_def hash_diff)
-  apply(((((blocks_rule_vcg; (rule refl)?), triple_seq_vcg)); sep_imp_solve2?)+)[1]
-  apply (sep_imp_solve2|solves \<open>simp\<close>)+
-  apply(((((blocks_rule_vcg; (rule refl)?), triple_seq_vcg)); sep_imp_solve2?)+)[1]
-  apply (sep_imp_solve2|solves \<open>simp\<close>)+
-  apply(((((blocks_rule_vcg; (rule refl)?), triple_seq_vcg)); sep_imp_solve2?)+)[1]
-  apply (sep_imp_solve2|solves \<open>simp\<close>)+
-  apply (clarsimp split: if_split_asm simp:word_rcat_simps bin_cat_def hash_diff)
-  apply (clarsimp split: if_split_asm simp:word_rcat_simps bin_cat_def hash_diff)
-  apply(((((blocks_rule_vcg; (rule refl)?), triple_seq_vcg)); sep_imp_solve2?)+)[1]
-  apply (sep_imp_solve2|solves \<open>simp\<close>)+
-  apply (clarsimp split: if_split_asm simp:word_rcat_simps bin_cat_def hash_diff)
+   apply (rule exI)
+   apply ((block_vcg2)[1])
+   apply ((block_vcg2)[1])
+   apply ((block_vcg2)[1])
+   apply ((block_vcg2)[1])
+   apply ((block_vcg2)[1])
+   apply (clarsimp split: if_split_asm simp: word_rcat_simps)
+  apply(rule exI)
+   apply ((block_vcg2)[1])
+   apply ((block_vcg2)[1])
+   apply ((block_vcg2)[1])
+   apply ((block_vcg2)[1])
+   apply ((block_vcg2)[1])
+   apply ((block_vcg2)[1])
+   apply ((block_vcg2)[1])
+   apply ((block_vcg2)[1])
+   apply (split_conds)
 (*1*)
   apply (case_tac "hash = addfund_hash"; clarsimp)
-  apply (case_tac "v > 0")
-  apply (case_tac "sender \<noteq> from")
+  apply (case_tac "amount > 0")
+  apply (case_tac "amount \<noteq> v")
+  apply (case_tac "sender \<noteq> buyer")
   apply (rule exI)
-  apply(((((blocks_rule_vcg; (rule refl)?), triple_seq_vcg)); sep_imp_solve2?)+)[1]
-  apply (sep_imp_solve2|solves \<open>simp\<close>)+
-  apply (clarsimp split: if_split_asm simp:word_rcat_simps bin_cat_def hash_diff)
-  apply(((((blocks_rule_vcg; (rule refl)?), triple_seq_vcg)); sep_imp_solve2?)+)[1]
-  apply (sep_imp_solve2|solves \<open>simp\<close>)+
-  apply (clarsimp split: if_split_asm simp:word_rcat_simps bin_cat_def hash_diff)
-  apply (clarsimp split: if_split_asm simp:word_rcat_simps bin_cat_def hash_diff)
-  apply(((((blocks_rule_vcg; (rule refl)?), triple_seq_vcg)); sep_imp_solve2?)+)[1]
-  apply (sep_imp_solve2|solves \<open>simp\<close>)+
-  apply (clarsimp split: if_split_asm simp:word_rcat_simps bin_cat_def hash_diff)
-  apply (clarsimp split: if_split_asm simp:word_rcat_simps bin_cat_def hash_diff)
-  apply(((((blocks_rule_vcg; (rule refl)?), triple_seq_vcg)); sep_imp_solve2?)+)[1]
-  apply (sep_imp_solve2|solves \<open>simp\<close>)+
-  apply(((((blocks_rule_vcg; (rule refl)?), triple_seq_vcg)); sep_imp_solve2?)+)[1]
-  apply (sep_imp_solve2|solves \<open>simp\<close>)+
-  apply (clarsimp simp:word_rcat_simps bin_cat_def hash_diff)
-  apply (rule conjI; rule refl)
-  apply (clarsimp split: if_split_asm simp:word_rcat_simps bin_cat_def hash_diff)
-  apply(((((blocks_rule_vcg; (rule refl)?), triple_seq_vcg)); sep_imp_solve2?)+)[1]
-  apply (sep_imp_solve2|solves \<open>simp\<close>)+
-  apply (clarsimp  simp:word_rcat_simps bin_cat_def hash_diff)
-  apply (rule conjI; rule refl)
-  apply (clarsimp split: if_split_asm simp:word_rcat_simps bin_cat_def hash_diff)
-  apply (clarsimp split: if_split_asm simp:word_rcat_simps bin_cat_def hash_diff)
-  apply(((((blocks_rule_vcg; (rule refl)?), triple_seq_vcg)); sep_imp_solve2?)+)[1]
-  apply (sep_imp_solve2|solves \<open>simp\<close>)+
-  apply(((((blocks_rule_vcg; (rule refl)?), triple_seq_vcg)); sep_imp_solve2?)+)[1]
-  apply (sep_imp_solve2|solves \<open>simp\<close>)+
-  apply (clarsimp  simp:word_rcat_simps bin_cat_def hash_diff)
-  apply (rule conjI; rule refl)
-  apply (clarsimp split: if_split_asm simp:word_rcat_simps bin_cat_def hash_diff)
-  apply (clarsimp split: if_split_asm simp:word_rcat_simps bin_cat_def hash_diff)
-  apply(((((blocks_rule_vcg; (rule refl)?), triple_seq_vcg)); sep_imp_solve2?)+)[1]
-  apply (sep_imp_solve2|solves \<open>simp\<close>)+
-  apply (clarsimp split: if_split_asm simp:word_rcat_simps bin_cat_def hash_diff)
-(*3*)
-  apply blast
-(*2*)
+   apply ((block_vcg2)[1])
+   apply ((block_vcg2)[1])
+   apply ((block_vcg2)[1])
+   apply ((block_vcg2)[1])
+   apply ((block_vcg2)[1])
+   apply ((block_vcg2)[1])
+   apply ((block_vcg2)[1])
+   apply ((block_vcg2)[1])
+   apply ((block_vcg2)[1])
+  apply ((block_vcg2)[1])
+   apply ((block_vcg2)[1])
+   apply (split_conds)
   apply (rule exI)
-  apply(((((blocks_rule_vcg; (rule refl)?), triple_seq_vcg)); sep_imp_solve2?)+)[1]
-  apply (sep_imp_solve2|solves \<open>simp\<close>)+
-  apply (clarsimp split: if_split_asm simp:word_rcat_simps bin_cat_def hash_diff)
-  apply(((((blocks_rule_vcg; (rule refl)?), triple_seq_vcg)); sep_imp_solve2?)+)[1]
-  apply (sep_imp_solve2|solves \<open>simp\<close>)+
-  apply (clarsimp split: if_split_asm simp:word_rcat_simps bin_cat_def hash_diff)
-  apply (clarsimp split: if_split_asm simp:word_rcat_simps bin_cat_def hash_diff)
-  apply(((((blocks_rule_vcg; (rule refl)?), triple_seq_vcg)); sep_imp_solve2?)+)[1]
-  apply (sep_imp_solve2|solves \<open>simp\<close>)+
-  apply (clarsimp split: if_split_asm simp:word_rcat_simps bin_cat_def hash_diff)
-  apply (clarsimp split: if_split_asm simp:word_rcat_simps bin_cat_def hash_diff)
-  apply(((((blocks_rule_vcg; (rule refl)?), triple_seq_vcg)); sep_imp_solve2?)+)[1]
-  apply (sep_imp_solve2|solves \<open>simp\<close>)+
-  apply (clarsimp split: if_split_asm simp:word_rcat_simps bin_cat_def hash_diff)
-  apply(((((blocks_rule_vcg; (rule refl)?), triple_seq_vcg)); sep_imp_solve2?)+)[1]
-  apply (sep_imp_solve2|solves \<open>simp\<close>)+
-    apply (clarsimp  simp:word_rcat_simps bin_cat_def hash_diff)
-  apply (rule conjI; rule refl)
-  apply(((((blocks_rule_vcg; (rule refl)?), triple_seq_vcg)); sep_imp_solve2?)+)[1]
-    apply (clarsimp  simp:word_rcat_simps bin_cat_def hash_diff)
-  apply (sep_imp_solve2|solves \<open>simp\<close>)+
-    apply (clarsimp  simp:word_rcat_simps bin_cat_def hash_diff)
-  apply (sep_imp_solve2|solves \<open>simp\<close>)+
-  apply (clarsimp  simp:word_rcat_simps bin_cat_def hash_diff)
-  apply (rule conjI; rule refl)
-  apply (clarsimp  simp:word_rcat_simps bin_cat_def hash_diff)
-  apply(((((blocks_rule_vcg; (rule refl)?), triple_seq_vcg)); sep_imp_solve2?)+)[1]
-  apply (sep_imp_solve2|solves \<open>simp\<close>)+
-  apply (clarsimp  simp:word_rcat_simps bin_cat_def hash_diff)
-  apply (rule conjI; rule refl)
-  apply (clarsimp  simp:word_rcat_simps bin_cat_def hash_diff)
-  apply(((((blocks_rule_vcg; (rule refl)?), triple_seq_vcg)); sep_imp_solve2?)+)[1]
-  apply (sep_imp_solve2|solves \<open>simp\<close>)+
-  apply (clarsimp split: if_split_asm simp:word_rcat_simps bin_cat_def hash_diff)
-(* 1 *)
+   apply ((block_vcg2)[1])
+   apply ((block_vcg2)[1])
+   apply ((block_vcg2)[1])
+   apply ((block_vcg2)[1])
+   apply ((block_vcg2)[1])
+   apply ((block_vcg2)[1])
+   apply ((block_vcg2)[1])
+   apply ((block_vcg2)[1])
+   apply ((block_vcg2)[1])
+   apply ((block_vcg2)[1])
+   apply ((block_vcg2)[1])
+   apply (split_conds)
   apply (rule exI)
-  apply(((((blocks_rule_vcg; (rule refl)?), triple_seq_vcg)); sep_imp_solve2?)+)[1]
-  apply (sep_imp_solve2|solves \<open>simp\<close>)+
-  apply (clarsimp split: if_split_asm simp:word_rcat_simps bin_cat_def hash_diff)
-  apply(((((blocks_rule_vcg; (rule refl)?), triple_seq_vcg)); sep_imp_solve2?)+)[1]
-  apply (sep_imp_solve2|solves \<open>simp\<close>)+
-  apply (clarsimp split: if_split_asm simp:word_rcat_simps bin_cat_def hash_diff eval_bit_mask)
-  apply (clarsimp split: if_split_asm simp:word_rcat_simps bin_cat_def hash_diff eval_bit_mask)
-  apply(((((blocks_rule_vcg; (rule refl)?), triple_seq_vcg)); sep_imp_solve2?)+)[1]
-  apply (sep_imp_solve2|solves \<open>simp\<close>)+
-  apply (clarsimp split: if_split_asm simp:word_rcat_simps bin_cat_def hash_diff)
-  apply (clarsimp split: if_split_asm simp:word_rcat_simps bin_cat_def hash_diff)
-  apply(((((blocks_rule_vcg; (rule refl)?), triple_seq_vcg)); sep_imp_solve2?)+)[1]
-  apply (sep_imp_solve2|solves \<open>simp\<close>)+
-  apply (clarsimp split: if_split_asm simp:word_rcat_simps bin_cat_def hash_diff)
-  apply (clarsimp split: if_split_asm simp:word_rcat_simps bin_cat_def hash_diff)
-  apply(((((blocks_rule_vcg; (rule refl)?), triple_seq_vcg)); sep_imp_solve2?)+)[1]
-  apply (sep_imp_solve2|solves \<open>simp\<close>)+
+   apply ((block_vcg2)[1])
+   apply ((block_vcg2)[1])
+   apply ((block_vcg2)[1])
+   apply ((block_vcg2)[1])
+   apply ((block_vcg2)[1])
+   apply ((block_vcg2)[1])
+   apply ((block_vcg2)[1])
+   apply ((block_vcg2)[1])
+   apply ((block_vcg2)[1])
+   apply ((block_vcg2)[1])
+   apply ((block_vcg2)[1])
+   apply (split_conds)
+  apply (rule exI)
+   apply ((block_vcg2)[1])
+   apply ((block_vcg2)[1])
+   apply ((block_vcg2)[1])
+   apply ((block_vcg2)[1])
+   apply ((block_vcg2)[1])
+   apply ((block_vcg2)[1])
+   apply ((block_vcg2)[1])
+   apply ((block_vcg2)[1])
+   apply ((block_vcg2)[1])
+   apply ((block_vcg2)[1])
+   apply ((block_vcg2)[1])
+   apply (split_conds)
+  apply (rule exI)
+   apply ((block_vcg2)[1])
+   apply ((block_vcg2)[1])
+   apply ((block_vcg2)[1])
+   apply ((block_vcg2)[1])
+   apply ((block_vcg2)[1])
   done
 end
