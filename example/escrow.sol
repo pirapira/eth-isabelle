@@ -1,27 +1,31 @@
 pragma solidity ^0.4.0;
-contract EscrowWallet {
+contract Escrow {
 
-    address from;
-    address to;
-    address owner;
+    address buyer;
+    address seller;
+    address arbiter;
+    uint256 amount;
 
-    function EscrowWallet(address _from, address _to) public {
-            from = _from;
-            to = _to;
-            owner = msg.sender;
+    function Escrow(address _buyer, address _seller, uint256 _amount) public {
+            require (amount > 0 && _buyer != 0 && _seller != 0);
+            buyer = _buyer;
+            seller = _seller;
+            arbiter = msg.sender;
+            amount = _amount;
     }
 
     function addfund() payable public  {
-        require (msg.value > 0 && msg.sender == from);
+        require (amount > 0 && msg.value == amount && msg.sender == buyer);
+        amount = 0;
     }
 
     function refund() public {
-        require (msg.sender == owner);
-        selfdestruct(from);
+        require (amount == 0 && msg.sender == arbiter);
+        selfdestruct(buyer);
     }
 
     function pay() public {
-        require (msg.sender == owner);
-        selfdestruct(to);
+        require (amount == 0 && msg.sender == arbiter);
+        selfdestruct(seller);
     }
 }
