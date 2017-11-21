@@ -1,0 +1,349 @@
+    /* "escrow.sol":24:785  contract Escrow {... */
+  mstore(0x40, 0x60)
+    /* "escrow.sol":128:395  function Escrow(address _buyer, address _seller, uint256 _amount) public {... */
+  jumpi(tag_1, iszero(callvalue))
+  0x0
+  dup1
+  revert
+tag_1:
+  mload(0x40)
+  0x60
+  dup1
+  bytecodeSize
+  dup4
+  codecopy
+  dup2
+  add
+  0x40
+  mstore
+  dup1
+  dup1
+  mload
+  swap2
+  swap1
+  0x20
+  add
+  dup1
+  mload
+  swap2
+  swap1
+  0x20
+  add
+  dup1
+  mload
+    /* "escrow.sol":224:230  amount */
+  sload(0x3)
+    /* "escrow.sol":128:395  function Escrow(address _buyer, address _seller, uint256 _amount) public {... */
+  swap1
+  swap3
+  pop
+    /* "escrow.sol":233:234  0 */
+  0x0
+    /* "escrow.sol":224:234  amount > 0 */
+  swap1
+  gt
+  swap1
+  pop
+    /* "escrow.sol":224:249  amount > 0 && _buyer != 0 */
+  dup1
+  iszero
+  tag_4
+  jumpi
+  pop
+  sub(exp(0x2, 0xa0), 0x1)
+    /* "escrow.sol":238:249  _buyer != 0 */
+  dup4
+  and
+  iszero
+  iszero
+    /* "escrow.sol":224:249  amount > 0 && _buyer != 0 */
+tag_4:
+    /* "escrow.sol":224:265  amount > 0 && _buyer != 0 && _seller != 0 */
+  dup1
+  iszero
+  tag_5
+  jumpi
+  pop
+  sub(exp(0x2, 0xa0), 0x1)
+    /* "escrow.sol":253:265  _seller != 0 */
+  dup3
+  and
+  iszero
+  iszero
+    /* "escrow.sol":224:265  amount > 0 && _buyer != 0 && _seller != 0 */
+tag_5:
+    /* "escrow.sol":215:266  require (amount > 0 && _buyer != 0 && _seller != 0) */
+  iszero
+  iszero
+  tag_6
+  jumpi
+  0x0
+  dup1
+  revert
+tag_6:
+    /* "escrow.sol":280:285  buyer */
+  0x0
+    /* "escrow.sol":280:294  buyer = _buyer */
+  dup1
+  sload
+  sub(exp(0x2, 0xa0), 0x1)
+  swap5
+  dup6
+  and
+  not(sub(exp(0x2, 0xa0), 0x1))
+  swap2
+  dup3
+  and
+  or
+  swap1
+  swap2
+  sstore
+  0x1
+    /* "escrow.sol":308:324  seller = _seller */
+  dup1
+  sload
+  swap4
+  dup6
+  and
+  swap4
+  dup3
+  and
+  swap4
+  swap1
+  swap4
+  or
+  swap1
+  swap3
+  sstore
+    /* "escrow.sol":338:345  arbiter */
+  0x2
+    /* "escrow.sol":338:358  arbiter = msg.sender */
+  dup1
+  sload
+    /* "escrow.sol":348:358  msg.sender */
+  caller
+    /* "escrow.sol":338:358  arbiter = msg.sender */
+  swap1
+  swap5
+  and
+  swap4
+  swap1
+  swap3
+  and
+  swap3
+  swap1
+  swap3
+  or
+  swap1
+  sstore
+    /* "escrow.sol":372:378  amount */
+  0x3
+    /* "escrow.sol":372:388  amount = _amount */
+  sstore
+    /* "escrow.sol":24:785  contract Escrow {... */
+  dataSize(sub_0)
+  dup1
+  dataOffset(sub_0)
+  0x0
+  codecopy
+  0x0
+  return
+stop
+
+sub_0: assembly {
+        /* "escrow.sol":24:785  contract Escrow {... */
+      mstore(0x40, 0x60)
+      jumpi(tag_1, lt(calldatasize, 0x4))
+      and(div(calldataload(0x0), 0x100000000000000000000000000000000000000000000000000000000), 0xffffffff)
+      0x1b9265b8
+      dup2
+      eq
+      tag_2
+      jumpi
+      dup1
+      0x590e1ae3
+      eq
+      tag_3
+      jumpi
+      dup1
+      0x8f9595d4
+      eq
+      tag_4
+      jumpi
+    tag_1:
+      0x0
+      dup1
+      revert
+        /* "escrow.sol":668:783  function pay() public {... */
+    tag_2:
+      jumpi(tag_5, iszero(callvalue))
+      0x0
+      dup1
+      revert
+    tag_5:
+      tag_6
+      jump(tag_7)
+    tag_6:
+      stop
+        /* "escrow.sol":545:662  function refund() public {... */
+    tag_3:
+      jumpi(tag_8, iszero(callvalue))
+      0x0
+      dup1
+      revert
+    tag_8:
+      tag_6
+      jump(tag_10)
+        /* "escrow.sol":401:539  function addfund() payable public  {... */
+    tag_4:
+      tag_6
+      jump(tag_12)
+        /* "escrow.sol":668:783  function pay() public {... */
+    tag_7:
+        /* "escrow.sol":709:715  amount */
+      sload(0x3)
+        /* "escrow.sol":709:720  amount == 0 */
+      iszero
+        /* "escrow.sol":709:745  amount == 0 && msg.sender == arbiter */
+      dup1
+      iszero
+      tag_14
+      jumpi
+      pop
+        /* "escrow.sol":738:745  arbiter */
+      sload(0x2)
+        /* "escrow.sol":724:734  msg.sender */
+      caller
+        /* "escrow.sol":738:745  arbiter */
+      0xffffffffffffffffffffffffffffffffffffffff
+        /* "escrow.sol":724:745  msg.sender == arbiter */
+      swap1
+      dup2
+      and
+        /* "escrow.sol":738:745  arbiter */
+      swap2
+      and
+        /* "escrow.sol":724:745  msg.sender == arbiter */
+      eq
+        /* "escrow.sol":709:745  amount == 0 && msg.sender == arbiter */
+    tag_14:
+        /* "escrow.sol":700:746  require (amount == 0 && msg.sender == arbiter) */
+      iszero
+      iszero
+      tag_15
+      jumpi
+      0x0
+      dup1
+      revert
+    tag_15:
+        /* "escrow.sol":769:775  seller */
+      and(0xffffffffffffffffffffffffffffffffffffffff, sload(0x1))
+        /* "escrow.sol":756:776  selfdestruct(seller) */
+      selfdestruct
+        /* "escrow.sol":545:662  function refund() public {... */
+    tag_10:
+        /* "escrow.sol":589:595  amount */
+      sload(0x3)
+        /* "escrow.sol":589:600  amount == 0 */
+      iszero
+        /* "escrow.sol":589:625  amount == 0 && msg.sender == arbiter */
+      dup1
+      iszero
+      tag_17
+      jumpi
+      pop
+        /* "escrow.sol":618:625  arbiter */
+      sload(0x2)
+        /* "escrow.sol":604:614  msg.sender */
+      caller
+        /* "escrow.sol":618:625  arbiter */
+      0xffffffffffffffffffffffffffffffffffffffff
+        /* "escrow.sol":604:625  msg.sender == arbiter */
+      swap1
+      dup2
+      and
+        /* "escrow.sol":618:625  arbiter */
+      swap2
+      and
+        /* "escrow.sol":604:625  msg.sender == arbiter */
+      eq
+        /* "escrow.sol":589:625  amount == 0 && msg.sender == arbiter */
+    tag_17:
+        /* "escrow.sol":580:626  require (amount == 0 && msg.sender == arbiter) */
+      iszero
+      iszero
+      tag_18
+      jumpi
+      0x0
+      dup1
+      revert
+    tag_18:
+        /* "escrow.sol":649:654  buyer */
+      and(0xffffffffffffffffffffffffffffffffffffffff, sload(0x0))
+        /* "escrow.sol":636:655  selfdestruct(buyer) */
+      selfdestruct
+        /* "escrow.sol":401:539  function addfund() payable public  {... */
+    tag_12:
+        /* "escrow.sol":464:465  0 */
+      0x0
+        /* "escrow.sol":455:461  amount */
+      sload(0x3)
+        /* "escrow.sol":455:465  amount > 0 */
+      gt
+        /* "escrow.sol":455:488  amount > 0 && msg.value == amount */
+      dup1
+      iszero
+      tag_20
+      jumpi
+      pop
+        /* "escrow.sol":482:488  amount */
+      sload(0x3)
+        /* "escrow.sol":469:478  msg.value */
+      callvalue
+        /* "escrow.sol":469:488  msg.value == amount */
+      eq
+        /* "escrow.sol":455:488  amount > 0 && msg.value == amount */
+    tag_20:
+        /* "escrow.sol":455:511  amount > 0 && msg.value == amount && msg.sender == buyer */
+      dup1
+      iszero
+      tag_21
+      jumpi
+      pop
+        /* "escrow.sol":506:511  buyer */
+      sload(0x0)
+        /* "escrow.sol":492:502  msg.sender */
+      caller
+        /* "escrow.sol":506:511  buyer */
+      0xffffffffffffffffffffffffffffffffffffffff
+        /* "escrow.sol":492:511  msg.sender == buyer */
+      swap1
+      dup2
+      and
+        /* "escrow.sol":506:511  buyer */
+      swap2
+      and
+        /* "escrow.sol":492:511  msg.sender == buyer */
+      eq
+        /* "escrow.sol":455:511  amount > 0 && msg.value == amount && msg.sender == buyer */
+    tag_21:
+        /* "escrow.sol":446:512  require (amount > 0 && msg.value == amount && msg.sender == buyer) */
+      iszero
+      iszero
+      tag_22
+      jumpi
+      0x0
+      dup1
+      revert
+    tag_22:
+        /* "escrow.sol":531:532  0 */
+      0x0
+        /* "escrow.sol":522:528  amount */
+      0x3
+        /* "escrow.sol":522:532  amount = 0 */
+      sstore
+        /* "escrow.sol":401:539  function addfund() payable public  {... */
+      jump	// out
+
+    auxdata: 0xa165627a7a72305820f807170f7f69a6fbdf43f87babe291e9f5d38101a3b65713ccfdbe30975599d30029
+}

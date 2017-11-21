@@ -37,7 +37,7 @@ contract Escrow {
 }
 
 Compiled with:
- solc --optimize --overwrite -o escrow2 --bin-runtime --asm --hashes escrow2.sol
+ solc --optimize --overwrite -o escrow --bin-runtime --asm --hashes escrow.sol
 
 8f9595d4: addfund()
 1b9265b8: pay()
@@ -45,64 +45,77 @@ Compiled with:
 
 
 *)
-value"(parse_bytecode ''606060405263ffffffff7c01000000000000000000000000000000000000000000000000000000006000350416631b9265b88114610052578063590e1ae3146100675780638f9595d41461007a57600080fd5b341561005d57600080fd5b610065610082565b005b341561007257600080fd5b6100656100d3565b610065610124565b6003541580156100ad57506002543373ffffffffffffffffffffffffffffffffffffffff9081169116145b15156100b857600080fd5b60015473ffffffffffffffffffffffffffffffffffffffff16ff5b6003541580156100fe57506002543373ffffffffffffffffffffffffffffffffffffffff9081169116145b151561010957600080fd5b60005473ffffffffffffffffffffffffffffffffffffffff16ff5b6000600354118015610137575060035434145b801561015e57506000543373ffffffffffffffffffffffffffffffffffffffff9081169116145b151561016957600080fd5b60006003555600a165627a7a7230582029f2f38b5b84c1c55e91aaca3d9362e635c88ad7e3be217a7183f3cccee1aed40029'')"
+value"(parse_bytecode ''6060604052600436106100565763ffffffff7c01000000000000000000000000000000000000000000000000000000006000350416631b9265b8811461005b578063590e1ae3146100705780638f9595d414610083575b600080fd5b341561006657600080fd5b61006e61008b565b005b341561007b57600080fd5b61006e6100dc565b61006e61012d565b6003541580156100b657506002543373ffffffffffffffffffffffffffffffffffffffff9081169116145b15156100c157600080fd5b60015473ffffffffffffffffffffffffffffffffffffffff16ff5b60035415801561010757506002543373ffffffffffffffffffffffffffffffffffffffff9081169116145b151561011257600080fd5b60005473ffffffffffffffffffffffffffffffffffffffff16ff5b6000600354118015610140575060035434145b801561016757506000543373ffffffffffffffffffffffffffffffffffffffff9081169116145b151561017257600080fd5b60006003555600a165627a7a72305820f807170f7f69a6fbdf43f87babe291e9f5d38101a3b65713ccfdbe30975599d30029'')"
 
 definition insts_ex where
-"insts_ex == [Stack (PUSH_N [0x60]), Stack (PUSH_N [0x40]), Memory MSTORE, Stack (PUSH_N [0xFF, 0xFF, 0xFF, 0xFF]),
-  Stack (PUSH_N [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]),
+"insts_ex == [Stack (PUSH_N [0x60]), Stack (PUSH_N [0x40]), Memory MSTORE, Stack (PUSH_N [4]),
+  Info CALLDATASIZE, Arith inst_LT, Stack (PUSH_N [0, 0x56]), Pc JUMPI,
+  Stack (PUSH_N [0xFF, 0xFF, 0xFF, 0xFF]),
+  Stack
+   (PUSH_N
+     [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]),
   Stack (PUSH_N [0]), Stack CALLDATALOAD, Arith DIV, Bits inst_AND,
-  Stack (PUSH_N [0x1B, 0x92, 0x65, 0xB8]), Dup 1, Arith inst_EQ, Stack (PUSH_N [0, 0x52]), Pc JUMPI, Dup 0,
-  Stack (PUSH_N [0x59, 0xE, 0x1A, 0xE3]), Arith inst_EQ, Stack (PUSH_N [0, 0x67]), Pc JUMPI, Dup 0,
-  Stack (PUSH_N [0x8F, 0x95, 0x95, 0xD4]), Arith inst_EQ, Stack (PUSH_N [0, 0x7A]), Pc JUMPI,
-  Stack (PUSH_N [0]), Dup 0, Unknown 0xFD, Pc JUMPDEST, Info CALLVALUE, Arith ISZERO,
-  Stack (PUSH_N [0, 0x5D]), Pc JUMPI, Stack (PUSH_N [0]), Dup 0, Unknown 0xFD, Pc JUMPDEST,
-  Stack (PUSH_N [0, 0x65]), Stack (PUSH_N [0, 0x82]), Pc JUMP, Pc JUMPDEST, Misc STOP, Pc JUMPDEST,
-  Info CALLVALUE, Arith ISZERO, Stack (PUSH_N [0, 0x72]), Pc JUMPI, Stack (PUSH_N [0]), Dup 0,
-  Unknown 0xFD, Pc JUMPDEST, Stack (PUSH_N [0, 0x65]), Stack (PUSH_N [0, 0xD3]), Pc JUMP, Pc JUMPDEST,
-  Stack (PUSH_N [0, 0x65]), Stack (PUSH_N [1, 0x24]), Pc JUMP, Pc JUMPDEST, Stack (PUSH_N [3]),
-  Storage SLOAD, Arith ISZERO, Dup 0, Arith ISZERO, Stack (PUSH_N [0, 0xAD]), Pc JUMPI, Stack POP,
-  Stack (PUSH_N [2]), Storage SLOAD, Info CALLER,
-  Stack (PUSH_N
-          [0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
-           0xFF, 0xFF, 0xFF, 0xFF]),
-  Swap 0, Dup 1, Bits inst_AND, Swap 1, Bits inst_AND, Arith inst_EQ, Pc JUMPDEST, Arith ISZERO,
-  Arith ISZERO, Stack (PUSH_N [0, 0xB8]), Pc JUMPI, Stack (PUSH_N [0]), Dup 0, Unknown 0xFD, Pc JUMPDEST,
-  Stack (PUSH_N [1]), Storage SLOAD,
-  Stack (PUSH_N
-          [0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
-           0xFF, 0xFF, 0xFF, 0xFF]),
-  Bits inst_AND, Misc SUICIDE, Pc JUMPDEST, Stack (PUSH_N [3]), Storage SLOAD, Arith ISZERO, Dup 0,
-  Arith ISZERO, Stack (PUSH_N [0, 0xFE]), Pc JUMPI, Stack POP, Stack (PUSH_N [2]), Storage SLOAD,
+  Stack (PUSH_N [0x1B, 0x92, 0x65, 0xB8]), Dup 1, Arith inst_EQ, Stack (PUSH_N [0, 0x5B]),
+  Pc JUMPI, Dup 0, Stack (PUSH_N [0x59, 0xE, 0x1A, 0xE3]), Arith inst_EQ,
+  Stack (PUSH_N [0, 0x70]), Pc JUMPI, Dup 0, Stack (PUSH_N [0x8F, 0x95, 0x95, 0xD4]),
+  Arith inst_EQ, Stack (PUSH_N [0, 0x83]), Pc JUMPI, Pc JUMPDEST, Stack (PUSH_N [0]), Dup 0,
+  Unknown 0xFD, Pc JUMPDEST, Info CALLVALUE, Arith ISZERO, Stack (PUSH_N [0, 0x66]), Pc JUMPI,
+  Stack (PUSH_N [0]), Dup 0, Unknown 0xFD, Pc JUMPDEST, Stack (PUSH_N [0, 0x6E]),
+  Stack (PUSH_N [0, 0x8B]), Pc JUMP, Pc JUMPDEST, Misc STOP, Pc JUMPDEST, Info CALLVALUE,
+  Arith ISZERO, Stack (PUSH_N [0, 0x7B]), Pc JUMPI, Stack (PUSH_N [0]), Dup 0, Unknown 0xFD,
+  Pc JUMPDEST, Stack (PUSH_N [0, 0x6E]), Stack (PUSH_N [0, 0xDC]), Pc JUMP, Pc JUMPDEST,
+  Stack (PUSH_N [0, 0x6E]), Stack (PUSH_N [1, 0x2D]), Pc JUMP, Pc JUMPDEST,
+  Stack (PUSH_N [3]), Storage SLOAD, Arith ISZERO, Dup 0, Arith ISZERO,
+  Stack (PUSH_N [0, 0xB6]), Pc JUMPI, Stack POP, Stack (PUSH_N [2]), Storage SLOAD,
   Info CALLER,
-  Stack (PUSH_N
-          [0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
-           0xFF, 0xFF, 0xFF, 0xFF]),
-  Swap 0, Dup 1, Bits inst_AND, Swap 1, Bits inst_AND, Arith inst_EQ, Pc JUMPDEST, Arith ISZERO,
-  Arith ISZERO, Stack (PUSH_N [1, 9]), Pc JUMPI, Stack (PUSH_N [0]), Dup 0, Unknown 0xFD, Pc JUMPDEST,
-  Stack (PUSH_N [0]), Storage SLOAD,
-  Stack (PUSH_N
-          [0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
-           0xFF, 0xFF, 0xFF, 0xFF]),
-  Bits inst_AND, Misc SUICIDE, Pc JUMPDEST, Stack (PUSH_N [0]), Stack (PUSH_N [3]), Storage SLOAD,
-  Arith inst_GT, Dup 0, Arith ISZERO, Stack (PUSH_N [1, 0x37]), Pc JUMPI, Stack POP, Stack (PUSH_N [3]),
-  Storage SLOAD, Info CALLVALUE, Arith inst_EQ, Pc JUMPDEST, Dup 0, Arith ISZERO, Stack (PUSH_N [1, 0x5E]),
-  Pc JUMPI, Stack POP, Stack (PUSH_N [0]), Storage SLOAD, Info CALLER,
-  Stack (PUSH_N
-          [0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
-           0xFF, 0xFF, 0xFF, 0xFF]),
-  Swap 0, Dup 1, Bits inst_AND, Swap 1, Bits inst_AND, Arith inst_EQ, Pc JUMPDEST, Arith ISZERO,
-  Arith ISZERO, Stack (PUSH_N [1, 0x69]), Pc JUMPI, Stack (PUSH_N [0]), Dup 0, Unknown 0xFD, Pc JUMPDEST,
-  Stack (PUSH_N [0]), Stack (PUSH_N [3]), Storage SSTORE, Pc JUMP, Misc STOP, Log LOG1,
-  Stack (PUSH_N [0x62, 0x7A, 0x7A, 0x72, 0x30, 0x58]), Arith SHA3, Unknown 0x29, Misc CALLCODE,
-  Misc RETURN, Dup 0xB, Pc JUMPDEST, Dup 4, Unknown 0xC1, Unknown 0xC5, Unknown 0x5E, Swap 1, Unknown 0xAA,
-  Unknown 0xCA, Unknown 0x3D, Swap 3, Stack (PUSH_N [0xE6, 0x35, 0xC8]), Dup 0xA, Unknown 0xD7,
-  Unknown 0xE3, Unknown 0xBE, Unknown 0x21,
-  Stack (PUSH_N [0x71, 0x83, 0xF3, 0xCC, 0xCE, 0xE1, 0xAE, 0xD4, 0, 0x29])]"
+  Stack
+   (PUSH_N
+     [0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
+      0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF]),
+  Swap 0, Dup 1, Bits inst_AND, Swap 1, Bits inst_AND, Arith inst_EQ, Pc JUMPDEST,
+  Arith ISZERO, Arith ISZERO, Stack (PUSH_N [0, 0xC1]), Pc JUMPI, Stack (PUSH_N [0]), Dup 0,
+  Unknown 0xFD, Pc JUMPDEST, Stack (PUSH_N [1]), Storage SLOAD,
+  Stack
+   (PUSH_N
+     [0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
+      0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF]),
+  Bits inst_AND, Misc SUICIDE, Pc JUMPDEST, Stack (PUSH_N [3]), Storage SLOAD, Arith ISZERO,
+  Dup 0, Arith ISZERO, Stack (PUSH_N [1, 7]), Pc JUMPI, Stack POP, Stack (PUSH_N [2]),
+  Storage SLOAD, Info CALLER,
+  Stack
+   (PUSH_N
+     [0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
+      0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF]),
+  Swap 0, Dup 1, Bits inst_AND, Swap 1, Bits inst_AND, Arith inst_EQ, Pc JUMPDEST,
+  Arith ISZERO, Arith ISZERO, Stack (PUSH_N [1, 0x12]), Pc JUMPI, Stack (PUSH_N [0]), Dup 0,
+  Unknown 0xFD, Pc JUMPDEST, Stack (PUSH_N [0]), Storage SLOAD,
+  Stack
+   (PUSH_N
+     [0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
+      0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF]),
+  Bits inst_AND, Misc SUICIDE, Pc JUMPDEST, Stack (PUSH_N [0]), Stack (PUSH_N [3]),
+  Storage SLOAD, Arith inst_GT, Dup 0, Arith ISZERO, Stack (PUSH_N [1, 0x40]), Pc JUMPI,
+  Stack POP, Stack (PUSH_N [3]), Storage SLOAD, Info CALLVALUE, Arith inst_EQ, Pc JUMPDEST,
+  Dup 0, Arith ISZERO, Stack (PUSH_N [1, 0x67]), Pc JUMPI, Stack POP, Stack (PUSH_N [0]),
+  Storage SLOAD, Info CALLER,
+  Stack
+   (PUSH_N
+     [0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
+      0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF]),
+  Swap 0, Dup 1, Bits inst_AND, Swap 1, Bits inst_AND, Arith inst_EQ, Pc JUMPDEST,
+  Arith ISZERO, Arith ISZERO, Stack (PUSH_N [1, 0x72]), Pc JUMPI, Stack (PUSH_N [0]), Dup 0,
+  Unknown 0xFD, Pc JUMPDEST, Stack (PUSH_N [0]), Stack (PUSH_N [3]), Storage SSTORE, Pc JUMP,
+  Misc STOP, Log LOG1, Stack (PUSH_N [0x62, 0x7A, 0x7A, 0x72, 0x30, 0x58]), Arith SHA3,
+  Unknown 0xF8, Sarith SMOD, Bits inst_OR, Unknown 0xF,
+  Stack
+   (PUSH_N
+     [0x69, 0xA6, 0xFB, 0xDF, 0x43, 0xF8, 0x7B, 0xAB, 0xE2, 0x91, 0xE9, 0xF5, 0xD3, 0x81, 1,
+      0xA3, 0xB6, 0x57, 0x13, 0xCC, 0xFD, 0xBE, 0x30, 0x97, 0x55, 0x99, 0xD3, 0, 0x29])]"
 value "length insts_ex"
 (* 191 instructions *)
 
 lemma
- "parse_bytecode ''606060405263ffffffff7c01000000000000000000000000000000000000000000000000000000006000350416631b9265b88114610052578063590e1ae3146100675780638f9595d41461007a57600080fd5b341561005d57600080fd5b610065610082565b005b341561007257600080fd5b6100656100d3565b610065610124565b6003541580156100ad57506002543373ffffffffffffffffffffffffffffffffffffffff9081169116145b15156100b857600080fd5b60015473ffffffffffffffffffffffffffffffffffffffff16ff5b6003541580156100fe57506002543373ffffffffffffffffffffffffffffffffffffffff9081169116145b151561010957600080fd5b60005473ffffffffffffffffffffffffffffffffffffffff16ff5b6000600354118015610137575060035434145b801561015e57506000543373ffffffffffffffffffffffffffffffffffffffff9081169116145b151561016957600080fd5b60006003555600a165627a7a7230582029f2f38b5b84c1c55e91aaca3d9362e635c88ad7e3be217a7183f3cccee1aed40029'' = insts_ex"
+ "parse_bytecode ''6060604052600436106100565763ffffffff7c01000000000000000000000000000000000000000000000000000000006000350416631b9265b8811461005b578063590e1ae3146100705780638f9595d414610083575b600080fd5b341561006657600080fd5b61006e61008b565b005b341561007b57600080fd5b61006e6100dc565b61006e61012d565b6003541580156100b657506002543373ffffffffffffffffffffffffffffffffffffffff9081169116145b15156100c157600080fd5b60015473ffffffffffffffffffffffffffffffffffffffff16ff5b60035415801561010757506002543373ffffffffffffffffffffffffffffffffffffffff9081169116145b151561011257600080fd5b60005473ffffffffffffffffffffffffffffffffffffffff16ff5b6000600354118015610140575060035434145b801561016757506000543373ffffffffffffffffffffffffffffffffffffffff9081169116145b151561017257600080fd5b60006003555600a165627a7a72305820f807170f7f69a6fbdf43f87babe291e9f5d38101a3b65713ccfdbe30975599d30029'' = insts_ex"
   unfolding insts_ex_def
   by eval
 
@@ -110,102 +123,146 @@ definition "blocks_escrow == build_blocks insts_ex"
 value "blocks_escrow"
 lemma blocks_escrow_simp:
  "blocks_escrow = [(0, [(0, Stack (PUSH_N [0x60])), (2, Stack (PUSH_N [0x40])), (4, Memory MSTORE),
-       (5, Stack (PUSH_N [0xFF, 0xFF, 0xFF, 0xFF])),
-       (10, Stack (PUSH_N
-                    [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-                     0])),
-       (40, Stack (PUSH_N [0])), (42, Stack CALLDATALOAD), (43, Arith DIV), (44, Bits inst_AND),
-       (45, Stack (PUSH_N [0x1B, 0x92, 0x65, 0xB8])), (50, Dup 1), (51, Arith inst_EQ),
-       (52, Stack (PUSH_N [0, 0x52]))],
+       (5, Stack (PUSH_N [4])), (7, Info CALLDATASIZE), (8, Arith inst_LT),
+       (9, Stack (PUSH_N [0, 0x56]))],
    Jumpi),
-  (56, [(56, Dup 0), (57, Stack (PUSH_N [0x59, 0xE, 0x1A, 0xE3])), (62, Arith inst_EQ),
-        (63, Stack (PUSH_N [0, 0x67]))],
+  (13, [(13, Stack (PUSH_N [0xFF, 0xFF, 0xFF, 0xFF])),
+        (18, Stack
+              (PUSH_N
+                [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                 0, 0, 0])),
+        (48, Stack (PUSH_N [0])), (50, Stack CALLDATALOAD), (51, Arith DIV),
+        (52, Bits inst_AND), (53, Stack (PUSH_N [0x1B, 0x92, 0x65, 0xB8])), (58, Dup 1),
+        (59, Arith inst_EQ), (60, Stack (PUSH_N [0, 0x5B]))],
    Jumpi),
-  (67, [(67, Dup 0), (68, Stack (PUSH_N [0x8F, 0x95, 0x95, 0xD4])), (73, Arith inst_EQ),
-        (74, Stack (PUSH_N [0, 0x7A]))],
+  (64, [(64, Dup 0), (65, Stack (PUSH_N [0x59, 0xE, 0x1A, 0xE3])), (70, Arith inst_EQ),
+        (71, Stack (PUSH_N [0, 0x70]))],
    Jumpi),
-  (78, [(78, Stack (PUSH_N [0])), (80, Dup 0), (81, Unknown 0xFD)], Terminal),
-  (82, [(82, Pc JUMPDEST), (83, Info CALLVALUE), (84, Arith ISZERO), (85, Stack (PUSH_N [0, 0x5D]))],
+  (75, [(75, Dup 0), (76, Stack (PUSH_N [0x8F, 0x95, 0x95, 0xD4])), (81, Arith inst_EQ),
+        (82, Stack (PUSH_N [0, 0x83]))],
    Jumpi),
-  (89, [(89, Stack (PUSH_N [0])), (91, Dup 0), (92, Unknown 0xFD)], Terminal),
-  (93, [(93, Pc JUMPDEST), (94, Stack (PUSH_N [0, 0x65])), (97, Stack (PUSH_N [0, 0x82]))], Jump),
-  (101, [(101, Pc JUMPDEST), (102, Misc STOP)], Terminal),
-  (103, [(103, Pc JUMPDEST), (104, Info CALLVALUE), (105, Arith ISZERO), (106, Stack (PUSH_N [0, 0x72]))],
-   Jumpi),
-  (110, [(110, Stack (PUSH_N [0])), (112, Dup 0), (113, Unknown 0xFD)], Terminal),
-  (114, [(114, Pc JUMPDEST), (115, Stack (PUSH_N [0, 0x65])), (118, Stack (PUSH_N [0, 0xD3]))], Jump),
-  (122, [(122, Pc JUMPDEST), (123, Stack (PUSH_N [0, 0x65])), (126, Stack (PUSH_N [1, 0x24]))], Jump),
-  (130, [(130, Pc JUMPDEST), (131, Stack (PUSH_N [3])), (133, Storage SLOAD), (134, Arith ISZERO),
-         (135, Dup 0), (136, Arith ISZERO), (137, Stack (PUSH_N [0, 0xAD]))],
-   Jumpi),
-  (141, [(141, Stack POP), (142, Stack (PUSH_N [2])), (144, Storage SLOAD), (145, Info CALLER),
-         (146, Stack (PUSH_N
-                       [0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
-                        0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF])),
-         (167, Swap 0), (168, Dup 1), (169, Bits inst_AND), (170, Swap 1), (171, Bits inst_AND),
-         (172, Arith inst_EQ)],
-   Next),
-  (173, [(173, Pc JUMPDEST), (174, Arith ISZERO), (175, Arith ISZERO), (176, Stack (PUSH_N [0, 0xB8]))],
-   Jumpi),
-  (180, [(180, Stack (PUSH_N [0])), (182, Dup 0), (183, Unknown 0xFD)], Terminal),
-  (184, [(184, Pc JUMPDEST), (185, Stack (PUSH_N [1])), (187, Storage SLOAD),
-         (188, Stack (PUSH_N
-                       [0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
-                        0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF])),
-         (209, Bits inst_AND), (210, Misc SUICIDE)],
+  (86, [(86, Pc JUMPDEST), (87, Stack (PUSH_N [0])), (89, Dup 0), (90, Unknown 0xFD)],
    Terminal),
-  (211, [(211, Pc JUMPDEST), (212, Stack (PUSH_N [3])), (214, Storage SLOAD), (215, Arith ISZERO),
-         (216, Dup 0), (217, Arith ISZERO), (218, Stack (PUSH_N [0, 0xFE]))],
+  (91, [(91, Pc JUMPDEST), (92, Info CALLVALUE), (93, Arith ISZERO),
+        (94, Stack (PUSH_N [0, 0x66]))],
    Jumpi),
-  (222, [(222, Stack POP), (223, Stack (PUSH_N [2])), (225, Storage SLOAD), (226, Info CALLER),
-         (227, Stack (PUSH_N
-                       [0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
-                        0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF])),
-         (248, Swap 0), (249, Dup 1), (250, Bits inst_AND), (251, Swap 1), (252, Bits inst_AND),
-         (253, Arith inst_EQ)],
-   Next),
-  (254, [(254, Pc JUMPDEST), (255, Arith ISZERO), (256, Arith ISZERO), (257, Stack (PUSH_N [1, 9]))],
-   Jumpi),
-  (261, [(261, Stack (PUSH_N [0])), (263, Dup 0), (264, Unknown 0xFD)], Terminal),
-  (265, [(265, Pc JUMPDEST), (266, Stack (PUSH_N [0])), (268, Storage SLOAD),
-         (269, Stack (PUSH_N
-                       [0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
-                        0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF])),
-         (290, Bits inst_AND), (291, Misc SUICIDE)],
-   Terminal),
-  (292, [(292, Pc JUMPDEST), (293, Stack (PUSH_N [0])), (295, Stack (PUSH_N [3])), (297, Storage SLOAD),
-         (298, Arith inst_GT), (299, Dup 0), (300, Arith ISZERO), (301, Stack (PUSH_N [1, 0x37]))],
-   Jumpi),
-  (305, [(305, Stack POP), (306, Stack (PUSH_N [3])), (308, Storage SLOAD), (309, Info CALLVALUE),
-         (310, Arith inst_EQ)],
-   Next),
-  (311, [(311, Pc JUMPDEST), (312, Dup 0), (313, Arith ISZERO), (314, Stack (PUSH_N [1, 0x5E]))], Jumpi),
-  (318, [(318, Stack POP), (319, Stack (PUSH_N [0])), (321, Storage SLOAD), (322, Info CALLER),
-         (323, Stack (PUSH_N
-                       [0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
-                        0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF])),
-         (344, Swap 0), (345, Dup 1), (346, Bits inst_AND), (347, Swap 1), (348, Bits inst_AND),
-         (349, Arith inst_EQ)],
-   Next),
-  (350, [(350, Pc JUMPDEST), (351, Arith ISZERO), (352, Arith ISZERO), (353, Stack (PUSH_N [1, 0x69]))],
-   Jumpi),
-  (357, [(357, Stack (PUSH_N [0])), (359, Dup 0), (360, Unknown 0xFD)], Terminal),
-  (361, [(361, Pc JUMPDEST), (362, Stack (PUSH_N [0])), (364, Stack (PUSH_N [3])), (366, Storage SSTORE)],
+  (98, [(98, Stack (PUSH_N [0])), (100, Dup 0), (101, Unknown 0xFD)], Terminal),
+  (102,
+   [(102, Pc JUMPDEST), (103, Stack (PUSH_N [0, 0x6E])), (106, Stack (PUSH_N [0, 0x8B]))],
    Jump),
-  (368, [(368, Misc STOP)], Terminal),
-  (369, [(369, Log LOG1), (370, Stack (PUSH_N [0x62, 0x7A, 0x7A, 0x72, 0x30, 0x58])), (377, Arith SHA3),
-         (378, Unknown 0x29)],
+  (110, [(110, Pc JUMPDEST), (111, Misc STOP)], Terminal),
+  (112,
+   [(112, Pc JUMPDEST), (113, Info CALLVALUE), (114, Arith ISZERO),
+    (115, Stack (PUSH_N [0, 0x7B]))],
+   Jumpi),
+  (119, [(119, Stack (PUSH_N [0])), (121, Dup 0), (122, Unknown 0xFD)], Terminal),
+  (123,
+   [(123, Pc JUMPDEST), (124, Stack (PUSH_N [0, 0x6E])), (127, Stack (PUSH_N [0, 0xDC]))],
+   Jump),
+  (131,
+   [(131, Pc JUMPDEST), (132, Stack (PUSH_N [0, 0x6E])), (135, Stack (PUSH_N [1, 0x2D]))],
+   Jump),
+  (139,
+   [(139, Pc JUMPDEST), (140, Stack (PUSH_N [3])), (142, Storage SLOAD), (143, Arith ISZERO),
+    (144, Dup 0), (145, Arith ISZERO), (146, Stack (PUSH_N [0, 0xB6]))],
+   Jumpi),
+  (150,
+   [(150, Stack POP), (151, Stack (PUSH_N [2])), (153, Storage SLOAD), (154, Info CALLER),
+    (155,
+     Stack
+      (PUSH_N
+        [0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
+         0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF])),
+    (176, Swap 0), (177, Dup 1), (178, Bits inst_AND), (179, Swap 1), (180, Bits inst_AND),
+    (181, Arith inst_EQ)],
+   Next),
+  (182,
+   [(182, Pc JUMPDEST), (183, Arith ISZERO), (184, Arith ISZERO),
+    (185, Stack (PUSH_N [0, 0xC1]))],
+   Jumpi),
+  (189, [(189, Stack (PUSH_N [0])), (191, Dup 0), (192, Unknown 0xFD)], Terminal),
+  (193,
+   [(193, Pc JUMPDEST), (194, Stack (PUSH_N [1])), (196, Storage SLOAD),
+    (197,
+     Stack
+      (PUSH_N
+        [0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
+         0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF])),
+    (218, Bits inst_AND), (219, Misc SUICIDE)],
    Terminal),
-  (379, [(379, Misc CALLCODE)], Terminal), (380, [(380, Misc RETURN)], Terminal),
-  (381, [(381, Dup 0xB)], Next), (382, [(382, Pc JUMPDEST), (383, Dup 4), (384, Unknown 0xC1)], Terminal),
-  (385, [(385, Unknown 0xC5)], Terminal), (386, [(386, Unknown 0x5E)], Terminal),
-  (387, [(387, Swap 1), (388, Unknown 0xAA)], Terminal), (389, [(389, Unknown 0xCA)], Terminal),
-  (390, [(390, Unknown 0x3D)], Terminal),
-  (391, [(391, Swap 3), (392, Stack (PUSH_N [0xE6, 0x35, 0xC8])), (396, Dup 0xA), (397, Unknown 0xD7)],
+  (220,
+   [(220, Pc JUMPDEST), (221, Stack (PUSH_N [3])), (223, Storage SLOAD), (224, Arith ISZERO),
+    (225, Dup 0), (226, Arith ISZERO), (227, Stack (PUSH_N [1, 7]))],
+   Jumpi),
+  (231,
+   [(231, Stack POP), (232, Stack (PUSH_N [2])), (234, Storage SLOAD), (235, Info CALLER),
+    (236,
+     Stack
+      (PUSH_N
+        [0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
+         0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF])),
+    (257, Swap 0), (258, Dup 1), (259, Bits inst_AND), (260, Swap 1), (261, Bits inst_AND),
+    (262, Arith inst_EQ)],
+   Next),
+  (263,
+   [(263, Pc JUMPDEST), (264, Arith ISZERO), (265, Arith ISZERO),
+    (266, Stack (PUSH_N [1, 0x12]))],
+   Jumpi),
+  (270, [(270, Stack (PUSH_N [0])), (272, Dup 0), (273, Unknown 0xFD)], Terminal),
+  (274,
+   [(274, Pc JUMPDEST), (275, Stack (PUSH_N [0])), (277, Storage SLOAD),
+    (278,
+     Stack
+      (PUSH_N
+        [0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
+         0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF])),
+    (299, Bits inst_AND), (300, Misc SUICIDE)],
    Terminal),
-  (398, [(398, Unknown 0xE3)], Terminal), (399, [(399, Unknown 0xBE)], Terminal),
-  (400, [(400, Unknown 0x21)], Terminal),
-  (401, [(401, Stack (PUSH_N [0x71, 0x83, 0xF3, 0xCC, 0xCE, 0xE1, 0xAE, 0xD4, 0, 0x29]))], Next)]"
+  (301,
+   [(301, Pc JUMPDEST), (302, Stack (PUSH_N [0])), (304, Stack (PUSH_N [3])),
+    (306, Storage SLOAD), (307, Arith inst_GT), (308, Dup 0), (309, Arith ISZERO),
+    (310, Stack (PUSH_N [1, 0x40]))],
+   Jumpi),
+  (314,
+   [(314, Stack POP), (315, Stack (PUSH_N [3])), (317, Storage SLOAD), (318, Info CALLVALUE),
+    (319, Arith inst_EQ)],
+   Next),
+  (320,
+   [(320, Pc JUMPDEST), (321, Dup 0), (322, Arith ISZERO), (323, Stack (PUSH_N [1, 0x67]))],
+   Jumpi),
+  (327,
+   [(327, Stack POP), (328, Stack (PUSH_N [0])), (330, Storage SLOAD), (331, Info CALLER),
+    (332,
+     Stack
+      (PUSH_N
+        [0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
+         0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF])),
+    (353, Swap 0), (354, Dup 1), (355, Bits inst_AND), (356, Swap 1), (357, Bits inst_AND),
+    (358, Arith inst_EQ)],
+   Next),
+  (359,
+   [(359, Pc JUMPDEST), (360, Arith ISZERO), (361, Arith ISZERO),
+    (362, Stack (PUSH_N [1, 0x72]))],
+   Jumpi),
+  (366, [(366, Stack (PUSH_N [0])), (368, Dup 0), (369, Unknown 0xFD)], Terminal),
+  (370,
+   [(370, Pc JUMPDEST), (371, Stack (PUSH_N [0])), (373, Stack (PUSH_N [3])),
+    (375, Storage SSTORE)],
+   Jump),
+  (377, [(377, Misc STOP)], Terminal),
+  (378,
+   [(378, Log LOG1), (379, Stack (PUSH_N [0x62, 0x7A, 0x7A, 0x72, 0x30, 0x58])),
+    (386, Arith SHA3), (387, Unknown 0xF8)],
+   Terminal),
+  (388, [(388, Sarith SMOD), (389, Bits inst_OR), (390, Unknown 0xF)], Terminal),
+  (391,
+   [(391,
+     Stack
+      (PUSH_N
+        [0x69, 0xA6, 0xFB, 0xDF, 0x43, 0xF8, 0x7B, 0xAB, 0xE2, 0x91, 0xE9, 0xF5, 0xD3, 0x81,
+         1, 0xA3, 0xB6, 0x57, 0x13, 0xCC, 0xFD, 0xBE, 0x30, 0x97, 0x55, 0x99, 0xD3, 0,
+         0x29]))],
+   Next)]"
   by eval
 
 definition addfund_hash :: "32 word"  where
@@ -339,7 +396,8 @@ shows
    apply ((block_vcg2)[1])
    apply ((block_vcg2)[1])
    apply ((block_vcg2)[1])
-  apply (split_conds)
+   apply ((block_vcg2)[1])
+   apply (split_conds)
 (* 1*)
   apply (clarsimp)+
   apply(split if_split, rule conjI)+
@@ -356,12 +414,14 @@ shows
    apply ((block_vcg2)[1])
    apply ((block_vcg2)[1])
    apply ((block_vcg2)[1])
+   apply ((block_vcg2)[1])
    apply (clarsimp split: if_split_asm simp: word_rcat_simps)
   apply (clarsimp)+
   apply(split if_split, rule conjI)+
   apply(safe; clarsimp)
   apply( clarsimp)
   apply(rule exI)
+   apply ((block_vcg2)[1])
    apply ((block_vcg2)[1])
    apply ((block_vcg2)[1])
    apply ((block_vcg2)[1])
@@ -390,6 +450,7 @@ shows
    apply ((block_vcg2)[1])
    apply ((block_vcg2)[1])
    apply ((block_vcg2)[1])
+   apply ((block_vcg2)[1])
    apply (split_conds)
   apply (case_tac "amount \<noteq> 0"; clarsimp)
   apply(rule exI)
@@ -401,8 +462,10 @@ shows
    apply ((block_vcg2)[1])
    apply ((block_vcg2)[1])
    apply ((block_vcg2)[1])
+   apply ((block_vcg2)[1])
    apply (split_conds)
   apply(rule exI)
+   apply ((block_vcg2)[1])
    apply ((block_vcg2)[1])
    apply ((block_vcg2)[1])
    apply ((block_vcg2)[1])
@@ -420,6 +483,7 @@ shows
    apply ((block_vcg2)[1])
    apply ((block_vcg2)[1])
    apply ((block_vcg2)[1])
+   apply ((block_vcg2)[1])
    apply (split_conds)
   apply (case_tac "amount \<noteq> 0"; clarsimp)
   apply(rule exI)
@@ -432,8 +496,10 @@ shows
    apply ((block_vcg2)[1])
    apply ((block_vcg2)[1])
    apply ((block_vcg2)[1])
+   apply ((block_vcg2)[1])
    apply (split_conds)
   apply(rule exI)
+   apply ((block_vcg2)[1])
    apply ((block_vcg2)[1])
    apply ((block_vcg2)[1])
    apply ((block_vcg2)[1])
@@ -459,6 +525,7 @@ shows
    apply ((block_vcg2)[1])
    apply ((block_vcg2)[1])
    apply ((block_vcg2)[1])
+   apply ((block_vcg2)[1])
   apply ((block_vcg2)[1])
    apply (split_conds)
   apply (rule exI)
@@ -472,17 +539,6 @@ shows
    apply ((block_vcg2)[1])
    apply ((block_vcg2)[1])
    apply ((block_vcg2)[1])
-   apply (split_conds)
-  apply (rule exI)
-   apply ((block_vcg2)[1])
-   apply ((block_vcg2)[1])
-   apply ((block_vcg2)[1])
-   apply ((block_vcg2)[1])
-   apply ((block_vcg2)[1])
-   apply ((block_vcg2)[1])
-   apply ((block_vcg2)[1])
-   apply ((block_vcg2)[1])
-   apply ((block_vcg2)[1])
    apply ((block_vcg2)[1])
    apply (split_conds)
   apply (rule exI)
@@ -496,8 +552,23 @@ shows
    apply ((block_vcg2)[1])
    apply ((block_vcg2)[1])
    apply ((block_vcg2)[1])
+   apply ((block_vcg2)[1])
    apply (split_conds)
   apply (rule exI)
+   apply ((block_vcg2)[1])
+   apply ((block_vcg2)[1])
+   apply ((block_vcg2)[1])
+   apply ((block_vcg2)[1])
+   apply ((block_vcg2)[1])
+   apply ((block_vcg2)[1])
+   apply ((block_vcg2)[1])
+   apply ((block_vcg2)[1])
+   apply ((block_vcg2)[1])
+   apply ((block_vcg2)[1])
+   apply ((block_vcg2)[1])
+   apply (split_conds)
+  apply (rule exI)
+   apply ((block_vcg2)[1])
    apply ((block_vcg2)[1])
    apply ((block_vcg2)[1])
    apply ((block_vcg2)[1])
