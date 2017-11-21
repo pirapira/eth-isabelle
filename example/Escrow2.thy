@@ -373,7 +373,7 @@ shows
    apply (rule conjI)
    apply (clarsimp simp: word_rcat_simps)
  (* write simp rules to put stack in first pos *)
-  apply (sep_select 7)
+  apply (sep_select 6)
    apply (sep_cancel)+
    apply (clarsimp split: if_split simp: word_rcat_simps)
    apply (split_conds)

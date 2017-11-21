@@ -1,0 +1,19 @@
+
+// Evaluation test
+
+let a:s32 := 1:s32
+let b:s32 := 2:s32
+let c:s32 := 3:s32
+
+let z:s32 := 4:s32
+
+function fun (x : s32, y:s32) -> z:s32 {
+   switch x
+     case 0:s32 { z := 123:s32 }
+     case 2:s32 { z := 1234:s32 }
+     default { z := 222:s32 }
+}
+
+z := fun(b, c)
+b := fun(a, c)
+

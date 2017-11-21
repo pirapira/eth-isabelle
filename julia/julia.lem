@@ -1,0 +1,496 @@
+
+(* Specification of Solidity intermediate language *)
+
+open import Pervasives
+open import List
+open import Map
+open import String
+
+(** Syntax *)
+
+type id = integer
+
+type type_name =
+ | CustomType of id
+ | Boolean
+ | S256
+ | S128
+ | S64
+ | S32
+ | S8
+ | U256
+ | U128
+ | U64
+ | U32
+ | U8
+
+type literal_kind =
+ | TrueLiteral
+ | FalseLiteral
+ | StringLiteral of integer (* list word8 *)
+ | NumberLiteral of integer
+
+type expression =
+ | FunctionCall of id * list expression
+ | Identifier of id
+ | Literal of literal_kind * type_name
+
+type statement =
+ | Block of list statement
+ | FunctionDefinition of id * list (id * type_name) * list (id * type_name) * statement
+ | VariableDeclaration of list (id * type_name) * expression
+ | EmptyVariableDeclaration of list (id * type_name)
+ | Assignment of list id * expression
+ | Switch of expression * list (literal_kind * type_name * statement) * maybe statement
+ | Break
+ | Continue
+ | ForLoopInit of list statement * expression * statement * statement
+ | ForLoop of expression * statement * statement
+ | Expression of expression
+
+(** Interpreter *)
+
+type seq_mode =
+ | RegularMode
+ | BreakMode
+ | ContinueMode
+
+type builtin =
+ | Convert of type_name * type_name
+ | AddU256
+ | SplitU256U64
+
+type gbuiltin =
+ | MLoad
+ | MStore
+ | MStore8
+ | MSize
+ | SLoad
+ | SStore
+ | Log of nat
+ | GasLeft
+ | Balance
+ | This
+ | Create
+ | Call
+ | Return
+ | Revert
+ | Selfdestruct
+ | CalldataLoad
+ | CalldataSize
+ | CalldataCopy
+
+(* It might be necessary to assume that there is a function for compiling / decompiling code to
+   implement stuff like code size etc. *)
+
+val two8 : integer
+val two32 : integer
+val two64 : integer
+val two128 : integer
+val two256 : integer
+let two8 = 256
+let two32 = 2**32
+let two64 = 2**64
+let two128 = 2**128
+let two256 = 2**256
+
+let typesize t = match t with
+| U8 -> two8
+| S8 -> two8
+| U32 -> two32
+| S32 -> two32
+| U64 -> two64
+| S64 -> two64
+| U128 -> two128
+| S128 -> two128
+| U256 -> two256
+| S256 -> two256
+| _ -> 2
+end
+
+type value =
+ | IntV of integer
+ | StringV of integer
+ | ListV of list value
+ | FalseV
+ | TrueV
+ | FunctionV of id * list (id * type_name) * list (id * type_name) * statement
+ | BuiltinV of builtin
+ | GBuiltinV of gbuiltin
+
+val eval_builtin : builtin -> list value -> list value
+let eval_builtin b lst = match (b, lst) with
+ | (AddU256, [IntV a; IntV b]) -> [IntV ((a+b) mod two256)]
+ | (Convert _ Boolean, [IntV x]) -> if x = 0 then [FalseV] else [TrueV]
+ | (Convert Boolean _, [FalseV]) -> [IntV 0]
+ | (Convert Boolean _, [TrueV]) -> [IntV 1]
+ | (Convert _ t, [IntV a]) -> [IntV (a mod typesize t)]
+ | (SplitU256U64, [IntV a]) ->
+    let a2 = a div two64 in
+    let a3 = a2 div two64 in
+    let a4 = a3 div two64 in
+    [IntV (a mod two64); IntV (a2 mod two64); IntV (a3 mod two64); IntV (a4 mod two64)]
+ | _ -> []
+end
+
+val initial : map id value
+let initial = Map.empty
+
+(* Global state *)
+
+type account = <|
+  storage : integer -> value;
+  balance : integer;
+  code : maybe statement;
+  nonce : integer;
+|>
+
+let empty_account = <|
+  storage = (fun _ -> IntV 0);
+  balance = 0;
+  code = Nothing;
+  nonce = 0;
+|>
+
+type state = <|
+   address : integer;
+   memory : integer -> value;
+   memory_size : integer;
+   current : account;
+   calldata : list value;
+   logs : list value;
+   accounts : integer -> account;
+   compile : statement -> list value;
+   decompile :  list value -> statement;
+   new_address : integer -> integer -> integer;
+   gas : integer;
+   context : map id value;
+|>
+
+let simple_compile st = [FunctionV 0 [] [] st]
+let simple_decompile lst = match lst with
+ | [FunctionV _ _ _ st] -> st
+ | _ -> Block []
+end
+
+let init_global = <|
+   address = 0;
+   context = initial;
+   current = empty_account;
+   memory = (fun _ -> IntV 0);
+   memory_size = 0;
+   calldata = [];
+   accounts = (fun _ -> empty_account);
+   compile = simple_compile;
+   decompile = simple_decompile;
+   new_address = (fun a b -> a*two256 + b);
+   logs = [];
+   gas = 0;
+|>
+
+val eval_literal : literal_kind -> value
+let eval_literal l = match l with
+ | TrueLiteral -> TrueV
+ | FalseLiteral -> FalseV
+ | StringLiteral lst -> StringV lst
+ | NumberLiteral i -> IntV i
+end
+
+type exit =
+ | Error
+ | ReturnExit of state * integer * integer (* state when execution was halted, return offset, length*)
+ | RevertExit of state * integer * integer
+
+type ret 'a =
+ | Normal of 'a
+ | Exit of exit
+
+val get_byte_aux : nat -> integer -> integer 
+let rec get_byte_aux n i = match n with
+ | 0 -> i mod two8
+ | n+1 -> get_byte_aux n (i div two8)
+end
+
+val get_byte : integer -> integer -> integer
+let get_byte n i = get_byte_aux (natFromInteger n) i
+
+val memory_integer : (integer -> value) -> integer -> nat -> value
+let rec memory_integer mem addr n = match n with
+ | 0 -> IntV 0
+ | n+1 ->
+   match (mem addr, memory_integer mem (addr+1) n) with
+   | (IntV a, IntV rest) -> IntV (a + rest*two8)
+   | _ -> IntV 0
+   end
+end
+
+val memory_bytes : (integer -> value) -> integer -> nat -> list integer
+let rec memory_bytes mem addr n = match n with
+ | 0 -> []
+ | n+1 ->
+   match (mem addr, memory_bytes mem (addr+1) n) with
+   | (IntV a, rest) -> a::rest
+   | _ -> []
+   end
+end
+
+val memory_values : (integer -> value) -> integer -> nat -> list value
+let rec memory_values mem addr n = match n with
+ | 0 -> []
+ | n+1 -> mem addr :: memory_values mem (addr+1) n
+end
+
+val roundup : integer -> integer -> integer
+let roundup i align = ((i + align - 1) div align) * align
+
+let update_memory_size g addr = <| g with memory_size = max g.memory_size addr |>
+
+val update_balance : state -> integer -> integer -> integer -> state
+let update_balance g sender receiver money =
+  let acc x =
+    let a = g.accounts x in
+    if x = sender then <| a with balance = a.balance - money |> else 
+    if x = receiver then <| a with balance = a.balance + money |> else a in
+  <| g with accounts = acc |>
+
+let build_state g addr gas =
+  let acc x = if x = g.address then g.current else g.accounts x in
+  <| g with address = addr;
+    current = acc addr;
+    accounts = acc;
+    gas = gas;
+  |>
+
+let update_state g ng =
+  let acc x = if x = ng.address then ng.current else ng.accounts x in
+  <| g with current = acc g.address; accounts = acc |>
+
+let list_to_map lst x =
+  match List.index lst (natFromInteger x) with
+  | Nothing -> IntV 0
+  | Just x -> x
+  end
+
+let copy_memory g ng offset n_offset sz =
+  (fun x -> if x >= offset && x < offset + sz then ng (n_offset - offset + x) else g x)
+
+val eval_gbuiltin : state -> gbuiltin -> list value -> ret (state * list value)
+let eval_gbuiltin state b lst = match (b, lst) with
+ | (Return, [IntV a; IntV b]) -> Exit (ReturnExit state a b)
+ | (Revert, [IntV a; IntV b]) -> Exit (RevertExit state a b)
+ | (MLoad, [IntV addr]) ->
+   let state = update_memory_size state (addr+32) in
+   Normal (state, [memory_integer state.memory addr 32])
+ | (MStore8, [IntV addr; IntV v]) ->
+   let state = update_memory_size state (addr+1) in
+   let mem x = if x = addr then IntV (v mod two8) else state.memory x in
+   Normal (<| state with memory = mem |>, [])
+ | (MStore, [IntV addr; IntV v]) ->
+   let state = update_memory_size state (addr+32) in
+   let mem x = if x >= addr && x < addr+32 then IntV (get_byte (x-addr) v) else state.memory x in
+   Normal (<| state with memory = mem |>, [])
+ | (MStore8, [IntV addr; v]) ->
+   let state = update_memory_size state (addr+1) in
+   let mem x = if x = addr then v else state.memory x in
+   Normal (<| state with memory = mem |>, [])
+ | (MSize, []) -> Normal (state, [IntV (roundup state.memory_size 32)])
+ | (SLoad, [IntV addr]) -> Normal (state, [state.current.storage addr])
+ | (SStore, [IntV addr; v]) ->
+   let mem x = if x = addr then v else state.current.storage x in
+   Normal (<| state with current = (<| (state.current) with storage = mem |>) |>, [])
+ | (Balance, [IntV addr]) -> Normal (state, [IntV (state.accounts addr).balance])
+ | (GasLeft, []) -> Normal (state, [IntV state.gas])
+ | (Log 0, [IntV addr; IntV size]) ->
+   let state = update_memory_size state (addr+size) in
+   let data = memory_bytes state.memory addr (natFromInteger size) in
+   Normal (<| state with logs = ListV (List.map (fun x -> IntV x) data) :: state.logs |>, [])
+ | (CalldataSize, []) -> Normal (state, [IntV (integerFromNat (List.length state.calldata))])
+ | (CalldataLoad, [IntV offset]) ->
+   Normal (state, [memory_integer (list_to_map state.calldata) offset 32])
+ | (CalldataCopy, [IntV mem_offset; IntV data_offset; IntV size]) ->
+   let state = update_memory_size state (mem_offset + size - 1) in
+   Normal (<| state with memory = copy_memory state.memory (list_to_map state.calldata) mem_offset data_offset size |>, [])
+ | _ -> Exit Error
+end
+
+val eval_statement : state -> map id value -> statement -> nat -> ret (state * map id value * seq_mode)
+val eval_expression : state -> map id value -> expression -> nat -> ret (state * map id value * value)
+
+let rec eval_statement g (l:map id value) st n =
+ match n with
+ | 0 -> Exit Error
+ | n+1 ->
+ match st with
+ | Block lst ->
+    let step_statement a st = match a with
+    | Normal (g, l, RegularMode) -> eval_statement g l st n
+    | a -> a
+    end in
+    match List.foldl step_statement (Normal (g,l,RegularMode)) lst with
+     | Normal (g', l', _) ->
+       (* Should we check for error here too? should be impossible *)
+       Normal (g', Map.mapi (fun k _ -> Map.findWithDefault k (IntV 0) l') l, RegularMode)
+     | Exit x -> Exit x
+    end
+ | VariableDeclaration lst expr ->
+    eval_statement g l (Assignment (List.map fst lst) expr) n
+ | Expression expr ->
+    match eval_expression g l expr n with
+    | Normal (g, l, _) -> Normal (g, l, RegularMode)
+    | Exit x -> Exit x
+    end
+ | EmptyVariableDeclaration lst ->
+    let (lnew : map id value) = Map.fromList (List.map (fun x -> (fst x, IntV 0)) lst) in
+    Normal (g, (l union lnew), RegularMode)
+ | FunctionDefinition id params rets st ->
+    Normal (g, Map.insert id (FunctionV id params rets st) l, RegularMode)
+ | Assignment lst expr ->
+    match eval_expression g l expr n with
+    | Normal (g, l, v) ->
+      let v = match v with ListV x -> x | a -> [a] end in
+      if List.length v <> List.length lst then Exit Error else
+      let lnew = Map.fromList (List.zip lst v) in
+      Normal (g, (l union lnew), RegularMode)
+    | Exit x -> Exit x
+    end
+ | Break -> Normal (g, l, BreakMode)
+ | Continue -> Normal (g, l, ContinueMode)
+ | ForLoopInit init cond post body ->
+    eval_statement g l (Block (init ++ [ForLoop cond post body])) n
+ | ForLoop cond post body ->
+    match eval_expression g l cond n with
+    | Normal (g, l, v) ->
+       if v = FalseV then Normal (g, l, RegularMode) else
+       match eval_statement g l body n with
+       | Normal (g, l, mode) ->
+          if mode = BreakMode then Normal (g, l, RegularMode) else
+          match eval_statement g l post n with
+          | Normal (g, l, _) -> eval_statement g l (ForLoop cond post body) n
+          | Exit x -> Exit x
+          end
+       | Exit x -> Exit x
+       end
+    | Exit x -> Exit x
+    end
+ | Switch expr cases def ->
+    match eval_expression g l expr n with
+    | Normal (g, l, v) ->
+      let handle_case (lit, _, st) a = match a with
+       | Normal (g, l, Nothing) ->
+          let v2 = eval_literal lit in
+          if v2 <> v then Normal (g, l, Nothing) else
+          match eval_statement g l st n with
+          | Exit x -> Exit x
+          | Normal (g, l, mode) -> Normal (g, l, Just mode)
+          end
+       | a -> a
+      end in
+      match List.foldr handle_case (Normal (g, l, Nothing)) cases with
+      | Normal (g, l, Just mode) -> Normal (g, l, mode)
+      | Normal (g, l, Nothing) ->
+        match def with
+        | Nothing -> Normal (g, l, RegularMode)
+        | Just st -> eval_statement g l st n
+        end
+      | Exit x -> Exit x
+      end
+    | Exit x -> Exit x
+    end
+   
+end
+end
+
+and eval_expression g (l:map id value) expr n =
+ match n with
+ | 0 -> Exit Error
+ | n+1 ->
+ match expr with
+ | Literal lit _ -> Normal (g, l, eval_literal lit)
+ | Identifier x ->
+    match Map.lookup x l with
+    | Just v -> Normal (g, l, v)
+    | Nothing -> Exit Error
+    end
+ | FunctionCall id lst ->
+    let loop a expr = match a with
+    | Normal (g, l, lst) -> 
+       match eval_expression g l expr n with
+       | Normal (g,l,v) -> Normal (g,l,lst ++ [v])
+       | Exit x -> Exit x
+       end
+    | Exit x -> Exit x
+    end in
+    match List.foldl loop (Normal (g,l,[])) lst with
+    | Normal (g, l, lst) ->
+     match Map.lookup id l with
+     | Just (BuiltinV name) -> Normal (g, l, ListV (eval_builtin name lst))
+     | Just (GBuiltinV Create) ->
+       match lst with
+       | [IntV money; IntV offset; IntV size] ->
+          let g = update_memory_size g (offset+size) in
+          if (g.accounts g.address).balance < money then Normal (g, l, FalseV) else
+          let addr = g.new_address g.address g.current.nonce in
+          let g = <| g with current = <| (g.current) with nonce = g.current.nonce+1 |> |> in
+          let g = update_balance g g.address addr money in
+          let ng = build_state g addr g.gas in
+          let st = g.decompile (memory_values g.memory offset (natFromInteger size)) in
+          let ng = <| ng with current = <| empty_account with code = Just st |> |> in
+          match eval_statement ng ng.context st n with
+          | Exit Error -> Exit Error
+          | Exit (RevertExit _ _ _) ->
+              Normal (g, l, IntV 0)
+          | Normal _ ->
+              Normal (g, l, IntV 0)
+          | Exit (ReturnExit ng offset sz) ->
+              let st = g.decompile (memory_values ng.memory offset (natFromInteger sz)) in
+              let ng = <| ng with current = <| (ng.current) with code = Just st |> |> in
+              Normal (update_state g ng, l, IntV addr)
+          end
+       | _ -> Exit Error
+       end
+     | Just (GBuiltinV Call) ->
+       match lst with
+       | [IntV gas; IntV addr; IntV money; IntV in_offset; IntV in_size; IntV out_offset; IntV out_size] ->
+          let g = update_memory_size g (in_offset+in_size) in
+          let g = update_memory_size g (out_offset+out_size) in
+          if (g.accounts g.address).balance < money then Normal (g, l, FalseV) else
+          let g = update_balance g g.address addr money in
+          match (g.accounts addr).code with
+          | Nothing -> Normal (g, l, TrueV)
+          | Just st ->
+            let ng = build_state g addr gas in
+            let ng = <| ng with calldata = memory_values g.memory in_offset (natFromInteger in_size) |> in
+            match eval_statement ng ng.context st n with
+            | Exit Error -> Exit Error
+            | Normal (ng, l, _) -> Normal (update_state g ng, l, TrueV)
+            | Exit (RevertExit ng offset sz) ->
+              let g = <| g with memory = copy_memory g.memory ng.memory out_offset offset (min sz out_size) |> in
+              Normal (g, l, FalseV)
+            | Exit (ReturnExit ng offset sz) ->
+              let g = <| g with memory = copy_memory g.memory ng.memory out_offset offset (min sz out_size) |> in
+              Normal (update_state g ng, l, TrueV)
+            end
+          end
+       | _ -> Exit Error
+       end
+     | Just (GBuiltinV name) ->
+       match eval_gbuiltin g name lst with
+       | Normal (g, lst) -> Normal (g, l, ListV lst)
+       | Exit x -> Exit x
+       end
+     | Just (FunctionV id params rets st) ->
+       if List.length params <> List.length lst then Exit Error else
+       let param_init = List.zip (List.map fst params) lst in
+       let rets_init = List.map (fun x -> (fst x, IntV 0)) rets in
+       let fctx : map id value = Map.fromList ((id, FunctionV id params rets st) :: param_init ++ rets_init) in
+       match eval_statement g (l union fctx) st n with
+       | Normal (g, l', _) -> Normal (g, l, ListV (List.map (fun (k,_) -> Map.findWithDefault k (IntV 0) l') rets))
+       | Exit x -> Exit x
+       end
+     | _ -> Exit Error
+     end
+    | Exit x -> Exit x
+    end
+end
+end
+

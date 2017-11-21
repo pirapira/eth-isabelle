@@ -1,0 +1,19 @@
+
+function init() {
+   function code() {
+      {{{mstore(0:u256, 333444:u256)}}}
+      return(0:u256, 32:u256)
+      revert(0:u256, 32:u256)
+   }
+   {mstore8(0:u256, code)}
+   {return(0:u256, 1:u256)}
+}
+
+mstore8(0:u256, init)
+
+let a:u256 := create(0:u256, 0:u256, 1:u256)
+
+let b:u256 := call(0:u256, a, 0:u256, 0:u256, 0:u256, 32:u256, 32:u256)
+
+let c:u256 := mload(32:u256)
+

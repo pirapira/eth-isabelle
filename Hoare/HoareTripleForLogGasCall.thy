@@ -86,7 +86,7 @@ apply(rule Set.equalityI)
  apply(simp add: gasprice_advance_pc)
 apply auto
 apply(rename_tac elm; case_tac elm; simp)
-apply(case_tac "length (vctx_logs x1) \<le> fst x5"; auto)
+apply auto
 done
 
 lemma imp_to_disjD: "P \<longrightarrow> Q \<Longrightarrow> \<not>P \<or> Q"

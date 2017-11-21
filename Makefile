@@ -19,14 +19,14 @@ clean-ocaml:
 all-isabelle: Parse.thy ContractSem.thy RelationalSem.thy example/Optimization.thy example/AlwaysFail.thy example/FailOnReentrance.thy lem/Block.thy lem/Evm.thy lem/Keccak.thy lem/Rlp.thy lem/Word160.thy lem/Word256.thy lem/Word8.thy lem/Word4.thy Hoare/HoareTripleForInstructions.thy Hoare/HoareTripleForInstructions2.thy
 	isabelle build -j 2 -d . all
 
-light-isabelle: Parse.thy ContractSem.thy RelationalSem.thy example/Optimization.thy example/AlwaysFail.thy example/FailOnReentrance.thy lem/Block.thy lem/Evm.thy lem/Keccak.thy lem/Rlp.thy lem/Word160.thy lem/Word256.thy lem/Word8.thy lem/Word4.thy Hoare/HoareTripleForInstructions.thy Hoare/HoareTripleForInstructions2.thy
-	isabelle build -b -j 2 -v -d . light
-
 lem-thy: lem/Block.thy lem/Evm.thy lem/Keccak.thy lem/Rlp.thy lem/Word160.thy lem/Word256.thy lem/Word8.thy lem/Keccak.thy lem/Word4.thy lem/Word64.thy lem/Word32.thy
 
 simplewallet: document/simplewallet.pdf
 document/simplewallet.pdf: ContractSem.thy RelationalSem.thy simple_wallet_document/root.tex lem/Evm.thy lem/Word256.thy lem/Word160.thy lem/Word8.thy lem/Keccak.thy
 	sh wallet_generation.sh
+
+
+lem-julia: julia/julia.ml
 
 lem-hol: lem/blockScript.sml lem/evmScript.sml lem/keccakScript.sml lem/rlpScript.sml lem/word160Script.sml lem/word256Script.sml lem/word8Script.sml lem/keccakScript.sml lem/word4Script.sml lem/word64Script.sml
 
@@ -43,6 +43,9 @@ lem/block.lem: lem/evm.lem
 
 lem/Block.thy: lem/block.lem
 	lem -isa lem/block.lem
+
+julia/julia.ml: julia/julia.lem
+	lem -ocaml julia/julia.lem
 
 lem/blockScript.sml: lem/block.lem
 	lem -hol lem/block.lem

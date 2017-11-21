@@ -1847,9 +1847,8 @@ apply(after_arith_if)
           apply(sep_simp simp: program_counter_sep gas_pred_sep stack_sep stack_height_sep pure_sep, (erule conjE)?)+
           apply(clarsimp simp add: gas_value_simps)
        apply(rule conjI)
-    	apply(sep_select 3, sep_select 2)
           					 apply(erule_tac P="_ \<and>* _" in back_subst)
-         apply(auto simp add: uniq_stateelm_def)[1]
+       apply(auto simp add: uniq_stateelm_def)[1]
        apply(simp add: uniq_stateelm_def)
        apply(rule conjI, fastforce)+
        apply(fastforce)

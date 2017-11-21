@@ -16,7 +16,7 @@ dependencies:
     - mv tmp $HOME/.circlerc
     - cat $HOME/.circlerc
     - sudo apt-get -qq update
-    - sudo apt-get -qq install libgmp3-dev
+    - sudo apt-get -qq install libgmp3-dev texlive-latex-recommended
     - wget https://raw.github.com/ocaml/opam/master/shell/opam_installer.sh -O - | sudo sh -s /usr/local/bin
     - export OPAMJOBS=1
     - opam init -y --comp=4.04.1
@@ -36,9 +36,9 @@ dependencies:
     - make -C lemdir || echo "failure expected"
     - make -C lemdir coq-libs
     - sudo make -C lemdir install
-    - wget https://isabelle.in.tum.de/dist/Isabelle2016-1_app.tar.gz
-    - tar xf Isabelle2016-1_app.tar.gz
-    - echo 'export PATH=./Isabelle2016-1/bin:$PATH' >> $BASH_ENV
+    - wget https://isabelle.in.tum.de/dist/Isabelle2017_app.tar.gz
+    - tar xf Isabelle2017_app.tar.gz
+    - echo 'export PATH=./Isabelle2017/bin:$PATH' >> $BASH_ENV
 test:
   override:
     - make lem-ocaml
@@ -46,3 +46,4 @@ test:
     - make lem-hol
     - make lem-coq
     - (cd lem && make)
+    - make simplewallet

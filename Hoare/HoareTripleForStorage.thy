@@ -1,7 +1,6 @@
 theory "HoareTripleForStorage" 
 
 imports "HoareTripleForInstructions"
- "../attic/Apply_Trace_Cmd"
 begin
 
 lemma storage_inst_advance [simp] :

@@ -1,4 +1,4 @@
-theory Hoare
+theory HoareWithInvariant
 
 imports Main
  "../lem/Evm"
@@ -41,7 +41,8 @@ datatype state_element =
   | CallerElm "address"
   | OriginElm "address"
   | SentValueElm "w256"
-  | SentDataElm "byte list"
+  | SentDataLengthElm "nat" (* considering making it int *)
+  | SentDataElm "nat * byte" (* position, content.  Considering making position an int *)
   | ExtProgramSizeElm "address * int" (* address, size.  Considering making size an int *)
   | ExtProgramElm "address * nat * byte" (* address, position, byte.  Considering making position an int *)
   | ContractActionElm "contract_action" (* None indicates continued execution *)
@@ -89,6 +90,11 @@ definition stack_as_set :: "w256 list \<Rightarrow> state_element set"
     "stack_as_set s == { StackHeightElm (length s) } \<union>
                        { StackElm (idx, v) | idx v. idx < length s \<and> (rev s) ! idx = v }"
 
+definition data_sent_as_set :: "byte list \<Rightarrow> state_element set"
+  where
+    "data_sent_as_set lst == { SentDataLengthElm (length lst) } \<union>
+                             { SentDataElm (idx, v) | idx v. idx < length lst \<and> lst ! idx = v }"
+
 definition ext_program_as_set :: "(address \<Rightarrow> program) \<Rightarrow> state_element set"
   where
     "ext_program_as_set ext ==
@@ -123,6 +129,7 @@ definition variable_ctx_as_set :: "variable_ctx \<Rightarrow> state_element set"
     \<union> balance_as_set (vctx_balance v)
     \<union> log_as_set (vctx_logs v)
     \<union> block_info_as_set (vctx_block v)
+    \<union> data_sent_as_set (vctx_data_sent v)
     \<union> ext_program_as_set (vctx_ext_program v)
     \<union> account_existence_as_set (vctx_account_existence v)
     \<union> { MemoryUsageElm (vctx_memory_usage v)
@@ -132,7 +139,7 @@ definition variable_ctx_as_set :: "variable_ctx \<Rightarrow> state_element set"
       , GaspriceElm (vctx_gasprice v)
       , GasElm (vctx_gas v)
       , PcElm (vctx_pc v)
-      , SentDataElm (vctx_data_sent v)
+      , SentDataLengthElm (length (vctx_data_sent v))
       }"
 
 definition contexts_as_set :: "variable_ctx \<Rightarrow> constant_ctx \<Rightarrow> state_element set"
@@ -401,7 +408,7 @@ by (clarsimp simp add: sep_basic_simps stack_def)
 
 lemmas context_rw = contexts_as_set_def variable_ctx_as_set_def constant_ctx_as_set_def
       stack_as_set_def memory_as_set_def
-      balance_as_set_def storage_as_set_def log_as_set_def program_as_set_def
+      balance_as_set_def storage_as_set_def log_as_set_def program_as_set_def data_sent_as_set_def
       ext_program_as_set_def account_existence_as_set_def
 
 lemma stack_sound1 :
@@ -449,10 +456,12 @@ where
               r = InstructionToEnvironment (ContractFail reasons) a b
               \<and> set reasons \<subseteq> allowed))"
 
+
 definition triple ::
- "network \<Rightarrow> failure_reason set \<Rightarrow> (state_element set \<Rightarrow> bool) \<Rightarrow> (int * inst) set \<Rightarrow> (state_element set \<Rightarrow> bool) \<Rightarrow> bool"
+ "network \<Rightarrow> failure_reason set \<Rightarrow> (state_element set \<Rightarrow> state_element set \<Rightarrow> bool)
+          \<Rightarrow> (state_element set \<Rightarrow> bool) \<Rightarrow> (int * inst) set \<Rightarrow> (state_element set \<Rightarrow> bool) \<Rightarrow> bool"
 where
-  "triple net allowed_failures pre insts post ==
+  "triple net allowed_failures reentrancy pre insts post ==
     \<forall> co_ctx presult rest stopper.
        (pre ** code insts ** rest) (instruction_result_as_set co_ctx presult) \<longrightarrow>
        (\<exists> k.
@@ -576,21 +585,6 @@ lemma sep_memory_usage_sep:
    (MemoryUsageElm u \<in> s \<and> (a ** rest) (s - {MemoryUsageElm u}))"
 	by (sep_simp simp:  memory_usage_sep)
 
-definition sent_data :: "byte list \<Rightarrow> state_element set \<Rightarrow> bool" where
-"sent_data d s = (s = {SentDataElm d})"
-
-lemma sent_data_sep:
-  "(sent_data d ** rest) s =
-   (SentDataElm d \<in> s \<and> rest (s - {SentDataElm d}))"
-by (solve_sep_iff simp: sent_data_def)
-
-definition sent_value :: "256 word \<Rightarrow> state_element set \<Rightarrow> bool" where
-"sent_value v s = (s = {SentValueElm v})"
-
-lemma sent_value_sep:
-  "(sent_value v ** rest) s =
-   (SentValueElm v \<in> s \<and> rest (s - {SentValueElm v}))"
-by (solve_sep_iff simp: sent_value_def)
 
 lemma stackHeightElmEquiv: "StackHeightElm h \<in> contexts_as_set v c =
   (length (vctx_stack v) = h)
@@ -683,7 +677,7 @@ done
 
 (* Maybe it's better to organize program_sem as a function from program_result to program_result *)
 lemma triple_continue:
-"triple net allowed q c r \<Longrightarrow>
+"triple net allowed ind q c r \<Longrightarrow>
  no_assertion co_ctx \<Longrightarrow>
  (q ** code c ** rest) (instruction_result_as_set co_ctx (program_sem s co_ctx k net presult)) \<Longrightarrow>
  \<exists> l. ((r ** code c ** rest) (instruction_result_as_set co_ctx (program_sem s co_ctx (k + l) net presult))
@@ -717,7 +711,7 @@ lemma code_union_s:
 	by (simp add: sup_commute)
 
 lemma composition:
-  "c = cL \<union> cR \<Longrightarrow> triple net F P cL Q \<Longrightarrow> triple net F Q cR R \<Longrightarrow> triple net F P c R"
+  "c = cL \<union> cR \<Longrightarrow> triple net F ind P cL Q \<Longrightarrow> triple net F ind Q cR R \<Longrightarrow> triple net F ind P c R"
   apply (simp (no_asm) add: triple_def)
   apply clarsimp
   apply (subst (asm) triple_def[where pre=P])
@@ -769,7 +763,7 @@ lemma composition:
 (** Frame **)
 
 lemma frame:
- "triple net F P c Q \<Longrightarrow> triple net F (P ** R) c (Q ** R)"
+ "triple net F ind P c Q \<Longrightarrow> triple net F ind (P ** R) c (Q ** R)"
   apply (simp add: triple_def)
   apply clarsimp
   subgoal for co_ctx presult rest stopper
@@ -786,7 +780,7 @@ lemma imp_sepL:
   by (auto simp add: sep_basic_simps)
 
 lemma weaken_post:
-  "triple net F P c Q \<Longrightarrow> (\<forall>s. Q s \<longrightarrow> R s) \<Longrightarrow> triple net F P c R"
+  "triple net F ind P c Q \<Longrightarrow> (\<forall>s. Q s \<longrightarrow> R s) \<Longrightarrow> triple net F ind P c R"
   apply (simp add: triple_def)
   apply clarsimp
   subgoal for co_ctx presult rest stopper
@@ -802,9 +796,9 @@ lemma weaken_post:
  done
 
 lemma strengthen_pre:
-  assumes  "triple net F P c Q"
+  assumes  "triple net F ind P c Q"
   and      "(\<forall>s. R s \<longrightarrow> P s)"
-  shows" triple net F R c Q"
+  shows" triple net F ind R c Q"
   using assms(1)
   apply (simp add: triple_def)
   apply(clarify)
@@ -818,8 +812,8 @@ lemma strengthen_pre:
  done
 
 lemma frame_backward:
-  "triple net F P c Q \<Longrightarrow> P' = (P ** R) \<Longrightarrow> Q' = (Q ** R) \<Longrightarrow>
-   triple net F P' c Q'"
+  "triple net F ind P c Q \<Longrightarrow> P' = (P ** R) \<Longrightarrow> Q' = (Q ** R) \<Longrightarrow>
+   triple net F ind P' c Q'"
   by (simp add: frame)
 
 lemma remove_true:
@@ -835,12 +829,12 @@ lemma sep_true [simp] :
  by (simp add: pure_def sep_conj_def emp_def)
 
 lemma move_pure0 :
-  "triple net reasons (p ** \<langle> True \<rangle>) c q \<Longrightarrow>  triple net reasons p c q"
+  "triple net reasons ind (p ** \<langle> True \<rangle>) c q \<Longrightarrow>  triple net reasons ind p c q"
 apply(simp add: triple_def remove_true)
 done
 
 lemma false_triple :
-  "triple net reasons (p ** \<langle> False \<rangle>) c q"
+  "triple net reasons ind (p ** \<langle> False \<rangle>) c q"
 apply(simp add: triple_def sep_basic_simps pure_def)
 done
 
@@ -849,7 +843,7 @@ lemma get_pure:
 apply(auto simp add: sep_basic_simps pure_def emp_def)
 done
 
-lemma move_pure: "triple net reaons (p ** \<langle> b \<rangle>) c q = (b \<longrightarrow> triple net reaons p c q)"
+lemma move_pure: "triple net reaons ind (p ** \<langle> b \<rangle>) c q = (b \<longrightarrow> triple net reaons ind p c q)"
 apply(auto simp add: move_pure0 false_triple)
 apply(case_tac b; auto simp: false_triple)
   done
@@ -858,7 +852,7 @@ lemma pure_sepD:
   "(\<langle>P\<rangle> ** R) s \<Longrightarrow> R s"
   by (simp add: pure_def emp_def sep_basic_simps)
     
-lemma move_pureL: "triple net reaons (\<langle> b \<rangle> ** p) c q = (b \<longrightarrow> triple net reaons p c q)"
+lemma move_pureL: "triple net reaons ind (\<langle> b \<rangle> ** p) c q = (b \<longrightarrow> triple net reaons ind p c q)"
  by (metis move_pure sep_conj_commute)
 
 lemma tmp01:
@@ -904,8 +898,8 @@ lemma sep_impL :
 
 lemma pre_imp:
  assumes "\<forall> s. (b s \<longrightarrow> a s)"
- and " triple net reasons a c q"
-shows" triple net reasons b c q"
+ and " triple net reasons ind a c q"
+shows" triple net reasons ind b c q"
 using assms(2)
   apply(auto simp add: triple_def)
   apply(drule_tac x = co_ctx in spec)
@@ -935,7 +929,7 @@ lemma preE00:
   apply blast
  done
 
-lemma preE : "triple net reasons (\<lambda> s. \<exists> x. p x s) c q = (\<forall> x. triple net reasons (p x) c q)"
+lemma preE : "triple net reasons ind (\<lambda> s. \<exists> x. p x s) c q = (\<forall> x. triple net reasons ind (p x) c q)"
 apply(auto simp add: triple_def preE1)
  apply(erule_tac x = co_ctx in allE)
  apply(drule_tac x = presult in spec)
@@ -953,30 +947,31 @@ done
 
 (** More rules to come **)
 
-lemma triple_tauto: "triple net failures q e q"
+lemma triple_tauto: "triple net failures ind q e q"
 apply(simp add: triple_def; auto)
 apply(rule_tac x = 0 in exI)
 apply(simp add: program_sem.simps)
 done
 
 
-lemma code_extension0: "triple net failures p c_1 q \<Longrightarrow> triple net failures q c_2 q \<Longrightarrow> triple net failures p (c_1 \<union> c_2) q"
+lemma code_extension0: "triple net failures ind p c_1 q \<Longrightarrow> triple net failures ind q c_2 q \<Longrightarrow>
+                        triple net failures ind p (c_1 \<union> c_2) q"
 apply(rule_tac cL = c_1 and cR = c_2 in composition; auto)
 done
 
-lemma code_extension : "triple net failures p c q \<Longrightarrow> triple net failures p (c \<union> e) q"
+lemma code_extension : "triple net failures ind p c q \<Longrightarrow> triple net failures ind p (c \<union> e) q"
 	by (simp add: composition triple_tauto)
 
 lemma code_extension_backward :
-  "triple net failures p c' q \<Longrightarrow> c' \<subseteq> c \<Longrightarrow> triple net failures p c q" 
+  "triple net failures ind p c' q \<Longrightarrow> c' \<subseteq> c \<Longrightarrow> triple net failures ind p c q" 
 proof -
- assume "triple net failures p c' q"
- then have "triple net failures p (c' \<union> c) q"
+ assume "triple net failures ind p c' q"
+ then have "triple net failures ind p (c' \<union> c) q"
   using code_extension by blast
  moreover assume "c' \<subseteq> c"
  then have "c = c' \<union> c"
   by (auto)
- ultimately show "triple net failures p c q"
+ ultimately show "triple net failures ind p c q"
   by auto
 qed
 
