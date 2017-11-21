@@ -405,7 +405,7 @@ inductive triple_inst_storage :: "network \<Rightarrow> pred \<Rightarrow> pos_i
        \<and>*  account_existence c existence \<and>* continuing \<and>* rest)"
 | inst_sstore :
     "triple_inst_storage net
-    (\<langle> h \<le> 1024 \<and> Csstore old new \<le> g\<rangle>
+    (\<langle> h \<le> 1022 \<and> Csstore old new \<le> g\<rangle>
            \<and>* stack_height (h + 2)
            \<and>* stack (h + 1) idx
            \<and>* stack h new

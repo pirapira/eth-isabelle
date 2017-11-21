@@ -885,7 +885,9 @@ shows
   					  apply(rule inst_mload_sound[simplified])
   				 apply(rule inst_mstore_sound[simplified])
         apply(erule triple_inst_storage.cases; clarsimp)
+         apply(inst_sound_set_eq, set_solve)
           apply(inst_sound_set_eq, set_solve)
+          apply(rule_tac x=aa in exI, simp)
   					apply(erule triple_inst_misc.cases; clarsimp)
   					 apply(rule inst_stop_sem)
   				  apply(rule inst_return_sem)
@@ -1185,6 +1187,7 @@ where
 (\<forall>h v. StackElm (h, v) \<in> s \<longrightarrow> (\<forall>v'. StackElm (h, v') \<in> s \<longrightarrow> v' = v)) \<and>
 (\<forall>v. StackHeightElm v \<in> s \<longrightarrow> (\<forall>h u. h \<ge> v \<longrightarrow> StackElm (h,u) \<notin> s)) \<and>
 (\<forall>h v. MemoryElm (h, v) \<in> s \<longrightarrow> (\<forall>v'. MemoryElm (h, v') \<in> s \<longrightarrow> v' = v)) \<and>
+(\<forall>h v. StorageElm (h, v) \<in> s \<longrightarrow> (\<forall>v'. StorageElm (h, v') \<in> s \<longrightarrow> v' = v)) \<and>
 (\<forall>v. MemoryUsageElm v \<in> s \<longrightarrow> (\<forall>x. MemoryUsageElm x \<in> s \<longrightarrow> x = v))"
 
 lemma uniq_gaselm:
@@ -1257,11 +1260,21 @@ lemma uniq_memelm_plus[rule_format]:
 (\<forall>h v. MemoryElm (h, v) \<in> x \<longrightarrow> (\<forall>v'. MemoryElm (h, v') \<in> x \<longrightarrow> v' = v))"
 by (drule sym, drule uniq_memelm, simp add: plus_set_def)
 
+lemma uniq_storageelm:
+"x = instruction_result_as_set co_ctx presult \<Longrightarrow>
+(\<forall>h v. StorageElm (h, v) \<in> x \<longrightarrow> (\<forall>v'. StorageElm (h, v') \<in> x \<longrightarrow> v' = v))"
+  by(simp add: as_set_simps split:instruction_result.splits)
+
+lemma uniq_storageelm_plus[rule_format]:
+"instruction_result_as_set co_ctx presult = x + y \<Longrightarrow>
+(\<forall>h v. StorageElm (h, v) \<in> x \<longrightarrow> (\<forall>v'. StorageElm (h, v') \<in> x \<longrightarrow> v' = v))"
+by (drule sym, drule uniq_storageelm, simp add: plus_set_def)
+
 lemmas uniq_stateelm_simps=
 uniq_stateelm_def
 uniq_gaselm_plus uniq_pcelm_plus uniq_stackheightelm_plus
 stack_max_elm_plus uniq_stackelm_plus uniq_memuelm_plus
-uniq_memelm_plus
+uniq_memelm_plus uniq_storageelm_plus
 
 lemma inst_res_as_set_uniq_stateelm:
 "(pre \<and>* code (blocks_insts blocks) \<and>* resta)
@@ -1410,11 +1423,6 @@ method after_byte =
        apply (uniq_state_elm_quasi)
        			 apply(case_tac "ha=Suc h"; simp)*)
 
-value "-1::w256"
-lemma
-"MemoryElm (h, v) \<in> memory_range_elms memaddr xs \<Longrightarrow> memaddr + of_nat (length xs) \<le> -1 \<Longrightarrow>  
-memaddr \<le> h"
-  oops
 lemma memaddr_no_overflow:
  "unat (memaddr::w256) + v \<le> unat (- 1::w256) \<Longrightarrow> 0 < v  \<Longrightarrow> memaddr \<le> memaddr + 1"    
   by unat_arith
@@ -1793,11 +1801,20 @@ apply(after_arith_if)
           apply(rule allI, rule conjI; clarsimp)
          apply(rule allI, rule conjI; clarsimp)
     (**Storage**)
+      (*SLOAD*)
         apply(erule triple_inst_storage.cases; clarsimp)
-        apply(find_q_pc_after_inst)
-        apply(rule_tac x="(s - {GasElm g} - {PcElm n} - {StackElm (h,idx)}) \<union> {GasElm (g - Gsload neta)} \<union>
+         apply(find_q_pc_after_inst)
+         apply(rule_tac x="(s - {GasElm g} - {PcElm n} - {StackElm (h,idx)}) \<union> {GasElm (g - Gsload neta)} \<union>
           {PcElm (n + 1)} \<union> {StackElm (h,w)}" in exI)
-        apply(easy_case_pc_after_inst)
+         apply(easy_case_pc_after_inst)
+        (*SSTORE*)
+        apply(find_q_pc_after_inst)
+        apply(rule_tac x="(s - {GasElm g} - {PcElm n} - {StackElm (h,new)} - {StackElm (Suc h, idx)} -
+        {StackHeightElm (Suc (Suc h))} - {StorageElm (idx, old)}) \<union> {StorageElm (idx, new)} \<union>
+        {GasElm (g - Csstore old new)} \<union> {StackHeightElm h} \<union> {PcElm (n + 1)}" in exI)
+            apply(after_byte)
+             apply(case_tac "ha=h"; clarsimp)
+            apply(rule conjI; clarsimp)
     (**Pc**)
   	    apply(erule triple_inst_pc.cases; clarsimp)
       apply(find_q_pc_after_inst)
