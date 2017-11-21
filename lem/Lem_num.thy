@@ -6,9 +6,9 @@ theory "Lem_num"
 
 imports 
  	 Main
-	 "Lem_bool" 
-	 "Lem_basic_classes" 
-	 "~~/src/HOL/Word/Word" 
+         "HOL-Word.Word"
+	 Lem_bool 
+	 Lem_basic_classes
 
 begin 
 

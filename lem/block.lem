@@ -35,19 +35,19 @@ type transaction = <|
   tr_data : list word8;
 |>
 
-type account = <|
-  account_address : address;
-  account_storage : storage;
-  account_code : program;
-  account_balance : w256;
-  account_nonce : w256;
-  account_exists : bool;
-  account_hascode : bool;
+type block_account = <|
+  block_account_address : address;
+  block_account_storage : storage;
+  block_account_code : program;
+  block_account_balance : w256;
+  block_account_nonce : w256;
+  block_account_exists : bool;
+  block_account_hascode : bool;
 |>
 
-val build_cctx : account -> constant_ctx
+val build_cctx : block_account -> constant_ctx
 let build_cctx a =
-  <| cctx_program = a.account_code; cctx_this = a.account_address; cctx_hash_filter = (fun _ -> true) |>
+  <| cctx_program = a.block_account_code; cctx_this = a.block_account_address; cctx_hash_filter = (fun _ -> true) |>
 
 (* Next we turn to the case where the environment returns back to the account after the account has *)
 (* called an account.  In this case, the account should contain one ongoing execution that is waiting *)
@@ -56,20 +56,20 @@ let build_cctx a =
 (* Second I define the empty account, which replaces an account that has *)
 (* destroyed itself. *)
 
-val empty_account : address -> account
+val empty_account : address -> block_account
 let empty_account addr = <|
-   account_address = addr;
-   account_storage = empty_storage;
-   account_code = empty_program;
-   account_balance = 0;
-   account_exists = false;
-   account_nonce = 0;
-   account_hascode = true;
+   block_account_address = addr;
+   block_account_storage = empty_storage;
+   block_account_code = empty_program;
+   block_account_balance = 0;
+   block_account_exists = false;
+   block_account_nonce = 0;
+   block_account_hascode = true;
 |>
 
 (* And after our contract makes a move, the account state is updated as follows. *)
 
-type world_state = address -> account
+type world_state = address -> block_account
 
 let empty_state _ = empty_account
 
@@ -100,56 +100,56 @@ let start_env a state args caller origin gasprice block =
 <| vctx_stack = []; (* The stack is initialized for every invocation *)
     vctx_memory = empty_memory; (* The memory is also initialized for every invocation *)
      vctx_memory_usage = 0; (* The memory usage is initialized. *)
-     vctx_storage = a.account_storage; (* The storage is taken from the account state *)
+     vctx_storage = a.block_account_storage; (* The storage is taken from the account state *)
      vctx_pc = 0; (* The program counter is initialized to zero *)
-     vctx_balance = (fun (addr:address) -> (state addr).account_balance);
+     vctx_balance = (fun (addr:address) -> (state addr).block_account_balance);
      vctx_caller = caller; (* the caller is specified by the environment *)
      vctx_value_sent = args.callarg_value; (* the sent value is specified by the environment *)
      vctx_data_sent = args.callarg_data; (* the sent data is specified by the environment *)
-     vctx_storage_at_call = a.account_storage; (* the snapshot of the storage is remembered in case of failure *)
-     vctx_balance_at_call = (fun (addr:address) -> (state addr).account_balance); (* the snapshot of the balance is remembered in case of failure *)
+     vctx_storage_at_call = a.block_account_storage; (* the snapshot of the storage is remembered in case of failure *)
+     vctx_balance_at_call = (fun (addr:address) -> (state addr).block_account_balance); (* the snapshot of the balance is remembered in case of failure *)
      vctx_origin = origin; (* the origin of the transaction is arbitrarily chosen *)
      vctx_gasprice = gasprice; (* the gasprice of the transaction is arbitrarily chosen *)
-     vctx_ext_program = (fun (addr:address) -> (state addr).account_code); (* the codes of the external programs are arbitrary. *)
+     vctx_ext_program = (fun (addr:address) -> (state addr).block_account_code); (* the codes of the external programs are arbitrary. *)
      vctx_block = block; (* the block information is chosen arbitrarily. *)
      vctx_gas = uint args.callarg_gas; (* the amount of gas is chosen arbitrarily. *)
-     vctx_account_existence = (fun (addr:address) -> (state addr).account_exists); (* existence is chosen arbitrarily *)
+     vctx_account_existence = (fun (addr:address) -> (state addr).block_account_exists); (* existence is chosen arbitrarily *)
      vctx_touched_storage_index = [];
      vctx_logs = [];
      vctx_refund = 0
    |>
 
-let create_env a state value data gas caller origin gasprice block =
+let create_env (a : block_account) state value data gas caller origin gasprice block =
 <| vctx_stack = []; (* The stack is initialized for every invocation *)
     vctx_memory = empty_memory; (* The memory is also initialized for every invocation *)
      vctx_memory_usage = 0; (* The memory usage is initialized. *)
-     vctx_storage = a.account_storage; (* The storage is taken from the account state *)
+     vctx_storage = a.block_account_storage; (* The storage is taken from the account state *)
      vctx_pc = 0; (* The program counter is initialized to zero *)
-     vctx_balance = (fun (addr:address) -> (state addr).account_balance);
+     vctx_balance = (fun (addr:address) -> (state addr).block_account_balance);
      vctx_caller = caller; (* the caller is specified by the environment *)
      vctx_value_sent = value; (* the sent value is specified by the environment *)
      vctx_data_sent = data; (* the sent data is specified by the environment *)
-     vctx_storage_at_call = a.account_storage; (* the snapshot of the storage is remembered in case of failure *)
-     vctx_balance_at_call = (fun (addr:address) -> (state addr).account_balance); (* the snapshot of the balance is remembered in case of failure *)
+     vctx_storage_at_call = a.block_account_storage; (* the snapshot of the storage is remembered in case of failure *)
+     vctx_balance_at_call = (fun (addr:address) -> (state addr).block_account_balance); (* the snapshot of the balance is remembered in case of failure *)
      vctx_origin = origin; (* the origin of the transaction is arbitrarily chosen *)
      vctx_gasprice = gasprice; (* the gasprice of the transaction is arbitrarily chosen *) 
-     vctx_ext_program = (fun (addr:address) -> (state addr).account_code); (* the codes of the external programs are arbitrary. *)
+     vctx_ext_program = (fun (addr:address) -> (state addr).block_account_code); (* the codes of the external programs are arbitrary. *)
      vctx_block = block; (* the block information is chosen arbitrarily. *)
      vctx_gas = gas; (* the amount of gas is chosen arbitrarily. *)
-     vctx_account_existence = (fun (addr:address) -> (state addr).account_exists); (* existence is chosen arbitrarily *)
+     vctx_account_existence = (fun (addr:address) -> (state addr).block_account_exists); (* existence is chosen arbitrarily *)
      vctx_touched_storage_index = [];
      vctx_logs = [];
      vctx_refund = 0
    |>
 
-let vctx_update_from_world v a state called_v = <|
-     vctx_storage = a.account_storage; (* The storage is taken from the account state *)
-     vctx_balance = (fun (addr:address) -> (state addr).account_balance);
-     vctx_ext_program = (fun (addr:address) -> (state addr).account_code); (* the codes of the external programs are arbitrary. *)
+let vctx_update_from_world v (a : block_account) state called_v = <|
+     vctx_storage = a.block_account_storage; (* The storage is taken from the account state *)
+     vctx_balance = (fun (addr:address) -> (state addr).block_account_balance);
+     vctx_ext_program = (fun (addr:address) -> (state addr).block_account_code); (* the codes of the external programs are arbitrary. *)
      vctx_gas = v.vctx_gas + called_v.vctx_gas;
      vctx_refund = v.vctx_refund + called_v.vctx_refund;
      vctx_logs = v.vctx_logs ++ called_v.vctx_logs;
-     vctx_account_existence = (fun (addr:address) -> (state addr).account_exists); (* existence is chosen arbitrarily *)
+     vctx_account_existence = (fun (addr:address) -> (state addr).block_account_exists); (* existence is chosen arbitrarily *)
      
      vctx_stack = v.vctx_stack;
      vctx_memory = v.vctx_memory; (* The memory is also initialized for every invocation *)
@@ -350,24 +350,24 @@ let make_program bytes = <|
        program_length = integerFromNat (List.length bytes);
        program_content = codemap bytes |>
 
-val set_account_code : account -> list word8 -> account
-let set_account_code acc bytes = <| acc with account_code = make_program bytes |>
+val set_account_code : block_account -> list word8 -> block_account
+let set_account_code acc bytes = <| acc with block_account_code = make_program bytes |>
 
-val update_world : world_state -> address -> account -> world_state
+val update_world : world_state -> address -> block_account -> world_state
 let update_world state a_addr n_acc a = if a = a_addr then n_acc else state a
 
 let sub_balance state addr value =
   let acc = state addr in
-  let acc = <| acc with account_balance = acc.account_balance - value |> in
+  let acc = <| acc with block_account_balance = acc.block_account_balance - value |> in
   update_world state addr acc
 
 let add_balance state addr value =
   let acc = state addr in
-  let acc = <| acc with account_balance = acc.account_balance + value |> in
+  let acc = <| acc with block_account_balance = acc.block_account_balance + value |> in
   update_world state addr acc
 
 let update_return state addr v =
-  update_world state addr (<| (state addr) with account_storage = v.vctx_storage |>)
+  update_world state addr (<| (state addr) with block_account_storage = v.vctx_storage |>)
 
 let transfer_balance state addr recv v =
   let state = sub_balance state addr v in
@@ -377,16 +377,16 @@ let update_call state addr args = transfer_balance state addr args.callarg_recip
 
 let update_nonce state addr =
   let acc = state addr in
-  update_world state addr (<| acc with account_nonce = acc.account_nonce + 1 |>)
+  update_world state addr (<| acc with block_account_nonce = acc.block_account_nonce + 1 |>)
 
 let create_account n_state new_addr bytes =
-  let new_acc = <| (n_state new_addr) with account_exists = true |> in
+  let new_acc = <| (n_state new_addr) with block_account_exists = true |> in
   let new_acc = set_account_code new_acc bytes in
   update_world n_state new_addr new_acc
 
 let calc_address addr nonce = w256_to_address (keccak (RLP (Node [RLP_address addr; RLP_w256 nonce])))
 
-let next net = function
+let step net = function
  | Finished st -> Finished st
  | Unimplemented -> Unimplemented
  | Continue global ->
@@ -401,14 +401,14 @@ let next net = function
            Unimplemented (* precompiled contracts *)
          else
          let n_state = update_return state c.cctx_this v in
-         if word256ULT (n_state c.cctx_this).account_balance args.callarg_value || length global.g_stack > 1023 then
+         if word256ULT (n_state c.cctx_this).block_account_balance args.callarg_value || length global.g_stack > 1023 then
             let nv = <| v with vctx_stack = 0 :: v.vctx_stack; vctx_gas = v.vctx_gas + uint args.callarg_gas |> in
             Continue (<| global with g_current = n_state; g_vmstate = InstructionContinue nv |>) else
          let n_state = update_call n_state c.cctx_this args in
          let acc = n_state args.callarg_recipient in
          let cctx = <|
             cctx_this = args.callarg_recipient;
-            cctx_program = (n_state args.callarg_code).account_code;
+            cctx_program = (n_state args.callarg_code).block_account_code;
             cctx_hash_filter = c.cctx_hash_filter |> in
          let nv = start_env acc n_state args c.cctx_this v.vctx_origin v.vctx_gasprice v.vctx_block in
          Continue (<| global with g_stack=((state,v,c,get_hint stuff)::global.g_stack);
@@ -421,22 +421,22 @@ let next net = function
          let acc = n_state c.cctx_this in
          let cctx = <|
             cctx_this = c.cctx_this;
-            cctx_program = (n_state args.callarg_code).account_code;
+            cctx_program = (n_state args.callarg_code).block_account_code;
             cctx_hash_filter = c.cctx_hash_filter |> in
          let nv = start_env acc n_state args v.vctx_caller v.vctx_origin v.vctx_gasprice v.vctx_block in
          Continue (<| global with g_stack=((state,v,c,get_hint stuff)::global.g_stack);
                                  g_current=n_state; g_cctx=cctx; g_vmstate=InstructionContinue nv |>)
       | ContractCreate args ->
-         let addr = calc_address c.cctx_this (state c.cctx_this).account_nonce in
-         if word256ULT (state c.cctx_this).account_balance args.createarg_value || length global.g_stack > 1023 || (state addr).account_exists then
+         let addr = calc_address c.cctx_this (state c.cctx_this).block_account_nonce in
+         if word256ULT (state c.cctx_this).block_account_balance args.createarg_value || length global.g_stack > 1023 || (state addr).block_account_exists then
             let nv = <| v with vctx_stack = 0 :: v.vctx_stack |> in
             Continue (<| global with g_current = state; g_vmstate = InstructionContinue nv |>) else
          let state = update_nonce state c.cctx_this in
          let n_state = update_return state c.cctx_this v in
          let old_acc = n_state addr in
-         let old_balance = old_acc.account_balance in
+         let old_balance = old_acc.block_account_balance in
          let acc = empty_account addr in
-         let acc = <| acc with account_balance = old_balance; account_exists = true |> in
+         let acc = <| acc with block_account_balance = old_balance; block_account_exists = true |> in
          let cctx = <| cctx_this = addr; cctx_program = make_program args.createarg_code; cctx_hash_filter = c.cctx_hash_filter |> in
          let n_state = update_world n_state addr acc in
          let n_state = transfer_balance n_state c.cctx_this addr args.createarg_value in
@@ -459,8 +459,8 @@ let next net = function
            Continue (<| global with g_stack=rest; g_current=oldstate; g_cctx=c; g_vmstate=InstructionContinue v |>)
          end
       | ContractSuicide dst ->
-         let n_dst = <| (state dst) with account_balance = (state dst).account_balance + (state c.cctx_this).account_balance |> in
-         let acc = <| (state c.cctx_this) with account_balance = 0 |> in
+         let n_dst = <| (state dst) with block_account_balance = (state dst).block_account_balance + (state c.cctx_this).block_account_balance |> in
+         let acc = <| (state c.cctx_this) with block_account_balance = 0 |> in
          let state = update_world (update_world state dst n_dst) c.cctx_this acc in
          let killed = c.cctx_this::global.g_killed in
          match global.g_stack with
@@ -485,7 +485,7 @@ let next net = function
          | (_,nv,c,ReturnTo mem_start mem_size) :: rest ->
            let acc = n_state c.cctx_this in
            let nv = <| nv with vctx_stack = 1::nv.vctx_stack; vctx_memory = put_return_values nv.vctx_memory bytes mem_start mem_size |> in
-           let nv = vctx_update_from_world nv acc n_state v in
+           let nv = vctx_update_from_world nv (acc : block_account) n_state v in
            Continue (<| global with g_stack=rest; g_current=n_state; g_cctx=c; g_vmstate=InstructionContinue nv |>)
          | (old_state,nv,c,CreateAddress new_addr) :: rest ->
            if bytes = [] && length rest = 0 && global.g_create then
@@ -515,12 +515,12 @@ let rec txdatacost lst = match lst with
 end
 declare termination_argument txdatacost = automatic
 
-let calc_igas tr state block =
+let calc_igas tr block =
   let igas = 21000 + txdatacost tr.tr_data in
   if word256ToInteger block.block_number < homestead_block then igas else
   match tr.tr_to with
   | Nothing -> igas + 32000
-  | Just addr -> igas (* + (if (state addr).account_exists then 0 else 32000) *)
+  | Just _ -> igas
   end
 
 let nothing_happens state tr = <|
@@ -533,11 +533,11 @@ let nothing_happens state tr = <|
 let start_transaction tr state block =
   let s_acc = state tr.tr_from in
   let gas_value = word256ToNatural tr.tr_gas_price * word256ToNatural tr.tr_gas_limit in
-  let igas = calc_igas tr state block in
+  let igas = calc_igas tr block in
   (* does not work because gas can overflow ... *)
   let nothing = Finished (nothing_happens state tr) in
-  if tr.tr_nonce <> s_acc.account_nonce then nothing else
-  if word256ToNatural s_acc.account_balance < word256ToNatural tr.tr_value + gas_value then nothing else
+  if tr.tr_nonce <> s_acc.block_account_nonce then nothing else
+  if word256ToNatural s_acc.block_account_balance < word256ToNatural tr.tr_value + gas_value then nothing else
   let gas_value = tr.tr_gas_price * tr.tr_gas_limit in
   if word256ToNatural block.block_gaslimit < word256ToNatural tr.tr_gas_limit then nothing else
   if word256ToNatural tr.tr_gas_limit < naturalFromInteger igas then nothing else
@@ -546,7 +546,7 @@ let start_transaction tr state block =
     if tr.tr_data = [] && tr.tr_gas_limit = 0 && tr.tr_gas_price = 0 then nothing else
     if tr.tr_data = [] && tr.tr_gas_price = 0 then Finished <| f_state=update_nonce state tr.tr_from; f_killed=[]; f_gas=0; f_refund=0; f_logs = [] |> else
     (* This should be creation... perhaps make a bogus state *)
-    let s_acc = <| s_acc with account_balance = s_acc.account_balance - gas_value |> in
+    let s_acc = <| s_acc with block_account_balance = s_acc.block_account_balance - gas_value |> in
     let n_state = update_world state tr.tr_from s_acc in
     if tr.tr_data = [] then
       Finished <| f_state=update_nonce n_state tr.tr_from; f_killed=[]; f_gas=integerFromNatural (word256ToNatural tr.tr_gas_limit) - igas; f_refund=0; f_logs=[] |> else
@@ -557,13 +557,13 @@ let start_transaction tr state block =
     let act = ContractCreate args in
     Continue (<| g_create = true; g_orig = n_state; g_stack = []; g_current = n_state; g_cctx = c; g_vmstate = InstructionToEnvironment act v Nothing; g_killed = [] |>)
   | Just addr ->
-    let s_acc = <| s_acc with account_nonce = s_acc.account_nonce + 1;  account_balance = s_acc.account_balance - gas_value |> in
+    let s_acc = <| s_acc with block_account_nonce = s_acc.block_account_nonce + 1;  block_account_balance = s_acc.block_account_balance - gas_value |> in
     let state2 = update_world state tr.tr_from s_acc in
-    if word256ToNatural s_acc.account_balance < word256ToNatural tr.tr_value then nothing else
-    let s_acc = <| s_acc with account_balance = s_acc.account_balance - tr.tr_value |> in
+    if word256ToNatural s_acc.block_account_balance < word256ToNatural tr.tr_value then nothing else
+    let s_acc = <| s_acc with block_account_balance = s_acc.block_account_balance - tr.tr_value |> in
     let n_state = update_world state tr.tr_from s_acc in
     let acc = n_state addr in
-    let acc = <| acc with account_balance = acc.account_balance + tr.tr_value |> in
+    let acc = <| acc with block_account_balance = acc.block_account_balance + tr.tr_value |> in
     let n_state = update_world n_state addr acc in
     let v = create_env acc n_state tr.tr_value tr.tr_data (uint tr.tr_gas_limit - igas) tr.tr_from tr.tr_from tr.tr_gas_price block in
     let c = build_cctx acc in

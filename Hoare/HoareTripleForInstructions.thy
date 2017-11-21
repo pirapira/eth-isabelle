@@ -1316,22 +1316,21 @@ lemma sep_action_sep :
 
 lemma iota0_non_empty_aux:
   "\<forall> b x len lst a.
-    len \<le> l \<longrightarrow>
+    len \<le> l \<longrightarrow>                     
     iota0 b len (lst @ [a]) = a # iota0 b len lst"
-apply(induction l)
- apply(simp add: iota0.simps)
-apply(auto simp add: iota0.simps)
-apply(case_tac "len = Suc l")
- apply clarsimp
- apply(simp add: iota0.simps)
- apply(drule_tac x = "b + 1" in spec)
- apply(drule_tac x = l in spec)
- apply simp
- apply(drule_tac x = "b # lst" in spec)
- apply(drule_tac x = "a" in spec)
- apply simp
-apply simp
-done
+  apply(induction l)
+    apply(simp add: iota0.simps)
+  apply(simp add: iota0.simps)
+  apply(rule allI)
+  apply(rule allI)
+  apply(case_tac "len = Suc l"; auto)
+  apply(drule_tac x = "b + 1" in spec)
+  apply(drule_tac x = l in spec)
+  apply simp
+  apply(drule_tac x = "b # lst" in spec)
+  apply(drule_tac x = "a" in spec)
+  by(simp add: iota0.simps)  
+
 
 lemma iota0_non_empty_aux':
   "\<forall> b x len lst a l.
@@ -1395,13 +1394,9 @@ apply(simp add:cut_memory_aux.simps)
 
 apply(simp add:cut_memory_aux.simps)
 apply(cases "unat (n + 1)")
-apply(simp)
+  apply(simp)
 apply(subst (asm) my_unat_suc)
-apply(simp add:cut_memory_aux.simps)
-apply(auto)
-apply(subst cut_memory_aux)
-apply(auto)
-done
+by(auto simp add:cut_memory_aux.simps)
 
 lemma cut_memory_tail:
   "cut_memory b (n + 1) m = a # lst \<Longrightarrow> cut_memory (b + 1) n m = lst"

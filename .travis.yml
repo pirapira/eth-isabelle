@@ -1,12 +1,11 @@
 dist: trusty
 cache:
   directories:
-  - $HOME/.isabelle
   - $HOME/.opam
 sudo: required
 before_install:
 - sudo apt-get -qq update
-- sudo apt-get -qq install libgmp3-dev
+- sudo apt-get -qq install libgmp3-dev texlive-latex-recommended
 # - git clone https://github.com/polyml/polyml.git
 # - cd polyml
 # - git checkout v5.6
@@ -34,9 +33,9 @@ before_install:
 - make || echo "failure expected"
 - cd ..
 - export PATH=./lemdir:$PATH
-- wget https://isabelle.in.tum.de/dist/Isabelle2016-1_app.tar.gz
-- tar xf Isabelle2016-1_app.tar.gz
-- export PATH=./Isabelle2016-1/bin:$PATH
+- wget https://isabelle.in.tum.de/dist/Isabelle2017_app.tar.gz
+- tar xf Isabelle2017_app.tar.gz
+- export PATH=./Isabelle2017/bin:$PATH
 # - git clone git://github.com/HOL-Theorem-Prover/HOL.git
 # - cd HOL
 # - echo 'val polymllibdir = "/usr/local/lib"' > tools-poly/poly-includes.ML
@@ -59,5 +58,6 @@ script:
 - sh compile.sh
 - ./runVmTest.native 89
 - cd -
-- make light-isabelle
+- isabelle version
+- make simplewallet
 

@@ -38,13 +38,13 @@ let convert_storage lst =
   (fun x -> try List.assoc x conv with _ -> zero)
 
 let convert_state addr st = {
-  account_storage0 = convert_storage st.VmTestParser.storage;
-  account_address0 = addr;
-  account_exists = true;
-  account_balance0 = Conv.word256_of_big_int st.VmTestParser.balance;
-  account_nonce = Conv.word256_of_big_int st.VmTestParser.nonce;
-  account_code0 = fst (Hexparser.parse_code st.VmTestParser.code);
-  account_hascode = false;
+  block_account_storage = convert_storage st.VmTestParser.storage;
+  block_account_address = addr;
+  block_account_exists = true;
+  block_account_balance = Conv.word256_of_big_int st.VmTestParser.balance;
+  block_account_nonce = Conv.word256_of_big_int st.VmTestParser.nonce;
+  block_account_code = fst (Hexparser.parse_code st.VmTestParser.code);
+  block_account_hascode = false;
 }
 
 let make_state_list lst =
@@ -94,10 +94,10 @@ let run_tr tr state block net =
    | Unimplemented -> raise Skip
    | a ->
      if debug_mode then debug_state a;
-     do_run (next net a) in
+     do_run (step net a) in
   let fi = do_run res in
   if debug_mode then begin
-    prerr_endline ("Bal " ^ w256dec (fi.f_state tr.tr_from).account_balance0);
+    prerr_endline ("Bal " ^ w256dec (fi.f_state tr.tr_from).block_account_balance);
     prerr_endline ("Killed " ^ string_of_int (List.length fi.f_killed));
   end;
   let final_state = end_transaction fi tr block in
@@ -124,17 +124,17 @@ let run_test (label, elm) : testResult =
     let diff_found = ref false in
     List.iter (fun (a,cmp, storage_list) ->
       let acc = state a in
-      if acc.account_balance0 <> cmp.account_balance0 then begin
-        Printf.printf "address %s has balance %s, but it should be %s!\n%!" (Conv.string_of_address a) (Conv.decimal_of_word256 acc.account_balance0)
-         (Conv.decimal_of_word256 cmp.account_balance0);
+      if acc.block_account_balance <> cmp.block_account_balance then begin
+        Printf.printf "address %s has balance %s, but it should be %s!\n%!" (Conv.string_of_address a) (Conv.decimal_of_word256 acc.block_account_balance)
+         (Conv.decimal_of_word256 cmp.block_account_balance);
         diff_found := true
       end;
-      if acc.account_nonce <> cmp.account_nonce then begin
-        Printf.printf "address %s has nonce %s, but it should be %s!\n%!" (Conv.string_of_address a) (Conv.decimal_of_word256 acc.account_nonce)
-         (Conv.decimal_of_word256 cmp.account_nonce);
+      if acc.block_account_nonce <> cmp.block_account_nonce then begin
+        Printf.printf "address %s has nonce %s, but it should be %s!\n%!" (Conv.string_of_address a) (Conv.decimal_of_word256 acc.block_account_nonce)
+         (Conv.decimal_of_word256 cmp.block_account_nonce);
          diff_found := true
       end;
-      List.iter (compare_storage diff_found a acc.account_storage0) storage_list) post_st;
+      List.iter (compare_storage diff_found a acc.block_account_storage) storage_list) post_st;
     (if !diff_found then TestFailure else TestSuccess)
   with
     Skip -> TestSkipped

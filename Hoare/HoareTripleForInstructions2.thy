@@ -120,10 +120,9 @@ lemma iszero_gas_triple :
                        gas_pred (g - Gverylow) **
                        continuing
                       )"
-  apply (clarsimp simp add: triple_def)
+  apply (auto simp add: triple_def)
   apply(rule_tac x = 1 in exI)
-  apply clarsimp
-  apply(clarsimp simp add: program_sem.simps)
+  apply(simp add: program_sem.simps)
   apply(case_tac presult;  (solves \<open>(hoare_sep sep: evm_sep simp:   stateelm_means_simps dest: stateelm_dest)\<close>)?)
   apply clarsimp
   apply(hoare_sep sep: evm_sep 
@@ -132,8 +131,8 @@ lemma iszero_gas_triple :
                    dest: advance_pc_inc_but_stack
                   split:if_split_asm)
   apply (drule advance_pc_inc_but_stack)
-  apply (simp add: image_def)
-  apply (simp  add: triv_if_eq advance_pc_stack_oblivious)
+    apply (simp add: image_def)
+  apply (simp add: triv_if_eq advance_pc_stack_oblivious)
   apply(erule_tac P=rest in back_subst)
   apply simp
   apply(rename_tac presult t)           
