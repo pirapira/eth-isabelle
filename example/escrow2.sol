@@ -7,7 +7,7 @@ contract Escrow {
     uint256 amount;
 
     function Escrow(address _buyer, address _seller, uint256 _amount) public {
-            require (amount > 0);
+            require (amount > 0 && _buyer != 0 && _seller != 0);
             buyer = _buyer;
             seller = _seller;
             arbiter = msg.sender;
@@ -20,12 +20,12 @@ contract Escrow {
     }
 
     function refund() public {
-        require (msg.sender == arbiter);
+        require (amount == 0 && msg.sender == arbiter);
         selfdestruct(buyer);
     }
 
     function pay() public {
-        require (msg.sender == arbiter);
+        require (amount == 0 && msg.sender == arbiter);
         selfdestruct(seller);
     }
 }

@@ -165,10 +165,11 @@ lemma
 (0, the (block_lookup (ex2 cond) 0))
 (if word_rcat [cond] = (0::256 word) then stack 0 (word_rcat [1::byte]) ** restn0 else stack 0 (word_rcat [2::byte]) ** rest0)
 "
-apply(unfold ex2_val)
-apply (simp)
-apply(rule exI)+
-apply(triple_vcg)
+ apply(unfold ex2_val)
+ apply (simp split: if_splits, rule conjI; clarsimp)
+  apply(rule exI, triple_vcg)
+ apply(rule exI, triple_vcg)
+ apply (clarsimp simp: word_rcat_simps bintrunc_def)
 done
 
 (* Same example as the previous one but with the unknown value as a precondition *)
