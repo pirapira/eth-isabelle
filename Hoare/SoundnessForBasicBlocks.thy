@@ -81,9 +81,9 @@ apply(auto simp add: as_set_simps)
 
 lemma inst_stop_sem:
 "triple_inst_sem net
-  (\<langle> h \<le> 1024 \<and> 0 \<le> g \<and> m \<ge> 0\<rangle> \<and>* continuing \<and>* memory_usage m  \<and>* program_counter n \<and>* stack_height h \<and>* gas_pred g \<and>* rest)
+  (\<langle> h \<le> 1024 \<and> 0 \<le> g\<rangle> \<and>* continuing \<and>* program_counter n \<and>* stack_height h \<and>* gas_pred g \<and>* rest)
   (n, Misc STOP)
-  (stack_height h \<and>* not_continuing \<and>* memory_usage m \<and>* program_counter n \<and>* action (ContractReturn []) \<and>* gas_pred g \<and>* rest )"
+  (stack_height h \<and>* not_continuing \<and>* program_counter n \<and>* action (ContractReturn []) \<and>* gas_pred g \<and>* rest )"
 apply(simp add:swap_inst_code_def triple_inst_sem_def program_sem.simps as_set_simps)
  apply(clarify)
  apply(simp split: instruction_result.splits)
@@ -197,19 +197,19 @@ notes
 shows
 "triple_inst_sem net
         (\<langle> h \<le> 1023 \<and>
-           Suc (unat n) \<le> h \<and> Gverylow \<le> g \<and> 0 \<le> m \<rangle> \<and>*
+           Suc (unat n) \<le> h \<and> Gverylow \<le> g\<rangle> \<and>*
          stack_height (Suc h) \<and>*
          stack h w \<and>*
          stack (h - unat n - 1) v \<and>*
          program_counter k \<and>*
-         gas_pred g \<and>* memory_usage m \<and>* continuing \<and>* rest)
+         gas_pred g \<and>* continuing \<and>* rest)
         (k, Swap n)
         (program_counter (k + 1) \<and>*
          gas_pred (g - Gverylow) \<and>*
          stack_height (Suc h) \<and>*
          stack h v \<and>*
          stack (h - unat n - 1) w \<and>*
-         memory_usage m \<and>* continuing \<and>* rest)"
+         continuing \<and>* rest)"
 apply(simp add: triple_inst_sem_def program_sem.simps as_set_simps)
 apply(clarify)
 apply(sep_simp simp: evm_sep; simp)
@@ -784,19 +784,13 @@ shows
 
   	lemma inst_dup_sound:
 "triple_inst_sem net
-        (\<langle> h \<le> 1023 \<and> unat n < h \<and> Gverylow \<le> g \<and> 0 < m\<rangle> \<and>*
-         stack_height h \<and>*
-         stack (h - unat n - 1) w \<and>*
-         memory_usage m \<and>*
-         program_counter k \<and>*
-         gas_pred g \<and>* continuing \<and>* rest)
-        (k, Dup n)
-        (program_counter (k + 1) \<and>*
-         gas_pred (g - Gverylow) \<and>*
-         stack_height (Suc h) \<and>*
-         stack (h - unat n - 1) w \<and>*
-         stack h w \<and>*
-         memory_usage m \<and>* continuing \<and>* rest)"
+  (\<langle> h \<le> 1023 \<and> unat n < h \<and> Gverylow \<le> g\<rangle> \<and>*
+   stack_height h \<and>* stack (h - unat n - 1) w \<and>*
+   program_counter k \<and>* gas_pred g \<and>* continuing \<and>* rest)
+  (k, Dup n)
+  (program_counter (k + 1) \<and>* gas_pred (g - Gverylow) \<and>*
+   stack_height (Suc h) \<and>* stack (h - unat n - 1) w \<and>*
+   stack h w \<and>* continuing \<and>* rest)"
 apply(simp add: triple_inst_sem_def program_sem.simps as_set_simps)
 apply(clarify)
 apply(sep_simp simp: evm_sep; simp)
@@ -821,12 +815,12 @@ apply(set_solve)
 
 lemma inst_suicide_sem:
  "triple_inst_sem net
-  (\<langle> h \<le> 1024 \<and> Csuicide (\<not> existence) net \<le> g \<and> 0 \<le> m \<and> at_least_eip150 net\<rangle> \<and>*
-   continuing \<and>* account_existence addr existence \<and>* memory_usage m \<and>*
+  (\<langle> h \<le> 1024 \<and> Csuicide (\<not> existence) net \<le> g \<and> at_least_eip150 net\<rangle> \<and>*
+   continuing \<and>* account_existence addr existence \<and>*
    program_counter n \<and>* stack_height (Suc h) \<and>* gas_pred g \<and>* stack h (ucast addr) \<and>* rest)
   (n, Misc SUICIDE)
   (stack_height (Suc h) \<and>* stack h (ucast addr) \<and>*
-   not_continuing \<and>*  account_existence addr existence \<and>* memory_usage m \<and>*
+   not_continuing \<and>*  account_existence addr existence \<and>*
    program_counter n \<and>* action (ContractSuicide addr) \<and>* gas_pred (g - Csuicide (\<not> existence) net) \<and>* rest)"
   apply(simp add: triple_inst_sem_def program_sem.simps as_set_simps)
   apply(clarify)
@@ -887,7 +881,6 @@ shows
         apply(erule triple_inst_storage.cases; clarsimp)
          apply(inst_sound_set_eq, set_solve)
           apply(inst_sound_set_eq, set_solve)
-          apply(rule_tac x=aa in exI, simp)
   					apply(erule triple_inst_misc.cases; clarsimp)
   					 apply(rule inst_stop_sem)
   				  apply(rule inst_return_sem)
