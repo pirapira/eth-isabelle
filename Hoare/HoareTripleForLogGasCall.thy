@@ -415,45 +415,31 @@ apply(simp add: sep_memory_range_sep sep_memory_range memory_range_sep failed_fo
     apply(simp add: as_set_simps)
    apply(simp add: as_set_simps)
   apply(rule conjI)
-  defer
-apply(erule_tac P=rest in back_subst)
-apply(rule Set.equalityI)
- apply(clarify)
- apply simp
- apply(rename_tac elm; case_tac elm; simp)
-      apply(case_tac "length tf \<le> fst x2"; clarsimp)
-  apply(simp add: as_set_simps)
-    apply(simp add: update_balance_def)
-    apply(rule conjI; clarsimp)
-   apply(clarsimp simp add: subset_eq)
-  apply(rename_tac elm; case_tac elm; clarsimp)
-   apply(simp add: as_set_simps)
-
-  apply(drule mp)
-     apply(simp add: update_balance_def)
-     defer
-     apply(simp)
-    apply(erule notE)
-    apply(subst memory_range_elms_cut_memory[where lst=input])
-      apply(simp)
-  apply(auto simp add: as_set_simps)[1]
-  apply(rule refl)
    apply(subst memory_range_elms_cut_memory[where lst=input])
      apply(assumption)
 apply(auto simp add: as_set_simps)[1]
    apply(simp add: as_set_simps)
-
- apply(subgoal_tac "a = cctx_this co_ctx")
+  apply(thin_tac "_ = existence")
+  apply(auto simp: move_neq_first 
+                        elim!: set_mp dest!: memory_range_elms_conjD memory_range_elms_disjD)[1]
+apply(erule_tac P=rest in back_subst)
+apply(rule Set.equalityI)
+ apply(clarsimp)
+ apply(rename_tac elm; case_tac elm; simp)
+      apply(case_tac "length tf \<le> fst x2"; clarsimp)
+     apply(simp add: as_set_simps)
+    apply(simp add: update_balance_def)
+    apply(rule conjI; clarsimp)
+   apply(simp add: subset_eq, rule allI)
+  apply(rename_tac elm; case_tac elm; clarsimp)
+   apply(simp add: as_set_simps)
+  apply(subgoal_tac "a = cctx_this co_ctx")
+  apply(clarify)
   apply(simp)
- apply(case_tac "a = cctx_this co_ctx")
+  apply(case_tac "a = cctx_this co_ctx")
+  apply(clarify)
     apply(simp)
-  sorry
- (*apply(simp)
-apply(clarsimp)
-    apply(rename_tac elm; case_tac elm; clarsimp)
-    apply (case_tac "vctx_balance x1 a = update_balance (cctx_this co_ctx) (\<lambda>orig. orig - v) (vctx_balance x1) a"; clarsimp)
-  apply (auto simp: move_neq_first elim!: set_mp dest!: memory_range_elms_conjD memory_range_elms_disjD)
-done*)
+  done
 
 end
 
