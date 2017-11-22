@@ -116,7 +116,6 @@ apply(clarsimp simp add: triple_def)
   apply(case_tac elm; simp add: hoare_simps split:if_splits)
   apply(rename_tac pair)
   apply(case_tac pair; fastforce)
-apply(fastforce)+
 done
 
 end
