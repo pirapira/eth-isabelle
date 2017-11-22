@@ -1,0 +1,12 @@
+chapter AFP
+
+session Word_Lib (AFP) = "HOL-Word" +
+  options [timeout = 300]
+  theories [document = false]
+    "HOL-Word.WordBitwise"
+    "HOL-Library.Prefix_Order"
+  theories
+    Word_Lemmas_32
+    Word_Lemmas_64
+  document_files
+    "root.tex"

@@ -34,6 +34,33 @@ lemma move_neq_first:
    "{x. P x \<and> x \<noteq> v \<and> Q x} = {x. x \<noteq> v \<and> P x \<and> Q x}"
   by blast+
 
+lemmas not_in_memory_range=
+account_ex_is_not_memory_range
+blocknumber_not_in_mr
+blockhash_not_in_mr
+caller_not_memory_range
+coinbase_not_in_mr
+difficulty_not_in_mr
+ext_pr_not_in_mr
+ext_program_not_in_mr
+gaslimit_not_in_mr
+gasprice_not_in_mr
+log_not_memory_range
+lognum_not_memory
+memory_usage_not_memory_range
+origin_not_memory_range
+sent_data_not_in_mr
+sent_value_not_memory_range
+storage_not_memory_range
+timestamp_not_in_mr
+balance_not_memory_range
+continuging_not_memory_range
+gas_not_memory_range
+stack_not_memory_range
+stack_height_not_memory_range
+code_not_memory_range
+continuing_not_memory_range
+find_theorems  "_ \<notin> memory_range_elms _ _"
 
 lemma log0_gas_triple :
   "triple net {OutOfGas}
@@ -73,7 +100,8 @@ vctx_stack_default_def set_diff_expand set_diff_eq )
   apply (auto simp: move_neq_first create_log_entry_def vctx_returned_bytes_def
               elim: set_mp dest!: memory_range_elms_conjD memory_range_elms_disjD)
   apply (drule (1) set_mp)
-  apply (rename_tac elm, case_tac elm; simp)
+    apply (rename_tac elm, case_tac elm; simp)
+  apply(simp add: as_set_simps)
   apply (erule_tac P=rest in  back_subst)
 apply(rule Set.equalityI)
  apply clarify
@@ -82,11 +110,12 @@ apply(rule Set.equalityI)
    apply(rename_tac st)
    apply(case_tac st; clarsimp)
    apply(erule disjE; clarsimp)
-  apply auto[1]
+    apply auto[1]
+  apply(simp add: as_set_simps)
  apply(simp add: gasprice_advance_pc)
 apply auto
 apply(rename_tac elm; case_tac elm; simp)
-apply auto
+apply (auto simp: as_set_simps)
 done
 
 lemma imp_to_disjD: "P \<longrightarrow> Q \<Longrightarrow> \<not>P \<or> Q"
@@ -129,17 +158,20 @@ apply clarify
 apply (auto simp: move_neq_first create_log_entry_def vctx_returned_bytes_def
             elim: set_mp dest!: memory_range_elms_conjD memory_range_elms_disjD)
 apply (drule (1) set_mp)
-apply (rename_tac elm, case_tac elm; simp)
+    apply (rename_tac elm, case_tac elm; simp)
+apply(simp add: as_set_simps)
 apply (erule_tac P=rest in  back_subst)
 apply(rule Set.equalityI)
  apply clarify
  apply simp
- apply(rename_tac elm; case_tac elm; clarsimp)
- apply (drule imp_to_disjD, erule disjE; clarsimp)
+   apply(rename_tac elm; case_tac elm; clarsimp)
+    apply (drule imp_to_disjD, erule disjE; clarsimp)
+apply(simp add: as_set_simps)
  apply (simp add: gasprice_advance_pc)
 apply clarify
 apply simp
-apply(rename_tac elm; case_tac elm; clarsimp)
+  apply(rename_tac elm; case_tac elm; clarsimp)
+apply(simp add: as_set_simps)
 done
 
 
@@ -197,8 +229,22 @@ apply simp
   apply (case_tac "ad = Suc (Suc (Suc (length tc)))" ; clarsimp)
 apply (auto simp: move_neq_first create_log_entry_def vctx_returned_bytes_def set_diff_eq
             elim: set_mp dest!: memory_range_elms_conjD memory_range_elms_disjD)[1]
-apply(rename_tac elm; case_tac elm; simp)
-apply(case_tac "length (vctx_logs x1) \<le> fst x5"; auto)
+    apply(rename_tac elm; case_tac elm; simp)
+     apply(simp add: as_set_simps)
+    apply(simp add: as_set_simps)
+   apply(simp add: as_set_simps)
+  apply(simp add:rev_nth)
+  apply(clarsimp)
+  apply(case_tac x)
+  apply(auto simp add: as_set_simps create_log_entry_def memory_range_elms_cut_memory)
+  apply(simp add: vctx_returned_bytes_def)
+  apply(subst memory_range_elms_cut_memory[where lst=data])
+    apply(assumption)
+  apply(subst (asm) subset_eq)
+   apply(simp add: Ball_def)
+   apply(subst subset_eq; clarsimp)
+   apply(erule_tac x=x in allE)
+  apply(auto simp add: as_set_simps)
 done
 
 
@@ -236,7 +282,8 @@ apply (rule_tac x = 1 in exI)
   apply clarify
   apply (auto simp: move_neq_first create_log_entry_def vctx_returned_bytes_def
               elim!: set_mp dest!: memory_range_elms_conjD memory_range_elms_disjD)
-apply (erule_tac P=rest in back_subst)
+apply(simp add: as_set_simps)
+   apply (erule_tac P=rest in back_subst)
 apply(rule Set.equalityI)
 apply clarify
 apply simp
@@ -245,7 +292,8 @@ apply(case_tac "fst x2 < length td"; clarsimp)
 apply clarify
 apply (simp add: set_diff_expand set_diff_eq)
 apply clarsimp
-apply(rename_tac elm; case_tac elm; clarsimp)
+   apply(rename_tac elm; case_tac elm; clarsimp)
+apply(auto simp add: as_set_simps)
 done
 
 lemma log4_gas_triple :
@@ -282,7 +330,6 @@ memory_range_sep insert_minus_set)
               elim!: set_mp dest!: memory_range_elms_conjD memory_range_elms_disjD)
  apply (auto simp add: as_set_simps)[1]
    defer
-    apply (auto split: if_split_asm simp: log_inst_numbers.simps)[1]
 apply (erule_tac P=rest in back_subst)
 apply(rule Set.equalityI)
  apply clarify
@@ -293,8 +340,31 @@ apply clarify
    apply (simp add: set_diff_expand set_diff_eq)
    apply (case_tac "a = Suc (Suc (Suc (Suc (Suc (length te)))))"; clarsimp)
    apply (auto simp: set_diff_eq)
-  apply(rename_tac elm; case_tac elm; simp)
-  apply(case_tac "length (vctx_logs x1) \<le> fst x5"; auto)
+       apply(rename_tac elm; case_tac elm; simp)
+        apply(simp add: as_set_simps)
+       apply(simp add: as_set_simps)
+      apply(simp add: as_set_simps)
+  apply(rename_tac elm; case_tac elm; simp add: as_set_simps)
+  apply(subst (asm) subset_eq)
+      apply(simp add: Ball_def)
+   apply(erule_tac x=elm in allE)
+      apply(auto simp add: as_set_simps)[1]
+  apply(erule_tac x=idx in allE; simp)
+  apply(subst (asm) subset_eq)
+      apply(simp add: Ball_def)
+     apply(erule_tac x=elm in allE)
+     apply(auto simp add: as_set_simps)[1]
+    apply(simp add: as_set_simps)
+   apply(simp add: Let_def failed_for_reasons_def)
+   apply(erule_tac x="[OutOfGas]" in allE)
+   apply(clarsimp)
+   apply(erule_tac x=x1 in allE)
+   apply(erule_tac x="None" in allE)
+   apply(simp split: if_splits)
+    apply(erule notE)
+    apply(simp add: Let_def)
+  apply(simp add: log_inst_numbers.simps)
+  apply(simp add: as_set_simps)
   done
     
 lemma call_gas_triple:
@@ -342,24 +412,34 @@ apply(simp add: sep_memory_range_sep sep_memory_range memory_range_sep failed_fo
     apply(simp add: vctx_stack_default_def)
         apply (rule conjI, (auto simp: move_neq_first 
                         elim!: set_mp dest!: memory_range_elms_conjD memory_range_elms_disjD)[1])+
-
+    apply(simp add: as_set_simps)
+   apply(simp add: as_set_simps)
+  apply(rule conjI)
+   apply(subst memory_range_elms_cut_memory[where lst=input])
+     apply(assumption)
+apply(auto simp add: as_set_simps)[1]
+   apply(simp add: as_set_simps)
+  apply(thin_tac "_ = existence")
+  apply(auto simp: move_neq_first 
+                        elim!: set_mp dest!: memory_range_elms_conjD memory_range_elms_disjD)[1]
 apply(erule_tac P=rest in back_subst)
 apply(rule Set.equalityI)
- apply(clarify)
- apply simp
- apply(rename_tac elm; case_tac elm; simp)
-  apply(case_tac "length tf \<le> fst x2"; clarsimp)
  apply(clarsimp)
- apply(subgoal_tac "a = cctx_this co_ctx")
+ apply(rename_tac elm; case_tac elm; simp)
+      apply(case_tac "length tf \<le> fst x2"; clarsimp)
+     apply(simp add: as_set_simps)
+    apply(simp add: update_balance_def)
+    apply(rule conjI; clarsimp)
+   apply(simp add: subset_eq, rule allI)
+  apply(rename_tac elm; case_tac elm; clarsimp)
+   apply(simp add: as_set_simps)
+  apply(subgoal_tac "a = cctx_this co_ctx")
+  apply(clarify)
   apply(simp)
- apply(case_tac "a = cctx_this co_ctx")
-  apply(simp)
- apply(simp)
-apply(clarsimp)
-    apply(rename_tac elm; case_tac elm; clarsimp)
-    apply (case_tac "vctx_balance x1 a = update_balance (cctx_this co_ctx) (\<lambda>orig. orig - v) (vctx_balance x1) a"; clarsimp)
-   apply (auto simp: move_neq_first elim!: set_mp dest!: memory_range_elms_conjD memory_range_elms_disjD)
-done
+  apply(case_tac "a = cctx_this co_ctx")
+  apply(clarify)
+    apply(simp)
+  done
 
 end
 
@@ -386,9 +466,10 @@ apply(rule  Set.equalityI; clarify)
  apply(simp)
  apply(rename_tac elm)
  apply(case_tac elm; clarsimp)
-apply(simp)
+apply(simp add: as_set_simps)
 apply(rename_tac elm)
-apply(case_tac elm; auto simp add: Word.wi_hom_syms(2))
+  apply(case_tac elm; auto simp add: Word.wi_hom_syms(2))
+  apply(simp add: as_set_simps)
 done
 end
 

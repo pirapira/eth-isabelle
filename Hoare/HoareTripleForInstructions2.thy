@@ -226,7 +226,8 @@ apply(rule  Set.equalityI)
 
  apply(case_tac "a = h - Suc (Suc (unat n))"; simp)
   apply blast
-apply auto[1]
+    apply auto[1]
+  apply(simp add: as_set_simps)
 apply(simp add: Set.subset_iff)
 apply(rule allI)
 apply(rename_tac elm)
@@ -240,7 +241,8 @@ apply(case_tac elm; simp add: instruction_result_as_set_def)
    apply blast
   apply(case_tac "a < h - Suc (Suc (unat n))"; simp)
   apply(simp add: tmp000 tmp001 tmp002 List.rev_nth)
-  apply linarith
+   apply linarith
+  apply(simp add: as_set_simps)
 done 
    
 (* lemma imp_neq_sym:
@@ -375,10 +377,11 @@ apply(erule_tac P=rest in back_subst)
 apply(rule Set.equalityI)
  apply(clarify)
  apply(simp)
- apply(rename_tac elm; case_tac elm; simp)
-apply clarsimp+
+   apply(rename_tac elm; case_tac elm; simp)
+    apply clarsimp+
+  apply(simp add: as_set_simps)
 apply(rename_tac elm; case_tac elm; simp)
-apply(auto)
+apply(auto simp add: as_set_simps)
 done
 
 
@@ -397,9 +400,10 @@ apply(rule Set.equalityI)
  apply(clarify)
  apply(simp)
  apply(rename_tac elm; case_tac elm; simp)
-apply(clarsimp)+
+    apply(clarsimp)+
+  apply(simp add: as_set_simps)
 apply(rename_tac elm; case_tac elm; simp)
-apply(auto)
+apply(auto simp add: as_set_simps)
 done
 
 
@@ -438,9 +442,10 @@ apply(erule_tac P=rest in back_subst)
 apply(rule Set.equalityI)
  apply(clarsimp)+
 apply(rename_tac elm; case_tac elm; simp)
-apply(clarsimp)+
+    apply(clarsimp)+
+  apply(simp add: as_set_simps)
 apply(rename_tac elm; case_tac elm; simp)
-apply(auto)
+apply(auto simp add: as_set_simps)
 done
 
 
@@ -732,8 +737,8 @@ apply(rule Set.equalityI)
  apply(case_tac x2; simp)
  apply(case_tac "aa = length list"; simp)
 apply(clarsimp)+
-apply(rename_tac elm; case_tac elm; simp)
-apply(case_tac " fst x2 < Suc (length list)"; auto)
+   apply(rename_tac elm; case_tac elm; simp)
+    apply(auto simp add: as_set_simps)
 done
 
 (*
@@ -796,10 +801,10 @@ apply(auto simp add: triple_def set_diff_eq)
    apply (case_tac x2; clarsimp)
   apply (metis (no_types, hide_lams) HoareTripleForInstructions.pair_snd_eq One_nat_def diff_diff_left diff_is_0_eq' length_Cons less_SucE less_Suc_eq_le list.size(4) nth_Cons_0 nth_non_equal_first_eq)
  apply(clarsimp)
- apply(rename_tac elm; case_tac elm; simp)
- apply(case_tac "fst x2 < length ta"; simp)
- apply(case_tac "rev ta ! fst x2 = snd x2 "; simp)
- apply(auto)[2]
+    apply(rename_tac elm; case_tac elm; simp)
+     apply(simp add: as_set_simps)
+    apply(simp add: as_set_simps)
+  apply(auto simp add: as_set_simps)[1]
 apply(rule_tac x = 1 in exI)
   apply(case_tac presult; simp)
   apply (clarsimp simp add: failed_for_reasons_def
@@ -814,8 +819,7 @@ apply(rule_tac x = 1 in exI)
 
 apply(clarsimp)
 apply(rename_tac elm; case_tac elm; simp)
-apply(case_tac "fst x2 < Suc (Suc (length ta))"; simp)
-apply auto
+apply (auto simp add: as_set_simps)
 done
 (*
 lemma tmp1 [simp]:
@@ -911,8 +915,7 @@ apply(rule Set.equalityI)
  apply(case_tac "fst x2 = Suc (length ta)"; simp)
 apply(clarsimp)+
 apply(rename_tac elm; case_tac elm; simp)
- apply(case_tac "fst x2 < length ta"; simp)
-  apply auto
+  apply(auto simp add: as_set_simps)
 done
 
 
@@ -1097,8 +1100,7 @@ apply(rule_tac x = 1 in exI)
   apply (clarsimp simp add: instruction_result_as_set_def set_diff_eq)
  apply(erule_tac P=rest in back_subst)
   apply(clarsimp)
-  apply auto
-  apply(rename_tac elm; case_tac elm; auto simp add: stack_as_set_def)+
+  apply(rename_tac elm; case_tac elm; auto simp add: as_set_simps)
 done
 
 end
