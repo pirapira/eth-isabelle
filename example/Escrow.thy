@@ -365,7 +365,7 @@ shows
 "\<exists>r. triple net
   (program_counter 0 ** stack_height 0 ** (sent_data (word_rsplit hash::byte list))
    ** sent_value v ** caller sender ** blk_num bn **
-   memory_usage 0 ** continuing ** gas_pred 100000
+   memory_usage 0 ** continuing ** gas_pred 40000
    ** storage 0 (ucast buyer)
    ** storage 1 (ucast seller)
    ** storage 2 (ucast arbiter)
