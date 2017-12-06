@@ -21,6 +21,7 @@ before_install:
 - opam init -y --comp=4.04.1
 - eval `opam config env`
 - opam update
+- opam upgrade
 - opam install -y ocamlbuild ocamlfind batteries yojson bignum easy-format bisect_ppx zarith depext sha menhir
 - git clone https://github.com/mrsmkl/ECC-OCaml.git ECC-OCaml
 - cd ECC-OCaml/src
