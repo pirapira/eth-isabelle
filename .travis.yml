@@ -43,6 +43,7 @@ before_install:
 # - bin/build -j 2
 # - cd -
 script:
+- make simplewallet
 - make lem-ocaml
 - make lem-thy
 - make lem-hol
@@ -59,5 +60,4 @@ script:
 - ./runVmTest.native 89
 - cd -
 - isabelle version
-- make simplewallet
 
