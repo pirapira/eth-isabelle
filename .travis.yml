@@ -5,7 +5,7 @@ cache:
 sudo: required
 before_install:
 - sudo apt-get -qq update
-- sudo apt-get -qq install libgmp3-dev texlive-latex-recommended
+- sudo apt-get -qq install libgmp3-dev texlive-latex-recommended aspcud
 # - git clone https://github.com/polyml/polyml.git
 # - cd polyml
 # - git checkout v5.6
@@ -21,9 +21,11 @@ before_install:
 - opam init -y --comp=4.04.1
 - eval `opam config env`
 - opam update
+- opam upgrade -y
 - opam install -y ocamlbuild ocamlfind batteries yojson bignum easy-format bisect_ppx zarith depext sha menhir
 - git clone https://github.com/mrsmkl/ECC-OCaml.git ECC-OCaml
 - cd ECC-OCaml/src
+- make uninstall
 - make depend
 - make
 - make install || echo "fails the second time and on"
@@ -43,6 +45,7 @@ before_install:
 # - bin/build -j 2
 # - cd -
 script:
+- make simplewallet
 - make lem-ocaml
 - make lem-thy
 - make lem-hol
@@ -59,5 +62,4 @@ script:
 - ./runVmTest.native 89
 - cd -
 - isabelle version
-- make simplewallet
 

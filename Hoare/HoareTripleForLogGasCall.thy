@@ -357,15 +357,14 @@ apply clarify
     apply(simp add: as_set_simps)
    apply(simp add: Let_def failed_for_reasons_def)
    apply(erule_tac x="[OutOfGas]" in allE)
-   apply(clarsimp)
+   apply(auto)
    apply(erule_tac x=x1 in allE)
    apply(erule_tac x="None" in allE)
    apply(simp split: if_splits)
     apply(erule notE)
     apply(simp add: Let_def)
-  apply(simp add: log_inst_numbers.simps)
-  apply(simp add: as_set_simps)
-  done
+  by(auto simp add: as_set_simps log_inst_numbers.simps)
+
     
 lemma call_gas_triple:
   notes meter_gas_def [simp del]

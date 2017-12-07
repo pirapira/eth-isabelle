@@ -41,9 +41,9 @@ dependencies:
     - echo 'export PATH=./Isabelle2017/bin:$PATH' >> $BASH_ENV
 test:
   override:
+    - make simplewallet
     - make lem-ocaml
     - make lem-thy
     - make lem-hol
     - make lem-coq
     - (cd lem && make)
-    - make simplewallet
