@@ -31,9 +31,10 @@ dependencies:
     - which ocamldep
     - make -C ECC-OCaml/src depend
     - make -C ECC-OCaml/src
-    - make -C ECC-OCaml/src install || echo "fails the second time and on"
+    - make -C ECC-OCaml/src uninstall
+    - make -C ECC-OCaml/src install
     - git clone https://bitbucket.org/Peter_Sewell/lem.git lemdir
-    - make -C lemdir || echo "failure expected"
+    - make -C lemdir
     - make -C lemdir coq-libs
     - sudo make -C lemdir install
     - wget https://isabelle.in.tum.de/dist/Isabelle2017_app.tar.gz
@@ -41,9 +42,9 @@ dependencies:
     - echo 'export PATH=./Isabelle2017/bin:$PATH' >> $BASH_ENV
 test:
   override:
+    - make lem-coq
+    - (cd lem && make)
     - make simplewallet
     - make lem-ocaml
     - make lem-thy
     - make lem-hol
-    - make lem-coq
-    - (cd lem && make)
