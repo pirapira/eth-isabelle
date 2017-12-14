@@ -118,7 +118,6 @@ let format_transaction (t : transaction) : Easy_format.t =
     ] in
   List (("{", ",", "}", list), lst)
 
-let nonce_as_rlp_obj = failwith "nonce_as_rlp_obj"
 let gas_price_as_rlp_obj = failwith "gas_price_as_rlp_obj"
 let gas_limit_as_rlp_obj = failwith "gas_limit_as_rlp_obj"
 let to_as_rlp_obj = failwith "to_as_rlp_obj"
@@ -131,7 +130,7 @@ let rlp_of_transaction (t : transaction) =
   Conv.byte_list_of_rope
     (Rlp.encode
        (RlpList
-          [ nonce_as_rlp_obj t
+          [ Rlp.rlpBigInt t.transactionNonce
           ; gas_price_as_rlp_obj t
           ; gas_limit_as_rlp_obj t
           ; to_as_rlp_obj t
