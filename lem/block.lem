@@ -23,7 +23,7 @@ open import Word160
 open import Word256
 open import Keccak
 open import Evm
-open import Rlp
+open import Rlplem
 
 type transaction = <|
   tr_from : address;
