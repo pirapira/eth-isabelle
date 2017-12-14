@@ -51,6 +51,7 @@ script:
 - make lem-hol
 - make lem-coq
 - make lem-julia
+- make lem-pdf
 - cd julia
 - make test
 - cd -
