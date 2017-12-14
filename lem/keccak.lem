@@ -128,22 +128,6 @@ let keccakf_rounds : nat = 24
 
 type byte = word8
 
-(*
-val boolList64_inner : word64 -> nat -> list bool
-let rec boolList64_inner num rest = match rest with
- | 0 -> []
- | rest+1 ->
-    let checked = 2 ** rest in
-    let quo = num / checked in
-    let taken = quo * checked in
-    (quo <> 0) :: boolList64_inner (num - taken) rest
-end
-
-val boolListFromWord64 : word64 -> list bool
-let boolListFromWord64 w = boolList64_inner w 64
-declare isabelle target_rep function boolListFromWord64 = `to_bl`
-*)
-
 val word_rsplit_aux : list bool -> nat -> list byte
 let rec word_rsplit_aux lst n = match n with
  | 0 -> []
@@ -154,15 +138,6 @@ declare termination_argument  word_rsplit_aux = automatic
 val word_rsplit : word64 -> list byte
 let word_rsplit w = word_rsplit_aux (boolListFromWord64 w) 8
 declare isabelle target_rep function word_rsplit = `word_rsplit`
-
-(*
-val word64FromBoollist : list bool -> word64
-let rec word64FromBoollist lst = match lst with
- | true :: lst -> 1 + 2 * word64FromBoollist lst
- | false :: lst -> 2 * word64FromBoollist lst
- | [] -> 0
-end
-*)
 
 val word_rcat_k : list byte -> word64
 let word_rcat_k lst = word64FromBoollist (List.concat (map boolListFromWord8 lst))

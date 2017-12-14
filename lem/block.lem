@@ -80,22 +80,6 @@ type receipt = <|
   receipt_logs : list log_entry;
 |>
 
-(*
-type block = <|
-  block_parent_hash : w256;
-  block_uncles_hash : list w256;
-  block_coinbase : address;
-  block_state : world_state;
-  block_transactions : list (transaction * receipt);
-  block_logs_bloom : w256;
-  block_difficulty : w256;
-  block_number : w256;
-  block_gas_limit : w256;
-  block_timestamp : w256;
-  block_nonce : w256;
-|>
-*)
-
 let start_env a state args caller origin gasprice block =
 <| vctx_stack = []; (* The stack is initialized for every invocation *)
     vctx_memory = empty_memory; (* The memory is also initialized for every invocation *)
