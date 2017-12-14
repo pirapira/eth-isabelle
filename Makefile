@@ -16,7 +16,7 @@ clean-hol:
 clean-ocaml:
 	git clean -fx lem/*.ml
 
-lem-thy: lem/Block.thy lem/Evm.thy lem/Keccak.thy lem/Rlp.thy lem/Word160.thy lem/Word256.thy lem/Word8.thy lem/Keccak.thy lem/Word4.thy lem/Word64.thy lem/Word32.thy
+lem-thy: lem/Block.thy lem/Evm.thy lem/Keccak.thy lem/Rlplem.thy lem/Word160.thy lem/Word256.thy lem/Word8.thy lem/Keccak.thy lem/Word4.thy lem/Word64.thy lem/Word32.thy
 
 simplewallet: document/simplewallet.pdf
 document/simplewallet.pdf: ContractSem.thy RelationalSem.thy simple_wallet_document/root.tex lem/Evm.thy lem/Word256.thy lem/Word160.thy lem/Word8.thy lem/Keccak.thy lem/Word64.thy lem/Word4.thy
@@ -25,11 +25,11 @@ document/simplewallet.pdf: ContractSem.thy RelationalSem.thy simple_wallet_docum
 
 lem-julia: julia/julia.ml
 
-lem-hol: lem/blockScript.sml lem/evmScript.sml lem/keccakScript.sml lem/rlpScript.sml lem/word160Script.sml lem/word256Script.sml lem/word8Script.sml lem/keccakScript.sml lem/word4Script.sml lem/word64Script.sml
+lem-hol: lem/blockScript.sml lem/evmScript.sml lem/keccakScript.sml lem/rlplemScript.sml lem/word160Script.sml lem/word256Script.sml lem/word8Script.sml lem/keccakScript.sml lem/word4Script.sml lem/word64Script.sml
 
-lem-pdf: lem/Evm-use_inc.pdf lem/Block-use_inc.pdf lem/Keccak-use_inc.pdf lem/Rlp-use_inc.pdf
+lem-pdf: lem/Evm-use_inc.pdf lem/Block-use_inc.pdf lem/Keccak-use_inc.pdf lem/Rlplem-use_inc.pdf
 
-lem-ocaml: lem/evm.ml lem/word256.ml lem/word160.ml lem/word8.ml lem/keccak.ml lem/word4.ml lem/word64.ml lem/word32.ml lem/block.ml lem/rlp.ml
+lem-ocaml: lem/evm.ml lem/word256.ml lem/word160.ml lem/word8.ml lem/keccak.ml lem/word4.ml lem/word64.ml lem/word32.ml lem/block.ml lem/rlplem.ml
 
 lem-coq:
 	lem -coq lem/*.lem
@@ -71,8 +71,8 @@ lem/evm.ml: lem/evm.lem
 lem/block.ml: lem/block.lem
 	lem -ocaml lem/block.lem
 
-lem/rlp.ml: lem/rlp.lem
-	lem -ocaml lem/rlp.lem
+lem/rlplem.ml: lem/rlplem.lem
+	lem -ocaml lem/rlplem.lem
 
 lem/keccak.ml: lem/keccak.lem
 	lem -ocaml lem/keccak.lem
@@ -135,22 +135,22 @@ lem/Keccak-use_inc.tex lem/Keccak-inc.tex: lem/keccak.lem
 lem/Keccak-use_inc.pdf: lem/Keccak-use_inc.tex lem/Keccak-inc.tex
 	cd lem; pdflatex Keccak-use_inc.tex; pdflatex Keccak-use_inc.tex
 
-lem/rlp.lem: lem/word256.lem lem/word160.lem lem/word8.lem
-	touch lem/rlp.lem
+lem/rlplem.lem: lem/word256.lem lem/word160.lem lem/word8.lem
+	touch lem/rlplem.lem
 
-lem/Rlp.thy: lem/rlp.lem
-	lem -isa lem/rlp.lem
+lem/Rlplem.thy: lem/rlplem.lem
+	lem -isa lem/rlplem.lem
 
-lem/rlpScript.sml: lem/rlp.lem
-	lem -hol lem/rlp.lem
+lem/rlplemScript.sml: lem/rlplem.lem
+	lem -hol lem/rlplem.lem
 
-lem/Rlp-use_inc.tex lem/Rlp-inc.tex: lem/rlp.lem
-	lem -tex lem/rlp.lem
-	sed 's/default/defWithComment/g' lem/Rlp-inc.tex > lem/tmp.txt
-	mv lem/tmp.txt lem/Rlp-inc.tex
+lem/Rlplem-use_inc.tex lem/Rlplem-inc.tex: lem/rlplem.lem
+	lem -tex lem/rlplem.lem
+	sed 's/default/defWithComment/g' lem/Rlplem-inc.tex > lem/tmp.txt
+	mv lem/tmp.txt lem/Rlplem-inc.tex
 
-lem/Rlp-use_inc.pdf: lem/Rlp-use_inc.tex lem/Rlp-inc.tex
-	cd lem; pdflatex Rlp-use_inc.tex; pdflatex Rlp-use_inc.tex
+lem/Rlplem-use_inc.pdf: lem/Rlplem-use_inc.tex lem/Rlplem-inc.tex
+	cd lem; pdflatex Rlplem-use_inc.tex; pdflatex Rlplem-use_inc.tex
 
 lem/Word160.thy: lem/word160.lem
 	lem -isa lem/word160.lem
