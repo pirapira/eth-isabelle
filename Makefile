@@ -1,6 +1,6 @@
 .PHONY: all all-isabelle light-isabelle clean clean-pdf clean-thy clean-ocaml clean-hol lem-thy lem-pdf lem-hol lem-ocaml doc
 
-all: all-isabelle lem-thy lem-pdf lem-ocaml lem-hol lem-coq doc
+all: simplewallet lem-thy lem-pdf lem-ocaml lem-hol lem-coq doc
 
 clean: clean-pdf clean-thy clean-ocaml clean-hol
 
@@ -15,9 +15,6 @@ clean-hol:
 
 clean-ocaml:
 	git clean -fx lem/*.ml
-
-all-isabelle: Parse.thy ContractSem.thy RelationalSem.thy example/Optimization.thy example/AlwaysFail.thy example/FailOnReentrance.thy lem/Block.thy lem/Evm.thy lem/Keccak.thy lem/Rlp.thy lem/Word160.thy lem/Word256.thy lem/Word8.thy lem/Word4.thy Hoare/HoareTripleForInstructions.thy Hoare/HoareTripleForInstructions2.thy
-	isabelle build -j 2 -d . all
 
 lem-thy: lem/Block.thy lem/Evm.thy lem/Keccak.thy lem/Rlp.thy lem/Word160.thy lem/Word256.thy lem/Word8.thy lem/Keccak.thy lem/Word4.thy lem/Word64.thy lem/Word32.thy
 
