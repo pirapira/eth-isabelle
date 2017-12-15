@@ -22,7 +22,7 @@ before_install:
 - eval `opam config env`
 - opam update
 - opam upgrade -y
-- opam install -y ocamlbuild ocamlfind batteries yojson bignum easy-format bisect_ppx zarith depext sha menhir
+- opam install -y ocamlbuild ocamlfind batteries yojson bignum easy-format bisect_ppx zarith depext sha menhir rlp
 - git clone https://github.com/mrsmkl/ECC-OCaml.git ECC-OCaml
 - cd ECC-OCaml/src
 - make uninstall
@@ -45,8 +45,12 @@ before_install:
 # - bin/build -j 2
 # - cd -
 script:
-- make simplewallet
 - make lem-ocaml
+- cd tester
+- sh compile.sh
+- ./runVmTest.native 89
+- cd -
+- make simplewallet
 - make lem-thy
 - make lem-hol
 - make lem-coq
@@ -58,9 +62,5 @@ script:
 # - cd lem
 # - ../HOL/bin/Holmake evmTheory.uo
 # - cd -
-- cd tester
-- sh compile.sh
-- ./runVmTest.native 89
-- cd -
 - isabelle version
 
