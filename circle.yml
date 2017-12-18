@@ -19,7 +19,8 @@ dependencies:
     - sudo apt-get -qq install libgmp3-dev texlive-latex-recommended
     - wget https://raw.github.com/ocaml/opam/master/shell/opam_installer.sh -O - | sudo sh -s /usr/local/bin
     - export OPAMJOBS=1
-    - opam init -y --comp=4.04.1
+    - opam init -y --comp=4.04.2
+    - opam switch 4.04.2
     - echo $BASH_ENV
     - touch $BASH_ENV
     - echo 'eval `opam config env`' >> $BASH_ENV
