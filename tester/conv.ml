@@ -116,6 +116,24 @@ let be_byte_list_of_big_int (target_len : int) (b : Big_int.big_int) =
 let be_byte_list_of_address (w : Word256.word256) : Word8.word8 list =
   be_byte_list_of_big_int 20 (big_int_of_word256 w)
 
+let char_pair_to_word8 (a, b) : Word8.word8 =
+  byte_of_int (int_of_string ("0x" ^ BatString.of_list [a; b]))
+
+let rec parse_hex_inner result (str : char list) : Word8.word8 list =
+  match str with
+  | [] -> List.rev result
+  | [x] -> failwith "odd-length hex"
+  | a :: b :: rest ->
+     parse_hex_inner ((char_pair_to_word8 (a, b)) :: result) rest
+
+let parse_hex_string (str : string) : Word8.word8 list =
+  let str =
+    if BatString.starts_with "0x" str then
+      BatString.tail str 2
+    else
+      str in
+  parse_hex_inner [] (BatString.to_list str)
+
 let format_quad_as_list
       (act : Evm.contract_action)
       (stashed_opt : (Nat_big_num.num * Nat_big_num.num) option) : Easy_format.t list =
@@ -193,6 +211,11 @@ let decimal_of_word256 (w : Word256.word256) =
 
 let char_as_byte (c : char) : Word8.word8 =
   byte_of_int (BatChar.code c)
+
+let byte_list_of_rope (r : Rope.t) : Keccak.byte list =
+  let retrev = ref [] in
+  let () = Rope.iter (fun ch -> retrev := (char_as_byte ch :: !retrev)) r in
+  List.rev !retrev
 
 let string_as_byte_list (str : string) =
   (List.map char_as_byte (BatString.to_list str))

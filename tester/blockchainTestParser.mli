@@ -31,14 +31,18 @@ type transaction =
   ; transactionNonce : Big_int.big_int
   ; transactionR : Big_int.big_int
   ; transactionS : Big_int.big_int
-  ; transactionTo : Big_int.big_int
+  ; transactionTo : Big_int.big_int option
   ; transactionV : Big_int.big_int
   ; transactionValue : Big_int.big_int
   }
 
+val rlp_of_transaction : transaction -> Keccak.byte list
+
 val parse_transaction : json -> transaction
 
 val format_transaction : transaction -> Easy_format.t
+
+val sender_of_transaction : transaction -> Evm.address
 
 type block =
   { blockHeader : blockHeader
@@ -67,6 +71,8 @@ type testCase =
   ; bcCasePreState : (string * VmTestParser.account_state) list
   }
 
-val parse_test_case : json -> testCase
+val parse_test_file : json -> (string * testCase) list
 
 val format_test_case : testCase -> Easy_format.t
+
+val block_info_of : block -> Evm.block_info

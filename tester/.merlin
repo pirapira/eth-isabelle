@@ -1,6 +1,7 @@
 PKG yojson
 PKG bignum
 PKG batteries
+PKG secp256k1
 S lem
 S "."
 B _build/lem

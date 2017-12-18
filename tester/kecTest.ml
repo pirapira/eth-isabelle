@@ -17,4 +17,22 @@ let () =
                 (Word64.boolListFromWord64
                              (Big_int.int64_of_big_int
                              (Big_int.big_int_of_string "-5899601735930514117")))) in
+  let t : BlockchainTestParser.transaction =
+    let zero = Big_int.zero_big_int in
+    { transactionData = ""
+    ; transactionGasLimit = zero
+    ; transactionGasPrice = zero
+    ; transactionNonce = zero
+    ; transactionTo = Some (Big_int.big_int_of_string "0x944400f4b88ac9589a0f17ed4671da26bddb668b")
+    ; transactionValue = Big_int.big_int_of_int 1000
+    ; transactionR = zero (* dummy: not signed yet *)
+    ; transactionS = zero (* dummy: not signed yet *)
+    ; transactionV = zero (* dummy: not signed yet *)
+    } in
+  let hex_to_byte_list = failwith "hex_to_byte_list" in
+  let () = assert (BlockchainTestParser.rlp_of_transaction t = hex_to_byte_list "0xdc80808094944400f4b88ac9589a0f17ed4671da26bddb668b8203e880") in
+
+  (* from ~/src/cpp-ethereum2/test/unittests/libdevcrypto/crypto.cpp *)
+  (* Transaction(u256 const& _value, u256 const& _gasPrice, u256 const& _gas, Address const& _dest,                      bytes const& _data, u256 const& _nonce, Secret const& _secret): *)
+  (*            (              1000,                     0,                0, h160(fromHex("944400f4b88ac9589a0f17ed4671da26bddb668b")), {}, 0, p.secret()) *)
   ()

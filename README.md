@@ -24,7 +24,7 @@ When you see `\<Rightarrow>` in the source, try using the [Isabelle2017](https:/
 * [lem](http://www.cl.cam.ac.uk/~pes20/lem/built-doc/lem-manual.html#installation)
 * [OCaml](http://www.ocaml.org/) 4.02.3
 * [opam](https://opam.ocaml.org/) 1.2.2
-* Some opam packages: use `opam install ocamlfind batteries yojson bignum easy-format bisect_ppx ocamlbuild sha`
+* Some opam packages: use `opam install ocamlfind batteries yojson bignum easy-format bisect_ppx ocamlbuild sha secp256k1`
 * [ECC-OCaml from mrsmkl](https://github.com/mrsmkl/ECC-OCaml)
 
 ## How to read the proofs
@@ -67,12 +67,9 @@ Another way is to run the VM Test and measure the coverage.
 $ sh measure_coverage.sh
 ```
 
-Moreover, it's possible to run the state tests:
+Moreover, it's possible to run Blockchain Tests.
 ```
-for j in `ls ../../tests/StateTests/*.json`
-do
-./stateTestReturnStatus.native $j || break
-done
+$ ./runBlockchainTest.native
 ```
 
 ## Makefile goals

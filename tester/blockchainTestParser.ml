@@ -77,7 +77,7 @@ type transaction =
   ; transactionNonce : Big_int.big_int
   ; transactionR : Big_int.big_int
   ; transactionS : Big_int.big_int
-  ; transactionTo : Big_int.big_int
+  ; transactionTo : Big_int.big_int option
   ; transactionV : Big_int.big_int
   ; transactionValue : Big_int.big_int
   }
@@ -90,7 +90,12 @@ let parse_transaction (j : json) : transaction =
   ; transactionNonce = parse_address_from_field "nonce" j
   ; transactionR = parse_address_from_field "r" j
   ; transactionS = parse_address_from_field "s" j
-  ; transactionTo = parse_address_from_field "to" j
+  ; transactionTo =
+      if (to_string (member "data" j) = "" || to_string (member "data" j) = "0x")
+      then
+        None (* XXX: this needs to be tested *)
+      else
+        Some (parse_address_from_field "to" j)
   ; transactionV = parse_address_from_field "v" j
   ; transactionValue = parse_address_from_field "value" j
   }
@@ -104,11 +109,48 @@ let format_transaction (t : transaction) : Easy_format.t =
     ; Label ((Atom ("nonce", atom), label), Atom (Big_int.string_of_big_int t.transactionNonce, atom))
     ; Label ((Atom ("r", atom), label), Atom (Big_int.string_of_big_int t.transactionR, atom))
     ; Label ((Atom ("s", atom), label), Atom (Big_int.string_of_big_int t.transactionS, atom))
-    ; Label ((Atom ("to", atom), label), Atom (Big_int.string_of_big_int t.transactionTo, atom))
+    ; Label ((Atom ("to", atom), label), Atom (
+                                             (match t.transactionTo with
+                                             | Some addr -> Big_int.string_of_big_int addr
+                                             | None -> ""), atom))
     ; Label ((Atom ("v", atom), label), Atom (Big_int.string_of_big_int t.transactionV, atom))
     ; Label ((Atom ("value", atom), label), Atom (Big_int.string_of_big_int t.transactionValue, atom))
     ] in
   List (("{", ",", "}", list), lst)
+
+let gas_price_as_rlp_obj = failwith "gas_price_as_rlp_obj"
+let gas_limit_as_rlp_obj = failwith "gas_limit_as_rlp_obj"
+let to_as_rlp_obj = failwith "to_as_rlp_obj"
+let value_as_rlp_obj = failwith "value_as_rlp_obj"
+let w_as_rlp_obj = failwith "w_as_rlp_obj"
+let r_as_rlp_obj = failwith "r_as_rlp_obj"
+let s_as_rlp_obj = failwith "s_as_rlp_obj"
+
+let rlp_of_transaction (t : transaction) =
+  Conv.byte_list_of_rope
+    (Rlp.encode
+       (RlpList
+          [ Rlp.rlpBigInt t.transactionNonce
+          ; gas_price_as_rlp_obj t
+          ; gas_limit_as_rlp_obj t
+          ; to_as_rlp_obj t
+          ; value_as_rlp_obj t
+          ; w_as_rlp_obj t
+          ; r_as_rlp_obj t
+          ; s_as_rlp_obj t]))
+
+(* rlp_of_transaction returns the keccak hash of the rlp encoding of a transaction *)
+let hash_of_transaction (t : transaction) : Secp256k1.buffer =
+  let rlp : Keccak.byte list = rlp_of_transaction t in
+  let hash : Keccak.byte list = Keccak.keccak' rlp in
+  failwith "hash_of_transaction: how to convert a byte list into a buffer?"
+
+let sender_of_transaction (t : transaction) : Evm.address =
+  let ctx = Secp256k1.(Context.create [Verify]) in
+  let msg = hash_of_transaction t in (* wow, it looks like I need to implement RLP! *)
+  let sign = failwith "sign" in
+  let recovered = Secp256k1.RecoverableSign.recover ctx sign msg in
+  failwith "sender_of_transaction"
 
 type block =
   { blockHeader : blockHeader
@@ -126,6 +168,8 @@ let print_and_forward_exception str x =
     raise e
 
 let parse_block (j : json) : block =
+  if Yojson.Basic.(Util.member "blockHeader" j =  `Null) then
+    raise UnsupportedEncoding;
   let open Util in
   { blockHeader =
       print_and_forward_exception
@@ -138,11 +182,11 @@ let parse_block (j : json) : block =
   ; blockTransactions =
       print_and_forward_exception
         "error in parsing transactions\n%!"
-        (List.map parse_transaction (to_list (member "transactions" j)))
+        (List.map parse_transaction (TestUtil.to_list_allow_null (member "transactions" j)))
   ; blockUncleHeaders =
       print_and_forward_exception
         "error in parsing uncle headers\n%!"
-        (List.map parse_block_header (to_list (member "uncleHeaders" j)))
+        (List.map parse_block_header (TestUtil.to_list_allow_null (member "uncleHeaders" j)))
   }
 
 let format_block (b : block) : Easy_format.t =
@@ -170,7 +214,10 @@ type testCase =
 let parse_blocks (js : json list) : block list =
   List.map parse_block js
 
-let parse_test_case (j : json) : testCase =
+let parse_test_case (name : string) (j : json) : testCase =
+  let () = Printf.printf "...... parsing test case %s\n" name in
+  let () = if Yojson.Basic.(Util.member "genesisRLP" j = `Null) then
+             raise UnsupportedEncoding in
   let open Util in
   { bcCaseBlocks =
       (let block_list = to_list (member "blocks" j) in
@@ -199,6 +246,11 @@ let parse_test_case (j : json) : testCase =
         (VmTestParser.parse_states (to_assoc (member "pre" j)))
   }
 
+let parse_test_file (js : json) =
+  List.map
+    (fun (name, case) -> (name, parse_test_case name case))
+    (Util.to_assoc js)
+
 let format_blocks (bs : block list) =
   Easy_format.(List (("[", ",", "]", list), List.map format_block bs))
 
@@ -213,3 +265,17 @@ let format_test_case (t : testCase) : Easy_format.t =
     ; Label ((Atom ("pre", atom), label), Atom ("(printing not implemented)", atom))
     ] in
   List (("{", ",", "}", list), lst)
+
+
+(* TODO: very similar to StateTestLib.construct_block_info.  refactor *)
+let block_info_of (b : block) : Evm.block_info =
+  let bh = b.blockHeader in
+  Evm.(
+    { block_blockhash = (fun _ -> failwith "blockhash not implemented")
+    ; block_coinbase = Conv.word160_of_big_int bh.bhCoinbase
+    ; block_timestamp = Conv.word256_of_big_int bh.bhTimestamp
+    ; block_number = Conv.word256_of_big_int bh.bhNumber
+    ; block_difficulty = Conv.word256_of_big_int bh.bhDifficulty
+    ; block_gaslimit = Conv.word256_of_big_int bh.bhGasLimit
+    }
+  )
