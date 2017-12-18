@@ -39,6 +39,8 @@ dependencies:
     - git clone https://bitbucket.org/Peter_Sewell/lem.git lemdir
     - make -C lemdir
     - make -C lemdir coq-libs
+    - sudo mkdir -p /usr/local/share/lem
+    - sudo ln -s /home/ubuntu/eth-isabelle/lemdir/coq-lib /usr/local/share/lem/coq-lib
     - echo 'PATH=/home/ubuntu/eth-isabelle/lemdir:$PATH' >> $BASH_ENV
     - wget https://isabelle.in.tum.de/dist/Isabelle2017_app.tar.gz
     - tar xf Isabelle2017_app.tar.gz
