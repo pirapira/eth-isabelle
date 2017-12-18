@@ -28,6 +28,8 @@ before_install:
 - export OPAMJOBS=2
 - opam init -y --comp=4.04.2
 - eval `opam config env`
+- opam switch 4.04.2
+- eval `opam config env`
 - opam update
 - opam upgrade -y
 - opam install -y ocamlbuild ocamlfind batteries yojson bignum easy-format bisect_ppx zarith depext sha menhir rlp
