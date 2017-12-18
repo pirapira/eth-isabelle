@@ -31,6 +31,7 @@ before_install:
 - opam switch 4.04.2
 - eval `opam config env`
 - opam update
+- opam --version
 - opam search secp256k1
 - opam upgrade -y
 - opam install -y ocamlbuild ocamlfind batteries yojson bignum easy-format bisect_ppx zarith depext sha menhir rlp
