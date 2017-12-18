@@ -33,9 +33,9 @@ before_install:
 - opam update
 - opam --version
 - opam search secp256k1
+- opam install -y -v secp256k1
 - opam upgrade -y
 - opam install -y ocamlbuild ocamlfind batteries yojson bignum easy-format bisect_ppx zarith depext sha menhir rlp
-- opam install -y -v secp256k1
 - git clone https://github.com/mrsmkl/ECC-OCaml.git ECC-OCaml
 - cd ECC-OCaml/src
 - make uninstall
