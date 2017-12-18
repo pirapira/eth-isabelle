@@ -13,7 +13,6 @@ before_install:
 - make
 - ./tests
 - sudo make install
-- sudo make install-data
 - cd -
 # - git clone https://github.com/polyml/polyml.git
 # - cd polyml
