@@ -5,7 +5,7 @@ cache:
 sudo: required
 before_install:
 - sudo apt-get -qq update
-- sudo apt-get -qq install libgmp3-dev texlive-latex-recommended aspcud texlive-latex-extra libsecp256k1-0 libsecp256k1-dev
+- sudo apt-get -qq install libgmp3-dev texlive-latex-recommended aspcud texlive-latex-extra
 - git clone https://github.com/bitcoin-core/secp256k1.git
 - cd secp256k1
 - ./autogen.sh
@@ -33,7 +33,8 @@ before_install:
 - opam update
 - opam --version
 - opam search secp256k1
-- opam install -y -v secp256k1
+- opam install -y -v 'configurator=v0.9.1'
+- opam install -y -v 'secp256k1=0.3.2'
 - opam upgrade -y
 - opam install -y ocamlbuild ocamlfind batteries yojson bignum easy-format bisect_ppx zarith depext sha menhir rlp
 - git clone https://github.com/mrsmkl/ECC-OCaml.git ECC-OCaml
