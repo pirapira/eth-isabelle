@@ -5,7 +5,7 @@ cache:
 sudo: required
 before_install:
 - sudo apt-get -qq update
-- sudo apt-get -qq install libgmp3-dev texlive-latex-recommended aspcud texlive-latex-extra
+- sudo apt-get -qq install libgmp3-dev texlive-latex-recommended aspcud texlive-latex-extra libsecp256k1-0 libsecp256k1-dev
 - git clone https://github.com/bitcoin-core/secp256k1.git
 - cd secp256k1
 - ./autogen.sh
