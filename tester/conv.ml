@@ -77,8 +77,6 @@ let string_of_address (addr : Word160.word160) : string =
   let str = BatBig_int.to_string_in_hexa b in
   pad_left_string '0' 40 str
 
-let byte_list_of_rope = failwith "byte_list_of_rope"
-
 let rec byte_list_of_hex_string (s : string) =
   if BatString.left s 2 = "0x" then byte_list_of_hex_string (BatString.tail s 2)
   else if String.length s < 2 then []
@@ -213,6 +211,11 @@ let decimal_of_word256 (w : Word256.word256) =
 
 let char_as_byte (c : char) : Word8.word8 =
   byte_of_int (BatChar.code c)
+
+let byte_list_of_rope (r : Rope.t) : Keccak.byte list =
+  let retrev = ref [] in
+  let () = Rope.iter (fun ch -> retrev := (char_as_byte ch :: !retrev)) r in
+  List.rev !retrev
 
 let string_as_byte_list (str : string) =
   (List.map char_as_byte (BatString.to_list str))
