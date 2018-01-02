@@ -1,7 +1,6 @@
 dist: trusty
 cache:
   directories:
-  - $HOME/.opam
 sudo: required
 before_install:
 - sudo apt-get -qq update
