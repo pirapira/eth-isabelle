@@ -26,6 +26,10 @@ When you see `\<Rightarrow>` in the source, try using the [Isabelle2017](https:/
 * [opam](https://opam.ocaml.org/) 1.2.2
 * Some opam packages: use `opam install ocamlfind batteries yojson bignum easy-format bisect_ppx ocamlbuild sha secp256k1`
 * [ECC-OCaml from mrsmkl](https://github.com/mrsmkl/ECC-OCaml)
+* [secp256k1](https://github.com/bitcoin-core/secp256k1)
+    * On Ubuntu Artful, `apt install secp256k1-0 secp256k1-dev` is enough
+    * On older versions of Ubuntu, installation from the current `master` branch is necessary
+    * configure option `--enable-module-recovery` is needed
 
 ## How to read the proofs
 
