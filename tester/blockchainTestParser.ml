@@ -131,8 +131,8 @@ let rlp_of_transaction (t : transaction) =
     (Rlp.encode
        (RlpList
           [ Rlp.rlpBigInt t.transactionNonce
-          ; gas_price_as_rlp_obj t
-          ; gas_limit_as_rlp_obj t
+          ; Rlp.rlpBigInt t.transactionGasPrice
+          ; Rlp.rlpBigInt t.transactionGasLimit
           ; to_as_rlp_obj t
           ; value_as_rlp_obj t
           ; w_as_rlp_obj t
