@@ -134,7 +134,7 @@ let rlp_of_transaction (t : transaction) =
           ; Rlp.rlpBigInt t.transactionGasPrice
           ; Rlp.rlpBigInt t.transactionGasLimit
           ; to_as_rlp_obj t
-          ; value_as_rlp_obj t
+          ; Rlp.rlpBigInt t.transactionValue
           ; w_as_rlp_obj t
           ; r_as_rlp_obj t
           ; s_as_rlp_obj t]))
