@@ -127,7 +127,7 @@ let s_as_rlp_obj = failwith "s_as_rlp_obj"
 
 let lsbs_as_rope = failwith "lsbs_as_rope"
 
-let to_as_rlp_obj (to_address : Big_int.big_int option) : =
+let to_as_rlp_obj (to_address : Big_int.big_int option) =
   Rlp.RlpData
     (match to_address with
      | None -> Rope.empty
