@@ -53,3 +53,4 @@ test:
     - make lem-ocaml
     - make lem-thy
     - make lem-hol
+    - make lem-pdf
