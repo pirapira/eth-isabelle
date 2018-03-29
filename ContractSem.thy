@@ -370,24 +370,7 @@ apply(drule not_at_least_one)
 apply(simp)
 done
 
-(* unat (1 + (aa - 1)) = Suc (unat(aa - 1)) *)
-
-(*
-lemma cut_memory_dom_nat :
-  "\<forall> a aa b. unat aa = n \<longrightarrow> cut_memory_dom (a, aa, b)"
-apply(induction n)
- apply(clarify)
- apply(rule cut_memory.domintros)
- apply(simp add: unat_eq_0 uint_0_iff)
-apply(clarify)
-apply(rule cut_memory.domintros)
-apply(drule unat_suc)
-apply(auto)
-done
-
-termination cut_memory
-apply(auto simp add: cut_memory_dom_nat)
-done
-*)
+termination sha3_update
+  by lexicographic_order
 
 end
