@@ -142,9 +142,10 @@ let rlp_of_transaction (t : transaction) =
           ; Rlp.rlpBigInt t.transactionGasLimit
           ; to_as_rlp_obj t.transactionTo
           ; Rlp.rlpBigInt t.transactionValue
-          ; w_as_rlp_obj t
-          ; r_as_rlp_obj t
-          ; s_as_rlp_obj t]))
+          ; Rlp.rlpBigInt t.transactionV
+          ; Rlp.rlpBigInt t.transactionR
+          ; Rlp.rlpBigInt t.transactionS
+          ]))
 
 (* rlp_of_transaction returns the keccak hash of the rlp encoding of a transaction *)
 let hash_of_transaction (t : transaction) : Secp256k1.buffer =
