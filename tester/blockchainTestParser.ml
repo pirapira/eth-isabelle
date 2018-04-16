@@ -151,7 +151,12 @@ let rlp_of_transaction (t : transaction) =
 let hash_of_transaction (t : transaction) : Secp256k1.buffer =
   let rlp : Keccak.byte list = rlp_of_transaction t in
   let hash : Keccak.byte list = Keccak.keccak' rlp in
-  failwith "hash_of_transaction: how to convert a byte list into a buffer?"
+  let hash_as_char_list : char list = List.map
+                                        Conv.char_of_byte
+                                        hash in
+  let buffer = Bigarray.Array1.create Bigarray.Char Bigarray.c_layout (List.length hash_as_char_list) in
+  let () = List.iteri (Bigarray.Array1.set buffer) hash_as_char_list in
+  buffer
 
 let sender_of_transaction (t : transaction) : Evm.address =
   let ctx = Secp256k1.(Context.create [Verify]) in

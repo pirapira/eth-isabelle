@@ -71,6 +71,9 @@ let big_int_of_word160 (Word160.W160 (h, tl)) : Big_int.big_int =
 let int_of_byte (Word8.W8 (h, tl) : Word8.word8) : int =
   Big_int.int_of_big_int (big_int_of_bit_list (pad_right h 8 tl))
 
+let char_of_byte (w : Word8.word8) : char =
+  Char.chr (int_of_byte w)
+
 (** [string_of_address a] returns a string of 40 characters containing [0-9] and [a-f] *)
 let string_of_address (addr : Word160.word160) : string =
   let b = big_int_of_word160 addr in
