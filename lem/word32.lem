@@ -40,7 +40,7 @@ val word32NatOp : (bitSequence -> nat -> bitSequence) -> word32 -> nat -> word32
 let word32NatOp binop w1 n = bs_to_w32 (binop (w32_to_bs w1) n)
 
 val word32UnaryOp : (bitSequence -> bitSequence) -> word32 -> word32
-let word32UnaryOp op w = bs_to_w32 (op (w32_to_bs w))
+let word32UnaryOp uniop w = bs_to_w32 (uniop (w32_to_bs w))
 
 val size32 : integer
 let size32 = 2 ** 32

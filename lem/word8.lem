@@ -39,7 +39,7 @@ val word8NatOp : (bitSequence -> nat -> bitSequence) -> word8 -> nat -> word8
 let word8NatOp binop w1 n = bs_to_w8 (binop (w8_to_bs w1) n)
 
 val word8UnaryOp : (bitSequence -> bitSequence) -> word8 -> word8
-let word8UnaryOp op w = bs_to_w8 (op (w8_to_bs w))
+let word8UnaryOp uniop w = bs_to_w8 (uniop (w8_to_bs w))
 
 val word8ToNat : word8 -> nat
 let word8ToNat w = natFromInt (intFromInteger (integerFromBitSeq (w8_to_bs w)) mod 256)

@@ -42,7 +42,7 @@ val word64NatOp : (bitSequence -> nat -> bitSequence) -> word64 -> nat -> word64
 let word64NatOp binop w1 n = bs_to_w64 (binop (w64_to_bs w1) n)
 
 val word64UnaryOp : (bitSequence -> bitSequence) -> word64 -> word64
-let word64UnaryOp op w = bs_to_w64 (op (w64_to_bs w))
+let word64UnaryOp uniop w = bs_to_w64 (uniop (w64_to_bs w))
 
 val size64 : integer
 let size64 = 2 ** 64
