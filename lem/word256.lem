@@ -43,7 +43,7 @@ val word256NatOp : (bitSequence -> nat -> bitSequence) -> word256 -> nat -> word
 let word256NatOp binop w1 n = bs_to_w256 (binop (w256_to_bs w1) n)
 
 val word256UnaryOp : (bitSequence -> bitSequence) -> word256 -> word256
-let word256UnaryOp op w = bs_to_w256 (op (w256_to_bs w))
+let word256UnaryOp uniop w = bs_to_w256 (uniop (w256_to_bs w))
 
 val size256 : integer
 let size256 = 2 ** 256

@@ -39,7 +39,7 @@ val word4NatOp : (bitSequence -> nat -> bitSequence) -> word4 -> nat -> word4
 let word4NatOp binop w1 n = bs_to_w4 (binop (w4_to_bs w1) n)
 
 val word4UnaryOp : (bitSequence -> bitSequence) -> word4 -> word4
-let word4UnaryOp op w = bs_to_w4 (op (w4_to_bs w))
+let word4UnaryOp uniop w = bs_to_w4 (uniop (w4_to_bs w))
 
 val word4ToNat : word4 -> nat
 let word4ToNat w = natFromInt (intFromInteger (integerFromBitSeq (w4_to_bs w)) mod 16)
