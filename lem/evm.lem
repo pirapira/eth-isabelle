@@ -1178,8 +1178,8 @@ end
 val jump : variable_ctx -> constant_ctx -> instruction_result
 let jump v c = match v.vctx_stack with
  | [] -> instruction_failure_result v [TooShortStack]
- | pos :: tl ->
-     let v_new = <| v with vctx_stack = tl; vctx_pc = uint pos |> in
+ | pos :: tail ->
+     let v_new = <| v with vctx_stack = tail; vctx_pc = uint pos |> in
      match vctx_next_instruction v_new c with
       | Just (Pc JUMPDEST) -> InstructionContinue v_new
       | _ -> instruction_failure_result v [InvalidJumpDestination]
@@ -1431,7 +1431,7 @@ let stop v _ =
 (* POP removes the topmost element of the stack: *)
 val pop : variable_ctx -> constant_ctx -> instruction_result
 let pop v c = match v.vctx_stack with
- | _ :: tl -> InstructionContinue (vctx_advance_pc c <| v with vctx_stack = tl |>)
+ | _ :: tail -> InstructionContinue (vctx_advance_pc c <| v with vctx_stack = tail |>)
  | [] -> instruction_failure_result v [TooShortStack]
 end
 
@@ -1986,7 +1986,7 @@ end
 
 val account_state_pop_ongoing_call : account_state -> account_state
 let account_state_pop_ongoing_call orig = match orig.account_ongoing_calls with
- | _ :: tl -> <| orig with account_ongoing_calls = tl |>
+ | _ :: tail -> <| orig with account_ongoing_calls = tail |>
  | _ -> <| orig with account_ongoing_calls = [] |>
 end
 
